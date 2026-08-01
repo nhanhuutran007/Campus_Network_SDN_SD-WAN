@@ -1,0 +1,133 @@
+========================================================
+ HƯỚNG DẪN CÀI UBUNTU + OPEN vSWITCH (OVS) TRONG EVE-NG
+========================================================
+
+1. Thêm image Linux vào EVE-NG
+--------------------------------
+Upload file:
+    linux-ubuntu-18.04-server.tar.gz
+vào thư mục:
+    /opt/unetlab/addons/qemu/
+
+Giải nén:
+    tar -xvf linux-ubuntu-18.04-server.tar.gz
+
+Fix permissions:
+    /opt/unetlab/wrappers/unl_wrapper -a fixpermissions
+
+
+2. Tạo node Ubuntu trong topology
+-----------------------------------
+Add Node → chọn image linux-ubuntu-18.04-server
+Add Network → chọn Cloud0 (NAT)
+Nối eth0 của node vào Cloud0
+
+
+3. Khởi động node và đăng nhập
+--------------------------------
+Tài khoản thường dùng:
+    root / eve
+hoặc:
+    user / Test123
+
+
+4. Kiểm tra Internet
+----------------------
+    ping 8.8.8.8
+    ping google.com
+
+Nếu không có Internet → kiểm tra lại Cloud0.
+
+
+5. Update hệ thống
+--------------------
+    sudo apt update
+    sudo apt upgrade -y
+
+
+6. Cài Open vSwitch (OVS)
+---------------------------
+    sudo apt install -y openvswitch-switch
+
+
+7. Chuyển sang quyền root (nếu cần)
+-------------------------------------
+Nếu chạy lệnh OVS bị lỗi Permission denied:
+    sudo -i
+
+
+8. Kiểm tra OVS đã cài thành công
+-----------------------------------
+Cách 1 (quan trọng nhất):
+    ovs-vsctl show
+→ Nếu thấy dòng "ovs_version" → thành công.
+
+Cách 2:
+    systemctl status openvswitch-switch
+→ Phải thấy "active (running)"
+
+Cách 3:
+    ovs-vsctl --version
+
+
+9. Tạo switch SDN (bridge OVS)
+--------------------------------
+    ovs-vsctl add-br br0
+
+Kiểm tra:
+    ovs-vsctl show
+
+
+10. Gán các cổng eth vào switch
+---------------------------------
+Ví dụ gán eth1, eth2, eth3:
+    ovs-vsctl add-port br0 eth1
+    ovs-vsctl add-port br0 eth2
+    ovs-vsctl add-port br0 eth3
+
+
+11. Kết nối OVS với SDN Controller (ONOS/Ryu/ODL)
+---------------------------------------------------
+Ví dụ controller IP: 10.215.28.26, port 6653:
+    ovs-vsctl set-controller br0 tcp:10.215.28.26:6653
+
+Kiểm tra:
+    ovs-vsctl get-controller br0
+
+
+12. Tạo VLAN (nếu cần)
+------------------------
+Gán VLAN 10:
+    ovs-vsctl set port eth1 tag=10
+
+Trunk VLAN:
+    ovs-vsctl set port eth2 trunks=10,20,30
+
+
+13. Tăng số lượng cổng cho node Ubuntu
+----------------------------------------
+Trong EVE-NG:
+    Chuột phải node → Edit
+    Ethernets → tăng lên 8, 16, 24, 48
+    Save → Start lại node
+
+
+14. Tạo image Ubuntu-OVS để dùng lại (không cần cài lại OVS)
+--------------------------------------------------------------
+SSH vào EVE-NG:
+    ssh root@<IP-EVE>
+
+Copy image:
+    cp -r /opt/unetlab/addons/qemu/linux-ubuntu-18.04-server \
+          /opt/unetlab/addons/qemu/linux-ubuntu-18.04-ovs
+
+Fix permissions:
+    /opt/unetlab/wrappers/unl_wrapper -a fixpermissions
+
+→ Giờ bạn có image mới: linux-ubuntu-18.04-ovs
+→ Kéo thả node là có OVS sẵn, không cần cài lại.
+
+
+========================================================
+ KẾT THÚC FILE HƯỚNG DẪN
+========================================================
