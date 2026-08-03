@@ -60,13 +60,23 @@ FW-ASAv-Active 1, FW-ASAv-Standby 2, Core-SW1 3, Core-SW2 4, Dist-SW1 5, Dist-SW
 
 1. Đọc `configs/README.md` để tra node-id; đọc `campus_network_sdn_sdwan.md` cho quy ước IP.
 2. Sửa config → cập nhật đồng thời: md (nếu có thay đổi thiết kế) + configs/README.md + .unl (nếu thay đổi topo).
-3. Sau khi sửa `.unl`: kiểm tra file còn **XML hợp lệ** (python xml.etree), không để lại network treo.
+3. Sau khi sửa `.unl`: kiểm tra file còn **XML hợp lệ** (python xml.etree), không để lại network treo, **đếm lại `config="1"` phải = 53** và đúng 53 node (1,2,3,4,6,7,11,12,14–21,24,26–32,37–65).
 4. Giữ đồng bộ: số link giữa md (bảng 2.2.x) và .unl phải khớp.
 5. Chỉ commit khi người dùng yêu cầu (thường là "up lên git"). Message commit tiếng Anh, ngắn gọn; nhánh `main`, remote `nhanhuutran007/Campus_Network_SDN_SD-WAN`.
 
+## Cập nhật `.unl` lên EVE KHÔNG MẤT CẤU HÌNH (QUAN TRỌNG)
+
+Cấu hình thiết bị **KHÔNG nằm trong `.unl`** — chúng nằm ở thư mục node trên server (`/opt/unetlab/labs/TranHuuNhan-PKT/Campus Network SDN SD-WAN/<node-id>/config.cfg`). 53 file đã upload và khớp md5 với repo. Quy tắc:
+
+- **Repo → EVE** (khi người dùng nhờ sửa .unl): commit/push xong → **SCP ghi đè DUY NHẤT file `.unl`** lên server (đường dẫn như trên, thêm đuôi `.unl`), **KHÔNG đụng thư mục node, không xóa/tạo gì**. Backup bản server trước khi ghi đè (`cp <lab>.unl /tmp/unl.backup`). Người dùng reload lab (F5) và chỉ Wipe node đã thay đổi.
+- **EVE GUI → repo** (người dùng tự sửa tay): chỉ Export `.unl` (an toàn, không mất gì) → ghi đè vào repo → **kiểm tra trước khi push**: cờ `config="1"` (node mới thêm mặc định `config="0"` — phải bật lại cho đúng danh sách 53 node), XML hợp lệ, node-id/network-id không đổi (nếu đổi id → config files trên server sẽ không khớp nữa).
+- **CẤM tuyệt đối**: chu kỳ Delete lab → Import lại — làm mất 53 file config trong thư mục node + reset toàn bộ cờ `config="1"` về 0 (đã từng xảy ra, HEAD `5222ac6` là bản sửa lại).
+- SSH EVE: `10.215.28.26`, user `root` (pass do người dùng cấp từng phiên, không lưu vào file). Upload bằng paramiko/SFTP; verify md5 sau upload.
+- Nếu thêm node MỚI vào lab: node mới không có sẵn file config → cần upload thêm + bật `config="1"` nếu có config.
+
 ## Trạng thái hiện tại (cập nhật sau mỗi phiên)
 
-- HEAD: `31878c7` — VPC → DHCP, xóa nhãn IP PC trên canvas, DHCP-Server = win server 2012 R2, xóa .unl.bak.
+- HEAD: `5222ac6` — bật lại `config="1"` cho 53 node (bị mất khi export/import EVE), thêm skill dự án. Trước đó `31878c7`: VPC → DHCP, xóa nhãn IP PC trên canvas, DHCP-Server = win server 2012 R2, xóa .unl.bak.
 - Working tree sạch (sau khi push). Cấu hình còn lại cần làm TAY trên lab: vManager/vSmart/vBond GUI, Windows servers (IP tĩnh + role DHCP trên node 72, syslog/web/mail app trên Win7), OVS scripts, vEdge paste config, cài Win7 image đã sửa.
 
 ## Lưu ý kỹ thuật lab
