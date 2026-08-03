@@ -49,7 +49,7 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | VPC20 | 20 | vpcs |
 | VPC21 | 21 | vpcs |
 | Web-Server | 22 | win (cấu hình tay) |
-| DHCP-Server | 23 | win (cấu hình tay) |
+| DHCP-Server | 72 | winserver (cấu hình tay) |
 | SwitchServerFarm | 24 | iol |
 | Syslog-Server | 25 | win (cấu hình tay) |
 | Internet | 26 | vios |
@@ -116,12 +116,14 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | linux (SDN_CONTROLLER, AccessTest, Access/Dist-SW) | `.sh` | ❌ chạy script thủ công trong VM |
 | win / vtmgmt / vtsmart / vtbond | — | ❌ cấu hình qua GUI (xem dưới) |
 
+> **VPC (PC ảo) mặc định xin DHCP**: `config.txt` chỉ chứa `ip dhcp` → PC tự xin IP từ scope tương ứng (campus: DHCP-Server 10.1.90.10 relay qua Core; chi nhánh: dhcpd trên Brand-FW; dải `.100–.199` theo mục 2.4 của md). Ngoại lệ bắt buộc IP tĩnh: **VPC11/12** (mạng test SDN 10.1.101.0/24 không có DHCP server) — `config.txt` chứa `ip 10.1.101.11 255.255.255.0 10.1.101.1`.
+
 **Các thiết bị cấu hình bằng tay (không có file):**
 - **vManager (33) / vSmart (34) / vBond (35)**: khởi động vManager → vào GUI `https://10.9.0.10` (mặt LAN) hoặc `10.9.1.10` (mặt cloud). Setup cluster vBond→vSmart→vManager, cấp system-ip/site-id cho từng vEdge từ vManager (tính năng Zero-Touch/Manual). vSmart/vBond sau đó được cấu hình **từ xa qua vManager**.
-- **Web-Server (22), Mail-Server (23), DHCP-Server (23/25), Syslog-Server (25), Win (36)**: đặt IP tĩnh qua Network Settings Windows:
+- **Web-Server (22), Mail-Server (13), DHCP-Server (72), Syslog-Server (25), Win (36)**: đặt IP tĩnh qua Network Settings Windows:
   - Web-Server: 10.1.1.10/28, GW 10.1.1.1; Mail-Server: 10.1.1.11/28, GW 10.1.1.1
-  - DHCP-Server: 10.1.90.10/24, GW 10.1.90.1 (cài role DHCP, tạo scope cho VLAN 10/20/30/40 theo mục 2.4 của md)
-  - Syslog-Server: 10.1.90.11/24, GW 10.1.90.1
+  - DHCP-Server: 10.1.90.10/24, GW 10.1.90.1 (node 72 dùng image **winserver-S2012-R2-x64** — cài role **DHCP Server** bản địa, tạo scope cho VLAN 10/20/30/40 theo mục 2.4 của md; Core đã khai `ip helper-address 10.1.90.10` trên SVI nên relay tự hoạt động)
+  - Syslog-Server: 10.1.90.11/24, GW 10.1.90.1 (image `win-7-x86-IPCC-WSAlicensed` vẫn dùng được — nhận syslog là phần mềm ứng dụng như Kiwi Syslog/TFTPD64, không cần Windows Server)
   - Win: 10.9.0.20/24, GW 10.9.0.2
 
 ## 5. Node Linux/OVS — cách chạy script

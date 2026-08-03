@@ -608,7 +608,7 @@ graph TB
 | 7 | System-IP OMP | `10.200.<site>.x` (vd: Site 100 → 10.200.100.1/2). Chỉ là định danh overlay, **không phải gateway LAN**. |
 | 8 | Mặt WAN | Mặt **Internet** dùng dải public `203.0.113.0/24`; mặt **MPLS** dùng `100.64.x.x/30`. |
 | 9 | Trunk L2 | Mang các VLAN cần thiết: Campus (10/20/30/40/90/99), chi nhánh (VLAN nghiệp vụ + 99). |
-| 10 | VPC (PC ảo) | Đặt IP tĩnh theo ví dụ trong bảng 2.2, hoặc để DHCP cấp (dải `.100 – .199`). |
+| 10 | VPC (PC ảo) | Mặc định **xin DHCP** (dải `.100 – .199`) bằng lệnh `ip dhcp` trong file `config.txt`; không đặt IP tĩnh. Ngoại lệ: VPC11/12 (mạng test SDN 10.1.101.0/24 — không có DHCP server) đặt tĩnh. |
 
 ### 2.1. Tổng hợp bảng subnet theo từng site
 
@@ -716,14 +716,14 @@ graph TB
 | 28 | Dist-SW2 — e2 = — | Access-SW2 — e2 = — | Trunk | L2 Dist → Access |
 | 29 | Dist-SW2 — e3 = — | Access-SW3 — e2 = — | Trunk | L2 Dist → Access |
 | 30 | Dist-SW2 — e4 = — | Access-SW4 — e2 = — | Trunk | L2 Dist → Access |
-| 31 | Access-SW1 — e3 = — | VPC14 (PC CNTT-1) — eth0 = 10.1.10.10/24 | VLAN 10 | Access VLAN 10, gw 10.1.10.1 |
-| 32 | Access-SW1 — e4 = — | VPC19 (PC CNTT-2) — eth0 = 10.1.10.11/24 | VLAN 10 | Access VLAN 10 |
-| 33 | Access-SW2 — e3 = — | VPC20 (PC TTK-1) — eth0 = 10.1.20.10/24 | VLAN 20 | gw 10.1.20.1 |
-| 34 | Access-SW2 — e4 = — | VPC21 (PC TTK-2) — eth0 = 10.1.20.11/24 | VLAN 20 | Access VLAN 20 |
-| 35 | Access-SW3 — e3 = — | VPC15 (PC Luật-1) — eth0 = 10.1.30.10/24 | VLAN 30 | gw 10.1.30.1 |
-| 36 | Access-SW3 — e4 = — | VPC16 (PC Luật-2) — eth0 = 10.1.30.11/24 | VLAN 30 | Access VLAN 30 |
-| 37 | Access-SW4 — e3 = — | VPC17 (PC HC-1) — eth0 = 10.1.40.10/24 | VLAN 40 | gw 10.1.40.1 |
-| 38 | Access-SW4 — e4 = — | VPC18 (PC HC-2) — eth0 = 10.1.40.11/24 | VLAN 40 | Access VLAN 40 |
+| 31 | Access-SW1 — e3 = — | VPC14 (PC CNTT-1) — eth0 = DHCP (10.1.10.100–.199) | VLAN 10 | Access VLAN 10, gw 10.1.10.1 |
+| 32 | Access-SW1 — e4 = — | VPC19 (PC CNTT-2) — eth0 = DHCP (10.1.10.100–.199) | VLAN 10 | Access VLAN 10 |
+| 33 | Access-SW2 — e3 = — | VPC20 (PC TTK-1) — eth0 = DHCP (10.1.20.100–.199) | VLAN 20 | gw 10.1.20.1 |
+| 34 | Access-SW2 — e4 = — | VPC21 (PC TTK-2) — eth0 = DHCP (10.1.20.100–.199) | VLAN 20 | Access VLAN 20 |
+| 35 | Access-SW3 — e3 = — | VPC15 (PC Luật-1) — eth0 = DHCP (10.1.30.100–.199) | VLAN 30 | gw 10.1.30.1 |
+| 36 | Access-SW3 — e4 = — | VPC16 (PC Luật-2) — eth0 = DHCP (10.1.30.100–.199) | VLAN 30 | Access VLAN 30 |
+| 37 | Access-SW4 — e3 = — | VPC17 (PC HC-1) — eth0 = DHCP (10.1.40.100–.199) | VLAN 40 | gw 10.1.40.1 |
+| 38 | Access-SW4 — e4 = — | VPC18 (PC HC-2) — eth0 = DHCP (10.1.40.100–.199) | VLAN 40 | Access VLAN 40 |
 
 #### 2.2.3. Site 100 — SDN Controller & Test (OpenFlow)
 
@@ -747,10 +747,10 @@ graph TB
 | 6 | vEdge2-S200 — ge0/0 = 203.0.113.9/30 | Internet — Gi0/5 = 203.0.113.10/30 | 203.0.113.8/30 | WAN Internet (TLOC) |
 | 7 | SwitchBrand — e0/0 = — | SW55 — e0/0 = — | Trunk (60,99) | L2 |
 | 8 | SwitchBrand — e0/1 = — | SW56 — e0/0 = — | Trunk (70,99) | L2 |
-| 9 | SW55 — e0/1 = — | VPC43 (PC NN-1) — eth0 = 10.2.60.10/24 | VLAN 60 | gw 10.2.60.1 |
-| 10 | SW55 — e0/2 = — | VPC44 (PC NN-2) — eth0 = 10.2.60.11/24 | VLAN 60 | Access VLAN 60 |
-| 11 | SW56 — e0/1 = — | VPC46 (PC YT-1) — eth0 = 10.2.70.10/24 | VLAN 70 | gw 10.2.70.1 |
-| 12 | SW56 — e0/2 = — | VPC47 (PC YT-2) — eth0 = 10.2.70.11/24 | VLAN 70 | Access VLAN 70 |
+| 9 | SW55 — e0/1 = — | VPC43 (PC NN-1) — eth0 = DHCP (10.2.60.100–.199) | VLAN 60 | gw 10.2.60.1 |
+| 10 | SW55 — e0/2 = — | VPC44 (PC NN-2) — eth0 = DHCP (10.2.60.100–.199) | VLAN 60 | Access VLAN 60 |
+| 11 | SW56 — e0/1 = — | VPC46 (PC YT-1) — eth0 = DHCP (10.2.70.100–.199) | VLAN 70 | gw 10.2.70.1 |
+| 12 | SW56 — e0/2 = — | VPC47 (PC YT-2) — eth0 = DHCP (10.2.70.100–.199) | VLAN 70 | Access VLAN 70 |
 
 #### 2.2.5. Đà Nẵng — Site 300
 
@@ -764,10 +764,10 @@ graph TB
 | 6 | vEdge2-S300 — ge0/0 = 203.0.113.13/30 | Internet — Gi0/6 = 203.0.113.14/30 | 203.0.113.12/30 | WAN Internet (TLOC) |
 | 7 | SwitchBrand — e0/1 = — | SW58 — e0/0 = — | Trunk (80,99) | L2 |
 | 8 | SwitchBrand — e0/2 = — | SW59 — e0/0 = — | Trunk (90,99) | L2 |
-| 9 | SW58 — e0/1 = — | VPC50 (PC DL-1) — eth0 = 10.3.80.10/24 | VLAN 80 | gw 10.3.80.1 |
-| 10 | SW58 — e0/2 = — | VPC54 (PC DL-2) — eth0 = 10.3.80.11/24 | VLAN 80 | Access VLAN 80 |
-| 11 | SW59 — e0/1 = — | VPC53 (PC TC-1) — eth0 = 10.3.90.10/24 | VLAN 90 | gw 10.3.90.1 |
-| 12 | SW59 — e0/2 = — | VPC48 (PC TC-2) — eth0 = 10.3.90.11/24 | VLAN 90 | Access VLAN 90 |
+| 9 | SW58 — e0/1 = — | VPC50 (PC DL-1) — eth0 = DHCP (10.3.80.100–.199) | VLAN 80 | gw 10.3.80.1 |
+| 10 | SW58 — e0/2 = — | VPC54 (PC DL-2) — eth0 = DHCP (10.3.80.100–.199) | VLAN 80 | Access VLAN 80 |
+| 11 | SW59 — e0/1 = — | VPC53 (PC TC-1) — eth0 = DHCP (10.3.90.100–.199) | VLAN 90 | gw 10.3.90.1 |
+| 12 | SW59 — e0/2 = — | VPC48 (PC TC-2) — eth0 = DHCP (10.3.90.100–.199) | VLAN 90 | Access VLAN 90 |
 
 #### 2.2.6. Nha Trang — Site 400
 
@@ -781,10 +781,10 @@ graph TB
 | 6 | vEdge2-S400 — ge0/0 = 203.0.113.17/30 | Internet — Gi0/7 = 203.0.113.18/30 | 203.0.113.16/30 | WAN Internet (TLOC) |
 | 7 | SwitchBrand — e0/1 = — | SW60 — e0/0 = — | Trunk (50,99) | L2 |
 | 8 | SwitchBrand — e0/2 = — | SW57 — e0/0 = — | Trunk (60,99) | L2 |
-| 9 | SW60 — e0/1 = — | VPC51 (PC TS-1) — eth0 = 10.4.50.10/24 | VLAN 50 | gw 10.4.50.1 |
-| 10 | SW60 — e0/2 = — | VPC45 (PC TS-2) — eth0 = 10.4.50.11/24 | VLAN 50 | Access VLAN 50 |
-| 11 | SW57 — e0/1 = — | VPC49 (PC LH-1) — eth0 = 10.4.60.10/24 | VLAN 60 | gw 10.4.60.1 |
-| 12 | SW57 — e0/2 = — | VPC52 (PC LH-2) — eth0 = 10.4.60.11/24 | VLAN 60 | Access VLAN 60 |
+| 9 | SW60 — e0/1 = — | VPC51 (PC TS-1) — eth0 = DHCP (10.4.50.100–.199) | VLAN 50 | gw 10.4.50.1 |
+| 10 | SW60 — e0/2 = — | VPC45 (PC TS-2) — eth0 = DHCP (10.4.50.100–.199) | VLAN 50 | Access VLAN 50 |
+| 11 | SW57 — e0/1 = — | VPC49 (PC LH-1) — eth0 = DHCP (10.4.60.100–.199) | VLAN 60 | gw 10.4.60.1 |
+| 12 | SW57 — e0/2 = — | VPC52 (PC LH-2) — eth0 = DHCP (10.4.60.100–.199) | VLAN 60 | Access VLAN 60 |
 
 #### 2.2.7. SD-WAN Controller — Site 900
 
@@ -851,7 +851,7 @@ graph TB
 | **SwitchServerFarm** | SVI (Mgmt) | 10.1.99.32 | /24 | L2 Switch khu Server Farm (uplink kép tới 2 Core) |
 | **SDN_CONTROLLER** | e0 | 10.1.100.2 | /24 | Management plane SDN (nối SwitchServerFarm e1/0) |
 | **AccessTest** | e2/e3 | — | — | OVS switch (OpenFlow), không đặt IP |
-| **VPC11 / VPC12** | eth0 | 10.1.101.11 / 10.1.101.12 | /24 | Máy test SDN (gw 10.1.101.1) |
+| **VPC11 / VPC12** | eth0 | 10.1.101.11 / 10.1.101.12 | /24 | Máy test SDN (gw 10.1.101.1) — bắt buộc IP tĩnh, mạng test không có DHCP server |
 
 #### 2.3.3. Campus Chính — Site ID 100 (AS 65000)
 
