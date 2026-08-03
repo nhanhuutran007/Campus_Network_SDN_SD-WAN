@@ -12,6 +12,7 @@ Dự án xây dựng Campus Network kết hợp **SD-WAN (Software-Defined Wide 
 - **Chi nhánh Nha Trang (Site ID 400, AS 65030)**: Có Branch Firewall, chia VLAN theo phòng ban (VLAN 50: Thủy sản, VLAN 60: Lữ hành).
 - **SD-WAN Controller Cluster (Site 900)**: vManage, vSmart, vBond (đặt tại Data Center hoặc Cloud).
 - **Hạ tầng WAN**: Internet + MPLS qua Service Provider, IPsec SD-WAN Overlay.
+- **SDN (OpenFlow)**: SDN_CONTROLLER quản lý AccessTest (OVS switch) với 2 máy test VPC11, VPC12 (mạng 10.1.101.0/24), kết nối SwitchServerFarm e1/0 qua 10.1.100.0/24.
 
 ---
 
@@ -38,12 +39,12 @@ subgraph SITE100["CAMPUS CHINH - SITE ID 100 - AS 65000"]
     end
     S1_VE1["vEdge1<br/>System-IP 10.200.100.1"]
     S1_VE2["vEdge2<br/>System-IP 10.200.100.2"]
-    S1_FWA["FW-ASAv-Active<br/>In:10.1.2.1 Out:10.1.3.1<br/>Mgmt:10.1.99.41"]
-    S1_FWS["FW-ASAv-Standby<br/>In:10.1.2.2 Out:10.1.3.2<br/>Mgmt:10.1.99.42"]
+    S1_FWA["FW-ASAv-Active<br/>In:10.1.2.1 Out:10.1.3.1<br/>Mgmt:10.1.99.41 FO:Gi0/5"]
+    S1_FWS["FW-ASAv-Standby<br/>In:10.1.2.2 Out:10.1.3.2<br/>Mgmt:10.1.99.42 FO:Gi0/5"]
     S1_C1["Core-SW1<br/>Loopback 10.1.0.1<br/>VRRP Active - Mgmt 10.1.99.1"]
     S1_C2["Core-SW2<br/>Loopback 10.1.0.2<br/>VRRP Standby - Mgmt 10.1.99.2"]
     S1_D1["Dist-SW1<br/>Mgmt 10.1.99.11 (thuan L2)"]
-    S1_D4["Dist-SW4<br/>Mgmt 10.1.99.14 (thuan L2)"]
+    S1_D2["Dist-SW2<br/>Mgmt 10.1.99.12 (thuan L2)"]
     S1_A1["Access-SW1<br/>VLAN10 CNTT 10.1.10.0/24<br/>VRRP GW 10.1.10.1<br/>Mgmt 10.1.99.21"]
     S1_A2["Access-SW2<br/>VLAN20 TTK 10.1.20.0/24<br/>VRRP GW 10.1.20.1<br/>Mgmt 10.1.99.22"]
     S1_A3["Access-SW3<br/>VLAN30 LUAT 10.1.30.0/24<br/>VRRP GW 10.1.30.1<br/>Mgmt 10.1.99.23"]
@@ -130,23 +131,24 @@ S1_FWA --> S1_C1
 S1_FWA --> S1_C2
 S1_FWS --> S1_C1
 S1_FWS --> S1_C2
+S1_FWA <-->|"Failover Gi0/5"| S1_FWS
 S1_C1 <--> S1_C2
 S1_C1 --> S1_SWSF
 S1_SWSF --> S1_DHCP
 S1_SWSF --> S1_SYSLOG
 S1_C1 --> S1_D1
-S1_C1 --> S1_D4
+S1_C1 --> S1_D2
 S1_C2 --> S1_D1
-S1_C2 --> S1_D4
-S1_D1 <--> S1_D4
+S1_C2 --> S1_D2
+S1_D1 <--> S1_D2
 S1_D1 --> S1_A1
 S1_D1 --> S1_A2
 S1_D1 --> S1_A3
 S1_D1 --> S1_A4
-S1_D4 --> S1_A1
-S1_D4 --> S1_A2
-S1_D4 --> S1_A3
-S1_D4 --> S1_A4
+S1_D2 --> S1_A1
+S1_D2 --> S1_A2
+S1_D2 --> S1_A3
+S1_D2 --> S1_A4
 S1_A1 --> S1_VPC14
 S1_A1 --> S1_VPC19
 S1_A2 --> S1_VPC20
@@ -233,7 +235,7 @@ class S1_WEB,S1_MAIL,S1_SWDMZ dmz
 class S1_DHCP,S1_SYSLOG,S1_SWSF serverfarm
 class S1_FWA,S1_FWS,S2_FW,S3_FW,S4_FW fw
 class S1_C1,S1_C2 core
-class S1_D1,S1_D4 dist
+class S1_D1,S1_D2 dist
 class S1_A1,S1_A2,S1_A3,S1_A4 access
 class S1_VPC14,S1_VPC19,S1_VPC20,S1_VPC21,S1_VPC15,S1_VPC16,S1_VPC17,S1_VPC18 pcnode
 class S2_VPC1,S2_VPC2,S2_VPC3,S2_VPC4,S3_VPC1,S3_VPC2,S3_VPC3,S3_VPC4,S4_VPC1,S4_VPC2,S4_VPC3,S4_VPC4 pcnode
@@ -324,9 +326,9 @@ graph TB
         end
 
         subgraph FWHA["SECURITY ZONE — FIREWALL HA"]
-            FW1_D["FW-ASAv-Active<br/>Inside: 10.1.2.1<br/>Outside: 10.1.3.1<br/>Mgmt: 10.1.99.41"]
-            FW2_D["FW-ASAv-Standby<br/>Inside: 10.1.2.2<br/>Outside: 10.1.3.2<br/>Mgmt: 10.1.99.42"]
-            FW1_D ---|"HA Sync"| FW2_D
+            FW1_D["FW-ASAv-Active<br/>Inside: 10.1.2.1<br/>Outside: 10.1.3.1<br/>Mgmt: 10.1.99.41<br/>Failover: Gi0/5"]
+            FW2_D["FW-ASAv-Standby<br/>Inside: 10.1.2.2<br/>Outside: 10.1.3.2<br/>Mgmt: 10.1.99.42<br/>Failover: Gi0/5"]
+            FW1_D ---|"Failover (Gi0/5) — HA Sync"| FW2_D
         end
 
         subgraph DMZ_D["DMZ ZONE — 10.1.1.0/28"]
@@ -337,7 +339,7 @@ graph TB
 
         subgraph DIST["DISTRIBUTION LAYER<br/>Mgmt VLAN 99"]
             DSW1["Dist-SW1<br/>Mgmt: 10.1.99.11"]
-            DSW4["Dist-SW4<br/>Mgmt: 10.1.99.14"]
+            DSW2["Dist-SW2<br/>Mgmt: 10.1.99.12"]
         end
 
         subgraph ACCESS["ACCESS LAYER<br/>Mgmt VLAN 99"]
@@ -380,19 +382,19 @@ graph TB
     VEDGE2 -->|"Outside Zone"| FW2_D
 
     CSW1 --> DSW1
-    CSW1 --> DSW4
+    CSW1 --> DSW2
     CSW2 --> DSW1
-    CSW2 --> DSW4
-    DSW1 <--> DSW4
+    CSW2 --> DSW2
+    DSW1 <--> DSW2
 
     DSW1 --> ASW1
     DSW1 --> ASW2
     DSW1 --> ASW3
     DSW1 --> ASW4
-    DSW4 --> ASW1
-    DSW4 --> ASW2
-    DSW4 --> ASW3
-    DSW4 --> ASW4
+    DSW2 --> ASW1
+    DSW2 --> ASW2
+    DSW2 --> ASW3
+    DSW2 --> ASW4
 
     ASW1 --- PC_V14
     ASW1 --- PC_V19
@@ -416,7 +418,7 @@ graph TB
     class CSW1,CSW2 core
     class FW1_D,FW2_D fw
     class WEB_D,MAIL_D,SWDMZ dmz
-    class DSW1,DSW4 dist
+    class DSW1,DSW2 dist
     class ASW1,ASW2,ASW3,ASW4 access
     class PC_V14,PC_V19,PC_V20,PC_V21,PC_V15,PC_V16,PC_V17,PC_V18 pc
     class VEDGE1,VEDGE2 edge
@@ -589,140 +591,503 @@ graph TB
 
 ---
 
-## 2. Bảng Quy Hoạch Địa Chỉ IP
+## 2. Bảng Quy Hoạch Địa Chỉ IP (Cập nhật theo Topology .unl)
 
-### 2.1. SD-WAN Controller (Site 900 — Cloud/DC riêng)
+> **Nguồn tham chiếu**: Bảng này được xây dựng lại dựa trên file topology `Campus Network SDN SD-WAN.unl` (EVE-NG). Mỗi dòng trong bảng 2.2 là **một liên kết vật lý thật** trong topology: thiết bị nào — cổng nào — nối sang thiết bị nào — cổng nào, kèm IP cụ thể. Cột IP ghi **"—"** nghĩa là **cổng đó KHÔNG đặt IP** (chỉ cấu hình L2/VLAN).
+
+### 2.0. Nguyên tắc quy hoạch & quy ước đặt IP
+
+| # | Quy ước | Giải thích |
+|---|---|---|
+| 1 | Dải tổng thể `10.0.0.0/8` | Octet 2 = số site: **1** = Campus chính, **2** = Cần Thơ, **3** = Đà Nẵng, **4** = Nha Trang, **9** = SD-WAN Controller. Octet 3 = phân khu, octet 4 = host. |
+| 2 | Mạng VLAN dùng `/24` | Gateway = `.1` (VRRP VIP trên Core hoặc sub-interface trên Brand-FW). Server đặt `.10`, `.11`. |
+| 3 | Liên kết point-to-point dùng `/30` | FW↔Core, FW↔vEdge, vEdge↔vEdge, vEdge↔SP. Quy ước: phía **Firewall** hoặc phía **vEdge** (gần WAN hơn) = `.1`, phía còn lại = `.2`. |
+| 4 | Cổng **CÓ IP** | Cổng L3: router, firewall, switch L3 (SVI/Loopback), System-IP vEdge. |
+| 5 | Cổng **KHÔNG IP** | Cổng access/trunk của switch L2 (nối PC, server, switch L2 khác) — chỉ cấu hình VLAN. |
+| 6 | Loopback OSPF | `10.<site>.0.x/32` (vd: Core-SW1 = 10.1.0.1/32). |
+| 7 | System-IP OMP | `10.200.<site>.x` (vd: Site 100 → 10.200.100.1/2). Chỉ là định danh overlay, **không phải gateway LAN**. |
+| 8 | Mặt WAN | Mặt **Internet** dùng dải public `203.0.113.0/24`; mặt **MPLS** dùng `100.64.x.x/30`. |
+| 9 | Trunk L2 | Mang các VLAN cần thiết: Campus (10/20/30/40/90/99), chi nhánh (VLAN nghiệp vụ + 99). |
+| 10 | VPC (PC ảo) | Đặt IP tĩnh theo ví dụ trong bảng 2.2, hoặc để DHCP cấp (dải `.100 – .199`). |
+
+### 2.1. Tổng hợp bảng subnet theo từng site
+
+#### 2.1.1. Campus chính — Site 100
+
+| Mạng con | VLAN | Vai trò | Ghi chú |
+|---|---|---|---|
+| 10.1.10.0/24 | 10 | Khoa CNTT | VPC14, VPC19 |
+| 10.1.20.0/24 | 20 | Khoa Toán-TK | VPC20, VPC21 |
+| 10.1.30.0/24 | 30 | Khoa Luật | VPC15, VPC16 |
+| 10.1.40.0/24 | 40 | Phòng Hành chính | VPC17, VPC18 |
+| 10.1.90.0/24 | 90 | Server Farm | DHCP + Syslog Server |
+| 10.1.99.0/24 | 99 | Management | IP quản lý switch/FW |
+| 10.1.1.0/28 | — | DMZ | Web, Mail |
+| 10.1.2.0/30, .4/30, .8/30, .12/30 | — | FW Inside ↔ Core | 4 link /30 |
+| 10.1.3.0/30, .4/30, .8/30, .12/30 | — | FW Outside ↔ vEdge | 4 link /30 |
+| 10.1.255.0/29 | — | Failover FW-A ↔ FW-S | Dây Gi0/5 (LAN-FO tùy chọn) |
+| 10.1.0.4/30 | — | Core-SW1 ↔ Core-SW2 (Po10) | 10.1.0.5 / 10.1.0.6 |
+| 10.1.100.0/24 | — | SDN Controller — SwitchServerFarm e1/0 | SDN_CONTROLLER e0 |
+| 10.1.101.0/24 | — | SDN Test (OpenFlow) | AccessTest, VPC11/12 |
+
+#### 2.1.2. Chi nhánh — Site 200 / 300 / 400
+
+| Site | Mạng con | VLAN | Vai trò |
+|---|---|---|---|
+| 200 | 10.2.60.0/24 | 60 | Khoa Nông nghiệp |
+| 200 | 10.2.70.0/24 | 70 | Khoa Y Tế |
+| 200 | 10.2.99.0/24 | 99 | Management |
+| 200 | 10.2.1.0/30, 10.2.1.4/30 | — | FW ↔ vEdge |
+| 200 | 10.2.2.0/30 | — | vEdge1 ↔ vEdge2 |
+| 300 | 10.3.80.0/24 | 80 | Khoa Du lịch |
+| 300 | 10.3.90.0/24 | 90 | Khoa Tài chính |
+| 300 | 10.3.99.0/24 | 99 | Management |
+| 300 | 10.3.1.0/30, 10.3.1.4/30 | — | FW ↔ vEdge |
+| 300 | 10.3.2.0/30 | — | vEdge1 ↔ vEdge2 |
+| 400 | 10.4.50.0/24 | 50 | Khoa Thủy sản |
+| 400 | 10.4.60.0/24 | 60 | Khoa Lữ hành |
+| 400 | 10.4.99.0/24 | 99 | Management |
+| 400 | 10.4.1.0/30, 10.4.1.4/30 | — | FW ↔ vEdge |
+| 400 | 10.4.2.0/30 | — | vEdge1 ↔ vEdge2 |
+
+#### 2.1.3. SD-WAN Controller — Site 900
+
+| Mạng con | Vai trò |
+|---|---|
+| 10.9.0.0/24 | Controller LAN (Switch32): vManager/vSmart/vBond/Win/vEdge65 |
+| 10.9.1.0/24 | Controller uplink Cloud (Switch61) |
+| 203.0.113.244/30 | vEdge65 WAN ↔ Switch32 |
+| 203.0.113.248/30 | Switch32 ↔ Internet |
+| 100.64.255.248/30 | Switch32 ↔ MPLS |
+
+#### 2.1.4. Service Provider (WAN)
+
+| Mạng con | Vai trò |
+|---|---|
+| 203.0.113.0/24 | Public cloud (Internet Gi0/0 = 203.0.113.254/24; vBond NAT 1:1 → 203.0.113.100) |
+| 203.0.113.0/30, .4/30, .8/30, .12/30, .16/30 | Transit Internet ↔ vEdge (mỗi site 1 link) |
+| 100.64.254.0/30 | Internet ↔ MPLS (backbone SP) |
+| 100.64.100.0/30, 100.64.100.4/30 | MPLS ↔ vEdge Site 100 |
+| 100.64.200.0/30 | MPLS ↔ vEdge Site 200 |
+| 100.64.300.0/30 | MPLS ↔ vEdge Site 300 |
+| 100.64.400.0/30 | MPLS ↔ vEdge Site 400 |
+
+### 2.2. Bảng kết nối cổng chi tiết (thiết bị — cổng — IP)
+
+> Quy ước: cột **Đầu A / Đầu B** ghi `Thiết bị — Cổng = IP`. IP ghi **"—"** = **cổng không đặt IP** (chỉ cấu hình VLAN / L2).
+
+#### 2.2.1. Site 100 — Firewall / Core / Server Farm / DMZ
+
+| # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
+|---|---|---|---|---|
+| 1 | FW-ASAv-Active — Gi0/0 = 10.1.2.1/30 | Core-SW1 — Gi1/0 = 10.1.2.2/30 | 10.1.2.0/30 | FW Inside 1 → Core1 (OSPF) |
+| 2 | FW-ASAv-Active — Gi0/1 = 10.1.2.5/30 | Core-SW2 — Gi0/3 = 10.1.2.6/30 | 10.1.2.4/30 | FW Inside 2 → Core2 |
+| 3 | FW-ASAv-Standby — Gi0/0 = 10.1.2.9/30 | Core-SW2 — Gi1/0 = 10.1.2.10/30 | 10.1.2.8/30 | FW Inside 3 → Core2 |
+| 4 | FW-ASAv-Standby — Gi0/1 = 10.1.2.13/30 | Core-SW1 — Gi0/3 = 10.1.2.14/30 | 10.1.2.12/30 | FW Inside 4 → Core1 |
+| 5 | FW-ASAv-Active — Gi0/2 = 10.1.3.1/30 | vEdge1-S100 — ge0/0 = 10.1.3.2/30 | 10.1.3.0/30 | FW Outside 1 → vEdge1 (VPN 512) |
+| 6 | FW-ASAv-Active — Gi0/3 = 10.1.3.5/30 | vEdge2-S100 — ge0/1 = 10.1.3.6/30 | 10.1.3.4/30 | FW Outside 2 → vEdge2 |
+| 7 | FW-ASAv-Standby — Gi0/2 = 10.1.3.9/30 | vEdge2-S100 — ge0/0 = 10.1.3.10/30 | 10.1.3.8/30 | FW Outside 3 → vEdge2 |
+| 8 | FW-ASAv-Standby — Gi0/3 = 10.1.3.13/30 | vEdge1-S100 — ge0/1 = 10.1.3.14/30 | 10.1.3.12/30 | FW Outside 4 → vEdge1 |
+| 9 | FW-ASAv-Active — Gi0/4 = 10.1.1.1/28 | SwitchDMZ — e0/2 = — | 10.1.1.0/28 | Interface DMZ (gateway DMZ) |
+| 10 | FW-ASAv-Standby — Gi0/4 = 10.1.1.2/28 | SwitchDMZ — e0/3 = — | 10.1.1.0/28 | Interface DMZ (dự phòng) |
+| 11 | Web-Server — e0 = 10.1.1.10/28 (gw 10.1.1.1) | SwitchDMZ — e0/0 = — | 10.1.1.0/28 | Access DMZ |
+| 12 | Mail-Server — e0 = 10.1.1.11/28 (gw 10.1.1.1) | SwitchDMZ — e0/1 = — | 10.1.1.0/28 | Access DMZ |
+| 13 | FW-ASAv-Active — Gi0/5 (Failover) | FW-ASAv-Standby — Gi0/5 (Failover) | — (LAN-FO: 10.1.255.0/29) | Dây Failover/HA-Sync — không đặt IP thông thường |
+| 14 | Core-SW1 — Po10 (Gi0/0+Gi0/1) = 10.1.0.5/30 | Core-SW2 — Po10 (Gi0/0+Gi0/1) = 10.1.0.6/30 | 10.1.0.4/30 | EtherChannel giữa 2 Core |
+| 15 | Core-SW1 — Gi1/1 = — | SwitchServerFarm — e0/0 = — | Trunk (90,99) | L2 trunk → Server Farm |
+| 16 | Core-SW2 — Gi1/1 = — | SwitchServerFarm — e0/3 = — | Trunk (90,99) | L2 trunk → Server Farm |
+| 17 | DHCP-Server — e0 = 10.1.90.10/24 | SwitchServerFarm — e0/1 = — | 10.1.90.0/24 | Access VLAN 90 |
+| 18 | Syslog-Server — e0 = 10.1.90.11/24 | SwitchServerFarm — e0/2 = — | 10.1.90.0/24 | Access VLAN 90 |
+
+#### 2.2.2. Site 100 — Distribution / Access / PC
+
+| # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
+|---|---|---|---|---|
+| 18 | Core-SW1 — Gi0/2 = — | Dist-SW1 — e6 = — | Trunk | L2 Core → Dist |
+| 19 | Core-SW1 — Gi1/2 = — | Dist-SW2 — e7 = — | Trunk | L2 Core → Dist |
+| 20 | Core-SW2 — Gi0/2 = — | Dist-SW2 — e6 = — | Trunk | L2 Core → Dist |
+| 21 | Core-SW2 — Gi1/2 = — | Dist-SW1 — e7 = — | Trunk | L2 Core → Dist |
+| 22 | Dist-SW1 — e5 = — | Dist-SW2 — e5 = — | Trunk | L2 Dist ↔ Dist |
+| 23 | Dist-SW1 — e1 = — | Access-SW1 — e1 = — | Trunk | L2 Dist → Access |
+| 24 | Dist-SW1 — e2 = — | Access-SW2 — e1 = — | Trunk | L2 Dist → Access |
+| 25 | Dist-SW1 — e3 = — | Access-SW3 — e1 = — | Trunk | L2 Dist → Access |
+| 26 | Dist-SW1 — e4 = — | Access-SW4 — e1 = — | Trunk | L2 Dist → Access |
+| 27 | Dist-SW2 — e1 = — | Access-SW1 — e2 = — | Trunk | L2 Dist → Access |
+| 28 | Dist-SW2 — e2 = — | Access-SW2 — e2 = — | Trunk | L2 Dist → Access |
+| 29 | Dist-SW2 — e3 = — | Access-SW3 — e2 = — | Trunk | L2 Dist → Access |
+| 30 | Dist-SW2 — e4 = — | Access-SW4 — e2 = — | Trunk | L2 Dist → Access |
+| 31 | Access-SW1 — e3 = — | VPC14 (PC CNTT-1) — eth0 = 10.1.10.10/24 | VLAN 10 | Access VLAN 10, gw 10.1.10.1 |
+| 32 | Access-SW1 — e4 = — | VPC19 (PC CNTT-2) — eth0 = 10.1.10.11/24 | VLAN 10 | Access VLAN 10 |
+| 33 | Access-SW2 — e3 = — | VPC20 (PC TTK-1) — eth0 = 10.1.20.10/24 | VLAN 20 | gw 10.1.20.1 |
+| 34 | Access-SW2 — e4 = — | VPC21 (PC TTK-2) — eth0 = 10.1.20.11/24 | VLAN 20 | Access VLAN 20 |
+| 35 | Access-SW3 — e3 = — | VPC15 (PC Luật-1) — eth0 = 10.1.30.10/24 | VLAN 30 | gw 10.1.30.1 |
+| 36 | Access-SW3 — e4 = — | VPC16 (PC Luật-2) — eth0 = 10.1.30.11/24 | VLAN 30 | Access VLAN 30 |
+| 37 | Access-SW4 — e3 = — | VPC17 (PC HC-1) — eth0 = 10.1.40.10/24 | VLAN 40 | gw 10.1.40.1 |
+| 38 | Access-SW4 — e4 = — | VPC18 (PC HC-2) — eth0 = 10.1.40.11/24 | VLAN 40 | Access VLAN 40 |
+
+#### 2.2.3. Site 100 — SDN Controller & Test (OpenFlow)
+
+| # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
+|---|---|---|---|---|
+| 39 | SDN_CONTROLLER — e0 = 10.1.100.2/24 | SwitchServerFarm — e1/0 = — | 10.1.100.0/24 | Management plane SDN |
+| 40 | AccessTest — e2 = — | VPC11 — eth0 = 10.1.101.11/24 | 10.1.101.0/24 | gw 10.1.101.1 |
+| 41 | AccessTest — e3 = — | VPC12 — eth0 = 10.1.101.12/24 | 10.1.101.0/24 | gw 10.1.101.1 |
+
+> **Lưu ý**: AccessTest là OVS switch (OpenFlow) do SDN_CONTROLLER quản lý — các cổng e2/e3 chỉ cấu hình L2, không đặt IP. AccessTest là thiết bị **test độc lập**: khi test, nối **trực tiếp** cổng e1 của AccessTest với cổng e1 của SDN_CONTROLLER (control plane, dải 192.168.100.0/24 theo hướng dẫn OVS).
+
+#### 2.2.4. Cần Thơ — Site 200
+
+| # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
+|---|---|---|---|---|
+| 1 | Brand-FW — Gi0/1 = 10.2.1.1/30 | vEdge1-S200 — ge0/0 = 10.2.1.2/30 | 10.2.1.0/30 | Outside → vEdge1 |
+| 2 | Brand-FW — Gi0/2 = 10.2.1.5/30 | vEdge2-S200 — ge0/1 = 10.2.1.6/30 | 10.2.1.4/30 | Outside → vEdge2 |
+| 3 | Brand-FW — Gi0/0.60 = 10.2.60.1/24, Gi0/0.70 = 10.2.70.1/24, Gi0/0.99 = 10.2.99.1/24 | SwitchBrand — e0/2 = — | Trunk (60,70,99) | Sub-interface (router-on-a-stick) |
+| 4 | vEdge1-S200 — ge0/3 = 10.2.2.1/30 | vEdge2-S200 — ge0/2 = 10.2.2.2/30 | 10.2.2.0/30 | Liên kết 2 vEdge (redundancy) |
+| 5 | vEdge1-S200 — ge0/2 = 100.64.200.1/30 | MPLS — Gi0/4 = 100.64.200.2/30 | 100.64.200.0/30 | WAN MPLS (TLOC) |
+| 6 | vEdge2-S200 — ge0/0 = 203.0.113.9/30 | Internet — Gi0/5 = 203.0.113.10/30 | 203.0.113.8/30 | WAN Internet (TLOC) |
+| 7 | SwitchBrand — e0/0 = — | SW55 — e0/0 = — | Trunk (60,99) | L2 |
+| 8 | SwitchBrand — e0/1 = — | SW56 — e0/0 = — | Trunk (70,99) | L2 |
+| 9 | SW55 — e0/1 = — | VPC43 (PC NN-1) — eth0 = 10.2.60.10/24 | VLAN 60 | gw 10.2.60.1 |
+| 10 | SW55 — e0/2 = — | VPC44 (PC NN-2) — eth0 = 10.2.60.11/24 | VLAN 60 | Access VLAN 60 |
+| 11 | SW56 — e0/1 = — | VPC46 (PC YT-1) — eth0 = 10.2.70.10/24 | VLAN 70 | gw 10.2.70.1 |
+| 12 | SW56 — e0/2 = — | VPC47 (PC YT-2) — eth0 = 10.2.70.11/24 | VLAN 70 | Access VLAN 70 |
+
+#### 2.2.5. Đà Nẵng — Site 300
+
+| # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
+|---|---|---|---|---|
+| 1 | Brand-FW — Gi0/1 = 10.3.1.1/30 | vEdge1-S300 — ge0/2 = 10.3.1.2/30 | 10.3.1.0/30 | Outside → vEdge1 |
+| 2 | Brand-FW — Gi0/0 = 10.3.1.5/30 | vEdge2-S300 — ge0/2 = 10.3.1.6/30 | 10.3.1.4/30 | Outside → vEdge2 |
+| 3 | Brand-FW — Gi0/2.80 = 10.3.80.1/24, Gi0/2.90 = 10.3.90.1/24, Gi0/2.99 = 10.3.99.1/24 | SwitchBrand — e0/0 = — | Trunk (80,90,99) | Sub-interface |
+| 4 | vEdge1-S300 — ge0/1 = 10.3.2.1/30 | vEdge2-S300 — ge0/1 = 10.3.2.2/30 | 10.3.2.0/30 | Liên kết 2 vEdge |
+| 5 | vEdge1-S300 — ge0/0 = 100.64.300.1/30 | MPLS — Gi0/5 = 100.64.300.2/30 | 100.64.300.0/30 | WAN MPLS (TLOC) |
+| 6 | vEdge2-S300 — ge0/0 = 203.0.113.13/30 | Internet — Gi0/6 = 203.0.113.14/30 | 203.0.113.12/30 | WAN Internet (TLOC) |
+| 7 | SwitchBrand — e0/1 = — | SW58 — e0/0 = — | Trunk (80,99) | L2 |
+| 8 | SwitchBrand — e0/2 = — | SW59 — e0/0 = — | Trunk (90,99) | L2 |
+| 9 | SW58 — e0/1 = — | VPC50 (PC DL-1) — eth0 = 10.3.80.10/24 | VLAN 80 | gw 10.3.80.1 |
+| 10 | SW58 — e0/2 = — | VPC54 (PC DL-2) — eth0 = 10.3.80.11/24 | VLAN 80 | Access VLAN 80 |
+| 11 | SW59 — e0/1 = — | VPC53 (PC TC-1) — eth0 = 10.3.90.10/24 | VLAN 90 | gw 10.3.90.1 |
+| 12 | SW59 — e0/2 = — | VPC48 (PC TC-2) — eth0 = 10.3.90.11/24 | VLAN 90 | Access VLAN 90 |
+
+#### 2.2.6. Nha Trang — Site 400
+
+| # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
+|---|---|---|---|---|
+| 1 | Brand-FW — Gi0/0 = 10.4.1.1/30 | vEdge1-S400 — eth0 = 10.4.1.2/30 | 10.4.1.0/30 | Outside → vEdge1 |
+| 2 | Brand-FW — Gi0/1 = 10.4.1.5/30 | vEdge2-S400 — eth0 = 10.4.1.6/30 | 10.4.1.4/30 | Outside → vEdge2 |
+| 3 | Brand-FW — Gi0/2.50 = 10.4.50.1/24, Gi0/2.60 = 10.4.60.1/24, Gi0/2.99 = 10.4.99.1/24 | SwitchBrand — e0/0 = — | Trunk (50,60,99) | Sub-interface |
+| 4 | vEdge1-S400 — ge0/1 = 10.4.2.1/30 | vEdge2-S400 — ge0/1 = 10.4.2.2/30 | 10.4.2.0/30 | Liên kết 2 vEdge |
+| 5 | vEdge1-S400 — ge0/0 = 100.64.400.1/30 | MPLS — Gi0/6 = 100.64.400.2/30 | 100.64.400.0/30 | WAN MPLS (TLOC) |
+| 6 | vEdge2-S400 — ge0/0 = 203.0.113.17/30 | Internet — Gi0/7 = 203.0.113.18/30 | 203.0.113.16/30 | WAN Internet (TLOC) |
+| 7 | SwitchBrand — e0/1 = — | SW60 — e0/0 = — | Trunk (50,99) | L2 |
+| 8 | SwitchBrand — e0/2 = — | SW57 — e0/0 = — | Trunk (60,99) | L2 |
+| 9 | SW60 — e0/1 = — | VPC51 (PC TS-1) — eth0 = 10.4.50.10/24 | VLAN 50 | gw 10.4.50.1 |
+| 10 | SW60 — e0/2 = — | VPC45 (PC TS-2) — eth0 = 10.4.50.11/24 | VLAN 50 | Access VLAN 50 |
+| 11 | SW57 — e0/1 = — | VPC49 (PC LH-1) — eth0 = 10.4.60.10/24 | VLAN 60 | gw 10.4.60.1 |
+| 12 | SW57 — e0/2 = — | VPC52 (PC LH-2) — eth0 = 10.4.60.11/24 | VLAN 60 | Access VLAN 60 |
+
+#### 2.2.7. SD-WAN Controller — Site 900
+
+| # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
+|---|---|---|---|---|
+| 1 | vManager — eth0 = 10.9.0.10/24 | Switch32 — Gi0/2 = — | 10.9.0.0/24 | Controller LAN (VLAN 10) |
+| 2 | vSmart — eth0 = 10.9.0.11/24 | Switch32 — Gi0/1 = — | 10.9.0.0/24 | Controller LAN |
+| 3 | vBond — ge0/0 = 10.9.0.12/24 | Switch32 — Gi0/0 = — | 10.9.0.0/24 | Controller LAN |
+| 4 | Win (Quản trị) — e0 = 10.9.0.20/24 (gw 10.9.0.2) | Switch32 — Gi0/3 = — | 10.9.0.0/24 | Máy quản trị truy cập vManager |
+| 5 | vEdge65 — ge0/1 = 10.9.0.100/24 | Switch32 — Gi1/3 = — | 10.9.0.0/24 | LAN vEdge65 (VPN 512) |
+| 6 | vEdge65 — ge0/0 = 203.0.113.245/30 | Switch32 — Gi1/2 = 203.0.113.246/30 | 203.0.113.244/30 | WAN vEdge65 (TLOC) |
+| 7 | Internet — Gi0/2 = 203.0.113.250/30 | Switch32 — Gi1/0 = 203.0.113.249/30 | 203.0.113.248/30 | Uplink Internet của Controller |
+| 8 | MPLS — Gi0/1 = 100.64.255.250/30 | Switch32 — Gi1/1 = 100.64.255.249/30 | 100.64.255.248/30 | Uplink MPLS của Controller |
+| 9 | Switch32 — SVI VLAN 10 = 10.9.0.2/24 | — | 10.9.0.0/24 | Gateway Controller LAN |
+| 10 | Switch61 — e0/0 = — | Cloud "Net" — — | — | Uplink cloud (Internet) |
+| 11 | vManager — eth1 = 10.9.1.10/24 | Switch61 — e0/1 = — | 10.9.1.0/24 | Mặt cloud của vManager |
+| 12 | vSmart — eth1 = 10.9.1.11/24 | Switch61 — e0/2 = — | 10.9.1.0/24 | Mặt cloud của vSmart |
+| 13 | vBond — eth0 = 10.9.1.12/24 | Switch61 — e0/3 = — | 10.9.1.0/24 | Mặt cloud của vBond (NAT 1:1 → 203.0.113.100) |
+| 14 | Switch61 — SVI = 10.9.1.1/24 | — | 10.9.1.0/24 | Gateway mạng cloud |
+
+> **Lưu ý**: Cổng WAN của Switch32 (Gi1/0, Gi1/1, Gi1/2) cho vào VLAN riêng (vd 250/251/252) và đặt IP trên SVI tương ứng; các cổng Gi0/0–Gi0/3, Gi1/3 để VLAN 10 (Controller LAN).
+
+#### 2.2.8. Service Provider — Internet / MPLS
+
+| # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
+|---|---|---|---|---|
+| 1 | Internet — Gi0/1 = 100.64.254.1/30 | MPLS — Gi0/0 = 100.64.254.2/30 | 100.64.254.0/30 | Backbone SP (Internet ↔ MPLS) |
+| 2 | Internet — Gi0/0 = 203.0.113.254/24 | Cloud "Net" — — | 203.0.113.0/24 | Gateway public ra Internet |
+| 3 | Internet — Gi0/4 = 203.0.113.2/30 | vEdge1-S100 — ge0/3 = 203.0.113.1/30 | 203.0.113.0/30 | WAN Internet vEdge1-S100 |
+| 4 | Internet — Gi0/3 = 203.0.113.6/30 | vEdge2-S100 — ge0/2 = 203.0.113.5/30 | 203.0.113.4/30 | WAN Internet vEdge2-S100 |
+| 5 | Internet — Gi0/5 = 203.0.113.10/30 | vEdge2-S200 — ge0/0 = 203.0.113.9/30 | 203.0.113.8/30 | WAN Internet vEdge2-S200 |
+| 6 | Internet — Gi0/6 = 203.0.113.14/30 | vEdge2-S300 — ge0/0 = 203.0.113.13/30 | 203.0.113.12/30 | WAN Internet vEdge2-S300 |
+| 7 | Internet — Gi0/7 = 203.0.113.18/30 | vEdge2-S400 — ge0/0 = 203.0.113.17/30 | 203.0.113.16/30 | WAN Internet vEdge2-S400 |
+| 8 | MPLS — Gi0/3 = 100.64.100.2/30 | vEdge1-S100 — ge0/2 = 100.64.100.1/30 | 100.64.100.0/30 | WAN MPLS vEdge1-S100 |
+| 9 | MPLS — Gi0/2 = 100.64.100.6/30 | vEdge2-S100 — ge0/3 = 100.64.100.5/30 | 100.64.100.4/30 | WAN MPLS vEdge2-S100 |
+| 10 | MPLS — Gi0/4 = 100.64.200.2/30 | vEdge1-S200 — ge0/2 = 100.64.200.1/30 | 100.64.200.0/30 | WAN MPLS vEdge1-S200 |
+| 11 | MPLS — Gi0/5 = 100.64.300.2/30 | vEdge1-S300 — ge0/0 = 100.64.300.1/30 | 100.64.300.0/30 | WAN MPLS vEdge1-S300 |
+| 12 | MPLS — Gi0/6 = 100.64.400.2/30 | vEdge1-S400 — ge0/0 = 100.64.400.1/30 | 100.64.400.0/30 | WAN MPLS vEdge1-S400 |
+
+### 2.3. Bảng IP theo từng thiết bị (tham khảo nhanh khi cấu hình)
+
+#### 2.3.1. SD-WAN Controller — Site 900
+
+| Thiết bị | Interface | IP Address | Subnet | Vai trò |
+|---|---|---|---|---|
+| **Switch61 (tầng trên)** | SVI | 10.9.1.1 | /24 | Gateway mạng cloud, nối vManager/vSmart/vBond |
+| **Switch32 (tầng dưới)** | SVI VLAN 10 | 10.9.0.2 | /24 | Gateway Controller LAN, nối SP + Win + vEdge65 |
+| **vManager** | eth0 / eth1 | 10.9.0.10 / 10.9.1.10 | /24 | Quản lý & cấu hình tập trung |
+| **vSmart** | eth0 / eth1 | 10.9.0.11 / 10.9.1.11 | /24 | Điều khiển định tuyến overlay (OMP) |
+| **vBond** | ge0/0 / eth0 | 10.9.0.12 / 10.9.1.12 | /24 | Xác thực & onboard Edge (NAT 1:1 → 203.0.113.100) |
+| **Win (Quản trị)** | e0 | 10.9.0.20 | /24 | Máy quản trị truy cập vManager |
+| **vEdge65** | ge0/1 | 10.9.0.100 | /24 | LAN vEdge Site 900 (VPN 512) |
+| **vEdge65** | ge0/0 | 203.0.113.245 | /30 | WAN vEdge Site 900 (TLOC) |
+
+#### 2.3.2. Network Services — Campus chính
 
 | Thành phần | Interface | IP Address | Subnet | Vai trò |
 |---|---|---|---|---|
-| **Switch (tầng trên)** | — | 10.9.0.1 | /16 | Aggregation, nối Net/vManager/vSmart/vBond |
-| **vManager** | eth0 | 10.9.0.10 | /16 | Quản lý & cấu hình tập trung |
-| **vSmart** | eth0 | 10.9.0.11 | /16 | Điều khiển định tuyến overlay (OMP) |
-| **vBond** | eth0 | 10.9.0.12 | /16 | Xác thực & onboard Edge mới (+ public 203.0.113.100) |
-| **Switch (tầng dưới)** | — | 10.9.0.2 | /16 | Nối xuống Service Provider + Win |
-| **Win (Quản trị)** | eth0 | 10.9.0.20 | /16 | Máy quản trị truy cập vManager |
+| **Web-Server** | e0 | 10.1.1.10 | /28 | Web Server — DMZ (gw 10.1.1.1) |
+| **Mail-Server** | e0 | 10.1.1.11 | /28 | Mail Server — DMZ (gw 10.1.1.1) |
+| **DHCP-Server** | e0 | 10.1.90.10 | /24 | Cấp IP động (relay từ Core SVIs) |
+| **Syslog-Server** | e0 | 10.1.90.11 | /24 | Centralized Logging |
+| **SwitchDMZ** | SVI (Mgmt) | 10.1.99.31 | /24 | L2 Switch khu DMZ (uplink kép tới FW) |
+| **SwitchServerFarm** | SVI (Mgmt) | 10.1.99.32 | /24 | L2 Switch khu Server Farm (uplink kép tới 2 Core) |
+| **SDN_CONTROLLER** | e0 | 10.1.100.2 | /24 | Management plane SDN (nối SwitchServerFarm e1/0) |
+| **AccessTest** | e2/e3 | — | — | OVS switch (OpenFlow), không đặt IP |
+| **VPC11 / VPC12** | eth0 | 10.1.101.11 / 10.1.101.12 | /24 | Máy test SDN (gw 10.1.101.1) |
 
-### 2.2. Network Services — Campus Chính
-
-| Thành phần | Interface | IP Address | Subnet | Vai trò |
-|---|---|---|---|---|
-| **Web-Server** | eth0 | 10.1.1.10 | /28 | Web Server (Public) — DMZ |
-| **Mail-Server** | eth0 | 10.1.1.11 | /28 | Mail Server — DMZ |
-| **DHCP-Server** | eth0 | 10.1.90.10 | /24 | Server cấp IP động (VLAN 10/20/30/40) |
-| **Syslog-Server** | eth0 | 10.1.90.11 | /24 | Centralized Logging |
-| **SwitchDMZ** | Mgmt | 10.1.99.31 | /24 | L2 Switch khu DMZ (uplink kép tới FW) |
-| **SwitchServerFarm** | Mgmt | 10.1.99.32 | /24 | L2 Switch khu Server Farm (uplink đơn tới Core1) |
-
-### 2.3. Campus Chính — Site ID 100 (AS 65000)
+#### 2.3.3. Campus Chính — Site ID 100 (AS 65000)
 
 | Thành phần | Interface | IP Address | Subnet | VLAN | Vai trò |
 |---|---|---|---|---|---|
-| **FW-ASAv-Active** | Outside | 10.1.3.1 | /29 | — | Segment ngoài (FW↔vEdge) |
-| **FW-ASAv-Active** | Inside | 10.1.2.1 | /29 | — | Segment trong (FW↔Core) |
+| **FW-ASAv-Active** | Gi0/0 | 10.1.2.1 | /30 | — | Inside 1 → Core-SW1 |
+| **FW-ASAv-Active** | Gi0/1 | 10.1.2.5 | /30 | — | Inside 2 → Core-SW2 |
+| **FW-ASAv-Active** | Gi0/2 | 10.1.3.1 | /30 | — | Outside 1 → vEdge1 |
+| **FW-ASAv-Active** | Gi0/3 | 10.1.3.5 | /30 | — | Outside 2 → vEdge2 |
+| **FW-ASAv-Active** | Gi0/4 | 10.1.1.1 | /28 | — | DMZ (gateway DMZ) |
 | **FW-ASAv-Active** | Mgmt | 10.1.99.41 | /24 | 99 | Quản lý riêng |
-| **FW-ASAv-Standby**| Outside | 10.1.3.2 | /29 | — | Segment ngoài (FW↔vEdge) |
-| **FW-ASAv-Standby**| Inside | 10.1.2.2 | /29 | — | Segment trong (FW↔Core) |
-| **FW-ASAv-Standby**| Mgmt | 10.1.99.42 | /24 | 99 | Quản lý riêng |
+| **FW-ASAv-Active** | Gi0/5 | — (Failover) | — | — | Dây Failover ↔ FW-Standby (HA Sync) |
+| **FW-ASAv-Standby** | Gi0/0 | 10.1.2.9 | /30 | — | Inside 1 → Core-SW2 |
+| **FW-ASAv-Standby** | Gi0/1 | 10.1.2.13 | /30 | — | Inside 2 → Core-SW1 |
+| **FW-ASAv-Standby** | Gi0/2 | 10.1.3.9 | /30 | — | Outside 1 → vEdge2 |
+| **FW-ASAv-Standby** | Gi0/3 | 10.1.3.13 | /30 | — | Outside 2 → vEdge1 |
+| **FW-ASAv-Standby** | Gi0/4 | 10.1.1.2 | /28 | — | DMZ (dự phòng) |
+| **FW-ASAv-Standby** | Mgmt | 10.1.99.42 | /24 | 99 | Quản lý riêng |
+| **FW-ASAv-Standby** | Gi0/5 | — (Failover) | — | — | Dây Failover ↔ FW-Active (HA Sync) |
 | **Core-SW1** | Loopback0 | 10.1.0.1 | /32 | — | OSPF Router-ID |
-| **Core-SW1** | Po10 | 10.1.0.5 | /30 | — | Port-Channel to Core-SW2 |
-| **Core-SW1** | VLAN10 SVI | 10.1.10.2 | /24 | 10 | Real IP (VRRP VIP: 10.1.10.1) |
-| **Core-SW1** | VLAN20 SVI | 10.1.20.2 | /24 | 20 | Real IP (VRRP VIP: 10.1.20.1) |
-| **Core-SW1** | VLAN30 SVI | 10.1.30.2 | /24 | 30 | Real IP (VRRP VIP: 10.1.30.1) |
-| **Core-SW1** | VLAN40 SVI | 10.1.40.2 | /24 | 40 | Real IP (VRRP VIP: 10.1.40.1) |
-| **Core-SW1** | Mgmt | 10.1.99.1 | /24 | 99 | Quản lý Core1 |
+| **Core-SW1** | Po10 | 10.1.0.5 | /30 | — | EtherChannel ↔ Core-SW2 |
+| **Core-SW1** | VLAN10 SVI | 10.1.10.2 | /24 | 10 | VRRP Active (VIP 10.1.10.1) |
+| **Core-SW1** | VLAN20 SVI | 10.1.20.2 | /24 | 20 | VRRP Active (VIP 10.1.20.1) |
+| **Core-SW1** | VLAN30 SVI | 10.1.30.2 | /24 | 30 | VRRP Active (VIP 10.1.30.1) |
+| **Core-SW1** | VLAN40 SVI | 10.1.40.2 | /24 | 40 | VRRP Active (VIP 10.1.40.1) |
+| **Core-SW1** | VLAN90 SVI | 10.1.90.2 | /24 | 90 | VRRP Active (VIP 10.1.90.1) |
+| **Core-SW1** | VLAN99 SVI | 10.1.99.1 | /24 | 99 | Quản lý Core1 |
 | **Core-SW2** | Loopback0 | 10.1.0.2 | /32 | — | OSPF Router-ID |
-| **Core-SW2** | Po10 | 10.1.0.6 | /30 | — | Port-Channel to Core-SW1 |
-| **Core-SW2** | VLAN10 SVI | 10.1.10.3 | /24 | 10 | Backup IP |
-| **Core-SW2** | VLAN20 SVI | 10.1.20.3 | /24 | 20 | Backup IP |
-| **Core-SW2** | VLAN30 SVI | 10.1.30.3 | /24 | 30 | Backup IP |
-| **Core-SW2** | VLAN40 SVI | 10.1.40.3 | /24 | 40 | Backup IP |
-| **Core-SW2** | Mgmt | 10.1.99.2 | /24 | 99 | Quản lý Core2 |
-| **Dist-SW1** | Mgmt | 10.1.99.11 | /24 | 99 | Switch Distribution 1 (Thuần L2) |
-| **Dist-SW4** | Mgmt | 10.1.99.14 | /24 | 99 | Switch Distribution 4 (Thuần L2) |
-| **Access-SW1** | Mgmt | 10.1.99.21 | /24 | 99 | Truy cập VLAN 10 — CNTT |
-| **Access-SW2** | Mgmt | 10.1.99.22 | /24 | 99 | Truy cập VLAN 20 — TTK |
-| **Access-SW3** | Mgmt | 10.1.99.23 | /24 | 99 | Truy cập VLAN 30 — LUẬT |
-| **Access-SW4** | Mgmt | 10.1.99.24 | /24 | 99 | Truy cập VLAN 40 — Hành chính |
+| **Core-SW2** | Po10 | 10.1.0.6 | /30 | — | EtherChannel ↔ Core-SW1 |
+| **Core-SW2** | VLAN10 SVI | 10.1.10.3 | /24 | 10 | VRRP Standby (VIP 10.1.10.1) |
+| **Core-SW2** | VLAN20 SVI | 10.1.20.3 | /24 | 20 | VRRP Standby (VIP 10.1.20.1) |
+| **Core-SW2** | VLAN30 SVI | 10.1.30.3 | /24 | 30 | VRRP Standby (VIP 10.1.30.1) |
+| **Core-SW2** | VLAN40 SVI | 10.1.40.3 | /24 | 40 | VRRP Standby (VIP 10.1.40.1) |
+| **Core-SW2** | VLAN90 SVI | 10.1.90.3 | /24 | 90 | VRRP Standby (VIP 10.1.90.1) |
+| **Core-SW2** | VLAN99 SVI | 10.1.99.2 | /24 | 99 | Quản lý Core2 |
+| **Dist-SW1** | SVI (Mgmt) | 10.1.99.11 | /24 | 99 | Distribution 1 (thuần L2) |
+| **Dist-SW2** | SVI (Mgmt) | 10.1.99.12 | /24 | 99 | Distribution 2 (thuần L2) |
+| **Access-SW1** | SVI (Mgmt) | 10.1.99.21 | /24 | 99 | Access VLAN 10 — CNTT |
+| **Access-SW2** | SVI (Mgmt) | 10.1.99.22 | /24 | 99 | Access VLAN 20 — TTK |
+| **Access-SW3** | SVI (Mgmt) | 10.1.99.23 | /24 | 99 | Access VLAN 30 — Luật |
+| **Access-SW4** | SVI (Mgmt) | 10.1.99.24 | /24 | 99 | Access VLAN 40 — Hành chính |
+| **vEdge1-S100** | ge0/0 | 10.1.3.2 | /30 | — | VPN 512 → FW-Active Outside |
+| **vEdge1-S100** | ge0/1 | 10.1.3.14 | /30 | — | VPN 512 → FW-Standby Outside |
+| **vEdge1-S100** | ge0/2 | 100.64.100.1 | /30 | — | VPN 0 → MPLS (TLOC) |
+| **vEdge1-S100** | ge0/3 | 203.0.113.1 | /30 | — | VPN 0 → Internet (TLOC) |
+| **vEdge1-S100** | System-IP | 10.200.100.1 | /32 | — | OMP |
+| **vEdge2-S100** | ge0/0 | 10.1.3.10 | /30 | — | VPN 512 → FW-Standby Outside |
+| **vEdge2-S100** | ge0/1 | 10.1.3.6 | /30 | — | VPN 512 → FW-Active Outside |
+| **vEdge2-S100** | ge0/2 | 203.0.113.5 | /30 | — | VPN 0 → Internet (TLOC) |
+| **vEdge2-S100** | ge0/3 | 100.64.100.5 | /30 | — | VPN 0 → MPLS (TLOC) |
+| **vEdge2-S100** | System-IP | 10.200.100.2 | /32 | — | OMP |
 
-### 2.4. Campus Chính — VLAN & DHCP Pool
+#### 2.3.4. Chi nhánh Cần Thơ — Site ID 200 (AS 65010)
+
+| Thành phần | Interface | IP Address | Subnet | Vai trò |
+|---|---|---|---|---|
+| **Brand-FW** | Gi0/0.60 | 10.2.60.1 | /24 | Gateway L3 Khoa Nông nghiệp |
+| **Brand-FW** | Gi0/0.70 | 10.2.70.1 | /24 | Gateway L3 Khoa Y Tế |
+| **Brand-FW** | Gi0/0.99 | 10.2.99.1 | /24 | Gateway Management |
+| **Brand-FW** | Gi0/1 | 10.2.1.1 | /30 | Outside → vEdge1 |
+| **Brand-FW** | Gi0/2 | 10.2.1.5 | /30 | Outside → vEdge2 |
+| **vEdge1-S200** | ge0/0 | 10.2.1.2 | /30 | VPN 512 → Brand-FW |
+| **vEdge1-S200** | ge0/2 | 100.64.200.1 | /30 | VPN 0 → MPLS (TLOC) |
+| **vEdge1-S200** | ge0/3 | 10.2.2.1 | /30 | VPN 512 ↔ vEdge2 |
+| **vEdge1-S200** | System-IP | 10.200.200.1 | /32 | OMP |
+| **vEdge2-S200** | ge0/1 | 10.2.1.6 | /30 | VPN 512 → Brand-FW |
+| **vEdge2-S200** | ge0/0 | 203.0.113.9 | /30 | VPN 0 → Internet (TLOC) |
+| **vEdge2-S200** | ge0/2 | 10.2.2.2 | /30 | VPN 512 ↔ vEdge1 |
+| **vEdge2-S200** | System-IP | 10.200.200.2 | /32 | OMP |
+| **SwitchBrand** | SVI (Mgmt) | 10.2.99.2 | /24 | Trunking (thuần L2) |
+| **SW55 (VLAN 60)** | SVI (Mgmt) | 10.2.99.11 | /24 | Access Switch (Nông nghiệp) |
+| **SW56 (VLAN 70)** | SVI (Mgmt) | 10.2.99.12 | /24 | Access Switch (Y Tế) |
+
+#### 2.3.5. Chi nhánh Đà Nẵng — Site ID 300 (AS 65020)
+
+| Thành phần | Interface | IP Address | Subnet | Vai trò |
+|---|---|---|---|---|
+| **Brand-FW** | Gi0/2.80 | 10.3.80.1 | /24 | Gateway L3 Khoa Du lịch |
+| **Brand-FW** | Gi0/2.90 | 10.3.90.1 | /24 | Gateway L3 Khoa Tài chính |
+| **Brand-FW** | Gi0/2.99 | 10.3.99.1 | /24 | Gateway Management |
+| **Brand-FW** | Gi0/1 | 10.3.1.1 | /30 | Outside → vEdge1 |
+| **Brand-FW** | Gi0/0 | 10.3.1.5 | /30 | Outside → vEdge2 |
+| **vEdge1-S300** | ge0/2 | 10.3.1.2 | /30 | VPN 512 → Brand-FW |
+| **vEdge1-S300** | ge0/0 | 100.64.300.1 | /30 | VPN 0 → MPLS (TLOC) |
+| **vEdge1-S300** | ge0/1 | 10.3.2.1 | /30 | VPN 512 ↔ vEdge2 |
+| **vEdge1-S300** | System-IP | 10.200.300.1 | /32 | OMP |
+| **vEdge2-S300** | ge0/2 | 10.3.1.6 | /30 | VPN 512 → Brand-FW |
+| **vEdge2-S300** | ge0/0 | 203.0.113.13 | /30 | VPN 0 → Internet (TLOC) |
+| **vEdge2-S300** | ge0/1 | 10.3.2.2 | /30 | VPN 512 ↔ vEdge1 |
+| **vEdge2-S300** | System-IP | 10.200.300.2 | /32 | OMP |
+| **SwitchBrand** | SVI (Mgmt) | 10.3.99.2 | /24 | Trunking (thuần L2) |
+| **SW58 (VLAN 80)** | SVI (Mgmt) | 10.3.99.11 | /24 | Access Switch (Du lịch) |
+| **SW59 (VLAN 90)** | SVI (Mgmt) | 10.3.99.12 | /24 | Access Switch (Tài chính) |
+
+#### 2.3.6. Chi nhánh Nha Trang — Site ID 400 (AS 65030)
+
+| Thành phần | Interface | IP Address | Subnet | Vai trò |
+|---|---|---|---|---|
+| **Brand-FW** | Gi0/2.50 | 10.4.50.1 | /24 | Gateway L3 Khoa Thủy sản |
+| **Brand-FW** | Gi0/2.60 | 10.4.60.1 | /24 | Gateway L3 Khoa Lữ hành |
+| **Brand-FW** | Gi0/2.99 | 10.4.99.1 | /24 | Gateway Management |
+| **Brand-FW** | Gi0/0 | 10.4.1.1 | /30 | Outside → vEdge1 |
+| **Brand-FW** | Gi0/1 | 10.4.1.5 | /30 | Outside → vEdge2 |
+| **vEdge1-S400** | eth0 | 10.4.1.2 | /30 | VPN 512 → Brand-FW |
+| **vEdge1-S400** | ge0/0 | 100.64.400.1 | /30 | VPN 0 → MPLS (TLOC) |
+| **vEdge1-S400** | ge0/1 | 10.4.2.1 | /30 | VPN 512 ↔ vEdge2 |
+| **vEdge1-S400** | System-IP | 10.200.400.1 | /32 | OMP |
+| **vEdge2-S400** | eth0 | 10.4.1.6 | /30 | VPN 512 → Brand-FW |
+| **vEdge2-S400** | ge0/0 | 203.0.113.17 | /30 | VPN 0 → Internet (TLOC) |
+| **vEdge2-S400** | ge0/1 | 10.4.2.2 | /30 | VPN 512 ↔ vEdge1 |
+| **vEdge2-S400** | System-IP | 10.200.400.2 | /32 | OMP |
+| **SwitchBrand** | SVI (Mgmt) | 10.4.99.2 | /24 | Trunking (thuần L2) |
+| **SW60 (VLAN 50)** | SVI (Mgmt) | 10.4.99.11 | /24 | Access Switch (Thủy sản) |
+| **SW57 (VLAN 60)** | SVI (Mgmt) | 10.4.99.12 | /24 | Access Switch (Lữ hành) |
+
+#### 2.3.7. Service Provider — Internet / MPLS
+
+| Thành phần | Interface | IP Address | Subnet | Vai trò |
+|---|---|---|---|---|
+| **Internet** | Gi0/0 | 203.0.113.254 | /24 | Gateway public ra Cloud "Net" |
+| **Internet** | Gi0/1 | 100.64.254.1 | /30 | ↔ MPLS Gi0/0 |
+| **Internet** | Gi0/2 | 203.0.113.250 | /30 | ↔ Switch32 Gi1/0 (Controller) |
+| **Internet** | Gi0/3 | 203.0.113.6 | /30 | ↔ vEdge2-S100 |
+| **Internet** | Gi0/4 | 203.0.113.2 | /30 | ↔ vEdge1-S100 |
+| **Internet** | Gi0/5 | 203.0.113.10 | /30 | ↔ vEdge2-S200 |
+| **Internet** | Gi0/6 | 203.0.113.14 | /30 | ↔ vEdge2-S300 |
+| **Internet** | Gi0/7 | 203.0.113.18 | /30 | ↔ vEdge2-S400 |
+| **MPLS** | Gi0/0 | 100.64.254.2 | /30 | ↔ Internet Gi0/1 |
+| **MPLS** | Gi0/1 | 100.64.255.250 | /30 | ↔ Switch32 Gi1/1 (Controller) |
+| **MPLS** | Gi0/2 | 100.64.100.6 | /30 | ↔ vEdge2-S100 |
+| **MPLS** | Gi0/3 | 100.64.100.2 | /30 | ↔ vEdge1-S100 |
+| **MPLS** | Gi0/4 | 100.64.200.2 | /30 | ↔ vEdge1-S200 |
+| **MPLS** | Gi0/5 | 100.64.300.2 | /30 | ↔ vEdge1-S300 |
+| **MPLS** | Gi0/6 | 100.64.400.2 | /30 | ↔ vEdge1-S400 |
+
+### 2.4. VLAN & DHCP Pool
+
+#### 2.4.1. Campus Chính — Site 100
 
 | VLAN ID | Tên VLAN | Mạng con | Gateway (VRRP VIP) | DHCP Range | Phân khu |
 |---|---|---|---|---|---|
-| **10** | Khoa CNTT | 10.1.10.0/24 | 10.1.10.1 | 10.1.10.100 – 10.1.10.200 | VPC14, VPC19 |
-| **20** | Khoa Toán TK | 10.1.20.0/24 | 10.1.20.1 | 10.1.20.100 – 10.1.20.200 | VPC20, VPC21 |
-| **30** | Khoa Luật | 10.1.30.0/24 | 10.1.30.1 | 10.1.30.100 – 10.1.30.200 | VPC15, VPC16 |
-| **40** | Phòng HC | 10.1.40.0/24 | 10.1.40.1 | 10.1.40.100 – 10.1.40.200 | VPC17, VPC18 |
+| **10** | Khoa CNTT | 10.1.10.0/24 | 10.1.10.1 | 10.1.10.100 – 10.1.10.199 | VPC14, VPC19 |
+| **20** | Khoa Toán TK | 10.1.20.0/24 | 10.1.20.1 | 10.1.20.100 – 10.1.20.199 | VPC20, VPC21 |
+| **30** | Khoa Luật | 10.1.30.0/24 | 10.1.30.1 | 10.1.30.100 – 10.1.30.199 | VPC15, VPC16 |
+| **40** | Phòng HC | 10.1.40.0/24 | 10.1.40.1 | 10.1.40.100 – 10.1.40.199 | VPC17, VPC18 |
 | **90** | Server Farm | 10.1.90.0/24 | 10.1.90.1 | Static IP | DHCP/Syslog Server |
-| **99** | Management | 10.1.99.0/24 | — | — | Quản lý IP các Switch |
+| **99** | Management | 10.1.99.0/24 | 10.1.99.1 | Static IP | Quản lý IP các Switch/FW |
 
-### 2.5. Chi nhánh Cần Thơ — Site ID 200 (AS 65010)
+> DHCP Server = DHCP-Server (10.1.90.10). Trên SVI của Core-SW1/Core-SW2 (VLAN 10/20/30/40) khai báo `ip helper-address 10.1.90.10` để relay DHCP.
 
-| Thành phần | Interface | IP Address | Subnet | Vai trò |
-|---|---|---|---|---|
-| **Brand-FW** | Inside (VLAN 60) | 10.2.60.1 | /24 | Gateway L3 cho Khoa Nông nghiệp |
-| **Brand-FW** | Inside (VLAN 70) | 10.2.70.1 | /24 | Gateway L3 cho Khoa Y Tế |
-| **Brand-FW** | Outside | 10.2.1.1 | /24 | Outside nối cEdge |
-| **SwitchBrand** | Mgmt | 10.2.99.1 | /24 | Switch phân phối/Trunking (Thuần L2) |
-| **SW-A (VLAN 60)**| Mgmt | 10.2.99.11 | /24 | Access Switch (Khoa Nông nghiệp) |
-| **SW-B (VLAN 70)**| Mgmt | 10.2.99.12 | /24 | Access Switch (Khoa Y Tế) |
+#### 2.4.2. Chi nhánh — Site 200 / 300 / 400
 
-### 2.6. Chi nhánh Cần Thơ — DHCP & Mạng nội bộ
+| Site | VLAN ID | Tên VLAN | Mạng con | Gateway (Brand-FW) | DHCP Range | Phân khu |
+|---|---|---|---|---|---|---|
+| 200 | **60** | Khoa Nông nghiệp | 10.2.60.0/24 | 10.2.60.1 | 10.2.60.100 – 10.2.60.199 | VPC43, VPC44 |
+| 200 | **70** | Khoa Y Tế | 10.2.70.0/24 | 10.2.70.1 | 10.2.70.100 – 10.2.70.199 | VPC46, VPC47 |
+| 200 | **99** | Management | 10.2.99.0/24 | 10.2.99.1 | Static IP | SwitchBrand/SW55/SW56 |
+| 300 | **80** | Khoa Du lịch | 10.3.80.0/24 | 10.3.80.1 | 10.3.80.100 – 10.3.80.199 | VPC50, VPC54 |
+| 300 | **90** | Khoa Tài chính | 10.3.90.0/24 | 10.3.90.1 | 10.3.90.100 – 10.3.90.199 | VPC53, VPC48 |
+| 300 | **99** | Management | 10.3.99.0/24 | 10.3.99.1 | Static IP | SwitchBrand/SW58/SW59 |
+| 400 | **50** | Khoa Thủy sản | 10.4.50.0/24 | 10.4.50.1 | 10.4.50.100 – 10.4.50.199 | VPC51, VPC45 |
+| 400 | **60** | Khoa Lữ hành | 10.4.60.0/24 | 10.4.60.1 | 10.4.60.100 – 10.4.60.199 | VPC49, VPC52 |
+| 400 | **99** | Management | 10.4.99.0/24 | 10.4.99.1 | Static IP | SwitchBrand/SW60/SW57 |
 
-| VLAN ID | Tên VLAN | Mạng con | Gateway (Brand-FW) | DHCP Range | Phân khu |
+> DHCP cho chi nhánh: cấu hình **DHCP server trên Brand-FW** (scope theo từng VLAN), hoặc relay về DHCP-Server campus (10.1.90.10) qua SD-WAN.
+
+### 2.5. SD-WAN: System-IP (OMP) & TLOC (Underlay)
+
+| Site | Thiết bị | System-IP (OMP) | TLOC Internet | TLOC MPLS | Số đường WAN |
 |---|---|---|---|---|---|
-| **60** | Khoa Nông nghiệp | 10.2.60.0/24 | 10.2.60.1 | 10.2.60.100 – 10.2.60.200 | VPC nhánh Nông nghiệp |
-| **70** | Khoa Y Tế | 10.2.70.0/24 | 10.2.70.1 | 10.2.70.100 – 10.2.70.200 | VPC nhánh Y Tế |
+| Campus (100) | vEdge1 | 10.200.100.1 | 203.0.113.1/30 (ge0/3) | 100.64.100.1/30 (ge0/2) | 2 |
+| Campus (100) | vEdge2 | 10.200.100.2 | 203.0.113.5/30 (ge0/2) | 100.64.100.5/30 (ge0/3) | 2 |
+| Cần Thơ (200) | vEdge1 | 10.200.200.1 | — | 100.64.200.1/30 (ge0/2) | 1 |
+| Cần Thơ (200) | vEdge2 | 10.200.200.2 | 203.0.113.9/30 (ge0/0) | — | 1 |
+| Đà Nẵng (300) | vEdge1 | 10.200.300.1 | — | 100.64.300.1/30 (ge0/0) | 1 |
+| Đà Nẵng (300) | vEdge2 | 10.200.300.2 | 203.0.113.13/30 (ge0/0) | — | 1 |
+| Nha Trang (400) | vEdge1 | 10.200.400.1 | — | 100.64.400.1/30 (ge0/0) | 1 |
+| Nha Trang (400) | vEdge2 | 10.200.400.2 | 203.0.113.17/30 (ge0/0) | — | 1 |
+| Controller (900) | vEdge65 | 10.200.900.1 | 203.0.113.245/30 (ge0/0) | — | 1 |
 
-### 2.7. Chi nhánh Đà Nẵng — Site ID 300 (AS 65020)
+### 2.6. Cấu hình mẫu (tham khảo cho người mới)
 
-| Thành phần | Interface | IP Address | Subnet | Vai trò |
-|---|---|---|---|---|
-| **Brand-FW** | Inside (VLAN 80) | 10.3.80.1 | /24 | Gateway L3 cho Khoa Du lịch |
-| **Brand-FW** | Inside (VLAN 90) | 10.3.90.1 | /24 | Gateway L3 cho Khoa Tài chính |
-| **Brand-FW** | Outside | 10.3.1.1 | /24 | Outside nối cEdge |
-| **SwitchBrand** | Mgmt | 10.3.99.1 | /24 | Switch phân phối/Trunking (Thuần L2) |
-| **SW-A (VLAN 80)**| Mgmt | 10.3.99.11 | /24 | Access Switch (Khoa Du lịch) |
-| **SW-B (VLAN 90)**| Mgmt | 10.3.99.12 | /24 | Access Switch (Khoa Tài chính) |
+**1) Core-SW1 — SVI + VRRP + DHCP relay (VLAN 10):**
 
-### 2.8. Chi nhánh Đà Nẵng — DHCP & Mạng nội bộ
+```
+vlan 10
+ name CNTT
+!
+interface Vlan10
+ ip address 10.1.10.2 255.255.255.0
+ vrrp 10 ip 10.1.10.1
+ vrrp 10 priority 150
+ ip helper-address 10.1.90.10
+```
 
-| VLAN ID | Tên VLAN | Mạng con | Gateway (Brand-FW) | DHCP Range | Phân khu |
-|---|---|---|---|---|---|
-| **80** | Khoa Du lịch | 10.3.80.0/24 | 10.3.80.1 | 10.3.80.100 – 10.3.80.200 | VPC nhánh Du lịch |
-| **90** | Khoa Tài chính | 10.3.90.0/24 | 10.3.90.1 | 10.3.90.100 – 10.3.90.200 | VPC nhánh Tài chính |
+**2) FW-ASAv-Active — Inside / Outside (Site 100):**
 
-### 2.9. Chi nhánh Nha Trang — Site ID 400 (AS 65030)
+```
+interface GigabitEthernet0/0
+ nameif inside
+ security-level 100
+ ip address 10.1.2.1 255.255.255.252
+!
+interface GigabitEthernet0/2
+ nameif outside
+ security-level 0
+ ip address 10.1.3.1 255.255.255.252
+!
+route outside 0.0.0.0 0.0.0.0 10.1.3.2
+```
 
-| Thành phần | Interface | IP Address | Subnet | Vai trò |
-|---|---|---|---|---|
-| **Brand-FW** | Inside (VLAN 50) | 10.4.50.1 | /24 | Gateway L3 cho Khoa Thủy sản |
-| **Brand-FW** | Inside (VLAN 60) | 10.4.60.1 | /24 | Gateway L3 cho Khoa Lữ hành |
-| **Brand-FW** | Outside | 10.4.1.1 | /24 | Outside nối cEdge |
-| **SwitchBrand** | Mgmt | 10.4.99.1 | /24 | Switch phân phối/Trunking (Thuần L2) |
-| **SW-A (VLAN 50)**| Mgmt | 10.4.99.11 | /24 | Access Switch (Khoa Thủy sản) |
-| **SW-B (VLAN 60)**| Mgmt | 10.4.99.12 | /24 | Access Switch (Khoa Lữ hành) |
+**3) vEdge1-S100 — System-IP, WAN (VPN 0) và LAN (VPN 512):**
 
-### 2.10. Chi nhánh Nha Trang — DHCP & Mạng nội bộ
+```
+system
+ system-ip 10.200.100.1
+ site-id 100
+!
+vpn 0
+ interface ge0/3
+  ip address 203.0.113.1/30
+!
+vpn 512
+ interface ge0/0
+  ip address 10.1.3.2/30
+```
 
-| VLAN ID | Tên VLAN | Mạng con | Gateway (Brand-FW) | DHCP Range | Phân khu |
-|---|---|---|---|---|---|
-| **50** | Khoa Thủy sản | 10.4.50.0/24 | 10.4.50.1 | 10.4.50.100 – 10.4.50.200 | VPC nhánh Thủy sản |
-| **60** | Khoa Lữ hành | 10.4.60.0/24 | 10.4.60.1 | 10.4.60.100 – 10.4.60.200 | VPC nhánh Lữ hành |
+**4) Internet router — Cổng nối vEdge1-S100:**
 
-### 2.11. Service Provider Transport & SD-WAN Edge (OMP / TLOC)
+```
+interface GigabitEthernet0/4
+ ip address 203.0.113.2 255.255.255.252
+ no shutdown
+```
 
-| Site | Thiết bị | System IP (OMP) | TLOC (Internet Underlay) | TLOC (MPLS Underlay) | Transit IP |
-|---|---|---|---|---|---|
-| Campus (100) | vEdge1 | 10.200.100.1 | 203.0.113.1/30 | — | — |
-| Campus (100) | vEdge2 | 10.200.100.2 | — | 100.64.100.1/30 | — |
-| Cần Thơ (200) | vEdge1 | 10.200.200.1 | 203.0.113.5/30 | — | 10.2.2.1/30 (với vEdge2) |
-| Cần Thơ (200) | vEdge2 | 10.200.200.2 | — | 100.64.200.1/30 | 10.2.2.2/30 (với vEdge1) |
-| Đà Nẵng (300) | vEdge1 | 10.200.300.1 | 203.0.113.9/30 | — | 10.3.2.1/30 (với vEdge2) |
-| Đà Nẵng (300) | vEdge2 | 10.200.300.2 | — | 100.64.300.1/30 | 10.3.2.2/30 (với vEdge1) |
-| Nha Trang (400)| vEdge1 | 10.200.400.1 | 203.0.113.13/30 | — | 10.4.2.1/30 (với vEdge2) |
-| Nha Trang (400)| vEdge2 | 10.200.400.2 | — | 100.64.400.1/30 | 10.4.2.2/30 (với vEdge1) |
-
-> **Lưu ý**: System IP định danh trên OMP, dạng Loopback. Không dùng làm LAN Gateway.
+> **Lưu ý chung**: (1) Cặp FW-ASAv Active/Standby được nối dây **Failover** tại cổng **Gi0/5** (HA Sync) — dây này không cần IP thông thường; nếu dùng LAN-FO có thể đặt subnet 10.1.255.0/29 (Active: 10.1.255.1, Standby: 10.1.255.2). (2) Các cổng còn trống (FW Gi0/6–Gi0/7, vEdge ge0/4, ...) không sử dụng. (3) System IP chỉ định danh trên OMP (dạng Loopback), **không dùng làm LAN Gateway**.
 
 ---
 
