@@ -64,19 +64,26 @@ FW-ASAv-Active 1, FW-ASAv-Standby 2, Core-SW1 3, Core-SW2 4, Dist-SW1 5, Dist-SW
 4. Giữ đồng bộ: số link giữa md (bảng 2.2.x) và .unl phải khớp.
 5. Chỉ commit khi người dùng yêu cầu (thường là "up lên git"). Message commit tiếng Anh, ngắn gọn; nhánh `main`, remote `nhanhuutran007/Campus_Network_SDN_SD-WAN`.
 
-## Cập nhật `.unl` lên EVE KHÔNG MẤT CẤU HÌNH (QUAN TRỌNG)
+## Cập nhật `.unl` lên EVE — CƠ CHẾ CONFIG NHÚNG (QUAN TRỌNG, HEAD `c4a8e70`)
 
-Cấu hình thiết bị **KHÔNG nằm trong `.unl`** — chúng nằm ở thư mục node trên server (`/opt/unetlab/labs/TranHuuNhan-PKT/Campus Network SDN SD-WAN/<node-id>/config.cfg`). 53 file đã upload và khớp md5 với repo. Quy tắc:
+**Phát hiện quan trọng (đã debug source mã EVE):** khi start node, EVE **CHỈ nạp config từ phần NHÚNG `<configs><config id="N">base64</config>` bên trong `.unl`** (`__lab.php:211–217` ép `config="0"` nếu thiếu phần nhúng; `cli.php:841–843` chỉ dump config khi `config=="1"` VÀ `config_data != ''`). File `config.cfg`/`config.txt` trong thư mục node trên server **KHÔNG được EVE đọc khi start** (chỉ có tác dụng khi user paste tay). `config_script`: iol/vpcs = embedded, viosl2 = `config_viosl2.py`, asav = `config_asav.py`, vtedge = `config_vtedge.py` — tất cả lấy config từ phần nhúng.
 
-- **Repo → EVE** (khi người dùng nhờ sửa .unl): commit/push xong → **SCP ghi đè DUY NHẤT file `.unl`** lên server (đường dẫn như trên, thêm đuôi `.unl`), **KHÔNG đụng thư mục node, không xóa/tạo gì**. Backup bản server trước khi ghi đè (`cp <lab>.unl /tmp/unl.backup`). Người dùng reload lab (F5) và chỉ Wipe node đã thay đổi.
-- **EVE GUI → repo** (người dùng tự sửa tay): chỉ Export `.unl` (an toàn, không mất gì) → ghi đè vào repo → **kiểm tra trước khi push**: cờ `config="1"` (node mới thêm mặc định `config="0"` — phải bật lại cho đúng danh sách 53 node), XML hợp lệ, node-id/network-id không đổi (nếu đổi id → config files trên server sẽ không khớp nữa).
-- **CẤM tuyệt đối**: chu kỳ Delete lab → Import lại — làm mất 53 file config trong thư mục node + reset toàn bộ cờ `config="1"` về 0 (đã từng xảy ra, HEAD `5222ac6` là bản sửa lại).
-- SSH EVE: `10.215.28.26`, user `root` (pass do người dùng cấp từng phiên, không lưu vào file). Upload bằng paramiko/SFTP; verify md5 sau upload.
-- Nếu thêm node MỚI vào lab: node mới không có sẵn file config → cần upload thêm + bật `config="1"` nếu có config.
+**GUI EVE ghi đè `.unl` khi mở/save lab**: reset `config="1"` → 0 và làm mất config nhúng (đã từng xảy ra — nguyên nhân Core-SW1 hostname "Switch" dù đã upload config.cfg).
+
+Quy tắc:
+
+- **Thiết kế config**: config phải được **nhúng base64 vào `.unl`** trong repo (không chỉ đặt file trong configs/). Khi thêm/sửa config thiết bị: cập nhật cả `configs/<id>/...` VÀ phần `<configs>` nhúng trong `.unl` (script hoặc python xml.etree để build). Verify: đếm node `config="1"` = 53 và trùng khớp id với `<config id=`.
+- **Repo → EVE** (sửa .unl trong repo): commit/push xong → **SCP ghi đè DUY NHẤT file `.unl`** lên `/opt/unetlab/labs/TranHuuNhan-PKT/Campus Network SDN SD-WAN.unl`. Backup trước (`cp /opt/unetlab/labs/.../*.unl /tmp/unl.backup`). Sau đó **Wipe + Start node qua CLI** (GUI reload có thể đè cờ):
+  `/opt/unetlab/wrappers/unl_wrapper -a wipe -T 6 -F "<path>.unl"` rồi `-a start -T 6 -F ...` (thêm `-D <node>` để chỉ 1 node; wipe toàn lab sẽ xóa cả lab state).
+- **EVE GUI → repo** (user sửa tay): chỉ Export `.unl` → ghi đè repo → **kiểm tra trước khi push**: 53 node `config="1"` + 53 config nhúng (GUI export sẽ MẤT phần nhúng → phải nhúng lại!), XML hợp lệ, node-id/network-id không đổi.
+- **CẤM tuyệt đối**: chu kỳ Delete lab → Import lại — mất config nhúng + reset cờ `config="1"` (từng xảy ra, `5222ac6` là bản sửa).
+- **Xác minh sau boot**: console telnet mỗi node trên port động — tìm bằng `ss -tlnp | grep qemu` (port của node X = process qemu pid của node đó), kết nối TCP thấy prompt như `Core-SW1>` là config OK. Server: `/opt/unetlab/tmp/6/<lab-uuid>/<node-id>/startup-config` là config thực tế viosl2 nạp.
+- SSH EVE: `10.215.28.26`, user `root` (pass do người dùng cấp từng phiên, không lưu vào file). Dùng paramiko; verify md5 sau upload.
+- Nếu thêm node MỚI: nhúng config mới + bật `config="1"` trong .unl.
 
 ## Trạng thái hiện tại (cập nhật sau mỗi phiên)
 
-- HEAD: `5222ac6` — bật lại `config="1"` cho 53 node (bị mất khi export/import EVE), thêm skill dự án. Trước đó `31878c7`: VPC → DHCP, xóa nhãn IP PC trên canvas, DHCP-Server = win server 2012 R2, xóa .unl.bak.
+- HEAD: `c4a8e70` — nhúng 53 startup config base64 vào `.unl` (EVE chỉ nạp config từ phần nhúng này khi boot; trước đây GUI save làm reset cờ → Core-SW1 hostname vẫn "Switch"). Đã xác minh: Core-SW1 (node 3) boot ra prompt `Core-SW1>` sau wipe+start qua CLI. Trước đó `5222ac6`: bật lại `config="1"` 53 node; `31878c7`: VPC → DHCP, xóa nhãn IP PC, DHCP-Server = win server 2012 R2, xóa .unl.bak.
 - Working tree sạch (sau khi push). Cấu hình còn lại cần làm TAY trên lab: vManager/vSmart/vBond GUI, Windows servers (IP tĩnh + role DHCP trên node 72, syslog/web/mail app trên Win7), OVS scripts, vEdge paste config, cài Win7 image đã sửa.
 
 ## Lưu ý kỹ thuật lab
