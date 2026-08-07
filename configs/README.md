@@ -36,9 +36,6 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | SwitchDMZ | 7 | iol |
 | Dist-SW2 | 8 | linux (OVS script) |
 | SDN_CONTROLLER | 9 | linux (OVS script) |
-| AccessTest | 10 | linux (OVS script) |
-| VPC11 | 11 | vpcs |
-| VPC12 | 12 | vpcs |
 | Mail-Server | 13 | win (cấu hình tay) |
 | VPC14 | 14 | vpcs |
 | VPC15 | 15 | vpcs |
@@ -111,12 +108,12 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | viosl2 / vios (Core, Internet, MPLS) | `config.cfg` | ✅ (cần `config="1"`) |
 | iol (SW55–61, SwitchBrand, SwitchDMZ, SwitchServerFarm) | `config.cfg` | ✅ (cần `config="1"`) |
 | asav (FW-ASAv, Brand-FW) | `config.cfg` | ✅ (cần `config="1"`) |
-| vpcs (VPC11–54) | `config.txt` | ✅ |
+| vpcs (VPC14–54) | `config.txt` | ✅ |
 | vtedge (vEdge1/2, vEdge65) | `config.cfg` | ⚠️ dán tay qua console an toàn nhất |
-| linux (SDN_CONTROLLER, AccessTest, Access/Dist-SW) | `.sh` | ❌ chạy script thủ công trong VM |
+| linux (SDN_CONTROLLER, Access/Dist-SW) | `.sh` | ❌ chạy script thủ công trong VM |
 | win / vtmgmt / vtsmart / vtbond | — | ❌ cấu hình qua GUI (xem dưới) |
 
-> **VPC (PC ảo) mặc định xin DHCP**: `config.txt` chỉ chứa `ip dhcp` → PC tự xin IP từ scope tương ứng (campus: DHCP-Server 10.1.90.10 relay qua Core; chi nhánh: dhcpd trên Brand-FW; dải `.100–.199` theo mục 2.4 của md). Ngoại lệ bắt buộc IP tĩnh: **VPC11/12** (mạng test SDN 10.1.101.0/24 không có DHCP server) — `config.txt` chứa `ip 10.1.101.11 255.255.255.0 10.1.101.1`.
+> **VPC (PC ảo) mặc định xin DHCP**: `config.txt` chỉ chứa `ip dhcp` → PC tự xin IP từ scope tương ứng (campus: DHCP-Server 10.1.90.10 relay qua Core; chi nhánh: dhcpd trên Brand-FW; dải `.100–.199` theo mục 2.4 của md).
 
 **Các thiết bị cấu hình bằng tay (không có file):**
 - **vManager (33) / vSmart (34) / vBond (35)**: khởi động vManager → vào GUI `https://10.9.0.10` (mặt LAN) hoặc `10.9.1.10` (mặt cloud). Setup cluster vBond→vSmart→vManager, cấp system-ip/site-id cho từng vEdge từ vManager (tính năng Zero-Touch/Manual). vSmart/vBond sau đó được cấu hình **từ xa qua vManager**.
@@ -128,7 +125,7 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 
 ## 5. Node Linux/OVS — cách chạy script
 
-Các node dùng image `linux-ubuntu-ovs-16p` (Access-SW1–4, Dist-SW1/2, SDN_CONTROLLER, AccessTest):
+Các node dùng image `linux-ubuntu-ovs-16p` (Access-SW1–4, Dist-SW1/2, SDN_CONTROLLER):
 - Boot node → console VNC (hoặc SSH từ EVE) → login root (password mặc định theo image).
 - Copy nội dung file `.sh` tương ứng vào VM (hoặc chép qua SCP) rồi chạy:
 
@@ -138,7 +135,7 @@ Các node dùng image `linux-ubuntu-ovs-16p` (Access-SW1–4, Dist-SW1/2, SDN_CO
 
 - Để cấu hình tồn tại sau reboot: thêm script vào `/etc/rc.local` hoặc crontab `@reboot` (xem thêm `HuondanchitietController_OVS.md` trong repo).
 
-> **Quan trọng**: AccessTest là thiết bị **test OpenFlow độc lập** (không nối vào mạng campus). Khi test: nối **trực tiếp** AccessTest **e1** ↔ SDN_CONTROLLER **e1** bằng dây trong EVE (control plane `192.168.100.0/24` theo hướng dẫn OVS: controller = 192.168.100.1, OVS = 192.168.100.2). SDN_CONTROLLER e0 = 10.1.100.2/24 vẫn là mặt quản lý campus (nối SwitchServerFarm e1/0).
+> **SDN campus (từ 08/2026)**: SDN_CONTROLLER quản lý toàn bộ L2 campus qua OpenFlow 1.3 — Dist-SW1/2 (dpid 5, 8) + Access-SW1–4 (dpid 68, 66, 70, 69) với **control plane trên VLAN 99 MANAGEMENT** (dải 10.1.99.0/24, link uplink sẵn có — **không còn link riêng**, mạng cũ `10.1.100.0/24` + 6 link đã xóa 07/08/2026): SDN_CONTROLLER e0 = **10.1.99.10/24** → SwitchServerFarm e1/0 (access VLAN 99); mỗi switch giữ IP mgmt trong VLAN 99 (Dist 10.1.99.11/.12, Access .21–.24) và `set-controller br0 tcp:10.1.99.10:6653`. App Ryu: **`campus_switch_13.py`** (trong `configs/01-Site100-Campus/`) — chạy cùng `ryu.app.ofctl_rest` (REST port 8080). `BLOCK_PORTS` mặc định rỗng để mọi VPC dùng DHCP; mục **2.7** của `campus_network_sdn_sdwan.md` và cuối file app có hướng dẫn demo ACL/northbound. *(Node test cũ AccessTest + VPC11/12 đã xóa 04/08/2026.)*
 
 ## 6. Thứ tự khởi động lab khuyến nghị
 
@@ -146,7 +143,7 @@ Các node dùng image `linux-ubuntu-ovs-16p` (Access-SW1–4, Dist-SW1/2, SDN_CO
 2. Site 100: Core-SW1/2 → FW → SwitchServerFarm/DMZ → Dist/Access → VPC.
 3. Các chi nhánh: Brand-FW → SwitchBrand/SW → VPC.
 4. Onboard vEdge qua vManager (đăng ký System-IP, site-id; kích hoạt tunnel IPsec).
-5. Với SDN: chạy SDN_CONTROLLER script → AccessTest script → kiểm tra `ovs-vsctl show` thấy controller connected; ping VPC11 ↔ VPC12 (được controller cài flow).
+5. Với SDN: chạy SDN_CONTROLLER script → script 6 switch campus (Dist/Access) → kiểm tra `ovs-vsctl show` thấy controller connected; `curl http://127.0.0.1:8080/stats/switches` → `[5, 8, 68, 66, 70, 69]`.
 
 ## 7. Địa chỉ tóm tắt nhanh (theo bảng 2.2/2.3 của md)
 
@@ -158,4 +155,6 @@ Các node dùng image `linux-ubuntu-ovs-16p` (Access-SW1–4, Dist-SW1/2, SDN_CO
 | vEdge1-S400 / vEdge2-S400 | 10.200.400.1 / .2 | Internet 203.0.113.17 — MPLS 100.64.400.1 |
 | vEdge65 | 10.200.900.1 | Internet 203.0.113.245/30 |
 | vManager/vSmart/vBond | 10.9.0.10 / .11 / .12 | Cloud 10.9.1.10 / .11 / .12 |
-| SDN_CONTROLLER / AccessTest | 10.1.100.2 / 10.1.100.3 | — |
+| SDN_CONTROLLER | 10.1.99.10 (e0, mgmt/control VLAN 99); e3 = Cloud-NAT (pnet0, Internet) | — |
+| Dist-SW1 / Dist-SW2 | mgmt/control 10.1.99.11 / .12 | controller 10.1.99.10:6653 |
+| Access-SW1–4 | mgmt/control 10.1.99.21–.24 | controller 10.1.99.10:6653 |

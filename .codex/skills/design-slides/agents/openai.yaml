@@ -1,0 +1,4 @@
+interface:
+  display_name: "Thiết kế Slide"
+  short_description: "Thiết kế và kiểm tra slide trình bày"
+  default_prompt: "Dùng $design-slides để thiết kế hoặc tinh chỉnh bộ slide theo bố cục rõ ràng và kiểm tra PDF đầu ra."

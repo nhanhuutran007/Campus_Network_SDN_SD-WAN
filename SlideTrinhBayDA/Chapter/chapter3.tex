@@ -1,0 +1,136 @@
+% =========================================================================
+% CHAPTER 3: MÔ HÌNH NGHIÊN CỨU VÀ THIẾT KẾ ĐỀ XUẤT
+% =========================================================================
+
+\section{Mô hình nghiên cứu và Thiết kế đề xuất}
+
+% --- SLIDE 3.1: Yêu cầu thiết kế ---
+\begin{frame}{3.1 Yêu cầu đối với mô hình đề xuất}
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \textbf{Yêu cầu chức năng:}
+        \begin{itemize}
+            \item Kết nối người dùng và dịch vụ theo từng khu vực chức năng.
+            \item Phân tách lưu lượng giữa các khoa, phòng ban và vùng máy chủ.
+            \item Kết nối Campus chính với các cơ sở phụ.
+            \item Hỗ trợ quản lý tập trung tại LAN và WAN.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \textbf{Yêu cầu kiến trúc:}
+        \begin{itemize}
+            \item Phân tầng rõ ràng, hạn chế phụ thuộc giữa các khối.
+            \item Có đường truyền và gateway dự phòng ở vị trí quan trọng.
+            \item Tách vùng người dùng, quản trị, máy chủ và DMZ.
+            \item Cho phép biểu diễn đầy đủ trên môi trường mô phỏng.
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+% --- SLIDE 3.2: Kiến trúc tổng thể ---
+\begin{frame}{3.2 Kiến trúc tổng thể đề xuất}
+    \begin{columns}[T]
+        \column{0.31\textwidth}
+        \begin{block}{Campus chính}
+            \centering
+            Core--Distribution--Access\\
+            SDN Controller\\
+            Server Farm và DMZ
+        \end{block}
+
+        \column{0.31\textwidth}
+        \begin{block}{Kết nối liên cơ sở}
+            \centering
+            WAN Edge\\
+            Internet và MPLS\\
+            SD-WAN Overlay
+        \end{block}
+
+        \column{0.31\textwidth}
+        \begin{block}{Các cơ sở phụ}
+            \centering
+            Site 200 -- Cần Thơ\\
+            Site 300 -- Đà Nẵng\\
+            Site 400 -- Nha Trang
+        \end{block}
+    \end{columns}
+    \vspace{0.2cm}
+    \begin{block}{Nguyên tắc tích hợp}
+        SDN điều khiển miền chuyển mạch trong Campus; SD-WAN đảm nhiệm kết nối giữa các site. Hai miền gặp nhau tại lớp Core/WAN Edge.
+    \end{block}
+\end{frame}
+
+% --- SLIDE 3.3: Mô hình Campus chính ---
+\begin{frame}{3.3 Mô hình Campus chính}
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \textbf{Kiến trúc phân tầng:}
+        \begin{itemize}
+            \item \textbf{Core:} kết nối các vùng chính, định tuyến và cung cấp gateway.
+            \item \textbf{Distribution:} tổng hợp các nhánh Access và áp dụng chính sách.
+            \item \textbf{Access:} kết nối thiết bị người dùng theo VLAN.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \textbf{Vị trí của SDN:}
+        \begin{itemize}
+            \item Controller cung cấp lớp điều khiển logic tập trung.
+            \item Các switch Distribution/Access đảm nhiệm chuyển tiếp dữ liệu.
+            \item Kênh điều khiển được tách khỏi lưu lượng người dùng.
+        \end{itemize}
+    \end{columns}
+    \vspace{0.15cm}
+    \begin{block}{Các vùng dịch vụ}
+        Server Farm cung cấp dịch vụ nội bộ; DMZ chứa dịch vụ cần công bố; Firewall kiểm soát lưu lượng giữa các vùng.
+    \end{block}
+\end{frame}
+
+% --- SLIDE 3.4: Phân vùng logic ---
+\begin{frame}{3.4 Phân vùng logic và quy hoạch địa chỉ}
+    \begin{table}
+        \centering
+        \small
+        \renewcommand{\arraystretch}{1.3}
+        \begin{tabular}{|p{0.22\textwidth}|p{0.3\textwidth}|p{0.38\textwidth}|}
+            \hline
+            \rowcolor{primaryDark!15}
+            \textbf{Nhóm mạng} & \textbf{Đối tượng} & \textbf{Nguyên tắc thiết kế} \\
+            \hline
+            Người dùng & Khoa, phòng ban, phòng học & Một VLAN/subnet riêng cho mỗi nhóm \\
+            \hline
+            Dịch vụ nội bộ & DHCP, Syslog và dịch vụ dùng chung & Đặt trong Server Farm, địa chỉ ổn định \\
+            \hline
+            Dịch vụ công bố & Web, Mail & Tách riêng trong DMZ và đi qua Firewall \\
+            \hline
+            Quản trị & Controller và giao diện quản lý & Tách khỏi lưu lượng người dùng \\
+            \hline
+            Liên kết WAN & Các đường point-to-point & Dùng dải riêng cho underlay và định danh site \\
+            \hline
+        \end{tabular}
+    \end{table}
+\end{frame}
+
+% --- SLIDE 3.5: Mô hình liên kết đa cơ sở ---
+\begin{frame}{3.5 Mô hình kết nối đa cơ sở}
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \textbf{Underlay:}
+        \begin{itemize}
+            \item Internet và MPLS cung cấp khả năng truyền dẫn vật lý.
+            \item Mỗi site kết nối vào WAN thông qua thiết bị biên.
+            \item Định tuyến underlay bảo đảm khả năng tiếp cận giữa các WAN Edge.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \textbf{Overlay:}
+        \begin{itemize}
+            \item Các site trao đổi route logic thông qua lớp điều khiển SD-WAN.
+            \item Dữ liệu liên cơ sở được vận chuyển qua tunnel bảo mật.
+            \item Chính sách WAN được quản lý theo site và loại lưu lượng.
+        \end{itemize}
+    \end{columns}
+    \vspace{0.15cm}
+    \begin{block}{Phạm vi của mô hình}
+        Campus chính và ba cơ sở phụ được biểu diễn trong cùng một topology để nghiên cứu quan hệ giữa mạng nội bộ và mạng WAN.
+    \end{block}
+\end{frame}

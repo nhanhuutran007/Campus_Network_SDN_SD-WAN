@@ -12,7 +12,7 @@ Dự án xây dựng Campus Network kết hợp **SD-WAN (Software-Defined Wide 
 - **Chi nhánh Nha Trang (Site ID 400, AS 65030)**: Có Branch Firewall, chia VLAN theo phòng ban (VLAN 50: Thủy sản, VLAN 60: Lữ hành).
 - **SD-WAN Controller Cluster (Site 900)**: vManage, vSmart, vBond (đặt tại Data Center hoặc Cloud).
 - **Hạ tầng WAN**: Internet + MPLS qua Service Provider, IPsec SD-WAN Overlay.
-- **SDN (OpenFlow)**: SDN_CONTROLLER quản lý AccessTest (OVS switch) với 2 máy test VPC11, VPC12 (mạng 10.1.101.0/24), kết nối SwitchServerFarm e1/0 qua 10.1.100.0/24.
+- **SDN (OpenFlow)**: SDN_CONTROLLER (Ryu) quản lý toàn bộ L2 campus qua OpenFlow 1.3: **Dist-SW1/2 + Access-SW1–4** (data plane campus). Control plane chạy **trên VLAN 99 MANAGEMENT** (dải 10.1.99.0/24, controller 10.1.99.10) qua các link uplink sẵn có — không có link riêng. App `campus_switch_13.py`: học MAC theo VLAN + ACL proactive (chặn port qua controller) + REST northbound (`ofctl_rest`, port 8080). *(Node test cũ AccessTest + VPC11/12 đã xóa 04/08/2026.)*
 
 ---
 
@@ -608,7 +608,7 @@ graph TB
 | 7 | System-IP OMP | `10.200.<site>.x` (vd: Site 100 → 10.200.100.1/2). Chỉ là định danh overlay, **không phải gateway LAN**. |
 | 8 | Mặt WAN | Mặt **Internet** dùng dải public `203.0.113.0/24`; mặt **MPLS** dùng `100.64.x.x/30`. |
 | 9 | Trunk L2 | Mang các VLAN cần thiết: Campus (10/20/30/40/90/99), chi nhánh (VLAN nghiệp vụ + 99). |
-| 10 | VPC (PC ảo) | Mặc định **xin DHCP** (dải `.100 – .199`) bằng lệnh `ip dhcp` trong file `config.txt`; không đặt IP tĩnh. Ngoại lệ: VPC11/12 (mạng test SDN 10.1.101.0/24 — không có DHCP server) đặt tĩnh. |
+| 10 | VPC (PC ảo) | Mặc định **xin DHCP** (dải `.100 – .199`) bằng lệnh `ip dhcp` trong file `config.txt`; không đặt IP tĩnh. |
 
 ### 2.1. Tổng hợp bảng subnet theo từng site
 
@@ -627,8 +627,7 @@ graph TB
 | 10.1.3.0/30, .4/30, .8/30, .12/30 | — | FW Outside ↔ vEdge | 4 link /30 |
 | 10.1.255.0/29 | — | Failover FW-A ↔ FW-S | Dây Gi0/5 (LAN-FO tùy chọn) |
 | 10.1.0.4/30 | — | Core-SW1 ↔ Core-SW2 (Po10) | 10.1.0.5 / 10.1.0.6 |
-| 10.1.100.0/24 | — | SDN Controller — SwitchServerFarm e1/0 | SDN_CONTROLLER e0 |
-| 10.1.101.0/24 | — | SDN Test (OpenFlow) | AccessTest, VPC11/12 |
+| — | 99 (dùng chung) | SDN Control plane / Management — SDN_CONTROLLER 10.1.99.10 ↔ các switch 10.1.99.11/.12/.21–.24 | Chạy trên VLAN 99 MANAGEMENT, dùng link uplink sẵn có (không có link riêng) |
 
 #### 2.1.2. Chi nhánh — Site 200 / 300 / 400
 
@@ -729,11 +728,10 @@ graph TB
 
 | # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
 |---|---|---|---|---|
-| 39 | SDN_CONTROLLER — e0 = 10.1.100.2/24 | SwitchServerFarm — e1/0 = — | 10.1.100.0/24 | Management plane SDN |
-| 40 | AccessTest — e2 = — | VPC11 — eth0 = 10.1.101.11/24 | 10.1.101.0/24 | gw 10.1.101.1 |
-| 41 | AccessTest — e3 = — | VPC12 — eth0 = 10.1.101.12/24 | 10.1.101.0/24 | gw 10.1.101.1 |
+| 39 | SDN_CONTROLLER — e0 = 10.1.99.10/24 | SwitchServerFarm — e1/0 (access VLAN 99) = — | VLAN 99 | Management plane SDN — cắm vào server farm, đi theo VLAN 99 MANAGEMENT |
+| 40 | SDN_CONTROLLER — e3 = DHCP (Cloud) | Cloud-NAT (pnet0) = — | Internet | e3 = Cloud-NAT — Internet từ host EVE cho cài Ryu/pip |
 
-> **Lưu ý**: AccessTest là OVS switch (OpenFlow) do SDN_CONTROLLER quản lý — các cổng e2/e3 chỉ cấu hình L2, không đặt IP. AccessTest là thiết bị **test độc lập**: khi test, nối **trực tiếp** cổng e1 của AccessTest với cổng e1 của SDN_CONTROLLER (control plane, dải 192.168.100.0/24 theo hướng dẫn OVS).
+> **Lưu ý**: Control plane SDN **không còn link riêng** (mạng 10.1.100.0/24 đã bỏ, link cũ #40–45 xóa khỏi lab 07/08/2026). SDN_CONTROLLER cắm **e0 → SwitchServerFarm e1/0 (access VLAN 99)** với IP **10.1.99.10/24**; các switch OVS có sẵn cổng mgmt trong VLAN 99 (Dist 10.1.99.11/.12, Access .21–.24) nên kênh điều khiển OpenFlow 1.3 (TCP 6653) đi **trên chính VLAN 99 MANAGEMENT, qua các link uplink sẵn có** — đúng kiến trúc doanh nghiệp: controller dùng chung mạng quản trị, không cần kéo dây riêng tới từng switch. Mỗi switch `set-controller br0 tcp:10.1.99.10:6653`. **SDN_CONTROLLER e3 = `Cloud-NAT` (pnet0)** — kéo Internet từ host EVE phục vụ cài Ryu/pip trong `SDN_CONTROLLER.sh`. *(Node test cũ AccessTest + VPC11/12 cùng mạng 10.1.101.0/24 đã xóa khỏi lab 04/08/2026.)*
 
 #### 2.2.4. Cần Thơ — Site 200
 
@@ -849,9 +847,10 @@ graph TB
 | **Syslog-Server** | e0 | 10.1.90.11 | /24 | Centralized Logging |
 | **SwitchDMZ** | SVI (Mgmt) | 10.1.99.31 | /24 | L2 Switch khu DMZ (uplink kép tới FW) |
 | **SwitchServerFarm** | SVI (Mgmt) | 10.1.99.32 | /24 | L2 Switch khu Server Farm (uplink kép tới 2 Core) |
-| **SDN_CONTROLLER** | e0 | 10.1.100.2 | /24 | Management plane SDN (nối SwitchServerFarm e1/0) |
-| **AccessTest** | e2/e3 | — | — | OVS switch (OpenFlow), không đặt IP |
-| **VPC11 / VPC12** | eth0 | 10.1.101.11 / 10.1.101.12 | /24 | Máy test SDN (gw 10.1.101.1) — bắt buộc IP tĩnh, mạng test không có DHCP server |
+| **SDN_CONTROLLER** | e0 | 10.1.99.10 | /24 | 99 | Management plane SDN (nối SwitchServerFarm e1/0, access VLAN 99) — kênh OpenFlow tới các switch |
+| **SDN_CONTROLLER** | e3 | DHCP (cloud) | Internet | — | **Cloud-NAT (pnet0)** — e3/ens6 nhận DHCP từ host EVE, dùng để cài Ryu/pip (không phải control plane) |
+| **Dist-SW1 / Dist-SW2** | SVI (Mgmt) | 10.1.99.11 / 10.1.99.12 | /24 | 99 | Control plane: set-controller `tcp:10.1.99.10:6653` |
+| **Access-SW1–4** | SVI (Mgmt) | 10.1.99.21 – .24 | /24 | 99 | Control plane: set-controller `tcp:10.1.99.10:6653` |
 
 #### 2.3.3. Campus Chính — Site ID 100 (AS 65000)
 
@@ -887,12 +886,12 @@ graph TB
 | **Core-SW2** | VLAN40 SVI | 10.1.40.3 | /24 | 40 | VRRP Standby (VIP 10.1.40.1) |
 | **Core-SW2** | VLAN90 SVI | 10.1.90.3 | /24 | 90 | VRRP Standby (VIP 10.1.90.1) |
 | **Core-SW2** | VLAN99 SVI | 10.1.99.2 | /24 | 99 | Quản lý Core2 |
-| **Dist-SW1** | SVI (Mgmt) | 10.1.99.11 | /24 | 99 | Distribution 1 (thuần L2) |
-| **Dist-SW2** | SVI (Mgmt) | 10.1.99.12 | /24 | 99 | Distribution 2 (thuần L2) |
-| **Access-SW1** | SVI (Mgmt) | 10.1.99.21 | /24 | 99 | Access VLAN 10 — CNTT |
-| **Access-SW2** | SVI (Mgmt) | 10.1.99.22 | /24 | 99 | Access VLAN 20 — TTK |
-| **Access-SW3** | SVI (Mgmt) | 10.1.99.23 | /24 | 99 | Access VLAN 30 — Luật |
-| **Access-SW4** | SVI (Mgmt) | 10.1.99.24 | /24 | 99 | Access VLAN 40 — Hành chính |
+| **Dist-SW1** | SVI (Mgmt) | 10.1.99.11 | /24 | 99 | Distribution 1 (thuần L2) — do Ryu quản lý (dpid 5) |
+| **Dist-SW2** | SVI (Mgmt) | 10.1.99.12 | /24 | 99 | Distribution 2 (thuần L2) — do Ryu quản lý (dpid 8) |
+| **Access-SW1** | SVI (Mgmt) | 10.1.99.21 | /24 | 99 | Access VLAN 10 — CNTT (dpid 68, controller 10.1.99.10) |
+| **Access-SW2** | SVI (Mgmt) | 10.1.99.22 | /24 | 99 | Access VLAN 20 — TTK (dpid 66, controller 10.1.99.10) |
+| **Access-SW3** | SVI (Mgmt) | 10.1.99.23 | /24 | 99 | Access VLAN 30 — Luật (dpid 70, controller 10.1.99.10) |
+| **Access-SW4** | SVI (Mgmt) | 10.1.99.24 | /24 | 99 | Access VLAN 40 — Hành chính (dpid 69, controller 10.1.99.10) |
 | **vEdge1-S100** | ge0/0 | 10.1.3.2 | /30 | — | VPN 512 → FW-Active Outside |
 | **vEdge1-S100** | ge0/1 | 10.1.3.14 | /30 | — | VPN 512 → FW-Standby Outside |
 | **vEdge1-S100** | ge0/2 | 100.64.100.1 | /30 | — | VPN 0 → MPLS (TLOC) |
@@ -1088,6 +1087,46 @@ interface GigabitEthernet0/4
 ```
 
 > **Lưu ý chung**: (1) Cặp FW-ASAv Active/Standby được nối dây **Failover** tại cổng **Gi0/5** (HA Sync) — dây này không cần IP thông thường; nếu dùng LAN-FO có thể đặt subnet 10.1.255.0/29 (Active: 10.1.255.1, Standby: 10.1.255.2). (2) Các cổng còn trống (FW Gi0/6–Gi0/7, vEdge ge0/4, ...) không sử dụng. (3) System IP chỉ định danh trên OMP (dạng Loopback), **không dùng làm LAN Gateway**.
+
+---
+
+### 2.7. SDN Campus (OpenFlow) — chi tiết triển khai
+
+#### 2.7.1. Kiến trúc
+
+- **Controller**: SDN_CONTROLLER (node 9, Ryu) — app **`campus_switch_13.py`** (trong `configs/01-Site100-Campus/`) + **`ryu.app.ofctl_rest`** (REST northbound, port **8080**).
+- **Data plane**: Dist-SW1/2 (dpid **5, 8**) + Access-SW1–4 (dpid **68, 66, 70, 69**) — toàn bộ L2 campus.
+- **Control plane**: SDN_CONTROLLER IP **10.1.99.10/24** (e0 → SwitchServerFarm e1/0, access **VLAN 99**); OpenFlow 1.3 qua TCP **6653**. Không có link riêng — kênh điều khiển chạy **trên VLAN 99 MANAGEMENT (mạng quản trị tách riêng) qua các link uplink sẵn có** của campus: mỗi switch OVS có IP mgmt trong VLAN 99 (Dist 10.1.99.11/.12, Access .21–.24) và `set-controller br0 tcp:10.1.99.10:6653`.
+- **Về triển khai vật lý thực tế**: trong lab, SDN_CONTROLLER chỉ cắm **đúng 1 cổng** (e0) vào SwitchServerFarm (access VLAN 99) — controller nối vào **một mạng quản trị chung (management fabric / VLAN management)**, không đòi hỏi kéo dây riêng từ controller tới từng switch (điều không thực tế khi các phòng ban ở các tòa nhà/tầng khác nhau). Mỗi switch chỉ cần cổng management (SVI/mgmt trong VLAN 99) đấu vào mạng quản trị đó — mạng quản trị này **đi cùng hạ tầng cáp/fiber uplink sẵn có của campus** (tách khỏi data plane bằng VLAN management riêng). Điều kiện duy nhất cần đảm bảo là **IP reachability L2/L3** giữa controller (10.1.99.10) và switch (10.1.99.x) trong VLAN 99 — đúng với thực tế khi controller đặt tại phòng server nối vào khu Server Farm. SDN_CONTROLLER chỉ quản lý **L2 fabric của Site 100**; các campus xa (200/300/400) không thuộc fabric này mà liên kết bằng SD-WAN overlay — mỗi campus một fabric riêng, kết nối liên campus qua WAN.
+- **Chế độ điều khiển**: mỗi bridge OVS đặt `fail_mode=secure` để chỉ chuyển tiếp theo flow do Ryu cài; app phải cài **table-miss priority 0** ngay khi switch kết nối để ARP/broadcast chưa khớp flow được gửi lên controller. Đặt `stp_enable=false` vì OVS STP từng chặn frame trước OpenFlow pipeline, làm controller không nhận `packet-in`. Khi controller mất kết nối, flow đang có vẫn tồn tại đến khi hết timeout nhưng lưu lượng mới không được tự động chuyển bằng `NORMAL`.
+
+#### 2.7.2. Chức năng của app `campus_switch_13.py`
+
+1. **L2 switching nhận thức VLAN (reactive)**: học MAC theo (VLAN, MAC, port); chưa biết đích → flood **trong đúng VLAN** (access port gán/giữ VLAN bằng cấu hình `tag=` của OVS — OVS tự push/pop VLAN ở ingress/egress); đã biết → cài flow unicast (priority 1, khớp `in_port + eth_src + eth_dst + vlan_vid`).
+2. **ACL proactive (demo bảo mật tập trung)**: `BLOCK_PORTS` trong app — khi switch kết nối, controller tự cài flow **drop priority 40000** cho port bị chặn. Mặc định danh sách rỗng để toàn bộ VPC dùng được DHCP; khi cần demo có thể thêm VPC14 bằng khóa `(68, 'ens6')` rồi khởi động lại app.
+3. **Northbound REST API** (`ofctl_rest`): truy vấn/đọc flow, cài flow từ xa bằng `curl` (xem phần demo dưới) — minh họa lớp ứng dụng SDN.
+
+#### 2.7.3. Bảng datapath-id → controller (theo script `.sh`)
+
+| Switch | datapath-id | IP switch (mgmt, VLAN 99) | Controller trỏ về |
+|---|---|---|---|
+| Dist-SW1 | 0000000000000005 | 10.1.99.11 | tcp:10.1.99.10:6653 |
+| Dist-SW2 | 0000000000000008 | 10.1.99.12 | tcp:10.1.99.10:6653 |
+| Access-SW1 | 0000000000000044 | 10.1.99.21 | tcp:10.1.99.10:6653 |
+| Access-SW2 | 0000000000000042 | 10.1.99.22 | tcp:10.1.99.10:6653 |
+| Access-SW3 | 0000000000000046 | 10.1.99.23 | tcp:10.1.99.10:6653 |
+| Access-SW4 | 0000000000000045 | 10.1.99.24 | tcp:10.1.99.10:6653 |
+
+#### 2.7.4. Quy trình khởi động & demo
+
+1. Chạy `SDN_CONTROLLER.sh` (cài Ryu + chạy `ryu-manager --ofp-tcp-listen-port 6653 /root/ryu-app/campus_switch_13.py ryu.app.ofctl_rest`).
+2. Chạy script `.sh` của 6 switch campus (Dist/Access) → `ovs-vsctl show` thấy `is_connected: true`.
+3. Kiểm tra: `curl http://127.0.0.1:8080/stats/switches` → `[5, 8, 68, 66, 70, 69]`.
+4. **Demo reactive**: ping VPC14 ↔ VPC19 (cùng VLAN 10) → `curl http://127.0.0.1:8080/stats/flow/68` thấy flow unicast mới được controller cài.
+5. **Demo proactive/ACL (tùy chọn)**: thêm `(68, 'ens6')` vào `BLOCK_PORTS`, khởi động lại app để chặn VPC14; xóa khóa này và khởi động lại app để cho phép VPC14 ping/DHCP.
+6. **Demo northbound (curl)**: cài "drop toàn bộ VLAN 20 trên Access-SW2" từ xa:
+   `curl -X POST -d '{"dpid": 66, "table_id": 0, "priority": 35000, "match": {"vlan_vid": 4116}, "instructions": [{"type": "APPLY_ACTIONS", "actions": []}]}' http://127.0.0.1:8080/stats/flowentry/add`
+   (vlan_vid 4116 = `OFPVID_PRESENT | 20`; xóa bằng `flowentry/delete`).
 
 ---
 
