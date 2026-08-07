@@ -1,0 +1,16 @@
+[Unit]
+Description=Campus Ryu OpenFlow 1.3 Controller
+Wants=campus-cloud-dhcp.service
+After=network.target campus-cloud-dhcp.service
+Conflicts=sdn-boot.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/root/SDN_CONTROLLER-autostart.sh
+Restart=always
+RestartSec=3
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

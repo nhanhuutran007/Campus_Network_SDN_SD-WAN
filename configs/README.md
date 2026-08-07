@@ -137,6 +137,30 @@ Các node dùng image `linux-ubuntu-ovs-16p` (Access-SW1–4, Dist-SW1/2, SDN_CO
 
 > **SDN campus (từ 08/2026)**: SDN_CONTROLLER quản lý toàn bộ L2 campus qua OpenFlow 1.3 — Dist-SW1/2 (dpid 5, 8) + Access-SW1–4 (dpid 68, 66, 70, 69) với **control plane trên VLAN 99 MANAGEMENT** (dải 10.1.99.0/24, link uplink sẵn có — **không còn link riêng**, mạng cũ `10.1.100.0/24` + 6 link đã xóa 07/08/2026): SDN_CONTROLLER e0 = **10.1.99.10/24** → SwitchServerFarm e1/0 (access VLAN 99); mỗi switch giữ IP mgmt trong VLAN 99 (Dist 10.1.99.11/.12, Access .21–.24) và `set-controller br0 tcp:10.1.99.10:6653`. App Ryu: **`campus_switch_13.py`** (trong `configs/01-Site100-Campus/`) — chạy cùng `ryu.app.ofctl_rest` (REST port 8080). `BLOCK_PORTS` mặc định rỗng để mọi VPC dùng DHCP; mục **2.7** của `campus_network_sdn_sdwan.md` và cuối file app có hướng dẫn demo ACL/northbound. *(Node test cũ AccessTest + VPC11/12 đã xóa 04/08/2026.)*
 
+### 5.1. Tự phục hồi Ryu/OVS sau stop/start
+
+Không đưa nguyên các script khởi tạo `Dist-SW*.sh`/`Access-SW*.sh` có bước reset OVSDB vào `rc.local` hoặc `@reboot`. Dùng bộ persistence idempotent:
+
+| File nguồn | Đích trong guest |
+|---|---|
+| `Campus-OVS-restore.sh` | `/root/Campus-OVS-restore.sh` trên 6 OVS |
+| `systemd/ovs-nodes/<node>.env` | `/etc/default/campus-ovs` trên đúng OVS |
+| `systemd/campus-ovs-restore.service` | `/etc/systemd/system/campus-ovs-restore.service` |
+| `SDN_CONTROLLER-autostart.sh` | `/root/SDN_CONTROLLER-autostart.sh` trên node 9 |
+| `Campus-Cloud-DHCP.sh` | `/root/Campus-Cloud-DHCP.sh` trên node 9 |
+| `systemd/campus-ryu.service` | `/etc/systemd/system/campus-ryu.service` trên node 9 |
+| `systemd/campus-cloud-dhcp.service` | `/etc/systemd/system/campus-cloud-dhcp.service` trên node 9 |
+
+Sau khi copy đúng file và cấp quyền script:
+
+```bash
+systemctl daemon-reload
+systemctl enable --now campus-ovs-restore.service   # trên OVS
+systemctl enable --now campus-cloud-dhcp.service campus-ryu.service  # controller
+```
+
+Service OVS phục hồi bridge/port theo kiểu `--may-exist`, IP `br-mgmt`, DPID, controller, pruning VLAN 99 và hai flow bootstrap priority 50000. Unit được liên kết với `openvswitch-switch.service`, vì vậy restart daemon OVS cũng chạy lại script và khôi phục flow runtime. Service Ryu gán lại `10.1.99.10/24` trên `ens3` rồi giữ `ryu-manager` trong foreground. DHCP Cloud-NAT trên `ens6` chạy bằng service riêng để restart Ryu không sinh lease trùng. Stop/start thông thường tự phục hồi; wipe vẫn cần triển khai lại file.
+
 ## 6. Thứ tự khởi động lab khuyến nghị
 
 1. Service Provider (Internet 26, MPLS 27) → Switch32/Switch61 + vManager/vSmart/vBond → các vEdge (28,6,29,42,30,40,31,41,65).

@@ -4,26 +4,6 @@
 
 \section{Báo cáo tiến độ nghiên cứu}
 
-% Khung ảnh dùng cho các slide minh họa tiến độ. Khi có ảnh thật, thay lệnh
-% \slideScreenshotPlaceholder bằng \includegraphics[...,keepaspectratio]{images/...}.
-\newcommand{\slideScreenshotPlaceholder}[2]{%
-    \begin{tcolorbox}[
-        height=0.65\textheight,
-        colback=lightGrayBg,
-        colframe=accentTeal,
-        boxrule=1pt,
-        arc=0pt,
-        valign=center
-    ]
-        \centering
-        {\color{accentTeal}\fontsize{28}{30}\selectfont\faImage}\par
-        \vspace{0.2cm}
-        \textbf{#1}\par
-        \vspace{0.12cm}
-        {\scriptsize\color{black!60}\texttt{#2}}
-    \end{tcolorbox}%
-}
-
 % --- SLIDE 4.1: Tổng quan tiến độ ---
 \begin{frame}{4.1 Tổng quan tiến độ}
     \begin{table}
@@ -52,125 +32,314 @@
     \end{table}
 \end{frame}
 
-% --- SLIDE 4.2: Mẫu ảnh các Site Campus ---
-\begin{frame}{4.2 Minh họa các Site Campus}
+% --- SLIDE 4.2: Thiết kế chi tiết các Site Campus ---
+\begin{frame}{4.2 Thiết kế chi tiết các Site Campus}
     \small
-    \begin{columns}[T,onlytextwidth]
-        \column{0.52\textwidth}
-        \slideScreenshotPlaceholder{CHÈN ẢNH CHỤP SITE}{images/site-campus.png}
-
-        \column{0.44\textwidth}
-        \textbf{Cách thiết kế vùng Site:}
+    \begin{block}{Cách thiết kế vùng Site}
         \begin{itemize}
-            \item Site 100 dùng mô hình \textbf{Core--Distribution--Access}; các site 200/300/400 được phân vùng theo khoa và VLAN nghiệp vụ.
-            \item Mạng người dùng và mạng quản trị được tách thành các subnet riêng theo mã site.
-            \item Firewall/WAN Edge tạo ranh giới giữa LAN Campus và mạng WAN.
-            \item Prefix của từng site được trao đổi qua SD-WAN overlay.
+            \item \textbf{Site 100 (Campus chính):} mô hình 3 lớp
+                  \emph{Core--Distribution--Access}; gateway mỗi VLAN là
+                  \textbf{VRRP VIP} trên Core-SW1/2.
+            \item \textbf{Site 200/300/400 (chi nhánh):} mô hình 2 lớp --
+                  Brand-FW làm \emph{router-on-a-stick} (sub-interface
+                  VLAN) + switch truy nhập, không có lớp Core/Dist riêng
+                  để tối ưu chi phí.
+            \item Mỗi khoa/phòng = một VLAN riêng
+                  (\texttt{10.<site>.<vlan>.0/24}), gateway \texttt{.1},
+                  DHCP pool \texttt{.100--.199}.
+            \item VLAN 99 MANAGEMENT dùng chung cho quản trị thiết bị ở
+                  tất cả các site.
         \end{itemize}
-        \vspace{0.08cm}
-        {\color{accentTeal}\textbf{Ảnh cần thể hiện:}} ranh giới site, switch, Firewall, vEdge và uplink về Service Provider.
-    \end{columns}
+    \end{block}
+    \vspace{0.12cm}
+    \begin{block}{Chức năng của vùng}
+        \begin{itemize}
+            \item Chia nhỏ broadcast domain theo khoa; tách mạng người
+                  dùng khỏi mạng quản trị.
+            \item Brand-FW đảm nhận gateway, DHCP server chi nhánh và
+                  ranh giới bảo mật LAN/WAN.
+            \item vEdge (WAN Edge) gắn mỗi site vào overlay SD-WAN.
+        \end{itemize}
+    \end{block}
 \end{frame}
 
-% --- SLIDE 4.3: Mẫu ảnh Service Provider ---
+% --- SLIDE 4.2b: Định tuyến và vai trò Site trong thiết kế ---
+\begin{frame}{4.2 Thiết kế chi tiết các Site Campus (2/2)}
+    \small
+    \begin{block}{Định tuyến trong vùng}
+        \begin{itemize}
+            \item Site 100: \textbf{OSPF Area 0} trên Core; Firewall tham
+                  gia OSPF qua link Inside \texttt{10.1.2.0/30}.
+            \item Site 200/300/400: Brand-FW định tuyến trực tiếp tới
+                  vEdge bằng link \texttt{10.<site>.1.0/30}; LAN qua
+                  sub-interface.
+            \item DHCP: relay về DHCP-Server \texttt{10.1.90.10} tại
+                  Site 100; chi nhánh dùng dhcpd ngay tại Brand-FW.
+            \item Giữa các site: prefix LAN được phát qua OMP, vận chuyển
+                  bằng tunnel IPsec trên underlay.
+        \end{itemize}
+    \end{block}
+    \vspace{0.12cm}
+    \begin{block}{Vai trò trong thiết kế tổng thể}
+        \begin{itemize}
+            \item Site 100 là trung tâm chứa Server Farm, DMZ, SDN
+                  Controller và DHCP tập trung.
+            \item Các chi nhánh triển khai dịch vụ phân tán nhưng vẫn
+                  kết nối xuyên site qua overlay SD-WAN.
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+% --- SLIDE 4.3: Service Provider và mạng Underlay ---
 \begin{frame}{4.3 Service Provider và mạng Underlay}
     \small
-    \begin{columns}[T,onlytextwidth]
-        \column{0.52\textwidth}
-        \slideScreenshotPlaceholder{CHÈN ẢNH INTERNET/MPLS}{images/service-provider-underlay.png}
-
-        \column{0.44\textwidth}
-        \textbf{Cách thiết kế vùng Underlay:}
+    \begin{block}{Cách thiết kế vùng Underlay}
         \begin{itemize}
-            \item \textbf{Internet} dùng dải \texttt{203.0.113.0/24}; mỗi WAN Edge nối qua một liên kết transit \texttt{/30}.
-            \item \textbf{MPLS} dùng các mạng \texttt{100.64.<site>.x/30} để tách kết nối theo site.
-            \item Service Provider chỉ cung cấp IP reachability cho các WAN Edge.
-            \item OMP và IPsec hình thành lớp overlay bên trên hai transport.
+            \item \textbf{Internet:} dải \texttt{203.0.113.0/24}; mỗi
+                  WAN Edge kết nối bằng một transit \texttt{/30} riêng
+                  (vd vEdge2-S200 \texttt{203.0.113.9/30}).
+            \item \textbf{MPLS:} các mạng \texttt{100.64.<site>.0/30}
+                  tách kết nối theo từng site (vd vEdge1-S400
+                  \texttt{100.64.400.1/30}).
+            \item Mỗi site có tối đa \textbf{2 TLOC} (Internet + MPLS);
+                  site 900 (Controller) kết nối Internet qua vEdge65.
+            \item Service Provider chỉ cung cấp IP reachability, không
+                  can thiệp vào lớp overlay.
         \end{itemize}
-        \vspace{0.08cm}
-        {\color{accentTeal}\textbf{Ảnh cần thể hiện:}} hai cloud Internet/MPLS, các link tới vEdge và Site 900.
-    \end{columns}
+    \end{block}
+    \vspace{0.12cm}
+    \begin{block}{Chức năng của vùng}
+        \begin{itemize}
+            \item Đóng vai trò transport vật lý cho toàn bộ SD-WAN.
+            \item Hai transport độc lập tạo đa đường (multi-homing) cho
+                  mỗi site.
+            \item Liên kết \texttt{/30} giữa 2 vEdge cùng site phục vụ
+                  dự phòng gateway WAN.
+        \end{itemize}
+    \end{block}
 \end{frame}
 
-% --- SLIDE 4.4: Mẫu ảnh SDN Controller ---
+% --- SLIDE 4.3b: Định tuyến và vai trò Underlay ---
+\begin{frame}{4.3 Service Provider và mạng Underlay (2/2)}
+    \small
+    \begin{block}{Định tuyến trong vùng}
+        \begin{itemize}
+            \item Underlay: IP static (hoặc OSPF) để hội tụ các
+                  \texttt{/30} tại Service Provider; chỉ cần reachability.
+            \item Overlay: \textbf{OMP} (Overlay Management Protocol)
+                  trao đổi prefix giữa WAN Edge và vSmart.
+            \item \textbf{IPsec} mã hóa tunnel giữa các vEdge; khóa được
+                  cấp phát bởi vSmart (controller).
+            \item OMP tạo topology full-mesh ảo bên trên 2 transport,
+                  che đi sự khác biệt Internet/MPLS.
+        \end{itemize}
+    \end{block}
+    \vspace{0.12cm}
+    \begin{block}{Vai trò trong thiết kế tổng thể}
+        \begin{itemize}
+            \item Là lớp hạ tầng chung cho mọi campus: thay thế kênh
+                  thuê riêng bằng tunnel an toàn trên mạng sẵn có.
+            \item Với SDN: underlay này giữ vai trò \emph{forwarding
+                  plane} mở rộng, còn SDN controller quản trị L2 trong
+                  Campus chính.
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+% --- SLIDE 4.4: Vùng SDN Controller ---
 \begin{frame}{4.4 Vùng SDN Controller}
     \small
-    \begin{columns}[T,onlytextwidth]
-        \column{0.52\textwidth}
-        \slideScreenshotPlaceholder{CHÈN ẢNH SDN CONTROLLER}{images/sdn-controller-zone.png}
-
-        \column{0.44\textwidth}
-        \textbf{Cách thiết kế vùng điều khiển:}
+    \begin{block}{Cách thiết kế vùng điều khiển}
         \begin{itemize}
-            \item Ryu Controller sử dụng \textbf{OpenFlow 1.3} để điều khiển lớp chuyển tiếp.
-            \item Control Plane dùng VLAN 99 MANAGEMENT (dải \texttt{10.1.99.0/24}, controller \texttt{10.1.99.10}).
-            \item Controller nối 1 cổng vào Server Farm, kênh điều khiển tới 6 switch OVS đi qua link uplink sẵn có.
-            \item Lưu lượng điều khiển được tách khỏi Data Plane của người dùng.
+            \item \textbf{Ryu Controller} sử dụng \textbf{OpenFlow 1.3}
+                  để điều khiển lớp chuyển tiếp (6 switch OVS: Dist-SW1/2,
+                  Access-SW1--4).
+            \item Control plane chạy trên \textbf{VLAN 99 MANAGEMENT}
+                  (\texttt{10.1.99.0/24}); controller \texttt{10.1.99.10}
+                  nối vào Server Farm.
+            \item Mỗi switch OVS \texttt{set-controller br0
+                  tcp:10.1.99.10:6653} và khai \emph{datapath-id} theo
+                  node-id, còn vòng tránh vòng lặp L2 do STP đảm nhiệm.
+            \item Kênh điều khiển đi qua link uplink sẵn có -- không cần
+                  kéo dây riêng tới từng switch.
         \end{itemize}
-        \vspace{0.08cm}
-        {\color{accentTeal}\textbf{Ảnh cần thể hiện:}} Controller, 6 switch OVS và kênh control plane trên VLAN quản trị.
-    \end{columns}
+    \end{block}
+    \vspace{0.02cm}
+    \begin{block}{Chức năng của vùng}
+        \begin{itemize}
+            \item Tách control plane khỏi data plane: quyết định chuyển
+                  tiếp tập trung tại Ryu.
+            \item App \texttt{campus\_switch\_13.py}: học MAC theo VLAN,
+                  flood đúng VLAN, ACL proactive chặn VPC14.
+            \item API REST (\texttt{ofctl\_rest}, port 8080) phục vụ
+                  giám sát topology và flow table.
+        \end{itemize}
+    \end{block}
 \end{frame}
 
-% --- SLIDE 4.5: Mẫu ảnh Server Farm ---
+% --- SLIDE 4.4b: Định tuyến và vai trò SDN Controller ---
+\begin{frame}{4.4 Vùng SDN Controller (2/2)}
+    \small
+    \begin{block}{Định tuyến trong vùng}
+        \begin{itemize}
+            \item Switch OVS xử lý L2 (MAC/VLAN); định tuyến liên VLAN do
+                  lớp Core (SVI + VRRP) đảm nhiệm.
+            \item Controller chỉ nhận OpenFlow qua TCP 6653, không tham
+                  gia chuyển gói dữ liệu người dùng.
+            \item \texttt{fail\_mode=standalone}: mất controller, switch
+                  tự chuyển sang chế độ chuyển tiếp bình thường, mạng
+                  campus vẫn hoạt động.
+            \item STP trên OVS loại bỏ vòng lặp L2 trong mô hình mesh
+                  Dist--Access.
+        \end{itemize}
+    \end{block}
+    \vspace{0.12cm}
+    \begin{block}{Vai trò trong thiết kế tổng thể}
+        \begin{itemize}
+            \item Minh họa khả năng lập trình mạng: chính sách (ACL,
+                  VLAN) thay đổi tập trung từ controller thay vì cấu hình
+                  từng switch.
+            \item Bổ trợ cho SD-WAN: SDN quản trị chuyển tiếp nội bộ
+                  campus, SD-WAN giao tiếp liên site.
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+% --- SLIDE 4.5: Vùng Server Farm ---
 \begin{frame}{4.5 Vùng Server Farm}
     \small
-    \begin{columns}[T,onlytextwidth]
-        \column{0.52\textwidth}
-        \slideScreenshotPlaceholder{CHÈN ẢNH SERVER FARM}{images/server-farm-zone.png}
-
-        \column{0.44\textwidth}
-        \textbf{Cách thiết kế vùng dịch vụ nội bộ:}
+    \begin{block}{Cách thiết kế vùng dịch vụ nội bộ}
         \begin{itemize}
-            \item Server Farm đặt trong \textbf{VLAN 90}, mạng \texttt{10.1.90.0/24}.
-            \item DHCP Server \texttt{10.1.90.10} và Syslog Server \texttt{10.1.90.11} dùng địa chỉ tĩnh.
-            \item SwitchServerFarm nối dự phòng tới Core-SW1/2 bằng trunk VLAN 90/99.
-            \item Vùng dịch vụ được tách khỏi mạng người dùng và DMZ.
+            \item Server Farm đặt trong \textbf{VLAN 90}
+                  (\texttt{10.1.90.0/24}), gateway VRRP
+                  \texttt{10.1.90.1} trên Core.
+            \item DHCP-Server \texttt{10.1.90.10} và Syslog-Server
+                  \texttt{10.1.90.11} dùng IP tĩnh.
+            \item SwitchServerFarm nối \textbf{dự phòng} tới Core-SW1/2
+                  bằng 2 trunk VLAN 90/99.
+            \item SDN Controller (\texttt{10.1.99.10}) cắm chung
+                  SwitchServerFarm ở access VLAN 99 để tận dụng hạ tầng.
         \end{itemize}
-        \vspace{0.08cm}
-        {\color{accentTeal}\textbf{Ảnh cần thể hiện:}} switch tập trung, DHCP, Syslog và hai uplink Core.
-    \end{columns}
+    \end{block}
+    \vspace{0.12cm}
+    \begin{block}{Chức năng của vùng}
+        \begin{itemize}
+            \item Cung cấp dịch vụ hạ tầng dùng chung cho toàn campus:
+                  cấp IP (DHCP), thu thập log (Syslog).
+            \item Tách biệt lưu lượng dịch vụ khỏi mạng người dùng và
+                  DMZ để kiểm soát bảo mật.
+            \item Redundancy nhờ 2 uplink tới cả hai Core.
+        \end{itemize}
+    \end{block}
 \end{frame}
 
-% --- SLIDE 4.6: Mẫu ảnh DMZ ---
+% --- SLIDE 4.5b: Định tuyến và vai trò Server Farm ---
+\begin{frame}{4.5 Vùng Server Farm (2/2)}
+    \small
+    \begin{block}{Định tuyến trong vùng}
+        \begin{itemize}
+            \item SVI VLAN 90 trên Core-SW1/2 làm gateway (VRRP VIP
+                  \texttt{10.1.90.1}).
+            \item Core khai \texttt{ip helper-address 10.1.90.10} trên
+                  SVI VLAN 10/20/30/40 để \textbf{relay DHCP} từ các
+                  khoa về DHCP-Server.
+            \item L2: trunk 90/99 truyền VLAN tới SwitchServerFarm;
+                  server thuộc access VLAN 90.
+            \item Syslog Server nhận log từ Firewall, switch và các thiết
+                bị qua mạng 10.1.90.0/24.
+        \end{itemize}
+    \end{block}
+    \vspace{0.12cm}
+    \begin{block}{Vai trò trong thiết kế tổng thể}
+        \begin{itemize}
+            \item Là trung tâm dịch vụ tập trung (mô hình doanh nghiệp):
+                  một DHCP Server phục vụ mọi VLAN người dùng.
+            \item Đặt controller SDN trong vùng quản trị giúp giám sát và
+                  cấu hình tập trung theo đúng chuẩn thực tế.
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+% --- SLIDE 4.6: Vùng DMZ ---
 \begin{frame}{4.6 Vùng DMZ}
     \small
-    \begin{columns}[T,onlytextwidth]
-        \column{0.52\textwidth}
-        \slideScreenshotPlaceholder{CHÈN ẢNH DMZ}{images/dmz-zone.png}
-
-        \column{0.44\textwidth}
-        \textbf{Cách thiết kế vùng dịch vụ công bố:}
+    \begin{block}{Cách thiết kế vùng dịch vụ công bố}
         \begin{itemize}
-            \item DMZ dùng mạng \texttt{10.1.1.0/28}, tách khỏi Inside và Server Farm.
-            \item Web Server \texttt{10.1.1.10} và Mail Server \texttt{10.1.1.11} nối qua SwitchDMZ.
-            \item Cặp Firewall ASAv Active/Standby cung cấp gateway và kiểm soát luồng truy cập.
-            \item Chỉ các dịch vụ cần công bố mới được phép đi qua chính sách Firewall.
+            \item DMZ dùng mạng \texttt{10.1.1.0/28}, gateway
+                  \texttt{10.1.1.1} (FW-ASAv-Active) trên interface DMZ.
+            \item Web-Server \texttt{10.1.1.10} và Mail-Server
+                  \texttt{10.1.1.11} nối qua SwitchDMZ.
+            \item Cặp Firewall \textbf{ASAv Active/Standby} (HA qua dây
+                  Failover Gi0/5) tạo ranh giới Inside--DMZ--Outside.
+            \item Dự phòng: FW-Standby cũng có interface DMZ
+                  (\texttt{10.1.1.2}) nối SwitchDMZ.
         \end{itemize}
-        \vspace{0.08cm}
-        {\color{accentTeal}\textbf{Ảnh cần thể hiện:}} Firewall HA, SwitchDMZ, Web/Mail và ranh giới Inside--Outside.
-    \end{columns}
+    \end{block}
+    \vspace{0.12cm}
+    \begin{block}{Chức năng của vùng}
+        \begin{itemize}
+            \item Công bố dịch vụ Web/Mail ra bên ngoài mà không lộ mạng
+                  nội bộ.
+            \item Kiểm soát chiều truy cập: từ ngoài vào chỉ cho phép
+                  port 80/443/25/110 theo chính sách.
+            \item HA đảm bảo gateway và chính sách không đứt khi một
+                  Firewall sự cố.
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+% --- SLIDE 4.6b: Định tuyến và vai trò Vùng DMZ ---
+\begin{frame}{4.6 Vùng DMZ (2/2)}
+    \small
+    \begin{block}{Định tuyến trong vùng}
+        \begin{itemize}
+            \item FW tham gia \textbf{OSPF} phía Inside (link
+                  \texttt{10.1.2.0/30} tới Core) để học route nội bộ.
+            \item DMZ là mạng trực tiếp trên interface Gi0/4 của FW
+                  (connected route).
+            \item Default route đi ra Internet qua FW
+                  Outside--vEdge (VPN 512).
+            \item NAT/ACL: FW thực hiện NAT cho traffic DMZ đi ra và
+                  chính sách cho traffic vào DMZ.
+        \end{itemize}
+    \end{block}
+    \vspace{0.12cm}
+    \begin{block}{Vai trò trong thiết kế tổng thể}
+        \begin{itemize}
+            \item Vùng đệm giữa mạng nội bộ và WAN -- mô hình chuẩn cho
+                  trường đại học công bố cổng thông tin, mail.
+            \item Kết hợp SD-WAN: traffic DMZ tới chi nhánh đi qua
+                  chính sách FW rồi tunnel IPsec của vEdge.
+        \end{itemize}
+    \end{block}
 \end{frame}
 
 % --- SLIDE 4.7: Kết quả nghiên cứu đã hoàn thành ---
 \begin{frame}{4.7 Nội dung đã hoàn thành}
     \begin{columns}[T]
-        \column{0.48\textwidth}
-        \textbf{Về lý thuyết:}
+        \column{0.5\textwidth}
+        \textbf{Về lý thuyết \& thiết kế:}
         \begin{itemize}
-            \item Làm rõ mô hình Campus ba lớp và chức năng của từng lớp.
-            \item Phân tích nguyên lý tách Control Plane/Data Plane trong SDN.
-            \item Phân tích underlay, overlay và các vai trò điều khiển trong SD-WAN.
-            \item Xác định vị trí tích hợp SDN và SD-WAN trong kiến trúc chung.
+            \item Mô hình Campus ba lớp; nguyên tắc tách Control
+                  Plane/Data Plane trong SDN.
+            \item Phân tích underlay/overlay và vai trò điều khiển
+                  (vManage, vSmart, vBond) trong SD-WAN.
+            \item Quy hoạch 4 site, phân vùng VLAN và địa chỉ thống nhất.
+            \item Vùng điều khiển SDN trên VLAN 99, dùng chính link
+                  uplink sẵn có (không kéo dây riêng).
         \end{itemize}
 
-        \column{0.48\textwidth}
-        \textbf{Về thiết kế:}
+        \column{0.5\textwidth}
+        \textbf{Về mô phỏng trên EVE-NG:}
         \begin{itemize}
-            \item Xác định bốn site và miền điều khiển SD-WAN.
-            \item Hoàn thiện nguyên tắc phân vùng VLAN và quy hoạch địa chỉ.
-            \item Phân tách vùng người dùng, quản trị, Server Farm và DMZ.
-            \item Xây dựng topology làm cơ sở cho giai đoạn mô phỏng.
+            \item Dựng topology đủ 66 node: 4 campus, site 900,
+                  vùng Server Farm/DMZ và hạ tầng Internet/MPLS.
+            \item SDN: Ryu quản lý 6 switch OVS (2 Dist + 4 Access)
+                  qua OpenFlow 1.3; App học MAC theo VLAN, kèm ACL.
+            \item SD-WAN: vManager/vSmart/vBond dựng + 9 vEdge sẵn
+                  sàng nhận cấu hình overlay.
+            \item Chi nhánh S400: DHCP hoạt động (VPC nhận IP 50/60);
+                  khắc phục lỗi khởi động Core-SW1/2 (CPU hog).
         \end{itemize}
     \end{columns}
 \end{frame}
@@ -178,19 +347,24 @@
 % --- SLIDE 4.8: Công việc đang thực hiện ---
 \begin{frame}{4.8 Công việc đang thực hiện}
     \begin{block}{Trọng tâm hiện tại}
-        Hoàn thiện sự nhất quán giữa cơ sở lý thuyết, thiết kế logic và topology mô phỏng.
+        Hoàn thiện và chạy thực nghiệm tổ hợp SDN + SD-WAN trên lab EVE-NG.
     \end{block}
     \vspace{0.15cm}
     \begin{enumerate}
-        \item Rà soát vai trò và kết nối của các khối Core, Distribution, Access, Firewall và WAN Edge.
+        \item Triển khai vùng điều khiển SDN trên VLAN 99 lên lab EVE
+              (thiết kế đã cập nhật, chưa đẩy config lên server).
         \vspace{0.12cm}
-        \item Đối chiếu VLAN, subnet và vùng dịch vụ với yêu cầu của từng site.
+        \item Cấu hình IOL switch cho chi nhánh S200 (Cần Thơ) và
+              S300 (Đà Nẵng) theo khuôn mẫu đã áp dụng tại S400.
         \vspace{0.12cm}
-        \item Hoàn thiện mô hình điều khiển tập trung cho các switch trong Campus chính.
+        \item Gán IP tĩnh, cài role DHCP Server trên node 72; cài các
+              dịch vụ syslog/web/mail trên máy chủ nội bộ.
         \vspace{0.12cm}
-        \item Hoàn thiện quan hệ underlay/overlay giữa Campus chính và các cơ sở phụ.
+        \item Nhập cấu hình vEdge; hoàn thiện overlay SD-WAN (TLOC,
+              IPsec, OMP) giữa Campus chính và các chi nhánh.
         \vspace{0.12cm}
-        \item Chuẩn bị các kịch bản kiểm tra kết nối cơ bản cho giai đoạn tiếp theo.
+        \item Chuẩn bị các kịch bản kiểm tra kết nối trong VLAN, liên
+              VLAN và liên site để thu minh chứng demo.
     \end{enumerate}
 \end{frame}
 

@@ -1,0 +1,13 @@
+[Unit]
+Description=Optional Campus Controller Cloud-NAT DHCP on ens6
+After=network.target
+ConditionPathExists=/sys/class/net/ens6
+
+[Service]
+Type=oneshot
+ExecStart=/root/Campus-Cloud-DHCP.sh
+RemainAfterExit=yes
+TimeoutStartSec=15
+
+[Install]
+WantedBy=multi-user.target

@@ -26,6 +26,7 @@ Trả lời và cập nhật tài liệu bằng tiếng Việt; giữ thuật ng
 
 - Đọc [project-conventions.md](references/project-conventions.md) khi xử lý kiến trúc, IP, VLAN, node-id hoặc quyết định thiết kế.
 - Đọc [eve-ng-workflows.md](references/eve-ng-workflows.md) trước khi sửa `.unl`, nhúng config, deploy lên EVE-NG, wipe/start node hoặc xử lý `.lock`.
+- Đọc [ryu-ovs-recovery.md](references/ryu-ovs-recovery.md) trước khi triển khai, khởi động lại hoặc khôi phục kết nối Ryu–OVS của Site 100.
 - Chạy `python .codex/skills/campus-network-lab/scripts/validate_unl.py "Campus Network SDN SD-WAN.unl"` sau mọi thay đổi tới `.unl` hoặc startup config nhúng.
 
 ## Quy trình thay đổi
@@ -54,4 +55,3 @@ Trả lời và cập nhật tài liệu bằng tiếng Việt; giữ thuật ng
 - Thiết kế, topology, file cấu hình và bảng node-id không mâu thuẫn trong phạm vi thay đổi.
 - Không làm mất hoặc ghi đè thay đổi không liên quan của người dùng.
 - Nêu rõ phần nào chỉ có thể xác minh trên EVE-NG thật.
-
