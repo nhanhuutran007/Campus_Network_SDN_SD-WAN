@@ -1,0 +1,59 @@
+{
+\setbeamertemplate{background}{
+\begin{tikzpicture}[overlay, remember picture]
+    \fill[primaryDark] (current page.south west) rectangle (current page.north east);
+    \fill[primaryLight] (current page.south west) -- (current page.south east) -- (current page.north east) -- cycle;
+    \fill[primaryDark!80] (current page.west) rectangle ([xshift=0.5\paperwidth]current page.west);
+    \fill[accentTeal!70] ([yshift=-0.08\paperheight]current page.south west) rectangle ([xshift=0.42\paperwidth, yshift=0.08\paperheight]current page.south west);
+    \fill[accentTeal!50] ([yshift=0.3\paperheight]current page.south west) rectangle ++(0.03\paperwidth, 0.6\paperheight);
+\end{tikzpicture}
+}
+\setbeamertemplate{navigation symbols}{}
+
+\begin{frame}[plain]
+    \centering
+    
+    \vspace{0.5cm}
+    
+    {\color{white}\fontsize{7}{9}\selectfont\textmd{ĐẠI HỌC TÔN ĐỨC THẮNG}}
+    \par{\color{white!70}\fontsize{6}{8}\selectfont\textmd{KHOA CÔNG NGHỆ THÔNG TIN}}
+    
+    \vspace{0.5cm}
+    
+    {\color{white}\fontsize{8}{10}\selectfont\textbf{DỰ ÁN CÔNG NGHỆ THÔNG TIN}}
+    
+    \vspace{0.25cm}
+    
+    {\color{accentTeal!80}\fontsize{7}{9}\selectfont\textbf{BÁO CÁO TIẾN ĐỘ NGHIÊN CỨU}}
+    
+    \begin{tikzpicture}
+        \draw[accentTeal, line width=0.4mm] (0,0) -- (5,0);
+    \end{tikzpicture}
+    
+    \vspace{0.3cm}
+    
+    {\color{white}\fontsize{13}{17}\selectfont\textbf{XÂY DỰNG MẠNG CAMPUS NETWORK}}
+    \par{\color{white}\fontsize{13}{17}\selectfont\textbf{SỬ DỤNG SDN VÀ SD-WAN}}
+    
+    \vspace{0.45cm}
+    
+    \begin{tikzpicture}
+        \draw[white!30, line width=0.2mm] (0,0) -- (5,0);
+    \end{tikzpicture}
+    
+    \vspace{0.4cm}
+    
+    {\color{white}\fontsize{6}{7}\selectfont
+    \begin{tabular}{lc}
+        \textbf{Giảng viên hướng dẫn:} & {\color{white!80}ThS. Lê Viết Thanh} \\[0.12cm]
+        \textbf{Sinh viên thực hiện:} & {\color{white!80}Trần Hữu Nhân -- 52300235} \\[0.05cm]
+        & {\color{white!80}Nguyễn Nhật Hào -- 52300198}
+    \end{tabular}
+    }
+    
+    \vspace{0.45cm}
+    
+    {\color{white!50}\fontsize{5}{6}\selectfont\today}
+    
+\end{frame}
+}

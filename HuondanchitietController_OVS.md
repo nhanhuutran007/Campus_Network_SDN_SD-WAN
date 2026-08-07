@@ -107,3 +107,56 @@ ovs-vsctl set-controller br0 tcp:192.168.100.1:6653
 ovs-vsctl show
 ```
 Kết quả báo `is_connected: true` bên dưới cấu hình Controller là OVS đã sẵn sàng chuyển tiếp gói tin (Data Plane). Mọi luồng đi qua PC sẽ được truy vấn Flow Table tại Controller.
+
+---
+
+## PHẦN 3: SDN QUẢN LÝ TOÀN BỘ L2 CAMPUS (Dist/Access-SW) — TỪ 08/2026
+
+> **Lưu ý (04/08/2026)**: node test cũ AccessTest + VPC11/12 đã **xóa khỏi lab** — PHẦN 1–2 dưới đây giữ làm tài liệu gốc về cách cài Ryu/OVS (dải test 192.168.100.0/24 không còn dùng).
+> **Lưu ý (07/08/2026)**: control plane SDN **chuyển sang VLAN 99 MANAGEMENT** (bỏ link riêng, mạng cũ 10.1.100.0/24 đã xóa khỏi lab) — đúng kiến trúc doanh nghiệp: controller nối vào mạng quản trị chung, không kéo dây riêng tới từng switch; dùng các bước ở 3.3 bên dưới.
+
+### 3.1. Sơ đồ kết nối control plane (VLAN 99 MANAGEMENT — dải 10.1.99.0/24)
+
+| Switch | Cổng control (IP mgmt trong VLAN 99) | Controller trỏ về |
+|---|---|---|
+| SDN_CONTROLLER (e0) | 10.1.99.10/24 (→ SwitchServerFarm e1/0, access VLAN 99) | — (là controller) |
+| Dist-SW1 / Dist-SW2 (dpid 5, 8) | 10.1.99.11 / 10.1.99.12 | tcp:10.1.99.10:6653 |
+| Access-SW1 / Access-SW2 (dpid 68, 66) | 10.1.99.21 / 10.1.99.22 | tcp:10.1.99.10:6653 |
+| Access-SW3 / Access-SW4 (dpid 70, 69) | 10.1.99.23 / 10.1.99.24 | tcp:10.1.99.10:6653 |
+
+(Không có link riêng: kênh OpenFlow đi trên VLAN 99 MANAGEMENT qua các link uplink sẵn có — Dist/Access có sẵn IP mgmt VLAN 99. Controller chỉ cắm 1 cổng e0 vào SwitchServerFarm; e3 = Cloud-NAT cho Internet.)
+
+### 3.2. App Ryu mới — `campus_switch_13.py`
+
+Thay thế `simple_switch_13.py` (không xử lý VLAN nên không dùng được cho campus):
+
+```bash
+cp campus_switch_13.py /root/ryu-app/
+ryu-manager --ofp-tcp-listen-port 6653 /root/ryu-app/campus_switch_13.py ryu.app.ofctl_rest
+```
+
+- **L2 nhận thức VLAN**: học MAC theo (VLAN, MAC, port); flood đúng VLAN (port access dùng `tag=` của OVS — OVS tự push/pop VLAN); chưa biết đích mới gửi `packet-in` lên controller (reactive).
+- **ACL proactive**: `BLOCK_PORTS` trong app — flow drop priority 40000 tự cài khi switch kết nối. Mặc định danh sách rỗng để mọi VPC dùng DHCP; có thể thêm VPC14 / Access-SW1 `ens6` khi cần demo chặn.
+- **Northbound**: `ofctl_rest` mở REST port 8080 → `curl http://127.0.0.1:8080/stats/switches` trả `[5, 8, 68, 66, 70, 69]`; cài flow từ xa bằng `POST /stats/flowentry/add` (xem demo cuối file app).
+
+### 3.3. Các bước bổ sung trên OVS campus (trong script `.sh` của từng node)
+
+```bash
+# 1) IP management/control plane trong VLAN 99 (bridge br-mgmt dùng chung)
+ip addr add 10.1.99.<x>/24 dev br-mgmt   # x: Dist .11/.12, Access .21–.24
+
+# 2) Ép OpenFlow 1.3 + khai datapath-id cố định (bằng node-id)
+ovs-vsctl set bridge br0 protocols=OpenFlow13
+ovs-vsctl set bridge br0 other_config:datapath-id=00000000000000<node-id hex>
+
+# 3) Trỏ controller (IP VLAN 99 của SDN_CONTROLLER — dùng chung cho mọi switch)
+ovs-vsctl set-controller br0 tcp:10.1.99.10:6653
+
+# 4) Chỉ chuyển tiếp theo flow của controller; app phải có table-miss priority 0
+ovs-vsctl set bridge br0 fail_mode=secure
+
+# 5) Tắt OVS STP để frame đi vào OpenFlow pipeline và sinh packet-in
+ovs-vsctl set bridge br0 stp_enable=false
+```
+
+> **Lưu ý quan trọng**: không xóa cấu hình `tag=`/`trunks=` trong script switch. Với `fail_mode=secure`, app `campus_switch_13.py` phải cài table-miss priority 0; nếu thiếu rule này, ARP/broadcast chưa khớp flow sẽ bị drop trước khi Ryu nhận `packet-in`.

@@ -1,0 +1,212 @@
+% =========================================================================
+% CHAPTER 4: BÁO CÁO TIẾN ĐỘ NGHIÊN CỨU
+% =========================================================================
+
+\section{Báo cáo tiến độ nghiên cứu}
+
+% Khung ảnh dùng cho các slide minh họa tiến độ. Khi có ảnh thật, thay lệnh
+% \slideScreenshotPlaceholder bằng \includegraphics[...,keepaspectratio]{images/...}.
+\newcommand{\slideScreenshotPlaceholder}[2]{%
+    \begin{tcolorbox}[
+        height=0.65\textheight,
+        colback=lightGrayBg,
+        colframe=accentTeal,
+        boxrule=1pt,
+        arc=0pt,
+        valign=center
+    ]
+        \centering
+        {\color{accentTeal}\fontsize{28}{30}\selectfont\faImage}\par
+        \vspace{0.2cm}
+        \textbf{#1}\par
+        \vspace{0.12cm}
+        {\scriptsize\color{black!60}\texttt{#2}}
+    \end{tcolorbox}%
+}
+
+% --- SLIDE 4.1: Tổng quan tiến độ ---
+\begin{frame}{4.1 Tổng quan tiến độ}
+    \begin{table}
+        \centering
+        \scriptsize
+        \setlength{\tabcolsep}{4pt}
+        \renewcommand{\arraystretch}{1.28}
+        \begin{tabular}{|p{0.33\textwidth}|p{0.18\textwidth}|p{0.42\textwidth}|}
+            \hline
+            \rowcolor{primaryDark!15}
+            \textbf{Khối công việc} & \textbf{Trạng thái} & \textbf{Kết quả hiện tại} \\
+            \hline
+            Nghiên cứu Campus Network, SDN, SD-WAN & Hoàn thành & Đã hệ thống hóa khái niệm, thành phần và vai trò \\
+            \hline
+            Phân tích yêu cầu và phạm vi & Hoàn thành & Xác định mô hình đại học gồm Campus chính và ba cơ sở phụ \\
+            \hline
+            Thiết kế kiến trúc và phân vùng logic & Hoàn thành & Có mô hình phân tầng, VLAN/IP, Server Farm và DMZ \\
+            \hline
+            Xây dựng mô hình EVE-NG & Đang rà soát & Topology đã hình thành; tiếp tục đối chiếu kết nối và thiết bị \\
+            \hline
+            Tích hợp các khối SDN và SD-WAN & Đang thực hiện & Hoàn thiện quan hệ điều khiển và kết nối giữa các site \\
+            \hline
+            Kiểm thử và tổng hợp kết quả & Chưa thực hiện & Thực hiện sau khi mô hình được hoàn thiện \\
+            \hline
+        \end{tabular}
+    \end{table}
+\end{frame}
+
+% --- SLIDE 4.2: Mẫu ảnh các Site Campus ---
+\begin{frame}{4.2 Minh họa các Site Campus}
+    \small
+    \begin{columns}[T,onlytextwidth]
+        \column{0.52\textwidth}
+        \slideScreenshotPlaceholder{CHÈN ẢNH CHỤP SITE}{images/site-campus.png}
+
+        \column{0.44\textwidth}
+        \textbf{Cách thiết kế vùng Site:}
+        \begin{itemize}
+            \item Site 100 dùng mô hình \textbf{Core--Distribution--Access}; các site 200/300/400 được phân vùng theo khoa và VLAN nghiệp vụ.
+            \item Mạng người dùng và mạng quản trị được tách thành các subnet riêng theo mã site.
+            \item Firewall/WAN Edge tạo ranh giới giữa LAN Campus và mạng WAN.
+            \item Prefix của từng site được trao đổi qua SD-WAN overlay.
+        \end{itemize}
+        \vspace{0.08cm}
+        {\color{accentTeal}\textbf{Ảnh cần thể hiện:}} ranh giới site, switch, Firewall, vEdge và uplink về Service Provider.
+    \end{columns}
+\end{frame}
+
+% --- SLIDE 4.3: Mẫu ảnh Service Provider ---
+\begin{frame}{4.3 Service Provider và mạng Underlay}
+    \small
+    \begin{columns}[T,onlytextwidth]
+        \column{0.52\textwidth}
+        \slideScreenshotPlaceholder{CHÈN ẢNH INTERNET/MPLS}{images/service-provider-underlay.png}
+
+        \column{0.44\textwidth}
+        \textbf{Cách thiết kế vùng Underlay:}
+        \begin{itemize}
+            \item \textbf{Internet} dùng dải \texttt{203.0.113.0/24}; mỗi WAN Edge nối qua một liên kết transit \texttt{/30}.
+            \item \textbf{MPLS} dùng các mạng \texttt{100.64.<site>.x/30} để tách kết nối theo site.
+            \item Service Provider chỉ cung cấp IP reachability cho các WAN Edge.
+            \item OMP và IPsec hình thành lớp overlay bên trên hai transport.
+        \end{itemize}
+        \vspace{0.08cm}
+        {\color{accentTeal}\textbf{Ảnh cần thể hiện:}} hai cloud Internet/MPLS, các link tới vEdge và Site 900.
+    \end{columns}
+\end{frame}
+
+% --- SLIDE 4.4: Mẫu ảnh SDN Controller ---
+\begin{frame}{4.4 Vùng SDN Controller}
+    \small
+    \begin{columns}[T,onlytextwidth]
+        \column{0.52\textwidth}
+        \slideScreenshotPlaceholder{CHÈN ẢNH SDN CONTROLLER}{images/sdn-controller-zone.png}
+
+        \column{0.44\textwidth}
+        \textbf{Cách thiết kế vùng điều khiển:}
+        \begin{itemize}
+            \item Ryu Controller sử dụng \textbf{OpenFlow 1.3} để điều khiển lớp chuyển tiếp.
+            \item Control Plane dùng VLAN 99 MANAGEMENT (dải \texttt{10.1.99.0/24}, controller \texttt{10.1.99.10}).
+            \item Controller nối 1 cổng vào Server Farm, kênh điều khiển tới 6 switch OVS đi qua link uplink sẵn có.
+            \item Lưu lượng điều khiển được tách khỏi Data Plane của người dùng.
+        \end{itemize}
+        \vspace{0.08cm}
+        {\color{accentTeal}\textbf{Ảnh cần thể hiện:}} Controller, 6 switch OVS và kênh control plane trên VLAN quản trị.
+    \end{columns}
+\end{frame}
+
+% --- SLIDE 4.5: Mẫu ảnh Server Farm ---
+\begin{frame}{4.5 Vùng Server Farm}
+    \small
+    \begin{columns}[T,onlytextwidth]
+        \column{0.52\textwidth}
+        \slideScreenshotPlaceholder{CHÈN ẢNH SERVER FARM}{images/server-farm-zone.png}
+
+        \column{0.44\textwidth}
+        \textbf{Cách thiết kế vùng dịch vụ nội bộ:}
+        \begin{itemize}
+            \item Server Farm đặt trong \textbf{VLAN 90}, mạng \texttt{10.1.90.0/24}.
+            \item DHCP Server \texttt{10.1.90.10} và Syslog Server \texttt{10.1.90.11} dùng địa chỉ tĩnh.
+            \item SwitchServerFarm nối dự phòng tới Core-SW1/2 bằng trunk VLAN 90/99.
+            \item Vùng dịch vụ được tách khỏi mạng người dùng và DMZ.
+        \end{itemize}
+        \vspace{0.08cm}
+        {\color{accentTeal}\textbf{Ảnh cần thể hiện:}} switch tập trung, DHCP, Syslog và hai uplink Core.
+    \end{columns}
+\end{frame}
+
+% --- SLIDE 4.6: Mẫu ảnh DMZ ---
+\begin{frame}{4.6 Vùng DMZ}
+    \small
+    \begin{columns}[T,onlytextwidth]
+        \column{0.52\textwidth}
+        \slideScreenshotPlaceholder{CHÈN ẢNH DMZ}{images/dmz-zone.png}
+
+        \column{0.44\textwidth}
+        \textbf{Cách thiết kế vùng dịch vụ công bố:}
+        \begin{itemize}
+            \item DMZ dùng mạng \texttt{10.1.1.0/28}, tách khỏi Inside và Server Farm.
+            \item Web Server \texttt{10.1.1.10} và Mail Server \texttt{10.1.1.11} nối qua SwitchDMZ.
+            \item Cặp Firewall ASAv Active/Standby cung cấp gateway và kiểm soát luồng truy cập.
+            \item Chỉ các dịch vụ cần công bố mới được phép đi qua chính sách Firewall.
+        \end{itemize}
+        \vspace{0.08cm}
+        {\color{accentTeal}\textbf{Ảnh cần thể hiện:}} Firewall HA, SwitchDMZ, Web/Mail và ranh giới Inside--Outside.
+    \end{columns}
+\end{frame}
+
+% --- SLIDE 4.7: Kết quả nghiên cứu đã hoàn thành ---
+\begin{frame}{4.7 Nội dung đã hoàn thành}
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \textbf{Về lý thuyết:}
+        \begin{itemize}
+            \item Làm rõ mô hình Campus ba lớp và chức năng của từng lớp.
+            \item Phân tích nguyên lý tách Control Plane/Data Plane trong SDN.
+            \item Phân tích underlay, overlay và các vai trò điều khiển trong SD-WAN.
+            \item Xác định vị trí tích hợp SDN và SD-WAN trong kiến trúc chung.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \textbf{Về thiết kế:}
+        \begin{itemize}
+            \item Xác định bốn site và miền điều khiển SD-WAN.
+            \item Hoàn thiện nguyên tắc phân vùng VLAN và quy hoạch địa chỉ.
+            \item Phân tách vùng người dùng, quản trị, Server Farm và DMZ.
+            \item Xây dựng topology làm cơ sở cho giai đoạn mô phỏng.
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+% --- SLIDE 4.8: Công việc đang thực hiện ---
+\begin{frame}{4.8 Công việc đang thực hiện}
+    \begin{block}{Trọng tâm hiện tại}
+        Hoàn thiện sự nhất quán giữa cơ sở lý thuyết, thiết kế logic và topology mô phỏng.
+    \end{block}
+    \vspace{0.15cm}
+    \begin{enumerate}
+        \item Rà soát vai trò và kết nối của các khối Core, Distribution, Access, Firewall và WAN Edge.
+        \vspace{0.12cm}
+        \item Đối chiếu VLAN, subnet và vùng dịch vụ với yêu cầu của từng site.
+        \vspace{0.12cm}
+        \item Hoàn thiện mô hình điều khiển tập trung cho các switch trong Campus chính.
+        \vspace{0.12cm}
+        \item Hoàn thiện quan hệ underlay/overlay giữa Campus chính và các cơ sở phụ.
+        \vspace{0.12cm}
+        \item Chuẩn bị các kịch bản kiểm tra kết nối cơ bản cho giai đoạn tiếp theo.
+    \end{enumerate}
+\end{frame}
+
+% --- SLIDE 4.9: Phần việc tiếp theo trong phạm vi đề tài ---
+\begin{frame}{4.9 Kế hoạch hoàn thành giai đoạn hiện tại}
+    \begin{enumerate}
+        \item \textbf{Hoàn thiện mô hình:} rà soát topology, địa chỉ và quan hệ giữa các thành phần.
+        \vspace{0.15cm}
+        \item \textbf{Kiểm tra chức năng cơ bản:} kết nối trong cùng VLAN, giữa các VLAN và giữa các site.
+        \vspace{0.15cm}
+        \item \textbf{Ghi nhận kết quả:} thu thập sơ đồ, bảng trạng thái và minh chứng từ mô phỏng.
+        \vspace{0.15cm}
+        \item \textbf{Hoàn thiện báo cáo:} đồng bộ phần lý thuyết, thiết kế và tiến độ thực hiện.
+    \end{enumerate}
+    \vspace{0.2cm}
+    \begin{block}{Giới hạn của kế hoạch}
+        Chỉ tập trung hoàn tất các hạng mục đã xác định trong đề tài, không mở rộng thêm công nghệ hoặc phạm vi mới.
+    \end{block}
+\end{frame}

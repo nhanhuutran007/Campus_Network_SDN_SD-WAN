@@ -1,0 +1,88 @@
+% =========================================================================
+% CHAPTER 1: MỞ ĐẦU VÀ ĐỊNH HƯỚNG NGHIÊN CỨU
+% =========================================================================
+
+\section{Mở đầu và Định hướng nghiên cứu}
+
+% --- SLIDE 1.1: Bối cảnh nghiên cứu ---
+\begin{frame}{1.1 Bối cảnh nghiên cứu}
+    \small
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \textbf{Vai trò của mạng Campus:}
+        \begin{itemize}
+            \item Kết nối người học, giảng viên, phòng ban và các hệ thống dùng chung.
+            \item Hỗ trợ học tập, nghiên cứu, quản trị và cung cấp dịch vụ số.
+            \item Liên kết nhiều khu vực chức năng và nhiều cơ sở địa lý.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \textbf{Vấn đề đặt ra:}
+        \begin{itemize}
+            \item Hạ tầng ngày càng lớn, nhiều thiết bị và chính sách truy cập.
+            \item Quản trị phân tán làm tăng độ phức tạp khi thay đổi hệ thống.
+            \item Kết nối WAN truyền thống thiếu linh hoạt khi mở rộng đa cơ sở.
+        \end{itemize}
+    \end{columns}
+    \vspace{0.2cm}
+    \begin{block}{Định hướng nghiên cứu}
+        Kết hợp kiến trúc Campus phân cấp với \textbf{SDN} cho mạng nội bộ và \textbf{SD-WAN} cho kết nối đa cơ sở.
+    \end{block}
+\end{frame}
+
+% --- SLIDE 1.2: Mục tiêu và câu hỏi nghiên cứu ---
+\begin{frame}{1.2 Mục tiêu và câu hỏi nghiên cứu}
+    \begin{block}{Mục tiêu tổng quát}
+        Xây dựng khung thiết kế Campus Network ứng dụng SDN và SD-WAN phù hợp với môi trường đại học đa cơ sở.
+    \end{block}
+    \vspace{0.15cm}
+    \textbf{Các câu hỏi nghiên cứu chính:}
+    \begin{enumerate}
+        \item Kiến trúc Campus phân cấp tổ chức vai trò của Core, Distribution và Access như thế nào?
+        \item SDN có thể tập trung hóa lớp điều khiển và quản lý chính sách trong Campus ra sao?
+        \item SD-WAN tổ chức underlay, overlay và kết nối an toàn giữa các cơ sở như thế nào?
+        \item Hai công nghệ cần được tích hợp ở vị trí nào trong một mô hình thống nhất?
+    \end{enumerate}
+\end{frame}
+
+% --- SLIDE 1.3: Đối tượng và phạm vi ---
+\begin{frame}{1.3 Đối tượng và phạm vi nghiên cứu}
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \textbf{Đối tượng nghiên cứu:}
+        \begin{itemize}
+            \item Kiến trúc mạng Campus trong môi trường đào tạo.
+            \item Phân tầng mạng, VLAN và quy hoạch địa chỉ IP.
+            \item Kiến trúc SDN, OpenFlow và SDN Controller.
+            \item Kiến trúc SD-WAN, underlay và overlay.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \textbf{Phạm vi của báo cáo tiến độ:}
+        \begin{itemize}
+            \item Tổng hợp cơ sở lý thuyết liên quan.
+            \item Phân tích yêu cầu cho mô hình đại học đa cơ sở.
+            \item Đề xuất kiến trúc logic và mô hình mô phỏng.
+            \item Ghi nhận các hạng mục đã và đang thực hiện.
+        \end{itemize}
+        \vspace{0.1cm}
+        \textbf{Ngoài phạm vi hiện tại:} triển khai trên hạ tầng vật lý và đo kiểm hiệu năng chuyên sâu.
+    \end{columns}
+\end{frame}
+
+% --- SLIDE 1.4: Phương pháp nghiên cứu ---
+\begin{frame}{1.4 Phương pháp nghiên cứu}
+    \begin{enumerate}
+        \item \textbf{Nghiên cứu tài liệu:} hệ thống hóa khái niệm Campus Network, SDN, SD-WAN và các giao thức liên quan.
+        \vspace{0.12cm}
+        \item \textbf{Phân tích yêu cầu:} xác định phạm vi người dùng, khu vực chức năng, dịch vụ và nhu cầu kết nối đa cơ sở.
+        \vspace{0.12cm}
+        \item \textbf{Thiết kế mô hình:} xây dựng kiến trúc phân tầng, phân vùng logic và quan hệ giữa SDN với SD-WAN.
+        \vspace{0.12cm}
+        \item \textbf{Mô phỏng đối chiếu:} biểu diễn thiết kế trên EVE-NG để kiểm tra tính nhất quán của topology và luồng kết nối cơ bản.
+    \end{enumerate}
+    \vspace{0.15cm}
+    \begin{block}{Trọng tâm giai đoạn hiện tại}
+        Hoàn thiện nền tảng lý thuyết và thiết kế logic trước khi chuyển sang kiểm thử toàn hệ thống.
+    \end{block}
+\end{frame}
