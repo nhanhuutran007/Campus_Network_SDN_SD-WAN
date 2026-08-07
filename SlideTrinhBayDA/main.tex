@@ -4,6 +4,7 @@
 \usepackage[T5]{fontenc}
 \usepackage[vietnamese]{babel}
 \usepackage{helvet}
+\usepackage{times}
 \usepackage{fontawesome5}
 \usepackage{booktabs}
 \usepackage{colortbl}
@@ -35,6 +36,12 @@
 \usetheme{Madrid}
 \usecolortheme{default}
 
+% --- Phông chữ báo cáo chuyên nghiệp (Times serif) cho nội dung slide ---
+% Trang bìa giữ nguyên phông Helvetica (xem \input{Chapter/title}).
+% Lưu ý: KHÔNG dùng \setbeamerfont{...}{family=ptm} — key `family` (thiếu dấu `*`)
+% lưu tên phông như text thô, bị typeset ra chữ "pt" ở góc trang.
+\renewcommand{\familydefault}{\rmdefault}
+
 \setbeamercolor{structure}{fg=primaryDark}
 \setbeamercolor{palette primary}{bg=primaryDark, fg=white}
 \setbeamercolor{palette secondary}{bg=primaryLight, fg=white}
@@ -53,11 +60,11 @@
 % --- Tiêu đề hiện đại: thanh bên trái + gạch chân kiểu khối vuông ---
 \setbeamercolor{headlineRule}{bg=accentTeal}
 \setbeamertemplate{frametitle}{%
-  \begin{beamercolorbox}[wd=\paperwidth,ht=0.9cm,dp=0.1cm,center]{frametitle}%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=0.9cm,dp=0.1cm,leftskip=0.55cm,rightskip=0.55cm]{frametitle}%
     \begin{tikzpicture}[remember picture,overlay]
       \fill[accentTeal]
-        ([xshift=0.5cm,yshift=-0.15cm]current page.north west)
-        rectangle ++(0.16cm,-0.6cm);
+        ([xshift=0cm,yshift=-0.15cm]current page.north west)
+        rectangle ++(0.18cm,-0.75cm);
     \end{tikzpicture}%
     \insertframetitle
   \end{beamercolorbox}%
@@ -71,7 +78,7 @@
   \begin{beamercolorbox}[wd=\paperwidth,ht=1.5pt]{headlineRule}%
   \end{beamercolorbox}%
   \begin{beamercolorbox}[wd=\paperwidth,ht=3.1ex,dp=1.2ex,leftskip=0.55cm,rightskip=0.55cm]{footline}%
-    \small\textbf{\insertshorttitle}\hfill\insertframenumber\,/\,\inserttotalframenumber
+    \small\textbf{\insertshorttitle}\hfill\textbf{Trang \insertframenumber/\inserttotalframenumber}
   \end{beamercolorbox}%
 }
 
@@ -98,7 +105,10 @@
 
 \begin{document}
 
+% Trang bìa giữ nguyên phông Helvetica
+{\fontfamily{phv}\selectfont
 \input{Chapter/title}
+}
 
 \begin{frame}{Tổng quan nội dung}
     \tableofcontents

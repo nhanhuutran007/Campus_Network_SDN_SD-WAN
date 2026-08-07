@@ -3,4 +3,4 @@
 \beamer@sectionintoc {2}{Cơ sở lý thuyết}{7}{0}{2}
 \beamer@sectionintoc {3}{Mô hình nghiên cứu và Thiết kế đề xuất}{13}{0}{3}
 \beamer@sectionintoc {4}{Báo cáo tiến độ nghiên cứu}{18}{0}{4}
-\beamer@sectionintoc {5}{Kết luận báo cáo tiến độ}{27}{0}{5}
+\beamer@sectionintoc {5}{Kết luận báo cáo tiến độ}{32}{0}{5}

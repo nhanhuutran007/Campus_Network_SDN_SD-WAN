@@ -52,8 +52,8 @@
 - Không khôi phục node DHCP cũ id 23 hoặc image Win7 cho DHCP-Server.
 - Giữ các nhãn IP của thiết bị mạng trên canvas. Không khôi phục nhãn IP tĩnh của VPC phòng ban hoặc nhãn VPC11/12 đã xóa.
 - Ryu quản lý Dist-SW1/2 và Access-SW1–4; giữ cấu hình VLAN `tag`/`trunks`, OpenFlow13, datapath-id và controller chung `tcp:10.1.99.10:6653`. Đặt `fail_mode=secure` và `stp_enable=false`: OVS STP từng chặn frame trước OpenFlow pipeline, làm controller không nhận packet-in.
-- DPID hiện dùng node-id ở dạng hex có padding; DPID 5, 8, 68, 66, 70 và 69 lần lượt thuộc Dist-SW1/2, Access-SW1–4. App `campus_switch_13.py` học MAC theo VLAN, flood đúng VLAN, mở `ofctl_rest` trên 8080 và mặc định chặn VPC14 tại `(68, 'eth3')` qua `BLOCK_PORTS`.
-- Không dùng lại đường control in-band qua SwitchServerFarm/Core; kênh OpenFlow đi trên VLAN 99 MANAGEMENT đã có sẵn trong hạ tầng (mạng cũ `10.1.100.0/24` không tồn tại nữa).
+- DPID hiện dùng node-id ở dạng hex có padding; DPID 5, 8, 68, 66, 70 và 69 lần lượt thuộc Dist-SW1/2, Access-SW1–4. App `campus_switch_13.py` học MAC theo VLAN và mở `ofctl_rest` trên 8080. Source hiện tại để `BLOCK_PORTS = {}`; khi bật demo ACL phải dùng đúng tên interface OVS như `ens6` và kiểm tra lại app thực tế trong guest.
+- Không dùng lại mạng control riêng `10.1.100.0/24` hoặc các link control cũ. Kênh OpenFlow đi trên VLAN 99 MANAGEMENT qua SwitchServerFarm, Core và các uplink campus sẵn có; khi dùng flow bootstrap `NORMAL`, phải tạo đường VLAN 99 không vòng lặp theo [ryu-ovs-recovery.md](ryu-ovs-recovery.md).
 - vEdge có thể cần paste config thủ công qua console sau lần boot đầu.
 - Windows, SD-WAN controllers và Linux/OVS có các bước cấu hình thủ công; không giả định `config="1"` có thể thay thế mọi bước.
 - Giữ `config="1"` cho đúng 51 node được khai trong validator; giữ `config="0"` cho Windows, vtmgmt/vtsmart/vtbond và Linux/OVS cần cấu hình tay.
