@@ -11,22 +11,24 @@
         \scriptsize
         \setlength{\tabcolsep}{4pt}
         \renewcommand{\arraystretch}{1.28}
-        \begin{tabular}{|p{0.33\textwidth}|p{0.18\textwidth}|p{0.42\textwidth}|}
+        \begin{tabular}{|p{0.31\textwidth}|p{0.16\textwidth}|p{0.46\textwidth}|}
             \hline
             \rowcolor{primaryDark!15}
             \textbf{Khối công việc} & \textbf{Trạng thái} & \textbf{Kết quả hiện tại} \\
             \hline
-            Nghiên cứu Campus Network, SDN, SD-WAN & Hoàn thành & Đã hệ thống hóa khái niệm, thành phần và vai trò \\
+            Nghiên cứu Campus Network, SDN, SD-WAN & Hoàn thành & Đã hệ thống hóa khái niệm, thành phần và vai trò của từng công nghệ \\
             \hline
-            Phân tích yêu cầu và phạm vi & Hoàn thành & Xác định mô hình đại học gồm Campus chính và ba cơ sở phụ \\
+            Phân tích yêu cầu và phạm vi & Hoàn thành & Xác định mô hình đại học đa cơ sở: Campus chính + 3 cơ sở phụ \\
             \hline
-            Thiết kế kiến trúc và phân vùng logic & Hoàn thành & Có mô hình phân tầng, VLAN/IP, Server Farm và DMZ \\
+            Thiết kế kiến trúc, VLAN và địa chỉ & Hoàn thành & Phân tầng 3 lớp/2 lớp, quy hoạch VLAN+IP cho 4 site, Server Farm và DMZ \\
             \hline
-            Xây dựng mô hình EVE-NG & Đang rà soát & Topology đã hình thành; tiếp tục đối chiếu kết nối và thiết bị \\
+            Xây dựng mô hình EVE-NG & Hoàn thành & Topology 66 node: 4 campus, site 900, Server Farm/DMZ, Internet \& MPLS \\
             \hline
-            Tích hợp các khối SDN và SD-WAN & Đang thực hiện & Hoàn thiện quan hệ điều khiển và kết nối giữa các site \\
+            Triển khai chi nhánh & Một phần hoàn thành & S400 (Nha Trang) DHCP hoạt động; S200/S300 đang cấu hình theo khuôn mẫu \\
             \hline
-            Kiểm thử và tổng hợp kết quả & Chưa thực hiện & Thực hiện sau khi mô hình được hoàn thiện \\
+            Tích hợp SDN (campus) và SD-WAN (overlay) & Đang thực hiện & SDN: Ryu + 6 switch OVS sẵn sàng trên VLAN 99; SD-WAN: vEdge sẵn nhà, overlay đang triển khai \\
+            \hline
+            Kiểm thử và tổng hợp kết quả & Chưa thực hiện & Thực hiện sau khi hoàn tất việc triển khai các vùng \\
             \hline
         \end{tabular}
     \end{table}
@@ -320,26 +322,27 @@
         \column{0.5\textwidth}
         \textbf{Về lý thuyết \& thiết kế:}
         \begin{itemize}
-            \item Mô hình Campus ba lớp; nguyên tắc tách Control
-                  Plane/Data Plane trong SDN.
+            \item Mô hình Campus ba lớp và mô hình chi nhánh hai lớp;
+                nguyên tắc tách Control Plane/Data Plane trong SDN.
             \item Phân tích underlay/overlay và vai trò điều khiển
-                  (vManage, vSmart, vBond) trong SD-WAN.
+                (vManage, vSmart, vBond) trong SD-WAN.
             \item Quy hoạch 4 site, phân vùng VLAN và địa chỉ thống nhất.
             \item Vùng điều khiển SDN trên VLAN 99, dùng chính link
-                  uplink sẵn có (không kéo dây riêng).
+                uplink sẵn có (không cần kéo dây riêng tới từng switch).
         \end{itemize}
 
         \column{0.5\textwidth}
         \textbf{Về mô phỏng trên EVE-NG:}
         \begin{itemize}
             \item Dựng topology đủ 66 node: 4 campus, site 900,
-                  vùng Server Farm/DMZ và hạ tầng Internet/MPLS.
-            \item SDN: Ryu quản lý 6 switch OVS (2 Dist + 4 Access)
-                  qua OpenFlow 1.3; App học MAC theo VLAN, kèm ACL.
-            \item SD-WAN: vManager/vSmart/vBond dựng + 9 vEdge sẵn
-                  sàng nhận cấu hình overlay.
-            \item Chi nhánh S400: DHCP hoạt động (VPC nhận IP 50/60);
-                  khắc phục lỗi khởi động Core-SW1/2 (CPU hog).
+                vùng Server Farm/DMZ và hạ tầng Internet/MPLS.
+            \item SDN: app \texttt{campus\_switch\_13.py} sẵn sàng quản
+                lý 6 switch OVS (2 Dist + 4 Access) qua OpenFlow 1.3
+                trên VLAN 99 (học MAC theo VLAN, ACL proactive).
+            \item SD-WAN: vManager/vSmart/vBond đã dựng; 9 vEdge
+                (mỗi site 2 TLOC Internet + MPLS) sẵn sàng cấu hình.
+            \item Chi nhánh S400 (Nha Trang): cấu hình thiết bị và
+                DHCP hoạt động (VPC nhận IP giải \texttt{50/60}).
         \end{itemize}
     \end{columns}
 \end{frame}
@@ -352,32 +355,40 @@
     \vspace{0.15cm}
     \begin{enumerate}
         \item Triển khai vùng điều khiển SDN trên VLAN 99 lên lab EVE
-              (thiết kế đã cập nhật, chưa đẩy config lên server).
+              (cấu hình 6 switch OVS và kênh điều khiển đã cập nhật,
+              bước tiếp theo là đưa lên server và vận hành thử).
         \vspace{0.12cm}
-        \item Cấu hình IOL switch cho chi nhánh S200 (Cần Thơ) và
-              S300 (Đà Nẵng) theo khuôn mẫu đã áp dụng tại S400.
+        \item Cấu hình thiết bị cho chi nhánh S200 (Cần Thơ) và
+              S300 (Đà Nẵng) theo khuôn mẫu đã áp dụng thành công tại S400.
         \vspace{0.12cm}
-        \item Gán IP tĩnh, cài role DHCP Server trên node 72; cài các
-              dịch vụ syslog/web/mail trên máy chủ nội bộ.
+        \item Gán IP tĩnh, cài role DHCP trên máy chủ (node 72); cài các
+              dịch vụ syslog/web/mail trên máy chủ nội bộ; cấu hình GUI
+              vManager/vSmart/vBond.
         \vspace{0.12cm}
-        \item Nhập cấu hình vEdge; hoàn thiện overlay SD-WAN (TLOC,
-              IPsec, OMP) giữa Campus chính và các chi nhánh.
+        \item Nhập cấu hình 9 vEdge và hoàn thiện overlay SD-WAN (TLOC,
+              tunnel IPsec, OMP) giữa Campus chính và các chi nhánh.
         \vspace{0.12cm}
-        \item Chuẩn bị các kịch bản kiểm tra kết nối trong VLAN, liên
-              VLAN và liên site để thu minh chứng demo.
+        \item Rà soát đồng bộ cấu hình và chuẩn bị các kịch bản kiểm
+              tra kết nối trong VLAN, liên VLAN và liên site.
     \end{enumerate}
 \end{frame}
 
 % --- SLIDE 4.9: Phần việc tiếp theo trong phạm vi đề tài ---
 \begin{frame}{4.9 Kế hoạch hoàn thành giai đoạn hiện tại}
     \begin{enumerate}
-        \item \textbf{Hoàn thiện mô hình:} rà soát topology, địa chỉ và quan hệ giữa các thành phần.
+        \item \textbf{Hoàn thiện mô hình:} đưa bản thiết kế vùng điều khiển
+              SDN (VLAN 99) lên lab EVE, triển khai cấu hình 6 switch OVS
+              và xác nhận kết nối với Ryu.
         \vspace{0.15cm}
-        \item \textbf{Kiểm tra chức năng cơ bản:} kết nối trong cùng VLAN, giữa các VLAN và giữa các site.
+        \item \textbf{Kiểm tra chức năng cơ bản:} kết nối trong cùng VLAN
+              và giữa các VLAN (relay DHCP), kết nối giữa các chi nhánh
+              qua overlay SD-WAN.
         \vspace{0.15cm}
-        \item \textbf{Ghi nhận kết quả:} thu thập sơ đồ, bảng trạng thái và minh chứng từ mô phỏng.
+        \item \textbf{Ghi nhận kết quả:} thu thập sơ đồ, bảng trạng thái và
+              minh chứng hoạt động từ mô phỏng phục vụ báo cáo.
         \vspace{0.15cm}
-        \item \textbf{Hoàn thiện báo cáo:} đồng bộ phần lý thuyết, thiết kế và tiến độ thực hiện.
+        \item \textbf{Hoàn thiện báo cáo:} đồng bộ phần lý thuyết, thiết kế
+              và kết quả triển khai, chuẩn bị nội dung báo cáo cuối kỳ.
     \end{enumerate}
     \vspace{0.2cm}
     \begin{block}{Giới hạn của kế hoạch}
