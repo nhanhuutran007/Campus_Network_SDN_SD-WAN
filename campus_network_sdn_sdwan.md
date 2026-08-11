@@ -621,11 +621,11 @@ graph TB
 | 10.1.30.0/24 | 30 | Khoa Luật | VPC15, VPC16 |
 | 10.1.40.0/24 | 40 | Phòng Hành chính | VPC17, VPC18 |
 | 10.1.90.0/24 | 90 | Server Farm | DHCP + Syslog Server |
-| 10.1.99.0/24 | 99 | Management | IP quản lý switch/FW |
+| 10.1.99.0/24 | 99 | Management | IP quản lý switch/FW — switch .1/.2 (Core), .10 (SDN controller), .11/.12 (Dist), .21–.24 (Access), .31 (DMZ), .32 (Farm), **.33/.34 (FW ASDM, failover mgmt)**, **.50 (PC-Management)** |
 | 10.1.1.0/28 | — | DMZ | Web, Mail |
 | 10.1.2.0/30, .4/30, .8/30, .12/30 | — | FW Inside ↔ Core | 4 link /30 |
 | 10.1.3.0/30, .4/30, .8/30, .12/30 | — | FW Outside ↔ vEdge | 4 link /30 |
-| 10.1.255.0/29 | — | Failover FW-A ↔ FW-S | Dây Gi0/5 (LAN-FO tùy chọn) |
+| 10.1.255.0/29 | — | Failover FW-A ↔ FW-S | Dây Gi0/5 — LAN-FO `failover interface ip failover 10.1.255.1 255.255.255.248 standby 10.1.255.2` khai giống hệt trên CẢ 2 unit (ASA tự gán IP theo vai trò: primary dùng .1, secondary dùng .2) |
 | 10.1.0.4/30 | — | Core-SW1 ↔ Core-SW2 (Po10) | 10.1.0.5 / 10.1.0.6 |
 | — | 99 (dùng chung) | SDN Control plane / Management — SDN_CONTROLLER 10.1.99.10 ↔ các switch 10.1.99.11/.12/.21–.24 | Chạy trên VLAN 99 MANAGEMENT, dùng link uplink sẵn có (không có link riêng) |
 
@@ -679,10 +679,10 @@ graph TB
 
 | # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
 |---|---|---|---|---|
-| 1 | FW-ASAv-Active — Gi0/0 = 10.1.2.1/30 | Core-SW1 — Gi1/0 = 10.1.2.2/30 | 10.1.2.0/30 | FW Inside 1 → Core1 (OSPF) |
-| 2 | FW-ASAv-Active — Gi0/1 = 10.1.2.5/30 | Core-SW2 — Gi0/3 = 10.1.2.6/30 | 10.1.2.4/30 | FW Inside 2 → Core2 |
-| 3 | FW-ASAv-Standby — Gi0/0 = 10.1.2.9/30 | Core-SW2 — Gi1/0 = 10.1.2.10/30 | 10.1.2.8/30 | FW Inside 3 → Core2 |
-| 4 | FW-ASAv-Standby — Gi0/1 = 10.1.2.13/30 | Core-SW1 — Gi0/3 = 10.1.2.14/30 | 10.1.2.12/30 | FW Inside 4 → Core1 |
+| 1 | FW-ASAv-Active — Gi0/0 = 10.1.2.1/30 | Core-SW1 — E1/0 = 10.1.2.2/30 | 10.1.2.0/30 | FW Inside 1 → Core1 (OSPF) |
+| 2 | FW-ASAv-Active — Gi0/1 = 10.1.2.5/30 | Core-SW2 — E0/3 = 10.1.2.6/30 | 10.1.2.4/30 | FW Inside 2 → Core2 |
+| 3 | FW-ASAv-Standby — Gi0/0 = 10.1.2.9/30 | Core-SW2 — E1/0 = 10.1.2.10/30 | 10.1.2.8/30 | FW Inside 3 → Core2 |
+| 4 | FW-ASAv-Standby — Gi0/1 = 10.1.2.13/30 | Core-SW1 — E0/3 = 10.1.2.14/30 | 10.1.2.12/30 | FW Inside 4 → Core1 |
 | 5 | FW-ASAv-Active — Gi0/2 = 10.1.3.1/30 | vEdge1-S100 — ge0/0 = 10.1.3.2/30 | 10.1.3.0/30 | FW Outside 1 → vEdge1 (VPN 512) |
 | 6 | FW-ASAv-Active — Gi0/3 = 10.1.3.5/30 | vEdge2-S100 — ge0/1 = 10.1.3.6/30 | 10.1.3.4/30 | FW Outside 2 → vEdge2 |
 | 7 | FW-ASAv-Standby — Gi0/2 = 10.1.3.9/30 | vEdge2-S100 — ge0/0 = 10.1.3.10/30 | 10.1.3.8/30 | FW Outside 3 → vEdge2 |
@@ -691,21 +691,24 @@ graph TB
 | 10 | FW-ASAv-Standby — Gi0/4 = 10.1.1.2/28 | SwitchDMZ — e0/3 = — | 10.1.1.0/28 | Interface DMZ (dự phòng) |
 | 11 | Web-Server — e0 = 10.1.1.10/28 (gw 10.1.1.1) | SwitchDMZ — e0/0 = — | 10.1.1.0/28 | Access DMZ |
 | 12 | Mail-Server — e0 = 10.1.1.11/28 (gw 10.1.1.1) | SwitchDMZ — e0/1 = — | 10.1.1.0/28 | Access DMZ |
-| 13 | FW-ASAv-Active — Gi0/5 (Failover) | FW-ASAv-Standby — Gi0/5 (Failover) | — (LAN-FO: 10.1.255.0/29) | Dây Failover/HA-Sync — không đặt IP thông thường |
-| 14 | Core-SW1 — Po10 (Gi0/0+Gi0/1) = 10.1.0.5/30 | Core-SW2 — Po10 (Gi0/0+Gi0/1) = 10.1.0.6/30 | 10.1.0.4/30 | EtherChannel giữa 2 Core |
-| 15 | Core-SW1 — Gi1/1 = — | SwitchServerFarm — e0/0 = — | Trunk (90,99) | L2 trunk → Server Farm |
-| 16 | Core-SW2 — Gi1/1 = — | SwitchServerFarm — e0/3 = — | Trunk (90,99) | L2 trunk → Server Farm |
-| 17 | DHCP-Server — e0 = 10.1.90.10/24 | SwitchServerFarm — e0/1 = — | 10.1.90.0/24 | Access VLAN 90 |
+| 13 | FW-ASAv-Active — Gi0/5 (Failover) | FW-ASAv-Standby — Gi0/5 (Failover) | LAN-FO: `failover interface ip failover 10.1.255.1 255.255.255.248 standby 10.1.255.2` (giống hệt 2 unit) | Dây Failover/HA-Sync — ASA tự gán IP theo vai trò (primary .1 / secondary .2) |
+| 14 | Core-SW1 — Po10 (E0/0+E0/1) = 10.1.0.5/30 | Core-SW2 — Po10 (E0/0+E0/1) = 10.1.0.6/30 | 10.1.0.4/30 | EtherChannel giữa 2 Core |
+| 15 | Core-SW1 — E1/1 = — | SwitchServerFarm — e0/0 = — | Trunk (90,99) | L2 trunk → Server Farm |
+| 16 | Core-SW2 — E1/1 = — | SwitchServerFarm — e0/3 = — | Trunk (90,99) | L2 trunk → Server Farm |
+| 17 | DHCP-Server — e0 = 10.1.90.10/24 | SwitchServerFarm — e1/1 = — | 10.1.90.0/24 | Access VLAN 90 (dây EVE cắm tại cổng E1/1 — id 17) |
 | 18 | Syslog-Server — e0 = 10.1.90.11/24 | SwitchServerFarm — e0/2 = — | 10.1.90.0/24 | Access VLAN 90 |
+| 19 | FW-ASAv-Active — Management0/0 = 10.1.99.33/24 (active) | SwitchServerFarm — e1/2 = — | VLAN 99 | Access VLAN 99 — ASDM/management, `failover management-interface management` (active .33 / standby .34 tự hoán đổi) |
+| 20 | FW-ASAv-Standby — Management0/0 = 10.1.99.34/24 (standby) | SwitchServerFarm — e1/3 = — | VLAN 99 | Access VLAN 99 — ASDM/management |
+| 21 | PC-Management — e0 = 10.1.99.50/24 (gw 10.1.99.1) | SwitchServerFarm — e2/0 = — | VLAN 99 | Access VLAN 99 — PC quản trị, truy cập ASDM https://10.1.99.33 / .34 |
 
 #### 2.2.2. Site 100 — Distribution / Access / PC
 
 | # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
 |---|---|---|---|---|
-| 18 | Core-SW1 — Gi0/2 = — | Dist-SW1 — e6 = — | Trunk | L2 Core → Dist |
-| 19 | Core-SW1 — Gi1/2 = — | Dist-SW2 — e7 = — | Trunk | L2 Core → Dist |
-| 20 | Core-SW2 — Gi0/2 = — | Dist-SW2 — e6 = — | Trunk | L2 Core → Dist |
-| 21 | Core-SW2 — Gi1/2 = — | Dist-SW1 — e7 = — | Trunk | L2 Core → Dist |
+| 18 | Core-SW1 — E0/2 = — | Dist-SW1 — e6 = — | Trunk | L2 Core → Dist |
+| 19 | Core-SW1 — E1/2 = — | Dist-SW2 — e7 = — | Trunk | L2 Core → Dist |
+| 20 | Core-SW2 — E0/2 = — | Dist-SW2 — e6 = — | Trunk | L2 Core → Dist |
+| 21 | Core-SW2 — E1/2 = — | Dist-SW1 — e7 = — | Trunk | L2 Core → Dist |
 | 22 | Dist-SW1 — e5 = — | Dist-SW2 — e5 = — | Trunk | L2 Dist ↔ Dist |
 | 23 | Dist-SW1 — e1 = — | Access-SW1 — e1 = — | Trunk | L2 Dist → Access |
 | 24 | Dist-SW1 — e2 = — | Access-SW2 — e1 = — | Trunk | L2 Dist → Access |
@@ -851,6 +854,13 @@ graph TB
 | **SDN_CONTROLLER** | e3 | DHCP (cloud) | Internet | — | **Cloud-NAT (pnet0)** — e3/ens6 nhận DHCP từ host EVE, dùng để cài Ryu/pip (không phải control plane) |
 | **Dist-SW1 / Dist-SW2** | SVI (Mgmt) | 10.1.99.11 / 10.1.99.12 | /24 | 99 | Control plane: set-controller `tcp:10.1.99.10:6653` |
 | **Access-SW1–4** | SVI (Mgmt) | 10.1.99.21 – .24 | /24 | 99 | Control plane: set-controller `tcp:10.1.99.10:6653` |
+| **FW-ASAv-Active / Standby** | Management0/0 | 10.1.99.33 / 10.1.99.34 | /24 | 99 | **ASDM management** — `failover management-interface management` (active .33, standby .34 tự hoán đổi), nối SwitchServerFarm e1/2 / e1/3 (access VLAN 99) |
+| **PC-Management** | e0 | 10.1.99.50 | /24 | 99 | PC quản trị (win-7) — truy cập ASDM `https://10.1.99.33` (hoặc `.34`), nối SwitchServerFarm e2/0 (access VLAN 99) |
+
+**ASDM (quản lý FW HA bằng giao diện web):**
+- PC-Management (node 73, win-7) đặt IP tĩnh **10.1.99.50/24, GW 10.1.99.1** → mở trình duyệt (cần Java 8) tới **`https://10.1.99.33`** (active) hoặc **`https://10.1.99.34`** (standby) → tải ASDM Launcher → đăng nhập `admin` / `vnpro@2026`.
+- Cấu hình FW đã khai: `interface Management0/0` (nameif management, security 100), `failover management-interface management Management0/0`, `failover interface ip management 10.1.99.33 … standby 10.1.99.34`, `http server enable` + `http 10.1.99.0 255.255.255.0 management`.
+- **Bắt buộc 1 lần trên console cả 2 unit**: `crypto key generate rsa modulus 2048` (RSA key không replicate qua HA). ASDM 7.20(2) nhúng sẵn trong image ASAv (`show version` → Device Manager Version) nên không cần file asdm riêng.
 
 #### 2.3.3. Campus Chính — Site ID 100 (AS 65000)
 
@@ -999,7 +1009,7 @@ graph TB
 | **90** | Server Farm | 10.1.90.0/24 | 10.1.90.1 | Static IP | DHCP/Syslog Server |
 | **99** | Management | 10.1.99.0/24 | 10.1.99.1 | Static IP | Quản lý IP các Switch/FW |
 
-> DHCP Server = DHCP-Server (10.1.90.10). Trên SVI của Core-SW1/Core-SW2 (VLAN 10/20/30/40) khai báo `ip helper-address 10.1.90.10` để relay DHCP.
+> DHCP Server = DHCP-Server (10.1.90.10). Trên SVI của Core-SW1/Core-SW2 (VLAN 10/20/30/40) khai báo `ip helper-address 10.1.90.10` để relay DHCP. **Trạng thái (08/2026): DHCP-Server node 72 chưa cài role DHCP — cấp DHCP campus sẽ triển khai sau** (các VPC mặc định `ip dhcp` nên chưa nhận IP cho tới khi role DHCP hoàn tất).
 
 #### 2.4.2. Chi nhánh — Site 200 / 300 / 400
 
@@ -1017,6 +1027,23 @@ graph TB
 
 > DHCP cho chi nhánh: cấu hình **DHCP server trên Brand-FW** (scope theo từng VLAN), hoặc relay về DHCP-Server campus (10.1.90.10) qua SD-WAN.
 
+> **Nguyên tắc**: Brand-FW dùng sub-interface làm gateway từng VLAN (`.1`), vừa là **default gateway** vừa là **DHCP server** của VLAN nghiệp vụ. Switch phòng ban (IOL) chỉ là **L2 thuần** (trunk/access, SVI Vlan99 quản trị) — không tham gia định tuyến.
+
+#### 2.4.3. Lý do chọn "Firewall-as-Core" cho tầng 3 chi nhánh (quyết định thiết kế)
+
+Có 2 phương án định tuyến tại chi nhánh: **(A) Brand-FW (ASAv) làm điểm L3 duy nhất** — phương án đang triển khai; **(B) thay SwitchBrand bằng router IOS (vios, image `i86bi_LinuxL3-AdvEnterpriseK9-M2_157_3_May_2018.bin`)** làm gateway/router-on-a-stick + DHCP.
+
+| Tiêu chí | (A) Firewall-as-Core — ĐANG DÙNG | (B) Branch Router (vios) |
+|---|---|---|
+| Mô hình tương ứng thực tế | **SMB/chi nhánh hiện đại** — UTM firewall (FortiGate, Palo Alto...) làm gateway+DHCP | Chi nhánh Cisco cổ điển — ISR router làm WAN+gateway |
+| Bảo mật | Security ngay tại điểm định tuyến, mọi traffic qua inspection | Tách rời: router chỉ route, FW đứng sau → **thêm 1 hop** |
+| DHCP | `dhcpd` scope theo VLAN, option 3 = gateway FW (khớp vì FW là gw) | `ip dhcp pool` chuẩn IOS (IOL L2/L3 KHÔNG có lệnh này — chỉ router IOS mới có) |
+| Định tuyến | Phần mềm ASA, đủ tải chi nhánh nhỏ | Nhanh hơn, nhưng ROAS chỉ 1 trunk, không mở rộng hơn |
+| Phù hợp kiến trúc SD-WAN | ✅ vEdge đã đóng vai trò router WAN edge — FW chỉ cần làm security+gateway LAN | Thừa router: vEdge (WAN) + Router (LAN) + FW (security) = 3 thiết bị cho mạng nhỏ |
+| Quản trị | 1 thiết bị gộp gateway+DHCP+security | Thêm 1 thiết bị, 1 điểm lỗi, đồng bộ tài liệu/config lại từ đầu |
+
+**Kết luận: giữ phương án (A) Firewall-as-Core.** Phù hợp xu hướng doanh nghiệp hiện đại (firewall làm gateway chi nhánh), giảm số hop và số thiết bị, tận dụng vEdge đã là router WAN. Phương án (B) chỉ mang giá trị tham khảo (đã cân nhắc, không triển khai). Với campus lớn (Site 100) vẫn dùng mô hình 3 lớp truyền thống với L3 switch core — 2 kiến trúc cùng tồn tại có chủ đích.
+
 ### 2.5. SD-WAN: System-IP (OMP) & TLOC (Underlay)
 
 | Site | Thiết bị | System-IP (OMP) | TLOC Internet | TLOC MPLS | Số đường WAN |
@@ -1033,9 +1060,11 @@ graph TB
 
 ### 2.6. Cấu hình mẫu (tham khảo cho người mới)
 
-**1) Core-SW1 — SVI + VRRP + DHCP relay (VLAN 10):**
+**1) Core-SW1 — SVI + VRRP + DHCP relay (VLAN 10) — Core dùng **IOL** (image `i86bi_linux_l2-adventerprisek9-ms.SSA.high_iron_20190423.bin`), khai `vtp mode off` + `switchport trunk encapsulation dot1q` trước `switchport mode trunk`:**
 
 ```
+vtp mode off
+!
 vlan 10
  name CNTT
 !
@@ -1044,6 +1073,11 @@ interface Vlan10
  vrrp 10 ip 10.1.10.1
  vrrp 10 priority 150
  ip helper-address 10.1.90.10
+!
+interface Ethernet0/2
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,40,90,99
 ```
 
 **2) FW-ASAv-Active — Inside / Outside (Site 100):**
@@ -1086,7 +1120,7 @@ interface GigabitEthernet0/4
  no shutdown
 ```
 
-> **Lưu ý chung**: (1) Cặp FW-ASAv Active/Standby được nối dây **Failover** tại cổng **Gi0/5** (HA Sync) — dây này không cần IP thông thường; nếu dùng LAN-FO có thể đặt subnet 10.1.255.0/29 (Active: 10.1.255.1, Standby: 10.1.255.2). (2) Các cổng còn trống (FW Gi0/6–Gi0/7, vEdge ge0/4, ...) không sử dụng. (3) System IP chỉ định danh trên OMP (dạng Loopback), **không dùng làm LAN Gateway**.
+> **Lưu ý chung**: (1) Cặp FW-ASAv Active/Standby được nối dây **Failover** tại cổng **Gi0/5** (HA Sync). Dùng LAN-FO subnet 10.1.255.0/29 — lệnh `failover interface ip failover 10.1.255.1 255.255.255.248 standby 10.1.255.2` phải **khai giống hệt trên cả 2 unit** (nếu khai khác nhau — vd standby khai .2/standby .1 — cả 2 unit tự gán trùng IP .1 → failover không lên); ASA trả lời đúng IP theo vai trò (primary=.1, secondary=.2) sau khi negotiation. Sau khi negotiation thành công, config của active sẽ **replication tự động** sang standby (hostname/running-config đồng bộ). (2) Các cổng còn trống (FW Gi0/6–Gi0/7, vEdge ge0/4, ...) không sử dụng. (3) System IP chỉ định danh trên OMP (dạng Loopback), **không dùng làm LAN Gateway**. (4) Core-SW1/2 dùng **IOL** (thay viosl2 từ 11/08/2026) — cú pháp cổng `Ethernet0/x`/`Ethernet1/x`, bắt buộc `vtp mode off` (IOL ở chế độ VTP server rev 0 bị switch khác rev cao quét sạch VLAN DB) và `switchport trunk encapsulation dot1q` trước `switchport mode trunk`.
 
 ---
 

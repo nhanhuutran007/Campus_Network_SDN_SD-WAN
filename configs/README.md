@@ -29,8 +29,8 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 |---|---|---|
 | FW-ASAv-Active | 1 | asav |
 | FW-ASAv-Standby | 2 | asav |
-| Core-SW1 | 3 | viosl2 |
-| Core-SW2 | 4 | viosl2 |
+| Core-SW1 | 3 | **iol** (chuyển từ viosl2 ngày 11/08/2026) |
+| Core-SW2 | 4 | **iol** (chuyển từ viosl2 ngày 11/08/2026) |
 | Dist-SW1 | 5 | linux (OVS script) |
 | vEdge2-S100 | 6 | vtedge |
 | SwitchDMZ | 7 | iol |
@@ -77,6 +77,7 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | Access-SW1 | 68 | linux (OVS script) |
 | Access-SW4 | 69 | linux (OVS script) |
 | Access-SW3 | 70 | linux (OVS script) |
+| PC-Management | 73 | win (cấu hình tay) |
 
 ## 3. Cách nạp config vào EVE-NG
 
@@ -105,23 +106,28 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 
 | Loại | File | Nạp tự động khi boot? |
 |---|---|---|
-| viosl2 / vios (Core, Internet, MPLS) | `config.cfg` | ✅ (cần `config="1"`) |
-| iol (SW55–61, SwitchBrand, SwitchDMZ, SwitchServerFarm) | `config.cfg` | ✅ (cần `config="1"`) |
+| iol (Core-SW1/2, SW55–61, SwitchBrand, SwitchDMZ, SwitchServerFarm) | `config.cfg` | ✅ (cần `config="1"`) |
+| viosl2 / vios (Internet, MPLS — dự phòng) | `config.cfg` | ✅ (cần `config="1"`) |
 | asav (FW-ASAv, Brand-FW) | `config.cfg` | ✅ (cần `config="1"`) |
 | vpcs (VPC14–54) | `config.txt` | ✅ |
 | vtedge (vEdge1/2, vEdge65) | `config.cfg` | ⚠️ dán tay qua console an toàn nhất |
 | linux (SDN_CONTROLLER, Access/Dist-SW) | `.sh` | ❌ chạy script thủ công trong VM |
 | win / vtmgmt / vtsmart / vtbond | — | ❌ cấu hình qua GUI (xem dưới) |
 
+> **Core-SW1/2 (IOL từ 11/08/2026)**: image `i86bi_linux_l2-adventerprisek9-ms.SSA.high_iron_20190423.bin`, cổng `Ethernet0/x`/`Ethernet1/x`. Hai điểm bắt buộc trong config: (1) `vtp mode off` đặt trước khối `vlan ...` — nếu để VTP server mặc định (rev 0, domain rỗng), switch IOL khác (vd SwitchServerFarm) có rev cao hơn sẽ **quét sạch toàn bộ VLAN DB** khiến SVI down; (2) `switchport trunk encapsulation dot1q` trước mỗi `switchport mode trunk` (image l2 không nhận encapsulation Auto → "Command rejected").
+
 > **VPC (PC ảo) mặc định xin DHCP**: `config.txt` chỉ chứa `ip dhcp` → PC tự xin IP từ scope tương ứng (campus: DHCP-Server 10.1.90.10 relay qua Core; chi nhánh: dhcpd trên Brand-FW; dải `.100–.199` theo mục 2.4 của md).
 
 **Các thiết bị cấu hình bằng tay (không có file):**
 - **vManager (33) / vSmart (34) / vBond (35)**: khởi động vManager → vào GUI `https://10.9.0.10` (mặt LAN) hoặc `10.9.1.10` (mặt cloud). Setup cluster vBond→vSmart→vManager, cấp system-ip/site-id cho từng vEdge từ vManager (tính năng Zero-Touch/Manual). vSmart/vBond sau đó được cấu hình **từ xa qua vManager**.
-- **Web-Server (22), Mail-Server (13), DHCP-Server (72), Syslog-Server (25), Win (36)**: đặt IP tĩnh qua Network Settings Windows:
+- **Web-Server (22), Mail-Server (13), DHCP-Server (72), Syslog-Server (25), Win (36), PC-Management (73)**: đặt IP tĩnh qua Network Settings Windows:
   - Web-Server: 10.1.1.10/28, GW 10.1.1.1; Mail-Server: 10.1.1.11/28, GW 10.1.1.1
-  - DHCP-Server: 10.1.90.10/24, GW 10.1.90.1 (node 72 dùng image **winserver-S2012-R2-x64** — cài role **DHCP Server** bản địa, tạo scope cho VLAN 10/20/30/40 theo mục 2.4 của md; Core đã khai `ip helper-address 10.1.90.10` trên SVI nên relay tự hoạt động)
+  - DHCP-Server: 10.1.90.10/24, GW 10.1.90.1 (node 72 dùng image **winserver-S2012-R2-x64** — cài role **DHCP Server** bản địa, tạo scope cho VLAN 10/20/30/40 theo mục 2.4 của md; Core đã khai `ip helper-address 10.1.90.10` trên SVI nên relay tự hoạt động. **Trạng thái 08/2026: chưa cài role DHCP — cấp DHCP campus triển khai sau**)
   - Syslog-Server: 10.1.90.11/24, GW 10.1.90.1 (image `win-7-x86-IPCC-WSAlicensed` vẫn dùng được — nhận syslog là phần mềm ứng dụng như Kiwi Syslog/TFTPD64, không cần Windows Server)
   - Win: 10.9.0.20/24, GW 10.9.0.2
+  - **PC-Management: 10.1.99.50/24, GW 10.1.99.1** (nối SwitchServerFarm e2/0, access VLAN 99) — dùng để mở **ASDM** quản lý 2 FW: `https://10.1.99.33` (active) / `https://10.1.99.34` (standby), đăng nhập `admin`/`vnpro@2026` (cần Java 8)
+
+> **FW-ASAv Active/Standby — ASDM management (11/08/2026)**: cả 2 FW cắm cổng **Management0/0** (NIC EVE id 0) vào SwitchServerFarm **e1/2 / e1/3** (access VLAN 99) với IP **10.1.99.33 / .34**; config đã khai `interface Management0/0` (nameif management), `failover management-interface management Management0/0` + `failover interface ip management 10.1.99.33 … standby 10.1.99.34` (active .33 / standby .34 tự hoán đổi), `http server enable` + `http 10.1.99.0 255.255.255.0 management`. **Bắt buộc 1 lần trên console cả 2 unit**: `crypto key generate rsa modulus 2048` (không replicate). ASDM 7.20(2) nhúng sẵn trong image (`show version` → Device Manager Version) nên không cần set `asdm image`.
 
 ## 5. Node Linux/OVS — cách chạy script
 
