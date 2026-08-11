@@ -123,7 +123,7 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 - **Web-Server (22), Mail-Server (13), DHCP-Server (72), Syslog-Server (25), Win (36), PC-Management (73)**: đặt IP tĩnh qua Network Settings Windows:
   - Web-Server: 10.1.1.10/28, GW 10.1.1.1; Mail-Server: 10.1.1.11/28, GW 10.1.1.1
   - DHCP-Server: 10.1.90.10/24, GW 10.1.90.1 (node 72 dùng image **winserver-S2012-R2-x64** — cài role **DHCP Server** bản địa, tạo scope cho VLAN 10/20/30/40 theo mục 2.4 của md; Core đã khai `ip helper-address 10.1.90.10` trên SVI nên relay tự hoạt động. **Trạng thái 08/2026: chưa cài role DHCP — cấp DHCP campus triển khai sau**)
-  - Syslog-Server: 10.1.90.11/24, GW 10.1.90.1 (image `win-7-x86-IPCC-WSAlicensed` vẫn dùng được — nhận syslog là phần mềm ứng dụng như Kiwi Syslog/TFTPD64, không cần Windows Server)
+  - Syslog-Server: 10.1.90.11/24, GW 10.1.90.1 (image `win-7-x86-IPCC-WSAlicensed` vẫn dùng được — nhận syslog là phần mềm ứng dụng như Kiwi Syslog/TFTPD64, không cần Windows Server. **Đã triển khai 12/08/2026**: dùng **Kiwi Syslog có sẵn trong image** (không cài Python), listen UDP 514 + rule firewall `syslog514`. Các thiết bị đã cấu hình `logging host 10.1.90.11`: Core-SW1/2, SwitchServerFarm (`logging host 10.1.90.11` — đã có trong config.cfg), FW-ASAv Active/Standby (`logging host inside 10.1.90.11` + `logging trap informational` + `logging enable`))
   - Win: 10.9.0.20/24, GW 10.9.0.2
   - **PC-Management: 10.1.99.50/24, GW 10.1.99.1** (nối SwitchServerFarm e2/0, access VLAN 99) — dùng để mở **ASDM** quản lý 2 FW: `https://10.1.99.33` (active) / `https://10.1.99.34` (standby), đăng nhập `admin`/`vnpro@2026` (cần Java 8)
 
