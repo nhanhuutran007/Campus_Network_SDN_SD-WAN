@@ -75,8 +75,8 @@ end
 
 %% ================== SITE 300 - CAMPUS DA NANG ==================
 subgraph SITE300["CAMPUS DA NANG - SITE ID 300 - AS 65020"]
-    S3_VE1["vEdge1<br/>System-IP 10.200.300.1"]
-    S3_VE2["vEdge2<br/>System-IP 10.200.300.2"]
+    S3_VE1["vEdge1<br/>System-IP 10.200.30.1"]
+    S3_VE2["vEdge2<br/>System-IP 10.200.30.2"]
     S3_FW["Brand-FW<br/>Gateway (VLAN 80, 90) Out:10.3.1.1"]
     S3_SWB["SwitchBrand<br/>Mgmt 10.3.99.1"]
     S3_SWA["SW (VLAN 80 Dulich)<br/>Mgmt 10.3.99.11"]
@@ -89,8 +89,8 @@ end
 
 %% ================== SITE 400 - CAMPUS NHA TRANG ==================
 subgraph SITE400["CAMPUS NHA TRANG - SITE ID 400 - AS 65030"]
-    S4_VE1["vEdge1<br/>System-IP 10.200.400.1"]
-    S4_VE2["vEdge2<br/>System-IP 10.200.400.2"]
+    S4_VE1["vEdge1<br/>System-IP 10.200.40.1"]
+    S4_VE2["vEdge2<br/>System-IP 10.200.40.2"]
     S4_FW["Brand-FW<br/>Gateway (VLAN 50, 60) Out:10.4.1.1"]
     S4_SWB["SwitchBrand<br/>Mgmt 10.4.99.1"]
     S4_SWA["SW (VLAN 50 Thuysan)<br/>Mgmt 10.4.99.11"]
@@ -486,8 +486,8 @@ graph TB
 ```mermaid
 graph TB
     subgraph DN_SITE["CHI NHANH DA NANG — Site ID 300 — AS 65020"]
-        CEDGE300_1["vEdge1<br/>System-IP: 10.200.300.1"]
-        CEDGE300_2["vEdge2<br/>System-IP: 10.200.300.2"]
+        CEDGE300_1["vEdge1<br/>System-IP: 10.200.30.1"]
+        CEDGE300_2["vEdge2<br/>System-IP: 10.200.30.2"]
 
         FW_DN["Brand-FW<br/>Gateway L3 (Sub-Interfaces)<br/>VLAN 80: 10.3.80.1<br/>VLAN 90: 10.3.90.1"]
 
@@ -517,7 +517,7 @@ graph TB
     end
 
     CEDGE300_1 -->|"Internet Underlay"| WAN_DN["Internet TLOC: 203.0.113.9/30"]
-    CEDGE300_2 -->|"MPLS Underlay"| MPLS_DN["MPLS TLOC: 100.64.300.1/30"]
+    CEDGE300_2 -->|"MPLS Underlay"| MPLS_DN["MPLS TLOC: 100.64.30.1/30"]
 
     classDef edge fill:#E74C3C,stroke:#C0392B,color:#fff,stroke-width:2px
     classDef fw fill:#C0392B,stroke:#922B21,color:#fff,stroke-width:3px
@@ -541,8 +541,8 @@ graph TB
 ```mermaid
 graph TB
     subgraph NT_SITE["CHI NHANH NHA TRANG — Site ID 400 — AS 65030"]
-        CEDGE400_1["vEdge1<br/>System-IP: 10.200.400.1"]
-        CEDGE400_2["vEdge2<br/>System-IP: 10.200.400.2"]
+        CEDGE400_1["vEdge1<br/>System-IP: 10.200.40.1"]
+        CEDGE400_2["vEdge2<br/>System-IP: 10.200.40.2"]
 
         FW_NT["Brand-FW<br/>Gateway L3 (Sub-Interfaces)<br/>VLAN 50: 10.4.50.1<br/>VLAN 60: 10.4.60.1"]
 
@@ -572,7 +572,7 @@ graph TB
     end
 
     CEDGE400_1 -->|"Internet Underlay"| WAN_NT["Internet TLOC: 203.0.113.13/30"]
-    CEDGE400_2 -->|"MPLS Underlay"| MPLS_NT["MPLS TLOC: 100.64.400.1/30"]
+    CEDGE400_2 -->|"MPLS Underlay"| MPLS_NT["MPLS TLOC: 100.64.40.1/30"]
 
     classDef edge fill:#E74C3C,stroke:#C0392B,color:#fff,stroke-width:2px
     classDef fw fill:#C0392B,stroke:#922B21,color:#fff,stroke-width:3px
@@ -663,13 +663,29 @@ graph TB
 
 | Mạng con | Vai trò |
 |---|---|
-| 203.0.113.0/24 | Public cloud (Internet Gi0/0 = 203.0.113.254/24; vBond NAT 1:1 → 203.0.113.100) |
+| 203.0.113.0/24 | Public cloud (Internet Gi0/0 = **DHCP** từ EVE host, cấm IP tĩnh; vBond NAT 1:1 → 203.0.113.100) |
 | 203.0.113.0/30, .4/30, .8/30, .12/30, .16/30 | Transit Internet ↔ vEdge (mỗi site 1 link) |
 | 100.64.254.0/30 | Internet ↔ MPLS (backbone SP) |
 | 100.64.100.0/30, 100.64.100.4/30 | MPLS ↔ vEdge Site 100 |
 | 100.64.200.0/30 | MPLS ↔ vEdge Site 200 |
-| 100.64.300.0/30 | MPLS ↔ vEdge Site 300 |
-| 100.64.400.0/30 | MPLS ↔ vEdge Site 400 |
+| 100.64.30.0/30 | MPLS ↔ vEdge Site 300 |
+| 100.64.40.0/30 | MPLS ↔ vEdge Site 400 |
+
+##### BGP ASN & Peering (Service Provider)
+
+| ASN | Thiết bị | Vai trò |
+|---|---|---|
+| **64511** | Internet (26) | ISP Internet — eBGP backbone ↔ MPLS, eBGP CE-PE ↔ vEdge Internet TLOC |
+| **64512** | MPLS (27) | ISP MPLS — eBGP backbone ↔ Internet, eBGP CE-PE ↔ vEdge MPLS TLOC |
+| **65000** | vEdge1/2-S100 | Site 100 (Campus chính) |
+| **65010** | vEdge1/2-S200 | Site 200 (Cần Thơ) |
+| **65020** | vEdge1/2-S300 | Site 300 (Đà Nẵng) |
+| **65030** | vEdge1/2-S400 | Site 400 (Nha Trang) |
+| — | Switch32 (site 900) | **Static CE-PE** (viosl2 không hỗ trợ BGP) |
+
+- Backbone SP: eBGP `64511 ↔ 64512` trên 100.64.254.0/30; mỗi ISP quảng bá **transit /30 của mình** cho ISP kia.
+- CE-PE: mỗi vEdge eBGP với ISP của transport (Internet TLOC ↔ AS 64511, MPLS TLOC ↔ AS 64512); ISP gửi `default-originate` cho khách hàng.
+- Site 900 (Switch32 + vEdge65): static default route → Internet (203.0.113.250) — thay vì BGP, vì Switch32 là switch L2 (viosl2).
 
 ### 2.2. Bảng kết nối cổng chi tiết (thiết bị — cổng — IP)
 
@@ -761,7 +777,7 @@ graph TB
 | 2 | Brand-FW — Gi0/0 = 10.3.1.5/30 | vEdge2-S300 — ge0/2 = 10.3.1.6/30 | 10.3.1.4/30 | Outside → vEdge2 |
 | 3 | Brand-FW — Gi0/2.80 = 10.3.80.1/24, Gi0/2.90 = 10.3.90.1/24, Gi0/2.99 = 10.3.99.1/24 | SwitchBrand — e0/0 = — | Trunk (80,90,99) | Sub-interface |
 | 4 | vEdge1-S300 — ge0/1 = 10.3.2.1/30 | vEdge2-S300 — ge0/1 = 10.3.2.2/30 | 10.3.2.0/30 | Liên kết 2 vEdge |
-| 5 | vEdge1-S300 — ge0/0 = 100.64.300.1/30 | MPLS — Gi0/5 = 100.64.300.2/30 | 100.64.300.0/30 | WAN MPLS (TLOC) |
+| 5 | vEdge1-S300 — ge0/0 = 100.64.30.1/30 | MPLS — Gi0/5 = 100.64.30.2/30 | 100.64.30.0/30 | WAN MPLS (TLOC) |
 | 6 | vEdge2-S300 — ge0/0 = 203.0.113.13/30 | Internet — Gi0/6 = 203.0.113.14/30 | 203.0.113.12/30 | WAN Internet (TLOC) |
 | 7 | SwitchBrand — e0/1 = — | SW58 — e0/0 = — | Trunk (80,99) | L2 |
 | 8 | SwitchBrand — e0/2 = — | SW59 — e0/0 = — | Trunk (90,99) | L2 |
@@ -778,7 +794,7 @@ graph TB
 | 2 | Brand-FW — Gi0/1 = 10.4.1.5/30 | vEdge2-S400 — eth0 = 10.4.1.6/30 | 10.4.1.4/30 | Outside → vEdge2 |
 | 3 | Brand-FW — Gi0/2.50 = 10.4.50.1/24, Gi0/2.60 = 10.4.60.1/24, Gi0/2.99 = 10.4.99.1/24 | SwitchBrand — e0/0 = — | Trunk (50,60,99) | Sub-interface |
 | 4 | vEdge1-S400 — ge0/1 = 10.4.2.1/30 | vEdge2-S400 — ge0/1 = 10.4.2.2/30 | 10.4.2.0/30 | Liên kết 2 vEdge |
-| 5 | vEdge1-S400 — ge0/0 = 100.64.400.1/30 | MPLS — Gi0/6 = 100.64.400.2/30 | 100.64.400.0/30 | WAN MPLS (TLOC) |
+| 5 | vEdge1-S400 — ge0/0 = 100.64.40.1/30 | MPLS — Gi0/6 = 100.64.40.2/30 | 100.64.40.0/30 | WAN MPLS (TLOC) |
 | 6 | vEdge2-S400 — ge0/0 = 203.0.113.17/30 | Internet — Gi0/7 = 203.0.113.18/30 | 203.0.113.16/30 | WAN Internet (TLOC) |
 | 7 | SwitchBrand — e0/1 = — | SW60 — e0/0 = — | Trunk (50,99) | L2 |
 | 8 | SwitchBrand — e0/2 = — | SW57 — e0/0 = — | Trunk (60,99) | L2 |
@@ -813,7 +829,7 @@ graph TB
 | # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
 |---|---|---|---|---|
 | 1 | Internet — Gi0/1 = 100.64.254.1/30 | MPLS — Gi0/0 = 100.64.254.2/30 | 100.64.254.0/30 | Backbone SP (Internet ↔ MPLS) |
-| 2 | Internet — Gi0/0 = 203.0.113.254/24 | Cloud "Net" — — | 203.0.113.0/24 | Gateway public ra Internet |
+| 2 | Internet — Gi0/0 = DHCP (10.215.28.x) | Cloud "Net" — — | 203.0.113.0/24 | Gateway public ra Internet (DHCP từ EVE host) |
 | 3 | Internet — Gi0/4 = 203.0.113.2/30 | vEdge1-S100 — ge0/3 = 203.0.113.1/30 | 203.0.113.0/30 | WAN Internet vEdge1-S100 |
 | 4 | Internet — Gi0/3 = 203.0.113.6/30 | vEdge2-S100 — ge0/2 = 203.0.113.5/30 | 203.0.113.4/30 | WAN Internet vEdge2-S100 |
 | 5 | Internet — Gi0/5 = 203.0.113.10/30 | vEdge2-S200 — ge0/0 = 203.0.113.9/30 | 203.0.113.8/30 | WAN Internet vEdge2-S200 |
@@ -822,8 +838,8 @@ graph TB
 | 8 | MPLS — Gi0/3 = 100.64.100.2/30 | vEdge1-S100 — ge0/2 = 100.64.100.1/30 | 100.64.100.0/30 | WAN MPLS vEdge1-S100 |
 | 9 | MPLS — Gi0/2 = 100.64.100.6/30 | vEdge2-S100 — ge0/3 = 100.64.100.5/30 | 100.64.100.4/30 | WAN MPLS vEdge2-S100 |
 | 10 | MPLS — Gi0/4 = 100.64.200.2/30 | vEdge1-S200 — ge0/2 = 100.64.200.1/30 | 100.64.200.0/30 | WAN MPLS vEdge1-S200 |
-| 11 | MPLS — Gi0/5 = 100.64.300.2/30 | vEdge1-S300 — ge0/0 = 100.64.300.1/30 | 100.64.300.0/30 | WAN MPLS vEdge1-S300 |
-| 12 | MPLS — Gi0/6 = 100.64.400.2/30 | vEdge1-S400 — ge0/0 = 100.64.400.1/30 | 100.64.400.0/30 | WAN MPLS vEdge1-S400 |
+| 11 | MPLS — Gi0/5 = 100.64.30.2/30 | vEdge1-S300 — ge0/0 = 100.64.30.1/30 | 100.64.30.0/30 | WAN MPLS vEdge1-S300 |
+| 12 | MPLS — Gi0/6 = 100.64.40.2/30 | vEdge1-S400 — ge0/0 = 100.64.40.1/30 | 100.64.40.0/30 | WAN MPLS vEdge1-S400 |
 
 ### 2.3. Bảng IP theo từng thiết bị (tham khảo nhanh khi cấu hình)
 
@@ -944,13 +960,13 @@ graph TB
 | **Brand-FW** | Gi0/1 | 10.3.1.1 | /30 | Outside → vEdge1 |
 | **Brand-FW** | Gi0/0 | 10.3.1.5 | /30 | Outside → vEdge2 |
 | **vEdge1-S300** | ge0/2 | 10.3.1.2 | /30 | VPN 512 → Brand-FW |
-| **vEdge1-S300** | ge0/0 | 100.64.300.1 | /30 | VPN 0 → MPLS (TLOC) |
+| **vEdge1-S300** | ge0/0 | 100.64.30.1 | /30 | VPN 0 → MPLS (TLOC) |
 | **vEdge1-S300** | ge0/1 | 10.3.2.1 | /30 | VPN 512 ↔ vEdge2 |
-| **vEdge1-S300** | System-IP | 10.200.300.1 | /32 | OMP |
+| **vEdge1-S300** | System-IP | 10.200.30.1 | /32 | OMP |
 | **vEdge2-S300** | ge0/2 | 10.3.1.6 | /30 | VPN 512 → Brand-FW |
 | **vEdge2-S300** | ge0/0 | 203.0.113.13 | /30 | VPN 0 → Internet (TLOC) |
 | **vEdge2-S300** | ge0/1 | 10.3.2.2 | /30 | VPN 512 ↔ vEdge1 |
-| **vEdge2-S300** | System-IP | 10.200.300.2 | /32 | OMP |
+| **vEdge2-S300** | System-IP | 10.200.30.2 | /32 | OMP |
 | **SwitchBrand** | SVI (Mgmt) | 10.3.99.2 | /24 | Trunking (thuần L2) |
 | **SW58 (VLAN 80)** | SVI (Mgmt) | 10.3.99.11 | /24 | Access Switch (Du lịch) |
 | **SW59 (VLAN 90)** | SVI (Mgmt) | 10.3.99.12 | /24 | Access Switch (Tài chính) |
@@ -965,13 +981,13 @@ graph TB
 | **Brand-FW** | Gi0/0 | 10.4.1.1 | /30 | Outside → vEdge1 |
 | **Brand-FW** | Gi0/1 | 10.4.1.5 | /30 | Outside → vEdge2 |
 | **vEdge1-S400** | eth0 | 10.4.1.2 | /30 | VPN 512 → Brand-FW |
-| **vEdge1-S400** | ge0/0 | 100.64.400.1 | /30 | VPN 0 → MPLS (TLOC) |
+| **vEdge1-S400** | ge0/0 | 100.64.40.1 | /30 | VPN 0 → MPLS (TLOC) |
 | **vEdge1-S400** | ge0/1 | 10.4.2.1 | /30 | VPN 512 ↔ vEdge2 |
-| **vEdge1-S400** | System-IP | 10.200.400.1 | /32 | OMP |
+| **vEdge1-S400** | System-IP | 10.200.40.1 | /32 | OMP |
 | **vEdge2-S400** | eth0 | 10.4.1.6 | /30 | VPN 512 → Brand-FW |
 | **vEdge2-S400** | ge0/0 | 203.0.113.17 | /30 | VPN 0 → Internet (TLOC) |
 | **vEdge2-S400** | ge0/1 | 10.4.2.2 | /30 | VPN 512 ↔ vEdge1 |
-| **vEdge2-S400** | System-IP | 10.200.400.2 | /32 | OMP |
+| **vEdge2-S400** | System-IP | 10.200.40.2 | /32 | OMP |
 | **SwitchBrand** | SVI (Mgmt) | 10.4.99.2 | /24 | Trunking (thuần L2) |
 | **SW60 (VLAN 50)** | SVI (Mgmt) | 10.4.99.11 | /24 | Access Switch (Thủy sản) |
 | **SW57 (VLAN 60)** | SVI (Mgmt) | 10.4.99.12 | /24 | Access Switch (Lữ hành) |
@@ -980,7 +996,7 @@ graph TB
 
 | Thành phần | Interface | IP Address | Subnet | Vai trò |
 |---|---|---|---|---|
-| **Internet** | Gi0/0 | 203.0.113.254 | /24 | Gateway public ra Cloud "Net" |
+| **Internet** | Gi0/0 | DHCP (vd 10.215.28.23) | /24 | Gateway public ra Cloud "Net" (DHCP từ EVE host) |
 | **Internet** | Gi0/1 | 100.64.254.1 | /30 | ↔ MPLS Gi0/0 |
 | **Internet** | Gi0/2 | 203.0.113.250 | /30 | ↔ Switch32 Gi1/0 (Controller) |
 | **Internet** | Gi0/3 | 203.0.113.6 | /30 | ↔ vEdge2-S100 |
@@ -993,8 +1009,8 @@ graph TB
 | **MPLS** | Gi0/2 | 100.64.100.6 | /30 | ↔ vEdge2-S100 |
 | **MPLS** | Gi0/3 | 100.64.100.2 | /30 | ↔ vEdge1-S100 |
 | **MPLS** | Gi0/4 | 100.64.200.2 | /30 | ↔ vEdge1-S200 |
-| **MPLS** | Gi0/5 | 100.64.300.2 | /30 | ↔ vEdge1-S300 |
-| **MPLS** | Gi0/6 | 100.64.400.2 | /30 | ↔ vEdge1-S400 |
+| **MPLS** | Gi0/5 | 100.64.30.2 | /30 | ↔ vEdge1-S300 |
+| **MPLS** | Gi0/6 | 100.64.40.2 | /30 | ↔ vEdge1-S400 |
 
 ### 2.4. VLAN & DHCP Pool
 
@@ -1052,10 +1068,10 @@ Có 2 phương án định tuyến tại chi nhánh: **(A) Brand-FW (ASAv) làm 
 | Campus (100) | vEdge2 | 10.200.100.2 | 203.0.113.5/30 (ge0/2) | 100.64.100.5/30 (ge0/3) | 2 |
 | Cần Thơ (200) | vEdge1 | 10.200.200.1 | — | 100.64.200.1/30 (ge0/2) | 1 |
 | Cần Thơ (200) | vEdge2 | 10.200.200.2 | 203.0.113.9/30 (ge0/0) | — | 1 |
-| Đà Nẵng (300) | vEdge1 | 10.200.300.1 | — | 100.64.300.1/30 (ge0/0) | 1 |
-| Đà Nẵng (300) | vEdge2 | 10.200.300.2 | 203.0.113.13/30 (ge0/0) | — | 1 |
-| Nha Trang (400) | vEdge1 | 10.200.400.1 | — | 100.64.400.1/30 (ge0/0) | 1 |
-| Nha Trang (400) | vEdge2 | 10.200.400.2 | 203.0.113.17/30 (ge0/0) | — | 1 |
+| Đà Nẵng (300) | vEdge1 | 10.200.30.1 | — | 100.64.30.1/30 (ge0/0) | 1 |
+| Đà Nẵng (300) | vEdge2 | 10.200.30.2 | 203.0.113.13/30 (ge0/0) | — | 1 |
+| Nha Trang (400) | vEdge1 | 10.200.40.1 | — | 100.64.40.1/30 (ge0/0) | 1 |
+| Nha Trang (400) | vEdge2 | 10.200.40.2 | 203.0.113.17/30 (ge0/0) | — | 1 |
 | Controller (900) | vEdge65 | 10.200.900.1 | 203.0.113.245/30 (ge0/0) | — | 1 |
 
 ### 2.6. Cấu hình mẫu (tham khảo cho người mới)

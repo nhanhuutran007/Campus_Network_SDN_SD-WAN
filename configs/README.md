@@ -121,7 +121,7 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 
 **Các thiết bị cấu hình bằng tay (không có file):**
 - **vManager (33) / vSmart (34) / vBond (35)**: khởi động vManager → vào GUI `https://10.9.0.10` (mặt LAN) hoặc `10.9.1.10` (mặt cloud). Setup cluster vBond→vSmart→vManager, cấp system-ip/site-id cho từng vEdge từ vManager (tính năng Zero-Touch/Manual). vSmart/vBond sau đó được cấu hình **từ xa qua vManager**.
-  - **15/08/2026**: đã lấy `show running-config` thật từ console host 1 (`telnet <eve>:33569/33570/33571`) lưu vào `05-Site900-SDWAN-Controllers/vManager-33|vSmart-34|vBond-35/config.cfg` và upload lên host 2 (`Campus Network SDN SD-WAN/33|34|35/`). Nội dung: vManager = 10.9.0.10/24 (vpn 0, eth0, gw 10.9.0.2 + 10.9.1.1), vbond 10.9.0.12, org `site-900`; vSmart = 10.9.0.11 (eth0 dhcp-client, eth0/0 shutdown); vBond = 10.9.0.12 local (omp advertise connected/static, security ipsec). **Login CLI**: `admin`/`vnpro@123` (vManager), `admin`/`okok` (vSmart, vBond). Lưu ý khi lấy config qua console: gặp `--More--` gửi phím `!` (dump hết) — không dùng space/Ctrl-L (mất phần đầu config).
+  - **15/08/2026**: đã lấy `show running-config` thật từ console host 1 (`telnet <eve>:33569/33570/33571`) lưu vào `05-Site900-SDWAN-Controllers/vManager-33|vSmart-34|vBond-35/config.cfg` và upload lên host 2 (`Campus Network SDN SD-WAN/33|34|35/`). **Cùng ngày đã sửa IP 3 con theo thiết kế** (md 2.2.5): vManager thêm eth1 = **10.9.1.10/24**; vSmart eth0 đổi dhcp → **10.9.0.11/24** + thêm eth1 = **10.9.1.11/24** + default route 10.9.0.2; vBond VPN 512 eth0 đổi dhcp → **10.9.1.12/24** (mặt cloud NAT → 203.0.113.100). **Lưu ý luật Viptela**: vSmart không cho phép IP interface trùng System-IP trong vpn 0 → **system-ip vSmart đã đổi 10.9.0.11 → 10.9.0.13** (vManager/vBond không bị chặn, system-ip = IP LAN OK). **Login CLI**: `admin`/`vnpro@123` (vManager), `admin`/`okok` (vSmart, vBond). Lưu ý khi lấy config qua console: gặp `--More--` gửi phím `!` (dump hết) — không dùng space/Ctrl-L (mất phần đầu config); nếu console đang kẹt config mode ("Uncommitted changes found") thì `exit` + trả lời `no` trước khi gõ lệnh.
 - **Web-Server (22), Mail-Server (13), DHCP-Server (72), Syslog-Server (25), Win (36), PC-Management (73)**: đặt IP tĩnh qua Network Settings Windows:
   - Web-Server: 10.1.1.10/28, GW 10.1.1.1; Mail-Server: 10.1.1.11/28, GW 10.1.1.1
   - DHCP-Server: 10.1.90.10/24, GW 10.1.90.1 (node 72 dùng image **winserver-S2012-R2-x64** — cài role **DHCP Server** bản địa, tạo scope cho VLAN 10/20/30/40 theo mục 2.4 của md; Core đã khai `ip helper-address 10.1.90.10` trên SVI nên relay tự hoạt động. **Trạng thái 08/2026: chưa cài role DHCP — cấp DHCP campus triển khai sau**)
@@ -183,9 +183,21 @@ Service OVS phục hồi bridge/port theo kiểu `--may-exist`, IP `br-mgmt`, DP
 |---|---|---|
 | vEdge1-S100 / vEdge2-S100 | 10.200.100.1 / .2 | Internet 203.0.113.1 / .5 — MPLS 100.64.100.1 / .5 |
 | vEdge1-S200 / vEdge2-S200 | 10.200.200.1 / .2 | Internet 203.0.113.9 — MPLS 100.64.200.1 |
-| vEdge1-S300 / vEdge2-S300 | 10.200.300.1 / .2 | Internet 203.0.113.13 — MPLS 100.64.300.1 |
-| vEdge1-S400 / vEdge2-S400 | 10.200.400.1 / .2 | Internet 203.0.113.17 — MPLS 100.64.400.1 |
+| vEdge1-S300 / vEdge2-S300 | 10.200.30.1 / .2 | Internet 203.0.113.13 — MPLS 100.64.30.1 |
+| vEdge1-S400 / vEdge2-S400 | 10.200.40.1 / .2 | Internet 203.0.113.17 — MPLS 100.64.40.1 |
 | vEdge65 | 10.200.900.1 | Internet 203.0.113.245/30 |
+
+### 7.1. BGP (Service Provider — thay OSPF underlay, 15/08/2026)
+
+| ASN | Thiết bị | Peering |
+|---|---|---|
+| 64511 | Internet (26) | eBGP backbone ↔ MPLS (100.64.254.2); CE-PE ↔ vEdge Internet TLOC (203.0.113.1/.5/.9/.13/.17) + `default-originate` |
+| 64512 | MPLS (27) | eBGP backbone ↔ Internet (100.64.254.1); CE-PE ↔ vEdge MPLS TLOC (100.64.100.1/.5, 100.64.200.1, 100.64.30.1, 100.64.40.1) + `default-originate` |
+| 65000 / 65010 / 65020 / 65030 | vEdge S100 / S200 / S300 / S400 | eBGP với ISP transport tương ứng (thay static default) |
+| — | Switch32 / vEdge65 (site 900) | Static CE-PE (Switch32 = viosl2, không hỗ trợ BGP) |
+
+- Mỗi ISP quảng bá transit /30 của mình qua backbone (`network … mask`); Internet Gi0/0 vẫn DHCP (cấm IP tĩnh).
+- vEdge config: `router bgp <ASN>` dưới `vpn 0` + `neighbor <SP-IP> remote-as <SP-ASN>`; bỏ `ip route 0.0.0.0/0` (học default qua BGP).
 | vManager/vSmart/vBond | 10.9.0.10 / .11 / .12 | Cloud 10.9.1.10 / .11 / .12 |
 | SDN_CONTROLLER | 10.1.99.10 (e0, mgmt/control VLAN 99); e3 = Cloud-NAT (pnet0, Internet) | — |
 | Dist-SW1 / Dist-SW2 | mgmt/control 10.1.99.11 / .12 | controller 10.1.99.10:6653 |
