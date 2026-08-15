@@ -15,6 +15,7 @@ configs/
 ├── 03-Site300-DaNang/         ← Brand-FW, vEdge1/2, SwitchBrand, SW58/59, VPC
 ├── 04-Site400-NhaTrang/       ← Brand-FW, vEdge1/2, SwitchBrand, SW60/57, VPC
 ├── 05-Site900-Controller/     ← Switch32, Switch61, vEdge65
+├── 05-Site900-SDWAN-Controllers/ ← vManager-33, vSmart-34, vBond-35 (running-config thật 15/08/2026)
 └── 06-ServiceProvider/        ← Internet, MPLS
 ```
 
@@ -56,9 +57,9 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | vEdge1-S300 | 30 | vtedge |
 | vEdge1-S400 | 31 | vtedge |
 | Switch32 | 32 | iol |
-| vManager | 33 | vtmgmt (cấu hình qua vManage GUI) |
-| vSmart | 34 | vtsmart (cấu hình qua vManage) |
-| vBond | 35 | vtbond (cấu hình qua vManage) |
+| vManager | 33 | vtmgmt (**có config.cfg từ 15/08/2026** — dán tay qua console) |
+| vSmart | 34 | vtsmart (**có config.cfg từ 15/08/2026** — dán tay qua console) |
+| vBond | 35 | vtbond (**có config.cfg từ 15/08/2026** — dán tay qua console) |
 | Win (quản trị) | 36 | win (cấu hình tay) |
 | Brand-FW-S200 | 37 | asav |
 | Brand-FW-S400 | 38 | asav |
@@ -112,7 +113,7 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | vpcs (VPC14–54) | `config.txt` | ✅ |
 | vtedge (vEdge1/2, vEdge65) | `config.cfg` | ⚠️ dán tay qua console an toàn nhất |
 | linux (SDN_CONTROLLER, Access/Dist-SW) | `.sh` | ❌ chạy script thủ công trong VM |
-| win / vtmgmt / vtsmart / vtbond | — | ❌ cấu hình qua GUI (xem dưới) |
+| win / vtmgmt / vtsmart / vtbond | `config.cfg` (controller từ 15/08/2026) | ❌ dán tay qua console / cấu hình GUI (xem dưới) |
 
 > **Core-SW1/2 (IOL từ 11/08/2026)**: image `i86bi_linux_l2-adventerprisek9-ms.SSA.high_iron_20190423.bin`, cổng `Ethernet0/x`/`Ethernet1/x`. Hai điểm bắt buộc trong config: (1) `vtp mode off` đặt trước khối `vlan ...` — nếu để VTP server mặc định (rev 0, domain rỗng), switch IOL khác (vd SwitchServerFarm) có rev cao hơn sẽ **quét sạch toàn bộ VLAN DB** khiến SVI down; (2) `switchport trunk encapsulation dot1q` trước mỗi `switchport mode trunk` (image l2 không nhận encapsulation Auto → "Command rejected").
 
@@ -120,6 +121,7 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 
 **Các thiết bị cấu hình bằng tay (không có file):**
 - **vManager (33) / vSmart (34) / vBond (35)**: khởi động vManager → vào GUI `https://10.9.0.10` (mặt LAN) hoặc `10.9.1.10` (mặt cloud). Setup cluster vBond→vSmart→vManager, cấp system-ip/site-id cho từng vEdge từ vManager (tính năng Zero-Touch/Manual). vSmart/vBond sau đó được cấu hình **từ xa qua vManager**.
+  - **15/08/2026**: đã lấy `show running-config` thật từ console host 1 (`telnet <eve>:33569/33570/33571`) lưu vào `05-Site900-SDWAN-Controllers/vManager-33|vSmart-34|vBond-35/config.cfg` và upload lên host 2 (`Campus Network SDN SD-WAN/33|34|35/`). Nội dung: vManager = 10.9.0.10/24 (vpn 0, eth0, gw 10.9.0.2 + 10.9.1.1), vbond 10.9.0.12, org `site-900`; vSmart = 10.9.0.11 (eth0 dhcp-client, eth0/0 shutdown); vBond = 10.9.0.12 local (omp advertise connected/static, security ipsec). **Login CLI**: `admin`/`vnpro@123` (vManager), `admin`/`okok` (vSmart, vBond). Lưu ý khi lấy config qua console: gặp `--More--` gửi phím `!` (dump hết) — không dùng space/Ctrl-L (mất phần đầu config).
 - **Web-Server (22), Mail-Server (13), DHCP-Server (72), Syslog-Server (25), Win (36), PC-Management (73)**: đặt IP tĩnh qua Network Settings Windows:
   - Web-Server: 10.1.1.10/28, GW 10.1.1.1; Mail-Server: 10.1.1.11/28, GW 10.1.1.1
   - DHCP-Server: 10.1.90.10/24, GW 10.1.90.1 (node 72 dùng image **winserver-S2012-R2-x64** — cài role **DHCP Server** bản địa, tạo scope cho VLAN 10/20/30/40 theo mục 2.4 của md; Core đã khai `ip helper-address 10.1.90.10` trên SVI nên relay tự hoạt động. **Trạng thái 08/2026: chưa cài role DHCP — cấp DHCP campus triển khai sau**)
