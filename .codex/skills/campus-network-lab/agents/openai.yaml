@@ -1,4 +1,0 @@
-interface:
-  display_name: "Campus Network Lab"
-  short_description: "Vận hành lab Campus SDN và SD-WAN trên EVE-NG"
-  default_prompt: "Use $campus-network-lab to inspect and safely update this Campus SDN/SD-WAN EVE-NG project."
