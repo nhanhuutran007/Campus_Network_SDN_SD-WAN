@@ -1,0 +1,188 @@
+%% 1. CÀI ĐẶT CƠ BẢN & LỚP VĂN BẢN
+\usepackage[utf8]{inputenc}
+% \usepackage[T5]{fontenc} % Bỏ dòng này vì đã có T1 bên dưới, tránh xung đột
+\usepackage[T1]{fontenc}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+
+%% 2. BỐ CỤC TRANG & CANH LỀ (ĐÃ SỬA THEO YÊU CẦU)
+\usepackage[a4paper, top=3.5cm, bottom=3cm, left=3.5cm, right=2cm]{geometry}
+% Đã BỎ tùy chọn "twoside" để lề trang không bị lệch
+
+
+%% 3. NGÔN NGỮ, FONT CHỮ & ĐỊNH DẠNG ĐOẠN VĂN (ĐÃ SỬA THEO YÊU CẦU)
+\usepackage[vietnamese]{babel}
+\usepackage{mathptmx} % Font Times New Roman
+\usepackage{indentfirst}
+% --- CÀI ĐẶT FONT, GIÃN DÒNG, THỤT LỀ MỚI ---
+\renewcommand{\normalsize}{\fontsize{13}{15.6}\selectfont}
+\linespread{1.5} % Giãn dòng 1.5
+\setlength{\parindent}{1cm} % Thụt đầu dòng 1cm
+\setlength{\parskip}{10pt} % Khoảng cách giữa các đoạn là 10pt
+\setlength{\emergencystretch}{2em}
+
+
+%% 4. TÙY CHỈNH CÁC CẤP ĐỀ MỤC (SECTION, SUBSECTION,...)
+\usepackage{titlesec}
+\setcounter{secnumdepth}{4}
+
+% Định dạng cho các chương CÓ ĐÁNH SỐ 
+\titleformat{\section}[block]
+  {\fontsize{16pt}{0pt}\selectfont \bfseries \centering}
+  {CHƯƠNG \thesection:}
+  {0.5em}
+  {}
+\titlespacing*{\section}{0pt}{0pt}{15pt}
+
+% Định dạng cho các chương KHÔNG ĐÁNH SỐ
+\titleformat{name=\section,numberless}[display]
+  {\fontsize{16pt}{0pt}\selectfont \bfseries \centering}
+  {}
+  {0em}
+  {}
+
+% Định dạng cho các mục con
+\titleformat*{\subsection}{\fontsize{14pt}{0pt}\selectfont \bfseries}
+\titlespacing*{\subsection}{0pt}{3pt}{0pt}
+
+\titleformat*{\subsubsection}{\fontsize{13pt}{0pt}\selectfont \bfseries \itshape}
+\titlespacing*{\subsubsection}{0pt}{6pt}{0pt}
+
+\titleformat*{\paragraph}{\fontsize{13pt}{0pt}\selectfont \itshape}
+\titlespacing*{\paragraph}{0pt}{0pt}{0pt}
+
+\titleformat{\paragraph}
+  {\normalfont\fontsize{13pt}{0pt}\selectfont\itshape}
+  {\theparagraph}
+  {1em}
+  {}
+\titlespacing*{\paragraph}{0pt}{0.5ex plus 0.5ex minus .2ex}{0.5ex plus .2ex}
+
+
+%% 5. HÌNH ẢNH, BẢNG BIỂU & CHÚ THÍCH (CAPTION)
+\usepackage[nottoc]{tocbibind}
+\usepackage{tocloft}
+\setlength{\cftbeforesecskip}{6pt}
+\setlength{\cftbeforesubsecskip}{2pt}
+\setlength{\cftbeforesubsubsecskip}{1pt}
+
+% Căn giữa các tiêu đề danh mục tương tự tiêu đề section gốc
+\renewcommand{\cfttoctitlefont}{\hspace*{\fill}\fontsize{16pt}{0pt}\selectfont\bfseries}
+\renewcommand{\cftaftertoctitle}{\hspace*{\fill}}
+\renewcommand{\cftloftitlefont}{\hspace*{\fill}\fontsize{16pt}{0pt}\selectfont\bfseries}
+\renewcommand{\cftafterloftitle}{\hspace*{\fill}}
+\renewcommand{\cftlottitlefont}{\hspace*{\fill}\fontsize{16pt}{0pt}\selectfont\bfseries}
+\renewcommand{\cftafterlottitle}{\hspace*{\fill}}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage[font=normal]{caption}
+\usepackage{array}
+
+\renewcommand{\figurename}{\fontsize{12pt}{0pt}\selectfont Hình}
+\captionsetup[figure]{labelsep=space}
+
+\renewcommand{\tablename}{\fontsize{12pt}{0pt}\selectfont Bảng}
+\captionsetup[table]{labelsep=space}
+
+\newcolumntype{s}{>{\hsize=.3\hsize}X}
+\newcolumntype{y}{>{\hsize=.4\hsize}X}
+\newcolumntype{d}{>{\hsize=.1\hsize}X}
+\newcolumntype{a}{>{\hsize=1.1\hsize}X}
+\newcolumntype{g}{>{\hsize=5\hsize}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+% --- SỬA LỖI TẠI ĐÂY ---
+% \renewcommand{\tabularxcolumn}[1]{>{\small}m{#1}} % Dòng lệnh cũ gây lỗi thu nhỏ chữ
+\renewcommand{\tabularxcolumn}[1]{>{\raggedright\arraybackslash}m{#1}} % Lệnh mới: Bỏ \small, thêm căn lề trái cho đẹp
+% -----------------------
+
+
+%% 6. KHỐI LỆNH (CODE LISTINGS) 
+\usepackage{listings}
+% Gói xcolor đã được nạp ở mục 5, không cần nạp lại
+
+\lstdefinestyle{customcode}{
+    basicstyle=\small\ttfamily,
+    breaklines=true,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    keywordstyle=\color{blue!80!black}\bfseries,
+    commentstyle=\color{green!50!black}\itshape,
+    stringstyle=\color{red!70!black},
+    showstringspaces=false,
+    tabsize=2,
+    captionpos=b,
+    frame=single,
+    rulecolor=\color{gray!40},
+    xleftmargin=1.5em,
+    framexleftmargin=1em,
+    aboveskip=1.5em,
+    belowskip=1.5em
+}
+\renewcommand{\lstlistingname}{Khối lệnh}
+
+
+%% 7. TOÁN HỌC & CÁC MÔI TRƯỜNG ĐỊNH LÝ
+\newtheorem{theorem}{Định lý}[section]
+\newtheorem{defn}[theorem]{Định nghĩa}
+\newtheorem{corollary}[theorem]{Hệ quả}
+\newtheorem{lemma}[theorem]{Bổ đề}
+
+
+%% 8. TÀI LIỆU THAM KHẢO
+\usepackage[natbibapa]{apacite} 
+\bibliographystyle{apacite}
+\makeatletter
+\def\APAC@apcfile{english.apc}
+\makeatother
+
+%% 9. CÁC GÓI BỔ SUNG KHÁC
+\usepackage{wrapfig}
+% Gói tikz đã được nạp ở mục 1, không cần nạp lại
+\usetikzlibrary{calc}
+\usepackage{soul}
+\usepackage{colortbl}
+\usepackage{forloop}
+\usepackage{enumitem}
+
+\definecolor{LightCyan}{rgb}{0.88,1,1}
+\newcounter{loopcntr}
+\newcommand{\rpt}[2][1]{\forloop{loopcntr}{0}{\value{loopcntr}<#1}{#2}}
+\setitemize{itemsep=0pt,leftmargin=1.25cm,topsep = 3pt}
+
+
+%% 10. ĐÁNH SỐ TỰ ĐỘNG & LIÊN KẾT 
+\usepackage{chngcntr}
+\usepackage[unicode, plainpages=false, pdfpagelabels=true, hidelinks]{hyperref}
+
+% Cấu hình bộ đếm cho các môi trường
+\counterwithin{figure}{section}
+\counterwithin{table}{section}
+\counterwithin{equation}{section}
+% Các counter khác đã được article class và titlesec xử lý, không cần thêm
+
+
+%% 11. ĐỊNH NGHĨA LẠI TÊN CÁC THÀNH PHẦN CỦA TÀI LIỆU
+\AtBeginDocument{%
+  \renewcommand{\contentsname}{MỤC LỤC}
+  \renewcommand{\listfigurename}{DANH MỤC HÌNH VẼ}
+  \renewcommand{\listtablename}{DANH MỤC BẢNG BIỂU}
+  \renewcommand{\refname}{TÀI LIỆU THAM KHẢO}
+  \normalsize % Áp dụng cỡ chữ mặc định cho toàn bộ tài liệu
+}
+
+
+%% 12. CÁC BIẾN TOÀN CỤC SỬ DỤNG TRONG BÁO CÁO
+\newcommand{\khoa}{CÔNG NGHỆ THÔNG TIN}
+\newcommand{\mon}{DỰ ÁN CÔNG NGHỆ THÔNG TIN}
+\newcommand{\chuyennganh}{MẠNG MÁY TÍNH VÀ TRUYỀN THÔNG DỮ LIỆU}
+\newcommand{\de}{XÂY DỰNG MẠNG CAMPUS NETWORK SỬ DỤNG SDN VÀ SD-WAN}
+\newcommand{\gvhd}{ThS. LÊ VIẾT THANH}
+\newcommand{\svmot}{TRẦN HỮU NHÂN - 52300235}
+\newcommand{\svhai}{NGUYỄN NHẬT HÀO - 52300198}
+\newcommand{\lop}{23050401}
+\newcommand{\khoahoc}{27}
+\newcommand{\nam}{2026}

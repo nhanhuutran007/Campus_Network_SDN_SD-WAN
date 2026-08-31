@@ -185,7 +185,7 @@ Service OVS phục hồi bridge/port theo kiểu `--may-exist`, IP `br-mgmt`, DP
 | vEdge1-S200 / vEdge2-S200 | 10.200.200.1 / .2 | Internet 203.0.113.9 — MPLS 100.64.200.1 |
 | vEdge1-S300 / vEdge2-S300 | 10.200.30.1 / .2 | Internet 203.0.113.13 — MPLS 100.64.30.1 |
 | vEdge1-S400 / vEdge2-S400 | 10.200.40.1 / .2 | Internet 203.0.113.17 — MPLS 100.64.40.1 |
-| vEdge65 | 10.200.900.1 | Internet 203.0.113.245/30 |
+| vEdge65 | 10.200.90.1 | Internet 203.0.113.245/30 |
 
 ### 7.1. BGP (Service Provider — thay OSPF underlay, 15/08/2026)
 
@@ -194,10 +194,15 @@ Service OVS phục hồi bridge/port theo kiểu `--may-exist`, IP `br-mgmt`, DP
 | 64511 | Internet (26) | eBGP backbone ↔ MPLS (100.64.254.2); CE-PE ↔ vEdge Internet TLOC (203.0.113.1/.5/.9/.13/.17) + `default-originate` |
 | 64512 | MPLS (27) | eBGP backbone ↔ Internet (100.64.254.1); CE-PE ↔ vEdge MPLS TLOC (100.64.100.1/.5, 100.64.200.1, 100.64.30.1, 100.64.40.1) + `default-originate` |
 | 65000 / 65010 / 65020 / 65030 | vEdge S100 / S200 / S300 / S400 | eBGP với ISP transport tương ứng (thay static default) |
-| — | Switch32 / vEdge65 (site 900) | Static CE-PE (Switch32 = viosl2, không hỗ trợ BGP) |
+| — | Switch32 / vEdge65 (site 900) | Static CE-PE theo phạm vi thiết kế; Switch32 hiện dùng IOL High Iron |
 
 - Mỗi ISP quảng bá transit /30 của mình qua backbone (`network … mask`); Internet Gi0/0 vẫn DHCP (cấm IP tĩnh).
 - vEdge config: `router bgp <ASN>` dưới `vpn 0` + `neighbor <SP-IP> remote-as <SP-ASN>`; bỏ `ip route 0.0.0.0/0` (học default qua BGP).
+- **BẮT BUỘC trên vEdge (bài học 29/08/2026 — S100):** `allow-service bgp` trong **từng** `tunnel-interface` (không `no allow-service bgp`, S100 không dùng `allow-service all`) + `neighbor <SP-IP> address-family ipv4-unicast` **cho từng neighbor**. Thiếu 1 trong 2 → TCP 179 bị stateful firewall của tunnel-interface chặn / neighbor không active → eBGP kẹt `connect`, vEdge mất default route, không reach TLOC site khác → **GUI báo BFD partial + device đỏ** (đã gặp trên vEdge1/2-S100, đã vá live + payload nhúng id 6/28).
+
+- **`tunnel-interface color` phải khớp transport (bài học 30/08/2026 — vEdge2-S200/S300/S400):** WAN **Internet** (203.0.113.x) = **`color biz-internet`**; WAN **MPLS** (100.64.x) = **`color mpls`**. VĐ2-Sxxx chi nhánh (id 40/41/42) trước đó khai nhầm `color mpls` trên ge0/0 (Internet) → không có TLOC `biz-internet` chi nhánh → mọi tunnel **biz-internet ↔ MPLS** Down (Health đỏ, QoE thấp). Đã sửa live 30/08/2026 (`no color mpls` / `color biz-internet` + `commit`) và đồng bộ lại payload nhúng `.unl` (id 40/41/42). BFD cross-color còn lại (S100 `biz-internet` → vEdge1 chi nhánh `mpls`) giữ trạng thái down = hành vi ưu tiên same-color của vEdge, không phải lỗi (underlay 2 chiều đã ping OK 100%).
+
+- **S100 cần route tới controller qua TỪNG transport (bài học 30/08/2026 TỐI — sau test failover):** `color mpls` + interface up + eBGP MPLS Established chưa đủ để TLOC mpls vào OMP — vpn0 còn phải có đường đến controller **qua chính màu đó**. S100 chỉ có `ip route 10.9.0.0/16 203.0.113.2/.6` (Internet) + BGP default → DTLS màu mpls (vsmart/vbond) không dial được → TLOC mpls local không valid, không quảng bá (đúng vấn đề "mpls TLOC không hồi phục sau failover/reboot"). Đã thêm trên **cả 2 vEdge S100** trong `vpn 0`: `ip route 10.9.0.0/24 100.64.100.2` (vEdge1) / `ip route 10.9.0.0/24 100.64.100.6` (vEdge2) → ~60s sau control DTLS 2 màu UP + mpls TLOC vào OMP + BFD mpls→mpls UP (S100 9/12, 3 down = standby). Đồng bộ: config.cfg 2 vEdge S100 + `configs/04-Site400-NhaTrang/vEdge1-S400/config.cfg` (sửa artifact git merge: marker `>>>>>>> + system header trùng lặp → ghi đè bằng payload id 31) + re-embed .unl id 29/30 (thiếu `tunnel-interface`) + 6/28/31/40/41/42 (verify 8/8 == repo) → đã push host 1 (md5 `743e0340...`). vEdge65 dùng System-IP `10.200.90.1`; organization-name đã chuẩn hóa thành `site-900`, nhưng node phụ này vẫn cần onboarding/kiểm thử riêng nếu đưa vào fabric.
 | vManager/vSmart/vBond | 10.9.0.10 / .11 / .12 | Cloud 10.9.1.10 / .11 / .12 |
 | SDN_CONTROLLER | 10.1.99.10 (e0, mgmt/control VLAN 99); e3 = Cloud-NAT (pnet0, Internet) | — |
 | Dist-SW1 / Dist-SW2 | mgmt/control 10.1.99.11 / .12 | controller 10.1.99.10:6653 |

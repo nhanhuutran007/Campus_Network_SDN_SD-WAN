@@ -605,7 +605,7 @@ graph TB
 | 4 | Cổng **CÓ IP** | Cổng L3: router, firewall, switch L3 (SVI/Loopback), System-IP vEdge. |
 | 5 | Cổng **KHÔNG IP** | Cổng access/trunk của switch L2 (nối PC, server, switch L2 khác) — chỉ cấu hình VLAN. |
 | 6 | Loopback OSPF | `10.<site>.0.x/32` (vd: Core-SW1 = 10.1.0.1/32). |
-| 7 | System-IP OMP | `10.200.<site>.x` (vd: Site 100 → 10.200.100.1/2). Chỉ là định danh overlay, **không phải gateway LAN**. |
+| 7 | System-IP OMP | Địa chỉ /32 duy nhất: Site 100/200 dùng `10.200.100.x`/`10.200.200.x`; Site 300/400/900 rút gọn octet thành `30`/`40`/`90` để hợp lệ IPv4. Chỉ là định danh overlay, **không phải gateway LAN**. |
 | 8 | Mặt WAN | Mặt **Internet** dùng dải public `203.0.113.0/24`; mặt **MPLS** dùng `100.64.x.x/30`. |
 | 9 | Trunk L2 | Mang các VLAN cần thiết: Campus (10/20/30/40/90/99), chi nhánh (VLAN nghiệp vụ + 99). |
 | 10 | VPC (PC ảo) | Mặc định **xin DHCP** (dải `.100 – .199`) bằng lệnh `ip dhcp` trong file `config.txt`; không đặt IP tĩnh. |
@@ -681,11 +681,11 @@ graph TB
 | **65010** | vEdge1/2-S200 | Site 200 (Cần Thơ) |
 | **65020** | vEdge1/2-S300 | Site 300 (Đà Nẵng) |
 | **65030** | vEdge1/2-S400 | Site 400 (Nha Trang) |
-| — | Switch32 (site 900) | **Static CE-PE** (viosl2 không hỗ trợ BGP) |
+| — | Switch32 (site 900) | **Static CE-PE** theo phạm vi thiết kế của vùng controller |
 
 - Backbone SP: eBGP `64511 ↔ 64512` trên 100.64.254.0/30; mỗi ISP quảng bá **transit /30 của mình** cho ISP kia.
 - CE-PE: mỗi vEdge eBGP với ISP của transport (Internet TLOC ↔ AS 64511, MPLS TLOC ↔ AS 64512); ISP gửi `default-originate` cho khách hàng.
-- Site 900 (Switch32 + vEdge65): static default route → Internet (203.0.113.250) — thay vì BGP, vì Switch32 là switch L2 (viosl2).
+- Site 900 (Switch32 + vEdge65): giữ static routing theo phạm vi thiết kế; Switch32 hiện dùng IOL High Iron và thực hiện các SVI VLAN 10/250/251/252.
 
 ### 2.2. Bảng kết nối cổng chi tiết (thiết bị — cổng — IP)
 
@@ -1072,7 +1072,9 @@ Có 2 phương án định tuyến tại chi nhánh: **(A) Brand-FW (ASAv) làm 
 | Đà Nẵng (300) | vEdge2 | 10.200.30.2 | 203.0.113.13/30 (ge0/0) | — | 1 |
 | Nha Trang (400) | vEdge1 | 10.200.40.1 | — | 100.64.40.1/30 (ge0/0) | 1 |
 | Nha Trang (400) | vEdge2 | 10.200.40.2 | 203.0.113.17/30 (ge0/0) | — | 1 |
-| Controller (900) | vEdge65 | 10.200.900.1 | 203.0.113.245/30 (ge0/0) | — | 1 |
+| Controller (900) | vEdge65 | 10.200.90.1 | 203.0.113.245/30 (ge0/0) | — | 1 |
+
+> **Lưu ý màu TLOC (`tunnel-interface color`) — bài học 30/08/2026:** `color` phải khớp transport thực tế: WAN **Internet** (203.0.113.x) → **`biz-internet`**; WAN **MPLS** (100.64.x) → **`mpls`**. Trước đây vEdge2-S200/S300/S400 khai nhầm `color mpls` trên WAN Internet → fabric không có TLOC `biz-internet` cho chi nhánh → mọi tunnel **biz-internet ↔ MPLS** Down, GUI Health đỏ/QoE thấp. Đã sửa live (30/08/2026) + đồng bộ payload nhúng `.unl` (id 40/41/42). Kiểm tra: `show omp tlocs` thấy TLOC đúng màu, `show bfd sessions` cross-color lên.
 
 ### 2.6. Cấu hình mẫu (tham khảo cho người mới)
 

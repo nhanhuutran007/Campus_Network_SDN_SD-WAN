@@ -45,15 +45,25 @@ mkdir -p /root/ryu-app
 if [ -f /root/campus_switch_13.py ]; then
     cp -f /root/campus_switch_13.py /root/ryu-app/campus_switch_13.py
 fi
+# 4b) App NOC monitoring (dashboard + REST: configs/01-Site100-Campus/campus_noc_monitor.py)
+#     Dashboard truy cap tu PC quan ly:  http://10.1.99.10:8080/
+if [ -f /root/campus_noc_monitor.py ]; then
+    cp -f /root/campus_noc_monitor.py /root/ryu-app/campus_noc_monitor.py
+fi
 
-# 5) Chay Ryu: app quan ly campus + REST northbound (ofctl_rest port 8080)
+# 5) Chay Ryu: app quan ly campus + NOC monitoring + REST northbound (ofctl_rest port 8080)
 pkill -f ryu-manager 2>/dev/null || true
 sleep 2
-nohup ryu-manager --ofp-tcp-listen-port 6653 /root/ryu-app/campus_switch_13.py ryu.app.ofctl_rest \
+nohup ryu-manager --ofp-tcp-listen-port 6653 \
+    /root/ryu-app/campus_switch_13.py \
+    /root/ryu-app/campus_noc_monitor.py \
+    ryu.app.ofctl_rest \
     > /root/ryu.log 2>&1 &
 
 # Kiem tra:
 #   tail -f /root/ryu.log
 #   ss -tlnp | grep -E '6653|8080'
 #   curl http://127.0.0.1:8080/stats/switches   -> [5, 8, 68, 66, 70, 69]
+#   curl http://127.0.0.1:8080/noc/summary      -> JSON tong hop NOC
 #   grep 'san sang' /root/ryu.log  (6 switch)
+#   Dashboard NOC (tu PC quan ly):  http://10.1.99.10:8080/

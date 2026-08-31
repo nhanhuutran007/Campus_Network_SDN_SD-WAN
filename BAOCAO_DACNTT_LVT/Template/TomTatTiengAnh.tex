@@ -1,0 +1,25 @@
+\section*{\fontsize{16pt}{15pt}\selectfont IPv6 SPINE-LEAF ZERO TRUST \\DATA CENTER ORCHESTRATION AND MEASUREMENT SYSTEM \\ABSTRACT}
+
+\begin{itemize}
+    \item[-] \textbf{Research issues:}
+    
+    The report includes 5 chapters:
+        \begin{itemize}
+        \item[•] Chapter 1 — Leaf-Spine Architecture and Data Center Trends
+        \item[•] Chapter 2 — OSPF and ECMP Configuration
+        \item[•] Chapter 3 — Zero Trust Security and Micro-segmentation
+        \item[•] Chapter 4 — IPv4-IPv6 Protocol Transition with NAT64
+        \item[•] Chapter 5 — Performance Evaluation and Conclusion
+        \end{itemize}
+    \item[-] \textbf{Approach:}
+        \begin{itemize}
+        \item[•] Theory: Study IPv6 addressing, OSPFv3 routing, ECMP load balancing, Zero Trust security model, VXLAN overlay, and NAT64 translation.
+        \item[•] Practice: Build a complete Leaf-Spine data center simulation using Mininet and FRRouting, deploy micro-segmentation firewall policies, and conduct automated performance measurements.
+    \end{itemize}
+    \item[-] \textbf{How to solve problems:}
+    Design and implement a pure IPv6 Leaf-Spine topology with 7 routers and 8 hosts. Configure OSPFv3 dynamic routing, ECMP multi-path forwarding, VXLAN L3VNI overlay tunnels, Zero Trust micro-segmentation using ip6tables, and NAT64/Tayga for IPv4 interoperability. Develop automated testing tools (5 cases) for convergence timing, ACL validation, and bandwidth analysis.
+    \item[-] \textbf{Results achieved:}
+    OSPFv3 convergence within 24--27 seconds during spine failure. Zero Trust ACL validated 100\% across 64 source-destination pairs. ECMP load balancing increased bandwidth by 2.36x under multi-flow conditions.
+\end{itemize}
+
+\newpage

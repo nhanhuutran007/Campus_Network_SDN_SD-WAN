@@ -1,0 +1,53 @@
+\section{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}\label{sec:ket_luan_huong_phat_trien}
+
+\subsection{Kết quả đạt được}
+
+Đề tài đã xây dựng được mô hình Campus Network đa cơ sở kết hợp SDN và SD-WAN trên EVE-NG. Mô hình gồm Campus chính tại Site 100, ba cơ sở phụ tại Site 200, 300 và 400, vùng điều khiển Site 900 cùng hai mạng truyền tải Internet/MPLS. Topology hiện có 67 node và 100 network; 51 startup config được nhúng trực tiếp trong file lab và đã vượt qua kiểm tra cấu trúc XML, node-id, network reference và payload Base64.
+
+Tại Campus chính, hệ thống đã triển khai các VLAN người dùng 10/20/30/40, Server Farm VLAN 90 và management VLAN 99. Core-SW1/2 cung cấp gateway VRRP, định tuyến OSPF và DHCP relay. Cặp ASAv hoạt động Primary--Active/Secondary--Standby Ready, vùng DMZ được tách khỏi mạng nội bộ và PC-Management đã truy cập được ASDM qua VLAN 99. Syslog tập trung đã nhận log thực tế từ các thiết bị hạ tầng.
+
+Tại ba cơ sở phụ, mô hình Firewall-as-Core đã được triển khai thống nhất. Brand-FW thực hiện router-on-a-stick và cấp DHCP cho sáu VLAN nghiệp vụ; 12 VPCS nhận đúng địa chỉ trong dải \texttt{.100--.199} và đúng gateway \texttt{.1}. Kết quả này chứng minh khả năng tái sử dụng một khuôn cấu hình cho nhiều site nhưng vẫn duy trì subnet và chính sách độc lập.
+
+Thành phần SDN sử dụng Ryu và OpenFlow 1.3 để quản lý hai Distribution OVS và bốn Access OVS tại Site 100. Control plane chạy trên VLAN 99 thay cho mạng và dây điều khiển riêng. Ứng dụng đã hỗ trợ học MAC theo VLAN, cài flow reactive, flow drop proactive tùy chọn và REST API northbound. Bộ service phục hồi OVS/Ryu sau stop/start và module NOC thử nghiệm cũng đã được xây dựng, tạo nền tảng cho quản trị tập trung và giám sát lưu lượng.
+
+Thành phần SD-WAN đã hoàn thiện underlay eBGP với Internet AS 64511, MPLS AS 64512 và bốn ASN khách hàng. Quy trình PKI/allow-list được áp dụng cho tám vEdge thuộc Site 100--400; vManage ghi nhận ba controller và tám edge reachable, OMP đạt 8/8 edge. Các lỗi sai màu TLOC, thiếu BGP service/address-family và thiếu route tới controller qua MPLS đã được khắc phục. Phép thử mất MPLS tại Site 100 quan sát đường dự phòng chuyển sang hoạt động trong khoảng 2 giây và duy trì kết nối qua Internet.
+
+Quan trọng hơn, đề tài đã hình thành được một quy trình kiểm tra theo lớp: topology và startup config; VLAN/trunk/gateway; OSPF/BGP underlay; PKI và control connection; OMP/TLOC/BFD; sau cùng mới kiểm thử dịch vụ đầu cuối. Quy trình này giúp tránh sửa sai tầng và có thể dùng như tài liệu vận hành, xử lý sự cố cho mô hình.
+
+\subsection{Hạn chế của đề tài}
+
+Mặc dù các chức năng chính đã được triển khai, mô hình vẫn còn một số giới hạn:
+
+\begin{itemize}
+    \item DHCP tại Campus chính mới hoàn thành phần relay trên Core; role và bốn scope trên Windows Server chưa có bằng chứng nghiệm thu cuối cùng. Vì vậy tám VPCS Site 100 chưa được tính là đã kiểm thử DHCP thành công.
+    \item Module NOC đã có mã nguồn, REST API và dashboard nhưng chưa được thử tải kéo dài, chưa đối chứng số liệu với công cụ đo độc lập và chưa lưu dữ liệu lịch sử vào cơ sở dữ liệu bền vững.
+    \item SDN Controller hiện là một node Ryu đơn. Service tự khởi động giúp phục hồi sau reboot nhưng không loại bỏ điểm lỗi đơn của control plane.
+    \item Logic SDN mới tập trung vào switching theo VLAN và ACL demo. Các chính sách như QoS hoàn chỉnh, topology-aware forwarding, NAC/802.1X, micro-segmentation và xác thực API chưa được hiện thực đầy đủ.
+    \item Node vEdge65 ở Site 900 là node phụ/staging và không nằm trong đợt kiểm thử tám edge. Kết quả overlay vì vậy chỉ đại diện cho Site 100--400.
+    \item Dashboard SD-WAN vẫn tính các tunnel cross-color standby vào tỷ lệ health. Nếu chỉ nhìn phần trăm mà không xét chính sách TLOC có thể dẫn đến đánh giá sai trạng thái dịch vụ.
+    \item Chưa có bộ benchmark lặp nhiều lần cho throughput, latency, jitter, packet loss, thời gian hội tụ, CPU và RAM. Con số failover khoảng 2 giây là kết quả của một tình huống lab, không phải cam kết SLA.
+    \item EVE-NG có khác biệt so với thiết bị thật về hiệu năng, clock, console, cơ chế nạp startup config và tài nguyên phần cứng. Nhiều thành phần vẫn cần cấu hình tay, đặc biệt là Windows, Linux/OVS và SD-WAN Controller.
+    \item Một số chính sách bảo mật nêu trong Chương 3 mới ở mức thiết kế, chẳng hạn 802.1X, DHCP Snooping, Dynamic ARP Inspection, SNMPv3 và Zero Trust; chưa được tính là kết quả triển khai.
+\end{itemize}
+
+\subsection{Hướng phát triển}
+
+Trong giai đoạn tiếp theo, đề tài có thể được phát triển theo các hướng sau:
+
+\begin{enumerate}
+    \item \textbf{Hoàn tất dịch vụ Campus chính:} cài role DHCP, tạo và authorize bốn scope, kiểm thử đủ tám VPCS qua relay, sau đó hoàn thiện Web/Mail và ma trận truy cập DMZ--Server Farm--VLAN người dùng.
+    \item \textbf{Hoàn thiện NOC:} bảo đảm PortStats được poll định kỳ, kiểm tra công thức bandwidth bằng iPerf, lưu time-series vào cơ sở dữ liệu, đóng gói Chart.js cục bộ và tích hợp cảnh báo qua e-mail hoặc hệ thống ticket.
+    \item \textbf{Tăng tính sẵn sàng SDN:} triển khai nhiều controller hoặc nền tảng hỗ trợ cluster, đồng bộ state/flow, bổ sung health-check và kiểm thử mất controller trong khi có lưu lượng mới.
+    \item \textbf{Mở rộng chính sách SDN:} phát hiện topology bằng LLDP, tính đường không vòng lặp, triển khai QoS, cách ly endpoint, RBAC cho REST API và ghi audit log cho mọi thay đổi flow.
+    \item \textbf{Tối ưu SD-WAN:} chuẩn hóa centralized policy cho TLOC preference, app-route và SLA class; tách rõ tunnel active/standby trên dashboard; lặp phép thử failover Internet/MPLS và mất một vEdge tại từng site.
+    \item \textbf{Hoàn thiện Site 900:} quyết định vai trò chính thức của vEdge65, onboard nếu cần làm site staging hoặc loại khỏi topology nếu không phục vụ kịch bản đánh giá.
+    \item \textbf{Tự động hóa triển khai:} xây dựng pipeline sinh payload nhúng từ \texttt{configs/}, kiểm tra diff, validate \texttt{.unl}, kiểm tra cú pháp cấu hình và triển khai theo từng node có kiểm soát. Có thể kết hợp Ansible, API EVE-NG và API vManage.
+    \item \textbf{Tăng cường bảo mật:} triển khai AAA tập trung, 802.1X/NAC, DHCP Snooping, Dynamic ARP Inspection, SNMPv3, TLS cho kênh quản trị và chính sách Zero Trust giữa các vùng dịch vụ.
+    \item \textbf{Thử nghiệm trên thiết bị thật:} chọn một cụm nhỏ gồm Core/Access, firewall và hai đường WAN để đối chiếu hành vi, hiệu năng và thời gian hội tụ với môi trường ảo.
+\end{enumerate}
+
+\subsection{Kết luận chung}
+
+Kết quả của đề tài cho thấy SDN và SD-WAN có thể được kết hợp trong một kiến trúc Campus phân tầng mà không làm mất vai trò của các cơ chế truyền thống. VRRP, OSPF, firewall HA và VLAN tiếp tục bảo đảm vận hành cục bộ; Ryu bổ sung khả năng điều khiển và quan sát tập trung cho lớp 2 tại Site 100; còn vManage, vSmart và vBond điều phối kết nối overlay giữa các cơ sở.
+
+Mô hình đã chứng minh được tính khả thi về mặt chức năng và quy trình triển khai. Đồng thời, việc ghi nhận trung thực các hạng mục chưa nghiệm thu cho thấy hệ thống vẫn cần hoàn thiện dịch vụ Campus, giám sát định lượng, tự động hóa và high availability trước khi có thể xem là tương đương một giải pháp production. Đây là nền tảng phù hợp để tiếp tục phát triển thành mô hình thực hành, nghiên cứu và thử nghiệm chính sách mạng Campus đa cơ sở.
