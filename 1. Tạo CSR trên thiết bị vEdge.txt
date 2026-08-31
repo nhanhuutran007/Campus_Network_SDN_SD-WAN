@@ -1,0 +1,57 @@
+1. Tạo CSR trên vEdge1-S100 (node 28)
+
+- Console vEdge1-S100: telnet 33564, login admin / vnpro@2026
+- Trước khi tạo CSR, xác nhận đã có config nền (nếu mới wipe/đặt lại tay):
+    system-ip 10.200.100.1, site-id 100, organization-name site-900, vbond 10.9.0.12
+  (host-name vEdge1-S100 — các vEdge còn lại dùng chung org site-900, phải khớp)
+
+vEdge# request csr upload /home/admin/vEdge1-S100.csr
+
+→ Nhập organization-unit khi được hỏi: site-900 (đồng bộ với các vEdge khác)
+→ Các field còn lại có thể truyền kèm để bỏ prompt: country VN, state HCM, location HCM,
+  org site-900, domain, email (để trống domain/email vẫn OK — cert v1 không cần extension)
+
+2. Chuyển CSR từ vEdge1-S100 sang máy CA (vManage 10.9.0.10)
+
+vEdge# request execute vpn 0 scp /home/admin/vEdge1-S100.csr admin@10.9.0.10:/home/admin/ca/vEdge1-S100.csr
+
+3. Trên máy CA (vManage), cd vào đúng thư mục chứa root CA rồi ký CSR
+
+bash
+cd /home/admin/ca/
+openssl x509 -req -in vEdge1-S100.csr -CA root-ca.pem -CAkey root-ca.key -CAcreateserial -out vEdge1-S100.crt -days 730 -sha256
+
+4. Chuyển certificate đã ký (.crt) ngược về vEdge1-S100
+
+vEdge# request execute vpn 0 scp admin@10.9.0.10:/home/admin/ca/vEdge1-S100.crt /home/admin/vEdge1-S100.crt
+
+5. Chuyển root CA (.pem) về vEdge1-S100 (nếu chưa có/chưa đúng)
+
+vEdge# request execute vpn 0 scp admin@10.9.0.10:/home/admin/ca/root-ca.pem /home/admin/root-ca.pem
+
+6. Cài root CA chain trên vEdge1-S100 — bước bắt buộc, không được bỏ qua
+
+vEdge# request root-cert-chain install /home/admin/root-ca.pem
+
+→ Đây chính là bước bị thiếu gây lỗi unable to get local issuer certificate lúc nãy.
+
+7. Cài certificate đã ký
+
+vEdge# request certificate install /home/admin/vEdge1-S100.crt
+
+8. Whitelist (allow-list) trên vManager — lấy chassis-num và serial-num của vEdge1-S100
+   (show control local-properties) rồi khai báo (bắt buộc, vBond mới chấp nhận thiết bị):
+
+vmanager# request vedge add chassis-num <chassis-num của vEdge1-S100> serial-num <serial-num của vEdge1-S100>
+
+   Lưu ý: chassis/serial ĐỔI MỖI LẦN wipe — phải lấy từ lệnh show trên device hiện tại, không dùng lại số cũ.
+
+9. Xác minh kết quả
+
+vEdge# show certificate installed
+vEdge# show control local-properties
+vEdge# show control connections   (mong đợi: vbond + vsmart + vmanage UP)
+
+Ví dụ whitelist đã dùng cho các node khác (chỉ tham khảo, đừng copy số này cho vEdge1-S100):
+request vedge add chassis-num dd8730b2-f79e-4dd9-951f-12a9e74f3e89 serial-num 050CC67238AF8949E4AE8D4CDF8083AA9A73F985
+request vedge add chassis-num 73b03754-c8e6-4272-84e0-cad17b36dc40 serial-num 050CC67238AF8949E4AE8D4CDF8083AA9A73F986

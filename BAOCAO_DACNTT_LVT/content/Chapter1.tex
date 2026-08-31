@@ -1,0 +1,43 @@
+\section{MỞ ĐẦU VÀ TỔNG QUAN ĐỀ TÀI}\label{sec:mo_dau_tong_quan}
+
+\subsection{Lý do chọn đề tài}
+
+Trong môi trường đại học, hệ thống mạng Campus là hạ tầng nền tảng phục vụ các hoạt động học tập, giảng dạy, nghiên cứu, quản trị hành chính và cung cấp dịch vụ số. Khi số lượng khoa, phòng học, phòng máy, thiết bị không dây và các cơ sở phụ tăng lên, mô hình mạng cần đáp ứng đồng thời các yêu cầu về hiệu năng, bảo mật, khả năng quản lý và mở rộng.
+
+Các hệ thống mạng truyền thống thường được cấu hình trực tiếp trên từng thiết bị, khiến quá trình thay đổi VLAN, bổ sung khu vực mạng, triển khai chính sách truy cập hoặc xử lý sự cố mất nhiều thời gian. Vì vậy, việc kết hợp kiến trúc Campus phân cấp với SDN và SD-WAN là hướng tiếp cận phù hợp nhằm tăng khả năng quản lý tập trung, tự động hóa vận hành và kết nối linh hoạt giữa nhiều địa điểm.
+
+\subsection{Mục tiêu thực hiện đề tài}
+
+Đề tài hướng đến việc xây dựng khung thiết kế mạng Campus Network sử dụng SDN và SD-WAN phù hợp với môi trường trường đại học. Các mục tiêu chính bao gồm:
+\begin{itemize}
+    \item Thiết kế kiến trúc mạng Campus theo mô hình Core--Distribution--Access.
+    \item Phân hoạch VLAN và địa chỉ IP cho các khoa, phòng học, phòng máy, khu vực hành chính và dịch vụ dùng chung.
+    \item Đề xuất phương án quản lý tập trung thiết bị mạng bằng SDN Controller.
+    \item Xây dựng phương án kết nối Campus chính với các cơ sở phụ thông qua SD-WAN.
+    \item Xác định các tiêu chí đánh giá về khả năng vận hành, dự phòng, mở rộng và quản lý chính sách.
+\end{itemize}
+
+\subsection{Đối tượng và phạm vi nghiên cứu}
+
+Đối tượng nghiên cứu của đề tài là hệ thống mạng Campus trong môi trường đào tạo, bao gồm các thiết bị chuyển mạch, định tuyến, phân vùng VLAN, dịch vụ cấp phát địa chỉ, chính sách truy cập và kết nối WAN giữa nhiều cơ sở.
+
+Phạm vi thực hiện tập trung vào thiết kế logic và mô hình triển khai ở mức dự án, chưa đi sâu vào triển khai trên toàn bộ hạ tầng vật lý thực tế. Các nội dung chính bao gồm mô hình topology, phân hoạch mạng, vai trò của SDN Controller, kết nối SD-WAN và các kịch bản kiểm thử chức năng cơ bản.
+
+\subsection{Phương pháp nghiên cứu}
+
+Đề tài được thực hiện theo hướng kết hợp nghiên cứu lý thuyết và thiết kế mô hình triển khai. Phần lý thuyết tập trung vào kiến trúc mạng Campus, VLAN, định tuyến nội bộ, SDN, SD-WAN và các cơ chế bảo mật cơ bản. Phần thiết kế mô hình tập trung xây dựng topology, bảng VLAN, sơ đồ địa chỉ, chính sách truy cập và quy trình kiểm thử.
+
+\subsection{Ý nghĩa thực tiễn của đề tài}
+
+Mô hình đề xuất giúp đơn giản hóa quá trình quản trị mạng Campus, giảm phụ thuộc vào cấu hình thủ công trên từng thiết bị và tăng khả năng mở rộng khi nhà trường bổ sung khoa, phòng học hoặc cơ sở mới. Việc tích hợp SDN và SD-WAN cũng tạo nền tảng cho các hướng phát triển như tự động hóa cấu hình, giám sát tập trung, tối ưu lưu lượng và quản lý chính sách bảo mật theo khu vực chức năng.
+
+\subsection{Bố cục báo cáo}
+
+Nội dung báo cáo được tổ chức thành năm chương chính, với bố cục cụ thể như sau:
+\begin{itemize}
+    \item \textbf{Chương 1 -- Mở đầu và tổng quan đề tài:} Trình bày lý do chọn đề tài, mục tiêu, đối tượng, phạm vi, phương pháp nghiên cứu, ý nghĩa thực tiễn và bố cục báo cáo.
+    \item \textbf{Chương 2 -- Cơ sở lý thuyết:} Trình bày các kiến thức nền tảng về Campus Network, mô hình Core--Distribution--Access, VLAN, định tuyến, SDN, SD-WAN và các cơ chế bảo mật, dự phòng.
+    \item \textbf{Chương 3 -- Mô hình mạng Campus đề xuất:} Mô tả kiến trúc tổng thể, topology, phân hoạch VLAN, địa chỉ IP, vai trò của SDN Controller và phương án kết nối SD-WAN.
+    \item \textbf{Chương 4 -- Triển khai và đánh giá:} Trình bày cấu hình các thành phần mạng, dịch vụ DHCP, OSPF, ACL, STP/RSTP, dự phòng liên kết và các kịch bản kiểm thử.
+    \item \textbf{Chương 5 -- Kết luận và hướng phát triển:} Tổng kết kết quả đạt được, nêu hạn chế và đề xuất hướng mở rộng hệ thống trong tương lai.
+\end{itemize}

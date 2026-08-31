@@ -1,0 +1,327 @@
+\section{TRIỂN KHAI, KIỂM THỬ VÀ ĐÁNH GIÁ}\label{sec:trien_khai_danh_gia}
+
+Chương này trình bày quá trình hiện thực mô hình đã thiết kế ở Chương~\ref{sec:mo_hinh_de_xuat} trên EVE-NG, cách đồng bộ cấu hình giữa các thiết bị và kết quả kiểm thử thu được. Kết quả được phân loại thành ba mức: \textit{đã kiểm chứng} khi có bằng chứng từ trạng thái thiết bị hoặc phép thử thực tế; \textit{đã cấu hình, cần nghiệm thu} khi cấu hình nguồn đã hoàn thành nhưng chưa có phép thử end-to-end tương ứng; và \textit{chưa triển khai} đối với hạng mục mới dừng ở thiết kế. Cách phân loại này giúp tách kết quả thực nghiệm khỏi chức năng dự kiến, đồng thời làm rõ phạm vi hoàn thành của đề tài.
+
+\subsection{Mục tiêu và nguyên tắc triển khai}
+
+Mục tiêu triển khai là xây dựng một topology thống nhất cho bốn site, trong đó Site 100 thể hiện kiến trúc Campus phân tầng và SDN, các Site 200, 300, 400 thể hiện mô hình chi nhánh, còn Site 900 cung cấp mặt phẳng điều khiển SD-WAN. Hai mạng truyền tải Internet và MPLS được mô phỏng độc lập để kiểm tra BGP underlay, điều khiển OMP, đường hầm IPsec và khả năng chuyển tuyến khi một transport bị gián đoạn.
+
+Quá trình triển khai tuân theo các nguyên tắc sau:
+
+\begin{itemize}
+    \item Địa chỉ, VLAN, Site ID, System-IP, node-id và ánh xạ cổng phải thống nhất giữa tài liệu thiết kế, file topology \texttt{Campus Network SDN SD-WAN.unl} và thư mục \texttt{configs/}.
+    \item Cấu hình tự động được lưu ở file nguồn và đồng thời nhúng dạng Base64 vào file \texttt{.unl}; cấu hình của Linux/OVS, Windows và SD-WAN Controller được triển khai thủ công hoặc bằng service trong máy ảo.
+    \item Không đưa tài khoản, mật khẩu hoặc khóa riêng PKI vào báo cáo. Phần PKI chỉ mô tả quy trình tạo CSR, cài Root CA, cài chứng thư và đăng ký serial/chassis.
+    \item Mọi phép thử phải ghi rõ điều kiện, kết quả mong đợi, bằng chứng quan sát và giới hạn của phép đo.
+\end{itemize}
+
+\subsection{Môi trường triển khai}
+
+\subsubsection{Nền tảng mô phỏng và thành phần phần mềm}
+
+Mô hình được triển khai trên EVE-NG bằng một file topology duy nhất. Kết quả phân tích tự động file topology ghi nhận \textbf{67 node}, \textbf{100 network}, \textbf{51 node bật startup config} và \textbf{51 payload cấu hình nhúng}. Toàn bộ tham chiếu network-id hợp lệ, không có node hoặc network bị treo. Các nền tảng chính được tổng hợp trong Bảng~\ref{tab:nen_tang_trien_khai_ch4}.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Nền tảng sử dụng trong mô hình triển khai}
+    \label{tab:nen_tang_trien_khai_ch4}
+    \begin{tabularx}{\textwidth}{|P{3.2cm}|P{4.2cm}|X|}
+        \hline
+        \textbf{Nhóm thành phần} & \textbf{Nền tảng/image} & \textbf{Vai trò trong mô hình} \\
+        \hline
+        Core và switch Cisco & IOL L2 High Iron 2019 & Core-SW1/2 thực hiện SVI, VRRP, OSPF; các switch còn lại thực hiện trunk/access và quản trị VLAN 99. \\
+        \hline
+        Firewall & Cisco ASAv 9.20(2)2 & Cặp firewall HA tại Site 100 và Brand-FW theo mô hình Firewall-as-Core tại các chi nhánh. \\
+        \hline
+        SDN data plane & Ubuntu Linux + Open vSwitch & Dist-SW1/2 và Access-SW1--4, sử dụng OpenFlow 1.3. \\
+        \hline
+        SDN control plane & Ryu + ứng dụng Python & Học MAC theo VLAN, cài flow, REST northbound và module giám sát NOC thử nghiệm. \\
+        \hline
+        SD-WAN & Viptela 20.10.1 & vManage, vSmart, vBond và tám vEdge thuộc các Site 100--400. \\
+        \hline
+        Service Provider & Cisco vIOS 15.7(3)M3 & Hai router Internet và MPLS chạy eBGP underlay. \\
+        \hline
+        Máy chủ và máy trạm & Windows Server 2012 R2, Windows 7, VPCS & DHCP, Syslog, Web, Mail, quản trị ASDM và các máy trạm kiểm thử. \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Việc lựa chọn IOL cho Core-SW1/2 khắc phục tình trạng CPU-hog từng xuất hiện với image vIOS-L2 khi các switch OVS phát broadcast trong lúc Core khởi động. Image IOL đang dùng hỗ trợ đồng thời \texttt{switchport}, SVI, \texttt{ip routing}, VRRP và OSPF. Hai lệnh có ý nghĩa quan trọng là \texttt{vtp mode off}, nhằm tránh VLAN database bị ghi đè bởi switch có revision cao hơn, và \texttt{switchport trunk encapsulation dot1q} trước lệnh \texttt{switchport mode trunk}.
+
+\subsubsection{Quản lý nguồn cấu hình}
+
+Các artifact được tổ chức theo vai trò như Bảng~\ref{tab:artifact_trien_khai_ch4}. Cấu trúc này cho phép truy vết từ yêu cầu thiết kế đến cấu hình thực thi và topology.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Nguồn dữ liệu và phương thức triển khai cấu hình}
+    \label{tab:artifact_trien_khai_ch4}
+    \begin{tabularx}{\textwidth}{|P{4.1cm}|P{4.2cm}|X|}
+        \hline
+        \textbf{Artifact} & \textbf{Nội dung} & \textbf{Cách sử dụng} \\
+        \hline
+        \path{campus_network_sdn_sdwan.md} & Quy hoạch IP, VLAN, cổng, ASN và kiến trúc & Nguồn thiết kế để đối chiếu với topology và báo cáo. \\
+        \hline
+        \texttt{Campus Network SDN SD-WAN.unl} & Node, interface, network và startup config nhúng & Import vào EVE-NG; kiểm tra XML và invariant trước khi triển khai. \\
+        \hline
+        \texttt{configs/} & Cấu hình IOS/IOL/ASAv/vEdge/VPCS, script OVS/Ryu và service systemd & Nguồn cấu hình có thể tái sử dụng; một số nền tảng cần dán qua console hoặc copy vào guest. \\
+        \hline
+        \texttt{configs/README.md} & Ánh xạ thiết bị--node-id và thứ tự khởi động & Tránh dán nhầm cấu hình, đặc biệt với node 40/41/42. \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Đối với node có \texttt{config="1"}, EVE-NG chỉ nạp startup config khi payload tương ứng tồn tại trong phần \texttt{<configs>} của file \texttt{.unl}. Vì vậy chỉ copy file \texttt{config.cfg} vào thư mục node là chưa đủ. Ngược lại, Linux/OVS, Windows, vManage, vSmart và vBond cần bước cấu hình trong guest. Các vEdge cũng cần chú ý quá trình boot đầu và commit cấu hình; việc wipe node có thể làm mất trạng thái runtime và yêu cầu onboard lại.
+
+\subsection{Triển khai mạng LAN tại Campus chính}
+
+\subsubsection{VLAN, trunk và gateway dự phòng}
+
+Tại Site 100, các VLAN người dùng 10, 20, 30 và 40 được mang qua các liên kết trunk giữa Core, Distribution và Access. VLAN 90 phục vụ Server Farm; VLAN 99 dành cho management và control plane SDN. Core-SW1 sử dụng địa chỉ SVI kết thúc bằng \texttt{.2}, Core-SW2 sử dụng \texttt{.3}; địa chỉ \texttt{.1} là VRRP Virtual IP cho VLAN người dùng và VLAN Server Farm.
+
+Đoạn cấu hình rút gọn trong Khối lệnh~\ref{lst:core_vrrp_ch4} minh họa cơ chế gateway và DHCP relay của VLAN 10.
+
+\begin{lstlisting}[style=customcode,caption={Cấu hình SVI, VRRP và DHCP relay trên Core-SW1},label={lst:core_vrrp_ch4}]
+interface Vlan10
+ ip address 10.1.10.2 255.255.255.0
+ vrrp 10 ip 10.1.10.1
+ vrrp 10 priority 150
+ ip helper-address 10.1.90.10
+ no shutdown
+!
+router ospf 1
+ router-id 10.1.0.1
+\end{lstlisting}
+
+Hai Core kết nối qua Port-Channel10 thuộc mạng \texttt{10.1.0.4/30}. Bốn liên kết Core--Firewall sử dụng các subnet \texttt{10.1.2.0/30}, \texttt{10.1.2.4/30}, \texttt{10.1.2.8/30} và \texttt{10.1.2.12/30}. OSPF Area 0 trao đổi route giữa Core và firewall active. Kết quả kiểm tra thực tế cho thấy quan hệ OSPF giữa FW-ASAv-Active và hai Core đạt trạng thái Full sau khi sửa đúng ánh xạ cổng E0/3 và E1/0 trên Core-SW1.
+
+\subsubsection{Firewall HA, DMZ và mạng quản trị}
+
+Cặp FW-ASAv tại Site 100 hoạt động active--standby. Node 1 giữ vai trò Primary--Active; node 2 đạt trạng thái Secondary--Standby Ready. Liên kết failover dùng Gi0/5 và subnet \texttt{10.1.255.0/29}. Cùng một khai báo địa chỉ failover được đặt trên cả hai unit để ASAv tự gán địa chỉ theo vai trò, tránh xung đột trong quá trình negotiation.
+
+DMZ sử dụng \texttt{10.1.1.0/28}, trong đó Web Server là \texttt{10.1.1.10}, Mail Server là \texttt{10.1.1.11}, gateway active là \texttt{10.1.1.1}. Mặt quản trị của cặp firewall được đưa vào VLAN 99 với \texttt{10.1.99.33} và \texttt{10.1.99.34}. PC-Management sử dụng \texttt{10.1.99.50/24}, gateway \texttt{10.1.99.1} và đã truy cập được ASDM của firewall active qua HTTPS. Kết quả này chứng minh đường quản trị từ Server Farm đến firewall HA hoạt động độc lập với các VLAN người dùng.
+
+\subsubsection{Dịch vụ Syslog và DHCP Campus}
+
+Syslog Server được đặt tại \texttt{10.1.90.11/24} và chạy Kiwi Syslog trên Windows. Core-SW1/2, SwitchServerFarm và cặp firewall đã được cấu hình gửi syslog qua UDP 514. Phép thử thực tế ghi nhận Syslog Server nhận được log từ firewall và các thiết bị mạng, do đó hạng mục thu thập nhật ký cơ bản được đánh giá là đã hoàn thành.
+
+DHCP Server tại \texttt{10.1.90.10/24} sử dụng Windows Server 2012 R2. Phần mạng đã sẵn sàng: Core-SW1/2 đều có \texttt{ip helper-address 10.1.90.10} trên SVI VLAN 10/20/30/40, và 8 VPCS tại Site 100 đều có startup config \texttt{ip dhcp}. Tuy nhiên role DHCP và bốn scope trên Windows Server chưa có bằng chứng nghiệm thu cuối cùng. Vì vậy báo cáo chỉ ghi nhận \textit{hạ tầng relay đã cấu hình}, không coi cấp phát DHCP tại Campus chính là kết quả hoàn tất.
+
+\subsection{Triển khai mạng LAN tại các cơ sở phụ}
+
+Ba chi nhánh áp dụng cùng một khuôn Firewall-as-Core: Brand-FW làm gateway lớp 3 và DHCP Server; SwitchBrand cùng hai switch phòng ban chỉ làm lớp 2. Mỗi trunk mang hai VLAN nghiệp vụ và VLAN 99. Việc đặt DHCP tại chỗ giúp máy trạm vẫn nhận địa chỉ khi overlay SD-WAN chưa sẵn sàng.
+
+Kết quả cấp phát được tổng hợp trong Bảng~\ref{tab:dhcp_chi_nhanh_ch4}. Các địa chỉ quan sát đều nằm đúng phạm vi \texttt{.100--.199} và gateway đều là địa chỉ \texttt{.1} trên sub-interface của Brand-FW.
+
+\begin{table}[H]
+    \centering
+    \scriptsize
+    \caption{Kết quả kiểm thử DHCP tại các cơ sở phụ}
+    \label{tab:dhcp_chi_nhanh_ch4}
+    \begin{tabularx}{\textwidth}{|c|c|P{3.0cm}|P{3.0cm}|X|}
+        \hline
+        \textbf{Site} & \textbf{VLAN} & \textbf{Subnet/Gateway} & \textbf{VPCS kiểm thử} & \textbf{Địa chỉ nhận được} \\
+        \hline
+        200 & 60 & 10.2.60.0/24; gw .1 & VPC43, VPC44 & 10.2.60.100; 10.2.60.101 \\
+        \hline
+        200 & 70 & 10.2.70.0/24; gw .1 & VPC46, VPC47 & 10.2.70.100; 10.2.70.101 \\
+        \hline
+        300 & 80 & 10.3.80.0/24; gw .1 & VPC50, VPC54 & 10.3.80.100; 10.3.80.101 \\
+        \hline
+        300 & 90 & 10.3.90.0/24; gw .1 & VPC53, VPC48 & 10.3.90.100; 10.3.90.101 \\
+        \hline
+        400 & 50 & 10.4.50.0/24; gw .1 & VPC51, VPC45 & 10.4.50.100; 10.4.50.101 \\
+        \hline
+        400 & 60 & 10.4.60.0/24; gw .1 & VPC49, VPC52 & 10.4.60.100; 10.4.60.101 \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Trong quá trình triển khai, các IOL chi nhánh không phải lúc nào cũng tự nạp đầy đủ trunk config sau khi start. Cấu hình đã được dán lại qua console, sau đó kiểm tra bằng \texttt{show vlan brief}, \texttt{show interfaces trunk} và lưu bằng \texttt{write memory}. Đây là lý do quy trình vận hành phải bao gồm bước xác minh running-config, không chỉ dựa vào cờ startup config trong EVE-NG.
+
+\subsection{Triển khai SDN tại Site 100}
+
+\subsubsection{Kiến trúc control plane}
+
+SDN Controller là node 9, sử dụng địa chỉ \texttt{10.1.99.10/24} trên e0/ens3 và kết nối SwitchServerFarm e1/0 ở chế độ access VLAN 99. Không còn mạng control riêng \texttt{10.1.100.0/24} và không còn AccessTest/VPC11/VPC12. Kênh OpenFlow đi qua chính management fabric hiện có, đến sáu OVS tại tầng Distribution và Access.
+
+Phạm vi điều khiển và DPID được trình bày trong Bảng~\ref{tab:dpid_sdn_ch4}. Hai Core vẫn chạy control plane Cisco truyền thống; Ryu không quản lý Core-SW1/2.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Ánh xạ switch OVS với SDN Controller}
+    \label{tab:dpid_sdn_ch4}
+    \begin{tabularx}{\textwidth}{|P{2.8cm}|c|P{3.2cm}|X|}
+        \hline
+        \textbf{Thiết bị} & \textbf{Node ID} & \textbf{DPID} & \textbf{IP quản trị} \\
+        \hline
+        Dist-SW1 & 5 & 0000000000000005 & 10.1.99.11/24 \\
+        \hline
+        Dist-SW2 & 8 & 0000000000000008 & 10.1.99.12/24 \\
+        \hline
+        Access-SW1 & 68 & 0000000000000044 & 10.1.99.21/24 \\
+        \hline
+        Access-SW2 & 66 & 0000000000000042 & 10.1.99.22/24 \\
+        \hline
+        Access-SW3 & 70 & 0000000000000046 & 10.1.99.23/24 \\
+        \hline
+        Access-SW4 & 69 & 0000000000000045 & 10.1.99.24/24 \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Mỗi bridge \texttt{br0} sử dụng OpenFlow 1.3, trỏ đến \texttt{tcp:10.1.99.10:6653}, đặt \texttt{fail\_mode=secure} và tắt OVS STP. Cấu hình rút gọn được minh họa trong Khối lệnh~\ref{lst:ovs_controller_ch4}.
+
+\begin{lstlisting}[style=customcode,caption={Thiết lập OpenFlow trên một OVS},label={lst:ovs_controller_ch4}]
+ovs-vsctl set bridge br0 protocols=OpenFlow13
+ovs-vsctl set bridge br0 other_config:datapath-id=0000000000000044
+ovs-vsctl set-controller br0 tcp:10.1.99.10:6653
+ovs-vsctl set bridge br0 fail_mode=secure
+ovs-vsctl set bridge br0 stp_enable=false
+\end{lstlisting}
+
+Vì \texttt{fail\_mode=secure} cần flow để chuyển lưu lượng management trước khi controller kết nối, bộ phục hồi cài hai flow bootstrap priority 50000 cho VLAN 99. Các nhánh mang VLAN 99 được pruning thành một cây không vòng lặp; các VLAN dữ liệu vẫn được giữ trên trunk. Cách làm này giải quyết vòng phụ thuộc ``switch cần controller để forward nhưng controller chỉ reachable qua switch''.
+
+\subsubsection{Ứng dụng Ryu và giám sát}
+
+Ứng dụng \texttt{campus\_switch\_13.py} thực hiện ba chức năng chính:
+
+\begin{enumerate}
+    \item Học địa chỉ MAC theo cặp (VLAN, MAC), flood trong đúng VLAN và cài flow unicast reactive.
+    \item Cài flow drop proactive cho cổng được khai trong \texttt{BLOCK\_PORTS}. Danh sách mặc định rỗng để không làm gián đoạn DHCP; có thể bật khi demo cách ly VPC14.
+    \item Cung cấp REST API qua \texttt{ryu.app.ofctl\_rest} trên TCP 8080 để đọc hoặc thay đổi flow từ ứng dụng northbound.
+\end{enumerate}
+
+Mã giám sát NOC được cài trong tệp \path{campus_noc_monitor.py}. Thành phần này thu hai loại thống kê cổng là PortStats và PortDescStats, công bố các endpoint \texttt{/noc/*} và dashboard tại \texttt{http://10.1.99.10:8080/}. Module định nghĩa chu kỳ lấy mẫu, lịch sử băng thông và ngưỡng cảnh báo 70\%/90\%. Tuy nhiên hạng mục này mới được xác nhận ở mức mã nguồn và tích hợp lệnh khởi động; chưa có bộ số liệu tải kéo dài để đánh giá độ chính xác của bandwidth/utilization. Vì vậy NOC dashboard được xem là phần mở rộng thử nghiệm, không phải kết quả hiệu năng đã nghiệm thu.
+
+\subsubsection{Kết quả kiểm tra SDN}
+
+Phép kiểm tra control plane ghi nhận đủ sáu địa chỉ quản trị OVS gửi OpenFlow 1.3 echo đến \texttt{10.1.99.10:6653}. REST endpoint \texttt{/stats/switches} phải trả về tập DPID \texttt{\{5, 8, 66, 68, 69, 70\}}; thứ tự phần tử không có ý nghĩa vì phụ thuộc thứ tự TCP handshake. Đây là bằng chứng sáu switch đã kết nối controller. Việc kiểm thử lưu lượng reactive, ACL demo và khả năng phục hồi sau restart OVS cần được lặp lại theo cùng checklist trước mỗi lần trình diễn vì flow runtime và bảng MAC của Ryu không tồn tại sau khi process khởi động lại.
+
+\subsection{Triển khai SD-WAN giữa các cơ sở}
+
+\subsubsection{Controller, PKI và underlay BGP}
+
+Site 900 gồm vManager, vSmart và vBond. Các địa chỉ LAN lần lượt là \texttt{10.9.0.10}, \texttt{10.9.0.11} và \texttt{10.9.0.12}; System-IP của vSmart là \texttt{10.9.0.13} để không trùng địa chỉ interface VPN 0. Mặt cloud sử dụng \texttt{10.9.1.10}, \texttt{10.9.1.11} và \texttt{10.9.1.12}. Switch32 là IOL thực hiện SVI và static routing cho vùng controller.
+
+Thiết bị chỉ được tham gia fabric sau khi hoàn thành chuỗi PKI: tạo CSR trên vEdge, ký bằng Root CA của lab, cài Root CA chain, cài chứng thư thiết bị và đăng ký đúng cặp chassis-number/serial-number trên cả vManage, vBond và vSmart. Thực nghiệm cho thấy thiếu Root CA gây lỗi xác minh chuỗi chứng thư; thiếu allow-list ở vSmart khiến vEdge có thể lên vBond/vManage nhưng không hình thành OMP với vSmart.
+
+Underlay sử dụng hai ASN nhà cung cấp: Internet AS 64511 và MPLS AS 64512. Hai router hình thành eBGP trên \texttt{100.64.254.0/30}. ASN khách hàng là 65000, 65010, 65020 và 65030 tương ứng các Site 100, 200, 300 và 400. ISP dùng \texttt{default-originate} cho CE; vì vậy vEdge học default route động thay cho việc phụ thuộc hoàn toàn vào static default.
+
+\subsubsection{Ánh xạ vEdge, System-IP và TLOC}
+
+Bảng~\ref{tab:vedge_tloc_ch4} là ánh xạ đã đối chiếu giữa node-id, file cấu hình và topology. Site 100 có hai vEdge, mỗi thiết bị đều có Internet và MPLS. Tại mỗi chi nhánh, vEdge1 mang MPLS còn vEdge2 mang Internet; dự phòng ở cấp site được tạo bởi cặp edge và liên kết nội bộ giữa chúng.
+
+\begin{table}[H]
+    \centering
+    \scriptsize
+    \caption{Ánh xạ vEdge, System-IP và TLOC thực tế}
+    \label{tab:vedge_tloc_ch4}
+    \begin{tabularx}{\textwidth}{|c|P{2.5cm}|c|P{2.7cm}|P{3.2cm}|X|}
+        \hline
+        \textbf{Site} & \textbf{Thiết bị} & \textbf{Node} & \textbf{System-IP} & \textbf{Internet TLOC} & \textbf{MPLS TLOC} \\
+        \hline
+        100 & vEdge1-S100 & 28 & 10.200.100.1 & 203.0.113.1/30 & 100.64.100.1/30 \\
+        \hline
+        100 & vEdge2-S100 & 6 & 10.200.100.2 & 203.0.113.5/30 & 100.64.100.5/30 \\
+        \hline
+        200 & vEdge1-S200 & 29 & 10.200.200.1 & Không sử dụng & 100.64.200.1/30 \\
+        \hline
+        200 & vEdge2-S200 & 42 & 10.200.200.2 & 203.0.113.9/30 & Không sử dụng \\
+        \hline
+        300 & vEdge1-S300 & 30 & 10.200.30.1 & Không sử dụng & 100.64.30.1/30 \\
+        \hline
+        300 & vEdge2-S300 & 40 & 10.200.30.2 & 203.0.113.13/30 & Không sử dụng \\
+        \hline
+        400 & vEdge1-S400 & 31 & 10.200.40.1 & Không sử dụng & 100.64.40.1/30 \\
+        \hline
+        400 & vEdge2-S400 & 41 & 10.200.40.2 & 203.0.113.17/30 & Không sử dụng \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Node 65 là vEdge phụ tại Site 900, dùng System-IP hợp lệ \texttt{10.200.90.1}, WAN \texttt{203.0.113.245/30} và LAN \texttt{10.9.0.100/24}. Node này không nằm trong tập tám edge được dùng cho kết quả kiểm thử end-to-end ở Bảng~\ref{tab:vedge_tloc_ch4}; do đó không được tính vào tỷ lệ hoàn thành overlay.
+
+Màu TLOC phải khớp transport: \texttt{biz-internet} cho dải \texttt{203.0.113.x} và \texttt{mpls} cho dải \texttt{100.64.x}. Sai lệch màu trên vEdge2-S200/S300/S400 từng làm fabric thiếu TLOC Internet của chi nhánh và khiến các tunnel cross-color down. Sau khi sửa màu và commit, mỗi vEdge chi nhánh khôi phục các phiên BFD phù hợp với thiết kế.
+
+\subsubsection{Kết quả control plane, BFD và failover}
+
+Sau khi hoàn tất PKI và allow-list, vManage ghi nhận 11 thiết bị trong nhóm kiểm thử gồm ba controller và tám vEdge Site 100--400 ở trạng thái reachable/green. OMP peer đạt 8/8 edge. Các phiên eBGP CE--PE trên hai transport đạt Established và underlay đã ping thành công 10/10 gói theo hai chiều giữa Internet và MPLS TLOC.
+
+Trong trạng thái hội tụ sau phép thử failover, mỗi vEdge Site 100 quan sát 9/12 phiên BFD up; mỗi vEdge1 chi nhánh dùng MPLS quan sát 8/8; mỗi vEdge2 chi nhánh dùng Internet quan sát 6/8. Các phiên còn down là tunnel cross-color ở trạng thái dự phòng theo lựa chọn TLOC hiện tại, không phải mất reachability underlay. Vì dashboard tính cả phiên standby, Site 100 hiển thị khoảng 75\% và các chi nhánh khoảng 87,5\%; các tỷ lệ này cần được diễn giải cùng chính sách tunnel, không nên dùng riêng lẻ để kết luận mạng lỗi.
+
+Phép thử mất đường MPLS tại cả hai vEdge Site 100 được thực hiện bằng cách shutdown interface WAN MPLS. Các tunnel cross-color dự phòng chuyển sang up trong khoảng 2 giây và Site 100 duy trì 6/6 phiên đang sử dụng qua Internet. Khi khôi phục interface, phát hiện TLOC MPLS không được quảng bá lại vì VPN 0 thiếu đường cụ thể đến mạng controller qua MPLS. Hai static route \texttt{10.9.0.0/24} qua \texttt{100.64.100.2} và \texttt{100.64.100.6} được bổ sung cho vEdge1/vEdge2-S100; sau khoảng 60 giây, DTLS hai màu, OMP TLOC và BFD MPLS được khôi phục. Kết quả này cho thấy một TLOC chỉ hợp lệ khi chính transport đó có reachability đến controller, không chỉ khi interface và eBGP đã up.
+
+\subsection{Kịch bản kiểm thử và kết quả tổng hợp}
+
+Các kịch bản được xây dựng theo từng lớp để tránh quy kết sai nguyên nhân. Ví dụ, trước khi kiểm tra OMP cần xác nhận IP interface, route underlay, BGP và PKI; trước khi kiểm tra DHCP cần xác nhận VLAN access, trunk, gateway và DHCP Server. Bảng~\ref{tab:kiem_thu_tong_hop_ch4} tổng hợp trạng thái tại thời điểm hoàn thiện báo cáo.
+
+\begingroup
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{|P{0.8cm}|P{2.7cm}|P{3.4cm}|P{2.0cm}|P{3.8cm}|}
+    \caption{Tổng hợp kịch bản kiểm thử và bằng chứng}\label{tab:kiem_thu_tong_hop_ch4} \\
+    \hline
+    \textbf{Mã} & \textbf{Kịch bản} & \textbf{Kết quả mong đợi} & \textbf{Trạng thái} & \textbf{Bằng chứng/ghi chú} \\
+    \hline
+    \endfirsthead
+    \multicolumn{5}{c}{\textit{Bảng~\ref{tab:kiem_thu_tong_hop_ch4} (tiếp theo)}} \\
+    \hline
+    \textbf{Mã} & \textbf{Kịch bản} & \textbf{Kết quả mong đợi} & \textbf{Trạng thái} & \textbf{Bằng chứng/ghi chú} \\
+    \hline
+    \endhead
+    \hline
+    \endfoot
+    T01 & Kiểm tra artifact topology & XML hợp lệ; node/network/config không treo & \textbf{Đạt} & 67 node, 100 network, 51 config bật và 51 payload nhúng; validator không báo lỗi/cảnh báo. \\
+    \hline
+    T02 & VRRP và OSPF tại Site 100 & Gateway ảo tồn tại; OSPF Full giữa Core và firewall active & \textbf{Đạt} & SVI/VRRP đúng .1/.2/.3; OSPF Full sau khi sửa mapping Core-SW1. \\
+    \hline
+    T03 & Firewall HA & Primary active, secondary standby ready; config đồng bộ & \textbf{Đạt} & Failover negotiation hoàn tất; ASDM truy cập được từ PC-Management. \\
+    \hline
+    T04 & DHCP ba chi nhánh & VPCS nhận đúng subnet, gateway .1 và dải .100--.199 & \textbf{Đạt} & 12 VPCS nhận địa chỉ như Bảng~\ref{tab:dhcp_chi_nhanh_ch4}. \\
+    \hline
+    T05 & DHCP Campus chính & 8 VPCS Site 100 nhận lease qua relay & \textbf{Chưa nghiệm thu} & Helper đã cấu hình; chưa có bằng chứng role/scope DHCP Server hoàn tất. \\
+    \hline
+    T06 & Thu thập Syslog & Server nhận log UDP 514 từ thiết bị hạ tầng & \textbf{Đạt} & Kiwi Syslog nhận log; Core, Farm và firewall đã khai logging host. \\
+    \hline
+    T07 & Kết nối Ryu--OVS & Sáu DPID kết nối OpenFlow 1.3 tới TCP 6653 & \textbf{Đạt} & Ghi nhận echo OpenFlow từ sáu IP quản trị; tập DPID mục tiêu đủ 6. \\
+    \hline
+    T08 & L2 reactive và ACL SDN & Học MAC theo VLAN; flow drop hoạt động khi bật demo & \textbf{Đạt một phần} & Logic đã có trong app; cần lặp lại ping/flow/ACL trực tiếp trước buổi nghiệm thu. \\
+    \hline
+    T09 & BGP underlay & eBGP ISP--ISP và CE--PE Established; có default route & \textbf{Đạt} & AS 64511--64512 Established; các vEdge nhận default qua transport tương ứng. \\
+    \hline
+    T10 & SD-WAN control plane & 8 edge có control connection và OMP & \textbf{Đạt} & 11 thiết bị controller+edge reachable/green; OMP edge 8/8. \\
+    \hline
+    T11 & Màu TLOC và BFD & Internet=biz-internet; MPLS=mpls; tunnel sử dụng được & \textbf{Đạt} & Sửa màu ở node 40/41/42; BFD active đạt trạng thái dự kiến, tunnel standby được giải thích riêng. \\
+    \hline
+    T12 & Failover MPLS Site 100 & Lưu lượng chuyển sang Internet và quay lại sau phục hồi & \textbf{Đạt} & Standby cross-color up khoảng 2 giây; bổ sung route controller qua MPLS để phục hồi TLOC sau khi no shutdown. \\
+    \hline
+    T13 & NOC dashboard và cảnh báo tải & PortStats cập nhật liên tục, cảnh báo đúng ngưỡng & \textbf{Chưa nghiệm thu} & Có mã nguồn, REST và dashboard; chưa có thử tải kéo dài và số liệu đối chứng. \\
+    \hline
+\end{longtable}
+\endgroup
+
+\subsection{Đánh giá kết quả}
+
+\subsubsection{Mức độ đáp ứng yêu cầu chức năng}
+
+Mô hình đã thể hiện được các chức năng cốt lõi: phân đoạn VLAN, gateway dự phòng, OSPF nội bộ, firewall HA, DHCP cục bộ tại chi nhánh, syslog tập trung, điều khiển sáu OVS bằng Ryu và kết nối tám vEdge qua fabric SD-WAN. BGP underlay và PKI giúp mô hình gần với quy trình triển khai doanh nghiệp hơn so với cách dùng static route và chứng thư mặc định.
+
+Tính nhất quán cấu hình được cải thiện nhờ ánh xạ node-id và startup config nhúng. Các lỗi thực tế như đảo cổng Core--Firewall, sai màu TLOC, thiếu \texttt{allow-service bgp}, thiếu address-family và thiếu route tới controller qua MPLS đều được phát hiện bằng cách kiểm tra theo lớp. Những lỗi này đồng thời tạo ra bộ tình huống chẩn đoán có giá trị cho phần bảo vệ đề tài.
+
+\subsubsection{Tính sẵn sàng và khả năng phục hồi}
+
+Site 100 có dự phòng ở nhiều lớp: VRRP cho gateway, OSPF cho định tuyến, ASAv active--standby, hai vEdge và hai transport. Các chi nhánh dùng hai vEdge phân chia Internet/MPLS, Brand-FW cấp DHCP tại chỗ và kết nối overlay đến Site 100. Phép thử failover SD-WAN chứng minh đường dự phòng có thể được kích hoạt nhanh; tuy nhiên con số khoảng 2 giây mới là một quan sát trong lab, chưa phải giá trị trung bình từ nhiều lần lặp.
+
+Ở SDN, service systemd và script phục hồi idempotent giúp gán lại IP management, DPID, controller target và flow bootstrap sau stop/start. Dù vậy Ryu hiện chỉ có một controller, nên process hoặc node controller vẫn là điểm lỗi đơn đối với việc học flow mới. Các flow đã cài có thể còn tồn tại trên OVS, nhưng không nên coi đây là cơ chế HA đầy đủ.
+
+\subsubsection{Hiệu năng và khả năng quan sát}
+
+Đề tài đã xây dựng được cơ chế thu số đếm port qua OpenFlow và dashboard NOC thử nghiệm. Tuy nhiên chưa thực hiện bộ đo có kiểm soát cho throughput, latency, jitter, packet loss, CPU/RAM hoặc thời gian hội tụ qua nhiều lần lặp. Do đó Chương 4 không đưa ra kết luận định lượng về hiệu năng tối đa. Kết quả hiện tại phù hợp để chứng minh tính đúng đắn chức năng và quy trình vận hành, chưa đủ để so sánh hiệu năng với thiết bị vật lý hoặc giải pháp thương mại.
+
+\subsubsection{Khả năng tái lập}
+
+Khả năng tái lập được hỗ trợ bởi một topology duy nhất, bộ cấu hình theo node, bảng node-id, validator và quy trình boot theo nhóm thiết bị. Dù vậy Windows, Linux/OVS, controller Viptela và một số IOL vẫn có bước thủ công. Vì thế kết quả tái lập phụ thuộc vào việc tuân thủ đúng thứ tự boot, kiểm tra running-config và không wipe nhầm node đã onboard. Đây là cơ sở để đề xuất tự động hóa sâu hơn ở Chương~\ref{sec:ket_luan_huong_phat_trien}.

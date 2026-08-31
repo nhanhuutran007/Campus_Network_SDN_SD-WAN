@@ -1,0 +1,539 @@
+\section{MÔ HÌNH MẠNG CAMPUS ĐỀ XUẤT}\label{sec:mo_hinh_de_xuat}
+
+\subsection{Phân tích bài toán và yêu cầu thiết kế hệ thống}
+
+Hệ thống mạng Campus được thiết kế nhằm phục vụ đồng thời nhiều nhóm người dùng và nhiều khu vực chức năng trong trường đại học, bao gồm khoa chuyên môn, phòng học lý thuyết, phòng máy thực hành, khu vực hành chính, thư viện, hệ thống máy chủ nội bộ, mạng không dây và các cơ sở phụ. Do đó, mô hình mạng cần đáp ứng các yêu cầu về khả năng kết nối ổn định, phân tách lưu lượng hợp lý, dễ quản trị, bảo mật và có khả năng mở rộng khi quy mô đào tạo tăng lên.
+
+Trước hết, hệ thống phải bảo đảm kết nối nội bộ giữa các khu vực trong Campus chính. Các khoa, phòng ban và phòng học cần truy cập được các dịch vụ dùng chung như hệ thống quản lý đào tạo, máy chủ xác thực, máy chủ tập tin, hệ thống học trực tuyến và Internet. Đối với phòng máy thực hành, mạng cần hỗ trợ số lượng thiết bị lớn, băng thông ổn định và khả năng cấp phát địa chỉ IP tự động để thuận tiện cho việc tổ chức lớp học, thực hành mạng hoặc triển khai phần mềm theo từng học phần.
+
+Đối với khu vực hành chính, yêu cầu quan trọng là bảo mật và kiểm soát truy cập. Các máy trạm thuộc phòng đào tạo, kế toán, nhân sự hoặc ban quản lý cần được tách riêng khỏi mạng sinh viên và mạng khách. Việc phân tách này giúp hạn chế truy cập trái phép, giảm nguy cơ lây lan sự cố giữa các khu vực và tạo điều kiện áp dụng các chính sách truy cập khác nhau theo vai trò người dùng.
+
+Khu vực máy chủ nội bộ cần được thiết kế như một vùng dịch vụ riêng, có địa chỉ IP tĩnh, dễ giám sát và được bảo vệ bằng các chính sách truy cập chặt chẽ. Chỉ những VLAN hoặc nhóm người dùng có nhu cầu hợp lệ mới được phép truy cập các dịch vụ tương ứng. Ngoài ra, vùng máy chủ cần có kết nối tốc độ cao đến tầng Core hoặc Distribution để bảo đảm hiệu năng cho các dịch vụ quan trọng của nhà trường.
+
+Mạng Wi-Fi cần hỗ trợ nhiều nhóm truy cập khác nhau như giảng viên, sinh viên, khách và thiết bị di động. Mỗi nhóm truy cập không dây nên được ánh xạ vào VLAN riêng để có chính sách cấp phát địa chỉ, giới hạn băng thông và kiểm soát truy cập phù hợp. Đối với mạng khách, hệ thống chỉ nên cho phép truy cập Internet và hạn chế truy cập vào tài nguyên nội bộ của trường.
+
+Bên cạnh Campus chính, mô hình cũng cần hỗ trợ kết nối đến các cơ sở phụ hoặc chi nhánh đào tạo. Các cơ sở này cần truy cập được một số dịch vụ tập trung đặt tại Campus chính, đồng thời vẫn duy trì được kết nối Internet cục bộ. Vì vậy, thiết kế cần có cơ chế SD-WAN để quản lý nhiều đường truyền WAN, lựa chọn đường đi phù hợp, tự động chuyển hướng khi đường truyền gặp sự cố và tối ưu lưu lượng giữa các site.
+
+Về mặt vận hành, hệ thống phải giảm phụ thuộc vào cấu hình thủ công trên từng thiết bị. SDN Controller được sử dụng để quản lý tập trung các switch, triển khai chính sách mạng, theo dõi trạng thái luồng dữ liệu và hỗ trợ thay đổi cấu hình nhanh hơn khi bổ sung VLAN, thêm khu vực mới hoặc điều chỉnh chính sách truy cập. Yêu cầu này giúp nâng cao tính nhất quán trong cấu hình và giảm sai sót trong quá trình quản trị.
+
+\subsubsection{Bài toán đơn giản hóa quá trình quản lý mạng Campus}
+
+Trong mô hình mạng Campus truyền thống, quá trình quản lý thường phụ thuộc nhiều vào việc cấu hình thủ công trên từng thiết bị như switch, router, thiết bị tường lửa và bộ điều khiển Wi-Fi. Khi quy mô mạng còn nhỏ, cách quản trị này có thể đáp ứng được các nhu cầu cơ bản. Tuy nhiên, khi số lượng VLAN, phòng học, phòng máy, điểm truy cập không dây, máy chủ và cơ sở phụ tăng lên, việc cấu hình riêng lẻ trên từng thiết bị trở nên phức tạp, tốn thời gian và dễ phát sinh sai sót.
+
+Một thay đổi nhỏ trong chính sách mạng, chẳng hạn bổ sung VLAN cho một khoa mới, thay đổi quyền truy cập của mạng sinh viên hoặc cập nhật ACL cho vùng máy chủ, có thể yêu cầu quản trị viên thao tác trên nhiều thiết bị khác nhau. Nếu các cấu hình này không được triển khai đồng bộ, hệ thống có thể xảy ra lỗi định tuyến, sai lệch chính sách truy cập, trùng lặp địa chỉ IP hoặc gián đoạn dịch vụ. Đây là vấn đề đặc biệt quan trọng đối với môi trường đại học, nơi mạng phải phục vụ liên tục cho hoạt động giảng dạy, học tập, nghiên cứu và quản lý hành chính.
+
+Do đó, bài toán đặt ra là cần đơn giản hóa quá trình quản lý mạng Campus theo hướng tập trung, nhất quán và dễ mở rộng. Thay vì quản trị từng thiết bị riêng lẻ, hệ thống cần cho phép cấu hình, giám sát và áp dụng chính sách từ một điểm quản lý trung tâm. Cách tiếp cận này giúp quản trị viên dễ dàng theo dõi trạng thái mạng, kiểm soát lưu lượng giữa các VLAN, triển khai chính sách bảo mật theo nhóm người dùng và nhanh chóng điều chỉnh cấu hình khi có thay đổi về tổ chức hoặc hạ tầng.
+
+Việc ứng dụng SDN Controller và SD-WAN trong mô hình đề xuất nhằm giải quyết trực tiếp bài toán trên. SDN Controller hỗ trợ quản lý tập trung hạ tầng mạng nội bộ trong Campus, trong khi SD-WAN giúp đơn giản hóa việc điều phối kết nối giữa Campus chính và các cơ sở phụ. Nhờ đó, hệ thống mạng không chỉ giảm khối lượng cấu hình thủ công mà còn nâng cao khả năng giám sát, phát hiện sự cố, chuẩn hóa chính sách và mở rộng mạng trong tương lai.
+
+\subsubsection{Cơ sở lựa chọn mô hình đề xuất}
+
+Mô hình mạng Campus đề xuất được lựa chọn dựa trên đặc điểm tổ chức của môi trường đại học, nhu cầu vận hành thực tế và xu hướng quản trị mạng hiện đại. Trong môi trường này, hệ thống mạng không chỉ phục vụ một nhóm người dùng cố định mà phải đáp ứng đồng thời nhiều đối tượng như cán bộ quản lý, giảng viên, sinh viên, khách truy cập, thiết bị phòng máy, máy chủ nội bộ và các cơ sở phụ. Vì vậy, một mô hình mạng đơn giản, ít phân lớp hoặc thiếu khả năng quản lý tập trung sẽ khó đáp ứng yêu cầu về hiệu năng, bảo mật và mở rộng lâu dài.
+
+Cơ sở đầu tiên của mô hình đề xuất là kiến trúc phân lớp Core--Distribution--Access. Kiến trúc này giúp tách rõ vai trò của từng tầng mạng: tầng Access kết nối trực tiếp thiết bị đầu cuối, tầng Distribution thực hiện tập trung lưu lượng và áp dụng chính sách, còn tầng Core đảm nhiệm chuyển mạch tốc độ cao giữa các khu vực chính. Cách tổ chức này phù hợp với mạng Campus vì dễ mở rộng khi bổ sung thêm phòng học, khoa, tòa nhà hoặc thiết bị mạng mới mà không làm thay đổi toàn bộ cấu trúc hệ thống.
+
+Cơ sở thứ hai là nhu cầu phân tách lưu lượng theo khu vực chức năng. Việc sử dụng VLAN cho từng nhóm người dùng và từng vùng dịch vụ giúp giảm miền quảng bá, nâng cao khả năng kiểm soát truy cập và hạn chế ảnh hưởng khi xảy ra sự cố. Đối với trường đại học, đây là yêu cầu quan trọng vì mạng sinh viên, mạng hành chính, mạng giảng viên, mạng khách và vùng máy chủ có mức độ tin cậy cũng như quyền truy cập khác nhau. Khi kết hợp VLAN với định tuyến liên VLAN và ACL, hệ thống có thể kiểm soát luồng truy cập một cách rõ ràng hơn.
+
+Cơ sở thứ ba là yêu cầu quản trị tập trung. SDN Controller được đưa vào mô hình nhằm giảm phụ thuộc vào cấu hình thủ công trên từng thiết bị, đồng thời hỗ trợ giám sát trạng thái mạng, triển khai chính sách đồng nhất và thay đổi cấu hình nhanh hơn. Điều này đặc biệt cần thiết trong bối cảnh mạng Campus thường xuyên có thay đổi về người dùng, lớp học, phòng máy, thiết bị Wi-Fi hoặc chính sách truy cập theo từng học kỳ.
+
+Cơ sở thứ tư là nhu cầu kết nối nhiều cơ sở đào tạo. SD-WAN được lựa chọn để hỗ trợ điều phối các đường truyền WAN giữa Campus chính và cơ sở phụ, tối ưu lưu lượng truy cập đến dịch vụ tập trung, đồng thời nâng cao khả năng dự phòng khi một đường truyền gặp sự cố. So với cách kết nối WAN truyền thống, SD-WAN phù hợp hơn với yêu cầu quản lý linh hoạt, theo dõi chất lượng đường truyền và lựa chọn tuyến dựa trên chính sách.
+
+Như vậy, mô hình đề xuất là sự kết hợp giữa kiến trúc mạng Campus phân lớp, phân hoạch VLAN, quản lý tập trung bằng SDN Controller và kết nối liên cơ sở bằng SD-WAN. Sự kết hợp này giúp hệ thống đạt được các mục tiêu chính gồm ổn định, dễ quản trị, bảo mật, linh hoạt và có khả năng mở rộng trong tương lai.
+
+\subsubsection{Phạm vi giả định của hệ thống}
+
+Để thuận lợi cho quá trình thiết kế, mô hình mạng Campus trong đề tài được xây dựng trên một số giả định nhất định. Các giả định này nhằm giới hạn phạm vi nghiên cứu, giúp việc quy hoạch topology, VLAN, địa chỉ IP, chính sách truy cập và kết nối WAN được trình bày rõ ràng, có tính hệ thống và phù hợp với mục tiêu của đề tài.
+
+Thứ nhất, hệ thống giả định có một Campus chính đóng vai trò trung tâm và một hoặc nhiều cơ sở phụ kết nối về Campus chính thông qua hạ tầng WAN. Campus chính bao gồm các khu vực chức năng cơ bản như khu hành chính, các khoa chuyên môn, phòng học lý thuyết, phòng máy thực hành, thư viện, vùng máy chủ nội bộ, hệ thống Wi-Fi và khu vực quản trị thiết bị mạng. Các cơ sở phụ có quy mô nhỏ hơn, chủ yếu cần truy cập Internet cục bộ và một số dịch vụ dùng chung đặt tại Campus chính.
+
+Thứ hai, mô hình tập trung vào thiết kế logic và kiến trúc kết nối ở mức tổng thể, chưa đi sâu vào lựa chọn chính xác chủng loại thiết bị, số lượng cổng vật lý, cấu hình chi tiết từng dòng lệnh hoặc chi phí triển khai thực tế. Các thiết bị như switch Core, switch Distribution, switch Access, router biên, firewall, SDN Controller và thiết bị SD-WAN được xem là các thành phần chức năng trong mô hình nhằm mô tả vai trò và quan hệ kết nối giữa chúng.
+
+Thứ ba, hệ thống sử dụng địa chỉ IPv4 private cho các VLAN nội bộ. Mỗi khu vực chức năng được cấp một subnet riêng để thuận tiện cho quản lý, định tuyến và áp dụng chính sách bảo mật. Việc cấp phát địa chỉ IP cho người dùng cuối được giả định thực hiện thông qua DHCP, trong khi các thiết bị hạ tầng mạng, máy chủ và gateway VLAN sử dụng địa chỉ IP tĩnh để bảo đảm tính ổn định khi vận hành.
+
+Thứ tư, các dịch vụ nội bộ được giả định đặt tại vùng máy chủ của Campus chính, bao gồm máy chủ xác thực, máy chủ tập tin, hệ thống học trực tuyến, hệ thống quản lý đào tạo và một số dịch vụ quản trị mạng. Người dùng tại các VLAN khác nhau chỉ được truy cập những dịch vụ phù hợp với vai trò của mình. Mạng khách được giả định chỉ có quyền truy cập Internet và không được truy cập trực tiếp vào tài nguyên nội bộ.
+
+Thứ năm, phạm vi bảo mật của đề tài tập trung vào các chính sách ở mức mạng như phân tách VLAN, ACL, kiểm soát truy cập giữa các vùng, vùng quản trị thiết bị và nguyên tắc cô lập mạng khách. Các nội dung bảo mật chuyên sâu như mã hóa ứng dụng, bảo mật cơ sở dữ liệu, kiểm thử xâm nhập hoặc triển khai hệ thống phát hiện xâm nhập chi tiết không thuộc phạm vi chính của phần thiết kế này.
+
+Với các giả định trên, mô hình đề xuất có thể đại diện cho một hệ thống mạng Campus ở mức vừa và có khả năng mở rộng. Phạm vi này đủ để thể hiện vai trò của kiến trúc phân lớp, SDN Controller, SD-WAN, VLAN, định tuyến nội bộ và chính sách bảo mật trong việc xây dựng một hệ thống mạng đại học có tính quản trị tập trung và vận hành ổn định.
+
+\subsubsection{Yêu cầu chức năng và phi chức năng của hệ thống}
+
+Từ bài toán thiết kế và phạm vi giả định đã nêu, hệ thống mạng Campus cần đáp ứng hai nhóm yêu cầu chính: yêu cầu chức năng và yêu cầu phi chức năng. Yêu cầu chức năng mô tả những nhiệm vụ mà hệ thống phải thực hiện, trong khi yêu cầu phi chức năng phản ánh chất lượng vận hành, mức độ ổn định, bảo mật, khả năng mở rộng và khả năng quản trị của hệ thống.
+
+Về yêu cầu chức năng, hệ thống trước hết phải cung cấp kết nối mạng cho toàn bộ các khu vực trong Campus chính và các cơ sở phụ. Người dùng thuộc các khoa, phòng học, phòng máy, khu hành chính, thư viện và mạng Wi-Fi cần truy cập được Internet cũng như các dịch vụ nội bộ được phép sử dụng. Các cơ sở phụ cần có khả năng kết nối về Campus chính để khai thác dịch vụ tập trung, đồng thời vẫn duy trì truy cập Internet tại chỗ.
+
+Hệ thống phải hỗ trợ phân tách mạng bằng VLAN theo từng khu vực chức năng và nhóm người dùng. Mỗi VLAN cần có subnet, gateway và chính sách truy cập riêng. Việc định tuyến giữa các VLAN được thực hiện tại tầng Core hoặc Distribution, nhưng không phải mọi VLAN đều được phép truy cập lẫn nhau. Các luồng truy cập phải được kiểm soát bằng ACL hoặc chính sách tương đương nhằm bảo đảm nguyên tắc chỉ cho phép những kết nối cần thiết.
+
+Hệ thống cũng cần cung cấp dịch vụ cấp phát địa chỉ IP động cho các mạng người dùng, phòng máy và Wi-Fi thông qua DHCP. Đối với vùng máy chủ, thiết bị mạng, thiết bị quản trị và các gateway quan trọng, hệ thống phải hỗ trợ sử dụng địa chỉ IP tĩnh để thuận tiện cho giám sát, ghi nhận nhật ký và xử lý sự cố. Bên cạnh đó, hệ thống cần có cơ chế truy cập đến các dịch vụ dùng chung như xác thực, lưu trữ tập tin, học trực tuyến và quản lý đào tạo.
+
+Một yêu cầu chức năng quan trọng khác là quản lý tập trung. SDN Controller cần hỗ trợ quản trị viên theo dõi trạng thái thiết bị, giám sát luồng dữ liệu, triển khai cấu hình hoặc chính sách mạng từ một điểm điều khiển trung tâm. Đối với kết nối liên cơ sở, SD-WAN cần hỗ trợ lựa chọn đường truyền, tự động chuyển hướng khi có sự cố và ưu tiên lưu lượng quan trọng theo chính sách đã định.
+
+Về yêu cầu phi chức năng, hệ thống phải bảo đảm tính sẵn sàng và ổn định trong quá trình vận hành. Các thành phần quan trọng như tầng Core, Distribution, kết nối WAN và vùng máy chủ cần được thiết kế theo hướng có dự phòng phù hợp để hạn chế gián đoạn dịch vụ. Khi một đường truyền hoặc một thiết bị trung gian gặp sự cố, hệ thống cần có khả năng duy trì kết nối ở mức chấp nhận được hoặc nhanh chóng khôi phục hoạt động.
+
+Hệ thống phải có khả năng mở rộng khi số lượng người dùng, phòng máy, thiết bị Wi-Fi, máy chủ hoặc cơ sở đào tạo tăng lên. Việc mở rộng cần được thực hiện bằng cách bổ sung VLAN, subnet, switch Access hoặc đường truyền WAN mà không làm thay đổi lớn đến kiến trúc tổng thể. Đây là yêu cầu quan trọng để bảo đảm mô hình có thể đáp ứng sự phát triển của nhà trường trong nhiều giai đoạn.
+
+Về bảo mật, hệ thống phải bảo đảm phân quyền truy cập theo vai trò người dùng và khu vực chức năng. Mạng hành chính, mạng máy chủ và mạng quản trị thiết bị cần được bảo vệ chặt chẽ hơn so với mạng sinh viên hoặc mạng khách. Các chính sách bảo mật phải hướng đến việc giảm truy cập trái phép, hạn chế lan truyền sự cố và hỗ trợ quản trị viên kiểm soát tốt hơn các luồng dữ liệu trong mạng.
+
+Ngoài ra, hệ thống cần có tính dễ quản trị và dễ giám sát. Cấu trúc địa chỉ IP, tên VLAN, sơ đồ kết nối và chính sách truy cập phải được tổ chức rõ ràng để thuận tiện cho vận hành lâu dài. Khi có thay đổi về tổ chức, lớp học, phòng ban hoặc dịch vụ, quản trị viên cần có thể điều chỉnh cấu hình một cách nhanh chóng, nhất quán và ít gây gián đoạn đến hoạt động chung của hệ thống.
+
+Từ các yêu cầu trên, hệ thống mạng đề xuất cần thỏa mãn các tiêu chí chính sau:
+
+\begin{itemize}
+    \item Bảo đảm kết nối ổn định cho các khoa, phòng học, phòng máy, khu hành chính, vùng máy chủ, Wi-Fi và cơ sở phụ.
+    \item Phân tách lưu lượng bằng VLAN theo từng khu vực chức năng và từng nhóm người dùng.
+    \item Tổ chức địa chỉ IP có cấu trúc, dễ mở rộng và thuận tiện cho quản lý.
+    \item Hỗ trợ định tuyến giữa các VLAN tại tầng Core hoặc Distribution.
+    \item Áp dụng chính sách bảo mật bằng ACL, giới hạn truy cập giữa mạng sinh viên, mạng khách, mạng hành chính và vùng máy chủ.
+    \item Cung cấp khả năng quản lý tập trung bằng SDN Controller nhằm đơn giản hóa vận hành và giám sát.
+    \item Hỗ trợ kết nối liên cơ sở bằng SD-WAN, có khả năng dự phòng đường truyền và tối ưu lưu lượng WAN.
+    \item Có khả năng mở rộng khi bổ sung thêm khoa, phòng máy, thiết bị Wi-Fi, máy chủ hoặc cơ sở đào tạo mới.
+\end{itemize}
+
+Như vậy, phần yêu cầu thiết kế là cơ sở để xây dựng kiến trúc tổng thể cho mô hình mạng Campus. Các yêu cầu này sẽ được cụ thể hóa trong các phần tiếp theo thông qua thiết kế topology, phân hoạch VLAN, quy hoạch địa chỉ IP, cơ chế quản lý bằng SDN Controller, kết nối SD-WAN và chính sách bảo mật cho toàn hệ thống.
+
+\subsection{Kiến trúc tổng thể}
+
+Kiến trúc tổng thể của hệ thống Campus Network được xây dựng theo mô hình phân tầng Core--Distribution--Access, đồng thời tích hợp SDN và SD-WAN để hình thành một hạ tầng mạng có khả năng quản lý tập trung, tự động hóa cấu hình và mở rộng linh hoạt. Trong kiến trúc này, mô hình ba tầng đảm nhiệm việc tổ chức kết nối trong từng Campus; SDN hỗ trợ điều khiển và giám sát tập trung mạng nội bộ; còn SD-WAN chịu trách nhiệm kết nối Campus chính với các cơ sở phụ qua nhiều loại đường truyền WAN. Sự kết hợp này giúp hệ thống nâng cao hiệu năng, tính sẵn sàng và khả năng áp dụng chính sách thống nhất trên toàn mạng.
+
+Hình~\ref{fig:kien_truc_tong_the_campus} trình bày kiến trúc tổng thể của mô hình đề xuất, bao gồm Campus chính tại Site ID 100, các cơ sở phụ tại Site ID 200, 300 và 400, SDN Controller tại Campus chính, hệ thống SD-WAN Controller tại Site 900 và hạ tầng truyền tải Internet/MPLS.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth]{image/campus_network.jpg}
+    \caption{Kiến trúc tổng thể mạng Campus đề xuất}
+    \label{fig:kien_truc_tong_the_campus}
+\end{figure}
+
+Tại Campus chính (Site ID 100, AS 65000), tầng Core gồm hai thiết bị Core-SW1 và Core-SW2 được triển khai theo cơ chế dự phòng. Hai Core Switch sử dụng VRRP để cung cấp một địa chỉ gateway ảo thống nhất cho các mạng phía dưới; trong đó một thiết bị giữ vai trò active và thiết bị còn lại giữ vai trò standby. Giao thức OSPF Area 0 được sử dụng để trao đổi thông tin định tuyến nội bộ và hỗ trợ hội tụ khi topology thay đổi. Liên kết EtherChannel giữa hai Core Switch giúp tăng băng thông, đồng thời duy trì kết nối khi một đường truyền thành viên gặp sự cố. Các kết nối từ tầng Distribution được triển khai dự phòng đến cả hai Core Switch nhằm hạn chế điểm lỗi đơn trong hạ tầng trung tâm.
+
+SDN Controller sử dụng Ryu tại địa chỉ 10.1.99.10 và quản lý sáu switch OVS ở tầng Distribution/Access bằng OpenFlow 1.3. Core-SW1/2 vẫn thực hiện chức năng lớp 3 bằng VRRP và OSPF, không thuộc tập datapath do Ryu điều khiển. Ryu cài flow chuyển mạch theo VLAN, hỗ trợ flow drop để minh họa ACL tập trung và cung cấp REST API cho ứng dụng giám sát. Mô hình hiện dùng một controller; phương án cluster được xem là hướng phát triển nhằm loại bỏ điểm lỗi đơn.
+
+Tầng Distribution gồm Dist-SW1 và Dist-SW2, có nhiệm vụ tập trung lưu lượng lớp 2 từ bốn Access Switch và chuyển các VLAN 10, 20, 30, 40, 90, 99 lên hai Core. Định tuyến liên VLAN được thực hiện tại Core-SW1/2 thay vì trên Distribution. Hai Distribution và bốn Access là OVS do Ryu điều khiển; OVS STP được tắt vì từng chặn frame trước OpenFlow pipeline. Riêng đường bootstrap VLAN 99 được pruning thành cây không vòng lặp để bảo đảm controller luôn reachable trước khi flow reactive được cài.
+
+Tầng Access gồm các Access Switch đặt tại phòng học, phòng máy hoặc khu vực làm việc và kết nối trực tiếp với thiết bị đầu cuối. Cổng kết nối người dùng được gán vào VLAN tương ứng với khoa hoặc phòng ban. Các máy trạm nhận địa chỉ IP động từ DHCP Server theo từng VLAN, trong khi ACL/Policy Server hỗ trợ kiểm soát quyền truy cập giữa các vùng mạng. Nhờ đó, người dùng chỉ có thể truy cập các dịch vụ nội bộ phù hợp với vai trò của mình; các mạng có mức độ tin cậy khác nhau vẫn được phân tách và kiểm soát rõ ràng.
+
+Kết nối giữa Campus chính và các cơ sở phụ được thực hiện qua SD-WAN Edge. Tại Campus chính, SD-WAN Edge kết nối với tầng Core và tham gia vào hạ tầng truyền tải SD-WAN thông qua Internet, MPLS hoặc nhiều đường truyền đồng thời. Hệ thống SD-WAN Controller trong mô hình gồm vManage để quản lý và cấu hình tập trung, vSmart để điều khiển định tuyến và phân phối chính sách, cùng vBond để xác thực thiết bị và hỗ trợ thiết lập mạng overlay. Thông tin định tuyến và chính sách giữa các thành phần được trao đổi thông qua OMP, cho phép quản trị viên điều khiển đường đi WAN từ một điểm quản lý tập trung.
+
+SD-WAN có thể lựa chọn đường truyền dựa trên các chỉ số chất lượng như độ trễ, độ biến thiên trễ và tỷ lệ mất gói. Lưu lượng quan trọng được ưu tiên qua tuyến đáp ứng yêu cầu chất lượng dịch vụ, trong khi các luồng thông thường có thể được phân bổ sang đường truyền còn lại để cân bằng tải. Khi một kết nối WAN suy giảm chất lượng hoặc bị gián đoạn, SD-WAN Edge tự động chuyển lưu lượng sang tuyến phù hợp khác, qua đó duy trì khả năng truy cập giữa các cơ sở.
+
+Các cơ sở phụ tại Site ID 200, 300 và 400 sử dụng kiến trúc rút gọn gồm hai SD-WAN Edge, một Brand-FW và ba switch lớp 2. Brand-FW làm gateway và DHCP Server cho các VLAN nghiệp vụ; cặp vEdge chia sẻ vai trò dự phòng theo transport, trong đó vEdge1 dùng MPLS và vEdge2 dùng Internet. Site 200 dùng VLAN 60/70, Site 300 dùng VLAN 80/90 và Site 400 dùng VLAN 50/60. Cách tổ chức này cho phép tái sử dụng khuôn cấu hình nhưng vẫn giữ subnet, Site ID và ASN độc lập cho từng cơ sở.
+
+Nhìn chung, kiến trúc đề xuất kết hợp ưu điểm của mô hình Campus ba tầng với khả năng điều khiển tập trung của SDN và khả năng tối ưu kết nối liên cơ sở của SD-WAN. Mô hình giúp giảm cấu hình thủ công, chuẩn hóa chính sách, tăng khả năng dự phòng, nâng cao mức độ bảo mật và hỗ trợ mở rộng hệ thống theo nhu cầu phát triển của nhà trường. Đây là cơ sở để triển khai chi tiết topology, phân hoạch VLAN, quy hoạch địa chỉ IP và các chính sách quản lý trong những phần tiếp theo.
+
+\subsection{Thiết kế topology mạng}
+
+Topology chi tiết của hệ thống được xây dựng theo hướng kết hợp mạng Campus phân tầng tại cơ sở chính với mạng overlay SD-WAN kết nối các cơ sở phụ. Thiết kế gồm năm vùng chính: Campus chính tại Site ID 100, Campus Cần Thơ tại Site ID 200, Campus Đà Nẵng tại Site ID 300, Campus Nha Trang tại Site ID 400 và vùng điều khiển SD-WAN tại Site ID 900. Các site được kết nối qua hai hạ tầng truyền tải độc lập là Internet và MPLS, qua đó tạo nhiều đường đi và cho phép hệ thống chuyển tuyến khi một kết nối gặp sự cố. Topology tổng thể được trình bày trong Hình~\ref{fig:topology_mang_campus}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{image/topology.png}
+    \caption{Sơ đồ bố trí tổng thể của hệ thống mạng Campus}
+    \label{fig:topology_mang_campus}
+\end{figure}
+
+\noindent\textit{Lưu ý về hình topology:} các ảnh trong mục này dùng để minh họa bố trí thiết bị và liên kết tại thời điểm thiết kế. Địa chỉ, tên node và cấu hình dùng để triển khai được chốt theo các bảng trong chương, tệp \texttt{Campus Network SDN SD-WAN.unl} và cây \texttt{configs/}; các nguồn dạng văn bản này được ưu tiên khi một nhãn nhỏ trên ảnh chụp cũ chưa được cập nhật.
+
+\subsubsection{Topology tại Campus chính}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{image/campuschinh.png}
+    \caption{Topology chi tiết tại Campus chính}
+    \label{fig:topology_campus_chinh}
+\end{figure}
+
+Campus chính được triển khai tại Site ID 100 và đóng vai trò trung tâm cung cấp dịch vụ cho toàn hệ thống. Phần LAN sử dụng mô hình Core--Distribution--Access với hai Core Switch, hai Distribution Switch và bốn Access Switch. Hai Core Switch được kết nối trực tiếp với nhau và cung cấp gateway dự phòng thông qua VRRP. Giao thức OSPF Area 0 được sử dụng trên các liên kết lớp 3 giữa Core và các thiết bị hạ tầng liên quan, giúp hệ thống tự động cập nhật đường đi và hội tụ khi một liên kết thay đổi trạng thái.
+
+Hai Distribution Switch được kết nối dự phòng đến cả Core-SW1 và Core-SW2. Từ tầng Distribution, các đường uplink được triển khai xuống nhiều Access Switch để hạn chế ảnh hưởng khi một thiết bị hoặc đường truyền gặp lỗi. Trên sáu OVS, STP được tắt và việc chuyển tiếp do flow OpenFlow của Ryu quyết định; riêng VLAN 99 được pruning thành một cây không vòng lặp để duy trì control plane. Vì vậy khả năng dùng đường dự phòng lớp 2 phải được kiểm tra cùng logic flow, không chỉ dựa vào số lượng uplink vật lý.
+
+Tầng Access được phân chia theo từng khu vực chức năng. Access-SW1 phục vụ VLAN 10 của Khoa Công nghệ thông tin với subnet 10.1.10.0/24; Access-SW2 phục vụ VLAN 20 của Khoa Toán Thống kê với subnet 10.1.20.0/24; Access-SW3 phục vụ VLAN 30 của Khoa Luật với subnet 10.1.30.0/24; và Access-SW4 phục vụ VLAN 40 của khu Hành chính với subnet 10.1.40.0/24. Mỗi Access Switch kết nối trực tiếp các máy trạm và sử dụng cổng trunk trên uplink để chuyển lưu lượng VLAN đến tầng Distribution. Địa chỉ quản trị của các switch được đặt trong một subnet quản trị riêng nhằm tách mặt phẳng quản lý khỏi lưu lượng người dùng.
+
+Vùng Server Farm được kết nối trực tiếp với tầng Core và chứa các dịch vụ dùng chung như DHCP Server, Syslog Server và SDN Controller. DHCP Server được thiết kế cấp phát địa chỉ theo từng VLAN thông qua DHCP Relay đặt trên gateway; Syslog Server thu thập nhật ký từ switch, firewall và các máy chủ; còn SDN Controller quản lý sáu OVS bằng OpenFlow 1.3. Controller nối một cổng vào SwitchServerFarm ở VLAN 99, không sử dụng dây điều khiển riêng đến từng switch.
+
+Các dịch vụ công cộng được bố trí trong vùng DMZ, tách biệt với Server Farm và các VLAN người dùng. Theo sơ đồ, DMZ gồm Web Server và Mail Server kết nối qua một switch riêng đến cặp firewall. Thiết kế này cho phép công bố những dịch vụ cần thiết ra Internet nhưng vẫn ngăn truy cập trực tiếp từ bên ngoài vào mạng nội bộ. Các chính sách NAT, ACL và kiểm tra trạng thái kết nối được áp dụng trên firewall để kiểm soát luồng dữ liệu giữa DMZ, Internet và Campus chính.
+
+Biên mạng Campus chính sử dụng hai firewall hoạt động theo cơ chế active--standby. Phía trong của firewall kết nối dự phòng đến hai Core Switch, phía ngoài kết nối đến hai SD-WAN Edge. Khi firewall active hoặc một liên kết bị lỗi, firewall standby có thể tiếp nhận vai trò xử lý lưu lượng. Hai SD-WAN Edge tại Site 100 được kết nối đến cả Internet và MPLS, tạo các TLOC độc lập cho từng mạng truyền tải. Nhờ đó, Campus chính vừa có dự phòng thiết bị, vừa có dự phòng đường truyền khi trao đổi dữ liệu với các cơ sở phụ.
+
+\subsubsection{Topology vùng điều khiển và mạng truyền tải SD-WAN}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{image/site900.png}
+    \caption{Topology vùng điều khiển SD-WAN tại Site 900}
+    \label{fig:topology_site900}
+\end{figure}
+
+Vùng điều khiển SD-WAN được triển khai tại Site ID 900 với Controller LAN 10.9.0.0/24 và mạng cloud 10.9.1.0/24. Các thành phần chính gồm vManage, vSmart và vBond, cùng máy trạm quản trị và Switch32. vManage cung cấp giao diện cấu hình và giám sát tập trung; vSmart tiếp nhận, xử lý và phân phối thông tin định tuyến OMP; vBond xác thực các SD-WAN Edge và hỗ trợ quá trình thiết lập phiên điều khiển ban đầu. Các thiết bị điều khiển được tách khỏi các VLAN người dùng tại những Campus khác.
+
+Mạng truyền tải được mô phỏng bởi hai miền độc lập. Internet Router thuộc AS 64511, MPLS Router thuộc AS 64512; hai router trao đổi các subnet transit bằng eBGP. Tại Site 100, mỗi vEdge có cả Internet và MPLS TLOC. Tại các chi nhánh, vEdge1 mang MPLS TLOC còn vEdge2 mang Internet TLOC. Trên các kết nối này, Edge thiết lập đường hầm bảo mật đến những Edge khác và gửi thông tin định tuyến lên vSmart thông qua OMP.
+
+Các Controller chỉ tham gia mặt phẳng điều khiển và quản trị, không nằm trực tiếp trên đường đi của lưu lượng người dùng. Sau khi nhận thông tin tuyến và chính sách từ vSmart, các SD-WAN Edge thiết lập đường hầm dữ liệu trực tiếp qua Internet hoặc MPLS. Cách phân tách này giúp tránh việc toàn bộ lưu lượng phải đi qua Controller, đồng thời duy trì khả năng chuyển tiếp trong trường hợp kết nối quản trị tạm thời bị gián đoạn.
+
+\subsubsection{Topology tại các cơ sở phụ}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.72\textwidth]{image/site200.png}
+    \caption{Topology Campus Cần Thơ tại Site 200}
+    \label{fig:topology_site200}
+\end{figure}
+
+Campus Cần Thơ tại Site ID 200 được triển khai với hai SD-WAN Edge, một firewall chi nhánh, một switch tập trung và hai switch truy cập lớp 2. vEdge1 kết nối miền MPLS, còn vEdge2 kết nối miền Internet để cung cấp hai hướng truyền tải độc lập. Phía LAN được chia thành VLAN 60 dành cho khu Nông nghiệp và VLAN 70 dành cho khu Y tế. Các máy trạm kết nối vào switch của từng VLAN, sau đó lưu lượng được tập trung qua switch chi nhánh, firewall và SD-WAN Edge trước khi đi đến Campus chính hoặc Internet.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{image/site300.png}
+    \caption{Topology Campus Đà Nẵng tại Site 300}
+    \label{fig:topology_site300}
+\end{figure}
+
+Campus Đà Nẵng tại Site ID 300 có cấu trúc tương tự, gồm hai SD-WAN Edge, firewall chi nhánh, một switch tập trung và hai switch truy cập lớp 2. vEdge1 mang TLOC MPLS, còn vEdge2 mang TLOC Internet. Mạng nội bộ được phân chia thành VLAN 80 cho khu Du lịch và VLAN 90 cho khu Tài chính. Việc tách hai nhóm người dùng thành các VLAN độc lập giúp giới hạn miền quảng bá và tạo điều kiện áp dụng chính sách truy cập khác nhau, đặc biệt đối với VLAN Tài chính có yêu cầu bảo mật cao hơn.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.72\textwidth]{image/site400.png}
+    \caption{Topology Campus Nha Trang tại Site 400}
+    \label{fig:topology_site400}
+\end{figure}
+
+Campus Nha Trang tại Site ID 400 cũng sử dụng hai SD-WAN Edge, một firewall, một switch tập trung và hai switch truy cập lớp 2. vEdge1 kết nối MPLS, còn vEdge2 kết nối Internet. Phần LAN gồm VLAN 50 cho khu Thủy sản và VLAN 60 cho khu Lữ hành. Switch chi nhánh tập trung các VLAN và chuyển lưu lượng đến firewall trước khi đi qua SD-WAN Edge. Mặc dù VLAN ID có thể được sử dụng lại tại các site khác nhau, các subnet IP của từng cơ sở phải độc lập để tránh trùng lặp khi quảng bá tuyến trên mạng overlay.
+
+Tại các cơ sở phụ, SD-WAN Edge đóng vai trò điểm kết nối giữa mạng LAN và mạng WAN. Edge quảng bá các subnet cục bộ lên vSmart, đồng thời nhận các tuyến được phép đến Server Farm, DMZ hoặc những site khác. Lưu lượng truy cập dịch vụ nội bộ được chuyển qua đường hầm đến Campus chính; lưu lượng Internet thông thường có thể thực hiện local breakout tại chi nhánh nếu đáp ứng chính sách bảo mật. Firewall chi nhánh kiểm soát lưu lượng giữa VLAN người dùng, SD-WAN Edge và Internet, hạn chế việc các máy trạm truy cập trực tiếp vào mặt phẳng quản trị.
+
+\subsubsection{Luồng lưu lượng trong topology}
+
+Đối với lưu lượng nội bộ tại Campus chính, gói tin từ máy trạm đi qua Access Switch, được chuyển đến Distribution Switch và sau đó đến Core Switch. Nếu đích thuộc VLAN khác, việc định tuyến liên VLAN được thực hiện tại cặp Core theo địa chỉ gateway VRRP. Nếu đích là một dịch vụ trong Server Farm, lưu lượng được chuyển trực tiếp từ Core đến vùng máy chủ và chịu sự kiểm soát của ACL. Đối với dịch vụ đặt trong DMZ hoặc tài nguyên bên ngoài Internet, lưu lượng tiếp tục đi qua cặp firewall trước khi đến vùng đích.
+
+Khi người dùng tại cơ sở phụ truy cập dịch vụ ở Campus chính, lưu lượng lần lượt đi từ Access/LAN Switch của chi nhánh đến firewall, SD-WAN Edge và đường hầm overlay. Edge lựa chọn Internet TLOC hoặc MPLS TLOC dựa trên chính sách và chất lượng đường truyền, sau đó chuyển gói tin đến Edge tại Site 100. Tại Campus chính, lưu lượng đi qua firewall và Core để đến Server Farm hoặc VLAN được cấp quyền. Chiều phản hồi sử dụng tuyến overlay tương ứng và vẫn chịu các chính sách bảo mật tại hai đầu kết nối.
+
+Đối với lưu lượng trao đổi giữa hai cơ sở phụ, vSmart quyết định việc phân phối tuyến theo mô hình hub-and-spoke hoặc full-mesh. Nếu chính sách cho phép kết nối trực tiếp, hai Edge có thể thiết lập đường hầm site-to-site để giảm độ trễ. Nếu lưu lượng cần được kiểm tra tập trung, gói tin được chuyển qua Campus chính trước khi đến site đích. Các VLAN người dùng không được mặc định truy cập lẫn nhau; quyền liên lạc phải được xác định rõ trong ACL và chính sách SD-WAN.
+
+\subsubsection{Cơ chế dự phòng và khả năng mở rộng}
+
+Topology sử dụng dự phòng ở nhiều lớp. Tại Campus chính, hệ thống có hai Core Switch, hai Distribution Switch, nhiều uplink chéo, cặp firewall active--standby và hai SD-WAN Edge. Ở lớp 2 OVS, Ryu cài flow và đường management VLAN 99 được pruning để tránh loop; ở lớp 3, OSPF cập nhật tuyến khi liên kết thay đổi; VRRP duy trì gateway mặc định; còn SD-WAN sử dụng BFD và TLOC để chuyển lưu lượng giữa Internet và MPLS. Sự kết hợp này hạn chế điểm lỗi đơn, nhưng từng cơ chế vẫn cần được kiểm thử độc lập.
+
+Các cơ sở phụ cũng được thiết kế với nhiều TLOC và hai SD-WAN Edge, nhờ đó có thể duy trì kết nối khi một thiết bị hoặc một mạng truyền tải bị lỗi. Khi đường MPLS không đáp ứng yêu cầu, lưu lượng có thể chuyển sang Internet; khi đường Internet gặp sự cố, các ứng dụng nội bộ tiếp tục sử dụng MPLS. Việc chuyển tuyến được thực hiện tự động theo trạng thái BFD và chính sách từ vSmart, không yêu cầu quản trị viên cấu hình lại thủ công tại từng site.
+
+Khả năng mở rộng được thực hiện bằng cách bổ sung site, VLAN hoặc Access Switch mới mà không thay đổi cấu trúc cốt lõi. Một cơ sở mới cần được cấp Site ID và System-IP riêng, triển khai SD-WAN Edge, khai báo các subnet LAN và đăng ký chứng thư/chassis/serial với hệ thống controller. Tại Campus chính, VLAN mới phải được bổ sung đồng bộ vào script OVS, trunk Cisco, gateway Core, DHCP và policy Ryu. Thiết kế phân tầng cùng bộ cấu hình theo mẫu giúp hệ thống mở rộng theo từng giai đoạn nhưng vẫn duy trì cấu trúc địa chỉ và cơ chế giám sát thống nhất.
+
+Như vậy, topology đề xuất cung cấp đầy đủ kết nối cho mạng nội bộ Campus, vùng máy chủ, DMZ, hệ thống điều khiển và các cơ sở phụ. Việc kết hợp dự phòng thiết bị, dự phòng liên kết, nhiều mạng truyền tải và điều khiển tập trung giúp hệ thống đạt tính sẵn sàng cao, dễ giám sát và phù hợp với nhu cầu mở rộng của nhà trường trong tương lai.
+
+\subsection{Phân hoạch VLAN và địa chỉ IP}
+
+Phân hoạch VLAN và địa chỉ IP được xây dựng dựa trên cấu trúc site của topology, bảo đảm mỗi khu vực chức năng có một miền quảng bá và một subnet riêng. Toàn bộ mạng nội bộ sử dụng không gian địa chỉ IPv4 private thuộc dải 10.0.0.0/8. Octet thứ hai thể hiện vị trí triển khai: giá trị 1 dành cho Campus chính, 2 dành cho Cần Thơ, 3 dành cho Đà Nẵng, 4 dành cho Nha Trang và 9 dành cho vùng SD-WAN Controller. Cách quy hoạch này giúp quản trị viên xác định nhanh site của một địa chỉ, đồng thời thuận tiện khi tổng hợp tuyến và mở rộng hệ thống.
+
+Các VLAN người dùng và dịch vụ sử dụng subnet /24 để cung cấp đủ địa chỉ cho thiết bị hiện tại và phần dung lượng dự phòng. Địa chỉ kết thúc bằng .1 được ưu tiên làm gateway; tại Campus chính đây là địa chỉ VRRP ảo, còn tại các cơ sở phụ là địa chỉ sub-interface trên Branch Firewall. Các kết nối point-to-point giữa firewall, Core Switch, SD-WAN Edge và router nhà cung cấp sử dụng subnet /30 nhằm tiết kiệm địa chỉ. Loopback dùng cho OSPF và System-IP dùng cho OMP sử dụng prefix /32 vì chỉ đóng vai trò định danh thiết bị.
+
+\subsubsection{Phân hoạch VLAN tại Campus chính}
+
+Campus chính tại Site ID 100 sử dụng các VLAN 10, 20, 30 và 40 cho người dùng; VLAN 90 cho Server Farm; VLAN 99 cho quản trị thiết bị và control plane SDN. DMZ sử dụng một subnet riêng, không dùng chung miền quảng bá với mạng người dùng. Mạng test OpenFlow 10.1.101.0/24 cùng AccessTest/VPC11/VPC12 đã được loại khỏi topology. Quy hoạch VLAN và phạm vi cấp phát DHCP tại Campus chính được trình bày trong Bảng~\ref{tab:vlan_campus_chinh}.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Phân hoạch VLAN tại Campus chính}
+    \label{tab:vlan_campus_chinh}
+    \begin{tabularx}{\textwidth}{|c|P{2.7cm}|P{2.8cm}|P{2.6cm}|X|}
+        \hline
+        \textbf{VLAN} & \textbf{Khu vực} & \textbf{Subnet} & \textbf{Gateway} & \textbf{Phạm vi địa chỉ} \\
+        \hline
+        10 & Khoa Công nghệ thông tin & 10.1.10.0/24 & 10.1.10.1 & DHCP: 10.1.10.100--10.1.10.199 \\
+        \hline
+        20 & Khoa Toán Thống kê & 10.1.20.0/24 & 10.1.20.1 & DHCP: 10.1.20.100--10.1.20.199 \\
+        \hline
+        30 & Khoa Luật & 10.1.30.0/24 & 10.1.30.1 & DHCP: 10.1.30.100--10.1.30.199 \\
+        \hline
+        40 & Phòng Hành chính & 10.1.40.0/24 & 10.1.40.1 & DHCP: 10.1.40.100--10.1.40.199 \\
+        \hline
+        90 & Server Farm & 10.1.90.0/24 & 10.1.90.1 & Địa chỉ tĩnh cho máy chủ \\
+        \hline
+        99 & Management & 10.1.99.0/24 & 10.1.99.1 & Địa chỉ tĩnh cho switch và firewall \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Gateway của các VLAN 10, 20, 30, 40 và 90 được triển khai bằng VRRP trên Core-SW1 và Core-SW2. Core-SW1 sử dụng các địa chỉ SVI kết thúc bằng .2 và giữ vai trò active; Core-SW2 sử dụng các địa chỉ kết thúc bằng .3 và giữ vai trò standby. Ví dụ, tại VLAN 10, hai địa chỉ vật lý là 10.1.10.2 và 10.1.10.3, trong khi máy trạm sử dụng địa chỉ VRRP ảo 10.1.10.1 làm default gateway. Nguyên tắc tương tự được áp dụng cho các VLAN còn lại, giúp người dùng không phải thay đổi gateway khi một Core Switch gặp sự cố.
+
+DHCP Server được đặt tại địa chỉ 10.1.90.10 trong Server Farm. Trên các SVI của VLAN người dùng, địa chỉ helper được cấu hình trỏ về máy chủ này để chuyển tiếp yêu cầu DHCP qua các miền quảng bá. Dải từ .100 đến .199 được dành cho thiết bị đầu cuối; các địa chỉ thấp được ưu tiên cho gateway, switch, máy chủ và thiết bị hạ tầng. VLAN 90 và VLAN 99 không cấp phát động nhằm bảo đảm địa chỉ của máy chủ và thiết bị quản trị luôn ổn định.
+
+Các subnet bổ trợ tại Campus chính được trình bày trong Bảng~\ref{tab:mang_bo_tro_campus}.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Các mạng dịch vụ và hạ tầng tại Campus chính}
+    \label{tab:mang_bo_tro_campus}
+    \begin{tabularx}{\textwidth}{|P{3.2cm}|P{3.1cm}|X|}
+        \hline
+        \textbf{Subnet} & \textbf{Chức năng} & \textbf{Địa chỉ hoặc ghi chú chính} \\
+        \hline
+        10.1.1.0/28 & DMZ & Gateway 10.1.1.1; Web Server 10.1.1.10; Mail Server 10.1.1.11 \\
+        \hline
+        10.1.90.0/24 & Server Farm & DHCP Server 10.1.90.10; Syslog Server 10.1.90.11 \\
+        \hline
+        10.1.99.0/24 & Mạng quản trị và SDN & Core .1/.2; SDN Controller .10; Dist .11/.12; Access .21--.24; DMZ .31; Farm .32; firewall .33/.34; PC-Management .50 \\
+        \hline
+        10.1.0.4/30 & Liên kết hai Core & Core-SW1: 10.1.0.5; Core-SW2: 10.1.0.6 trên Port-Channel 10 \\
+        \hline
+        10.1.2.0/30, 10.1.2.4/30, 10.1.2.8/30, 10.1.2.12/30 & Firewall--Core & Bốn liên kết point-to-point phía inside \\
+        \hline
+        10.1.3.0/30, 10.1.3.4/30, 10.1.3.8/30, 10.1.3.12/30 & Firewall--SD-WAN Edge & Bốn liên kết point-to-point phía outside \\
+        \hline
+        10.1.255.0/29 & Đồng bộ firewall & Mạng failover Gi0/5 giữa firewall active và standby; primary .1, secondary .2 \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Địa chỉ Loopback0 của Core-SW1 và Core-SW2 lần lượt là 10.1.0.1/32 và 10.1.0.2/32, được sử dụng làm OSPF Router-ID. Trong VLAN quản trị, Core-SW1 và Core-SW2 sử dụng 10.1.99.1 và 10.1.99.2; SDN Controller sử dụng 10.1.99.10; Dist-SW1 và Dist-SW2 sử dụng 10.1.99.11 và 10.1.99.12; bốn Access Switch sử dụng dải 10.1.99.21--10.1.99.24. SwitchDMZ và SwitchServerFarm lần lượt sử dụng 10.1.99.31 và 10.1.99.32; hai firewall dùng 10.1.99.33/.34 trên Management0/0; PC-Management dùng 10.1.99.50. Việc phân nhóm theo vai trò giúp nhận biết nhanh thiết bị khi giám sát và xử lý sự cố.
+
+\subsubsection{Phân hoạch VLAN tại các cơ sở phụ}
+
+Mỗi cơ sở phụ sử dụng octet thứ hai riêng để tránh trùng subnet trên mạng overlay. Các VLAN nghiệp vụ tại chi nhánh được định tuyến bởi sub-interface trên Branch Firewall; VLAN 99 được dành cho quản trị switch. Phân hoạch chi tiết được trình bày trong Bảng~\ref{tab:vlan_chi_nhanh}.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Phân hoạch VLAN tại các cơ sở phụ}
+    \label{tab:vlan_chi_nhanh}
+    \begin{tabularx}{\textwidth}{|c|c|p{2.5cm}|p{2.5cm}|p{2.3cm}|X|}
+        \hline
+        \textbf{Site} & \textbf{VLAN} & \textbf{Khu vực} & \textbf{Subnet} & \textbf{Gateway} & \textbf{Phạm vi địa chỉ} \\
+        \hline
+        200 & 60 & Khoa Nông nghiệp & 10.2.60.0/24 & 10.2.60.1 & DHCP: 10.2.60.100--10.2.60.199 \\
+        \hline
+        200 & 70 & Khoa Y tế & 10.2.70.0/24 & 10.2.70.1 & DHCP: 10.2.70.100--10.2.70.199 \\
+        \hline
+        200 & 99 & Management & 10.2.99.0/24 & 10.2.99.1 & Địa chỉ tĩnh \\
+        \hline
+        300 & 80 & Khoa Du lịch & 10.3.80.0/24 & 10.3.80.1 & DHCP: 10.3.80.100--10.3.80.199 \\
+        \hline
+        300 & 90 & Khoa Tài chính & 10.3.90.0/24 & 10.3.90.1 & DHCP: 10.3.90.100--10.3.90.199 \\
+        \hline
+        300 & 99 & Management & 10.3.99.0/24 & 10.3.99.1 & Địa chỉ tĩnh \\
+        \hline
+        400 & 50 & Khoa Thủy sản & 10.4.50.0/24 & 10.4.50.1 & DHCP: 10.4.50.100--10.4.50.199 \\
+        \hline
+        400 & 60 & Khoa Lữ hành & 10.4.60.0/24 & 10.4.60.1 & DHCP: 10.4.60.100--10.4.60.199 \\
+        \hline
+        400 & 99 & Management & 10.4.99.0/24 & 10.4.99.1 & Địa chỉ tĩnh \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Tại Site 200, SwitchBrand sử dụng địa chỉ quản trị 10.2.99.2; hai Access Switch của VLAN 60 và VLAN 70 sử dụng 10.2.99.11 và 10.2.99.12. Tại Site 300, các địa chỉ tương ứng là 10.3.99.2, 10.3.99.11 và 10.3.99.12. Tại Site 400, SwitchBrand sử dụng 10.4.99.2, còn hai Access Switch sử dụng 10.4.99.11 và 10.4.99.12. Quy luật địa chỉ giống nhau giữa các site giúp chuẩn hóa mẫu cấu hình và thao tác quản trị.
+
+Các liên kết từ Branch Firewall đến hai SD-WAN Edge sử dụng hai subnet /30 thuộc dải 10.x.1.0, trong đó x là số đại diện cho site. Liên kết nội bộ giữa hai Edge sử dụng dải 10.x.2.0/30. Cụ thể, Site 200 dùng 10.2.1.0/30, 10.2.1.4/30 và 10.2.2.0/30; Site 300 dùng 10.3.1.0/30, 10.3.1.4/30 và 10.3.2.0/30; Site 400 dùng 10.4.1.0/30, 10.4.1.4/30 và 10.4.2.0/30. Cách phân chia này tách rõ mạng người dùng khỏi mạng transit và tránh lãng phí địa chỉ trên các liên kết chỉ có hai đầu.
+
+DHCP tại cơ sở phụ được triển khai trực tiếp trên Brand-FW bằng \texttt{dhcpd} theo từng VLAN. Phương án cấp phát cục bộ giúp chi nhánh vẫn cấp được địa chỉ khi kết nối WAN gián đoạn. Trong mô hình, phạm vi .100--.199 được thống nhất cho máy trạm; VLAN 99 tiếp tục sử dụng địa chỉ tĩnh.
+
+\subsubsection{Quy hoạch địa chỉ SD-WAN Controller}
+
+Vùng SD-WAN Controller tại Site ID 900 được chia thành hai subnet riêng. Mạng 10.9.0.0/24 được sử dụng cho Controller LAN, còn mạng 10.9.1.0/24 phục vụ kết nối phía cloud. Switch32 sử dụng địa chỉ 10.9.0.2 làm gateway của Controller LAN; Switch61 sử dụng 10.9.1.1 cho mạng cloud. vManage, vSmart và vBond lần lượt sử dụng các địa chỉ 10.9.0.10, 10.9.0.11 và 10.9.0.12 trên Controller LAN, đồng thời có địa chỉ tương ứng 10.9.1.10, 10.9.1.11 và 10.9.1.12 trên mạng cloud. Máy trạm quản trị sử dụng 10.9.0.20 và chỉ được phép truy cập những giao diện quản lý cần thiết.
+
+vBond được ánh xạ NAT 1:1 ra địa chỉ công cộng 203.0.113.100 để các Edge có thể thực hiện quá trình xác thực và onboard từ mạng truyền tải. vEdge65 tại Site 900 sử dụng địa chỉ LAN 10.9.0.100 và địa chỉ WAN 203.0.113.245/30. Các subnet 203.0.113.248/30 và 100.64.255.248/30 được sử dụng cho kết nối từ vùng Controller đến Internet và MPLS.
+
+\subsubsection{Quy hoạch System-IP và TLOC}
+
+System-IP là địa chỉ /32 dùng để nhận dạng SD-WAN Edge trên mặt phẳng điều khiển OMP, không được sử dụng làm gateway cho mạng LAN. Site 100 và 200 dùng các octet 100 và 200; Site 300, 400 và 900 được rút gọn thành 30, 40 và 90 để octet luôn hợp lệ trong IPv4. TLOC là địa chỉ thuộc mạng underlay, gắn với từng loại đường truyền Internet hoặc MPLS. Quy hoạch chi tiết được trình bày trong Bảng~\ref{tab:system_ip_tloc}.
+
+\begin{table}[H]
+    \centering
+    \scriptsize
+    \caption{Quy hoạch System-IP và TLOC của các SD-WAN Edge}
+    \label{tab:system_ip_tloc}
+    \begin{tabularx}{\textwidth}{|c|p{1.7cm}|p{2.5cm}|p{3.1cm}|X|}
+        \hline
+        \textbf{Site} & \textbf{Thiết bị} & \textbf{System-IP} & \textbf{TLOC Internet} & \textbf{TLOC MPLS} \\
+        \hline
+        100 & vEdge1 & 10.200.100.1/32 & 203.0.113.1/30 & 100.64.100.1/30 \\
+        \hline
+        100 & vEdge2 & 10.200.100.2/32 & 203.0.113.5/30 & 100.64.100.5/30 \\
+        \hline
+        200 & vEdge1 & 10.200.200.1/32 & Không sử dụng & 100.64.200.1/30 \\
+        \hline
+        200 & vEdge2 & 10.200.200.2/32 & 203.0.113.9/30 & Không sử dụng \\
+        \hline
+        300 & vEdge1 & 10.200.30.1/32 & Không sử dụng & 100.64.30.1/30 \\
+        \hline
+        300 & vEdge2 & 10.200.30.2/32 & 203.0.113.13/30 & Không sử dụng \\
+        \hline
+        400 & vEdge1 & 10.200.40.1/32 & Không sử dụng & 100.64.40.1/30 \\
+        \hline
+        400 & vEdge2 & 10.200.40.2/32 & 203.0.113.17/30 & Không sử dụng \\
+        \hline
+        900 & vEdge65 & 10.200.90.1/32 & 203.0.113.245/30 & Không sử dụng \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Mặt Internet sử dụng dải 203.0.113.0/24 và được chia thành các subnet /30 cho từng liên kết Edge--Internet Router. Mặt MPLS sử dụng các subnet 100.64.100.0/30 và 100.64.100.4/30 cho Site 100; 100.64.200.0/30 cho Site 200; 100.64.30.0/30 cho Site 300; và 100.64.40.0/30 cho Site 400. Việc tách riêng hai dải địa chỉ giúp hệ thống nhận biết màu đường truyền và xử lý sự cố độc lập giữa Internet và MPLS.
+
+\subsubsection{Nguyên tắc vận hành và mở rộng địa chỉ}
+
+Các cổng access và trunk trên switch lớp 2 không cấu hình địa chỉ IP trực tiếp; chúng chỉ mang VLAN được chỉ định. Địa chỉ IP chỉ được gán cho SVI quản trị, SVI gateway, cổng định tuyến, Loopback, interface firewall và SD-WAN Edge. Trunk tại Campus chính mang các VLAN 10, 20, 30, 40, 90 và 99; trunk tại chi nhánh mang các VLAN nghiệp vụ của site cùng VLAN 99.
+
+Khi bổ sung một VLAN mới, quản trị viên cần lựa chọn VLAN ID chưa sử dụng trong phạm vi site, cấp một subnet /24 theo quy tắc 10.$<$site$>$.$<$VLAN$>$.0/24 nếu không xảy ra xung đột, dành địa chỉ .1 cho gateway và tạo scope DHCP trong dải .100--.199. Nếu bổ sung site mới, octet thứ hai phải được cấp riêng, System-IP phải duy nhất trên toàn SD-WAN và các subnet TLOC /30 không được trùng với đường truyền hiện có. Tất cả thay đổi phải được cập nhật đồng thời trên DHCP, ACL, OSPF, chính sách OMP và hệ thống giám sát.
+
+Như vậy, phương án phân hoạch VLAN và địa chỉ IP tạo ra cấu trúc rõ ràng giữa mạng người dùng, dịch vụ, quản trị, transit và WAN. Quy tắc địa chỉ thống nhất giúp giảm nguy cơ trùng lặp, hỗ trợ tổng hợp tuyến, đơn giản hóa cấu hình và tạo nền tảng thuận lợi cho việc mở rộng Campus cũng như bổ sung cơ sở mới trong tương lai.
+
+\subsection{Thiết kế quản lý tập trung bằng SDN Controller}
+
+SDN Controller được triển khai tại Site 100 bằng Ryu và sử dụng địa chỉ 10.1.99.10/24. Phạm vi southbound gồm Dist-SW1/2 và Access-SW1--4; hai Core Switch không phải datapath OpenFlow mà tiếp tục đảm nhiệm SVI, VRRP, OSPF và kết nối firewall. Cách phân vai này tạo mô hình Hybrid SDN: Ryu điều khiển lớp 2 OVS, trong khi lớp 3 Cisco giữ các giao thức định tuyến và dự phòng truyền thống.
+
+Control plane OpenFlow 1.3 sử dụng TCP 6653 trên VLAN 99 MANAGEMENT. Controller chỉ cần một liên kết e0 đến SwitchServerFarm e1/0 ở chế độ access VLAN 99. Sáu OVS dùng các địa chỉ 10.1.99.11/.12/.21--.24 và trỏ về cùng controller. Mạng điều khiển cũ 10.1.100.0/24 cùng các dây riêng đã được loại bỏ, do đó thiết kế phản ánh đúng mô hình doanh nghiệp: controller tham gia một management fabric chung thay vì kéo cáp riêng đến từng switch.
+
+Mỗi OVS bridge sử dụng \texttt{fail\_mode=secure}, OpenFlow13 và DPID cố định theo node-id. Ryu cài table-miss flow để frame chưa khớp được gửi lên controller. Ứng dụng \texttt{campus\_switch\_13.py} học MAC theo VLAN, flood trong đúng VLAN và cài flow unicast reactive. Các cổng access được gán VLAN bằng thuộc tính \texttt{tag}; các uplink mang tập VLAN 10, 20, 30, 40, 90 và 99 bằng thuộc tính \texttt{trunks}.
+
+Chính sách bảo mật tập trung được minh họa bằng \texttt{BLOCK\_PORTS}. Khi một cổng được đưa vào danh sách, Ryu cài flow drop priority cao ngay sau khi switch kết nối. Danh sách mặc định để rỗng để tất cả VPCS có thể xin DHCP; khi trình diễn có thể thêm cổng của VPC14 và khởi động lại ứng dụng. Ngoài ra, \texttt{ryu.app.ofctl\_rest} cung cấp REST API trên TCP 8080 để đọc bảng flow hoặc cài flow từ ứng dụng northbound.
+
+Thiết kế giám sát sử dụng một app Ryu riêng để thu PortDescStats và PortStats, tính tốc độ Rx/Tx, tỷ lệ sử dụng cổng và cảnh báo theo ngưỡng. Các endpoint \texttt{/noc/switches}, \texttt{/noc/ports}, \texttt{/noc/congestion}, \texttt{/noc/summary} và dashboard web dùng chung TCP 8080. Đây là phần mở rộng cho phép quan sát tập trung mà không cần cài SNMP agent trên từng OVS.
+
+Vì management reachability cũng đi qua OVS, thiết kế bổ sung flow bootstrap priority 50000 cho VLAN 99 và pruning VLAN 99 thành một cây không vòng lặp. OVS STP được tắt vì từng chặn frame trước OpenFlow pipeline; STP trên phần Cisco vẫn được kiểm tra độc lập. Sau stop/start, service systemd gán lại IP management, controller target, DPID và flow bootstrap; các flow reactive và bảng MAC sẽ được học lại khi có lưu lượng.
+
+SDN Controller và SD-WAN Controller có phạm vi khác nhau. Ryu quản lý lớp 2 trong Site 100; vManage, vSmart và vBond quản lý tám vEdge, route OMP và tunnel giữa các site. Hai miền có thể tích hợp thông qua nền tảng giám sát hoặc API ở giai đoạn sau nhưng không thay thế chức năng của nhau.
+
+Như vậy, thiết kế SDN của đề tài không giả định controller tự động cấu hình toàn bộ Core, VLAN và routing. Mọi thay đổi VLAN vẫn phải đồng bộ giữa script OVS, trunk Cisco, gateway Core, DHCP và policy Ryu. Giá trị chính của SDN trong phạm vi hiện tại là lập trình flow lớp 2, minh họa ACL tập trung, cung cấp API và tập trung hóa dữ liệu giám sát.
+
+\subsection{Thiết kế kết nối các cơ sở bằng SD-WAN}
+
+SD-WAN được sử dụng để kết nối Campus chính với các cơ sở phụ trên một mạng overlay thống nhất, không phụ thuộc vào một loại đường truyền WAN duy nhất. Theo Hình~\ref{fig:kien_truc_tong_the_campus}, Campus chính có Site ID 100, hai cơ sở phụ có Site ID 200 và Site ID 300. Mỗi site được nhận dạng độc lập trên hệ thống Controller, có dải địa chỉ LAN riêng và kết nối vào hạ tầng truyền tải thông qua SD-WAN Edge. Phương án này cho phép nhà trường sử dụng đồng thời Internet và MPLS, đồng thời bổ sung cơ sở mới mà không phải thay đổi cấu trúc mạng tại Campus trung tâm.
+
+Kiến trúc SD-WAN gồm hai thành phần chính là mặt phẳng điều khiển tập trung và mặt phẳng chuyển tiếp phân tán. Mặt phẳng điều khiển bao gồm vManage, vSmart và vBond. vManage cung cấp giao diện quản trị, lưu trữ mẫu cấu hình, giám sát thiết bị và thống kê chất lượng đường truyền. vSmart tiếp nhận thông tin định tuyến từ các SD-WAN Edge, phân phối tuyến và thực thi chính sách điều khiển thông qua OMP. vBond xác thực thiết bị, hỗ trợ các Edge vượt qua cơ chế NAT và cung cấp thông tin cần thiết để thiết lập kết nối ban đầu với các Controller. Mặt phẳng chuyển tiếp gồm các SD-WAN Edge tại từng site, trực tiếp đóng gói, mã hóa và chuyển lưu lượng người dùng qua mạng WAN.
+
+Tại Campus chính, SD-WAN Edge được kết nối dự phòng đến Core-SW1 và Core-SW2. Thiết bị học các mạng nội bộ của Campus thông qua OSPF hoặc các tuyến được công bố từ tầng Core, sau đó quảng bá những tiền tố hợp lệ lên hệ thống SD-WAN. Theo chiều ngược lại, các mạng LAN của cơ sở phụ được SD-WAN Edge chuyển vào bảng định tuyến của Campus chính. Việc lọc và tổng hợp tuyến được thực hiện tại điểm kết nối này nhằm tránh quảng bá các mạng quản trị không cần thiết và hạn chế số lượng tuyến phải duy trì trong toàn hệ thống.
+
+Tại Site ID 200 và Site ID 300, SD-WAN Edge đóng vai trò cổng kết nối giữa mạng LAN chi nhánh và các đường truyền WAN. Phía LAN, Edge kết nối với switch của cơ sở và học các subnet cục bộ bằng tuyến tĩnh hoặc giao thức định tuyến nội bộ. Phía WAN, mỗi Edge được thiết kế với tối thiểu hai kết nối truyền tải, chẳng hạn một đường MPLS và một đường Internet của nhà cung cấp khác. Các giao diện WAN thuộc vùng truyền tải, còn các mạng người dùng được đặt trong vùng dịch vụ riêng. Cách phân tách này giúp chính sách định tuyến, bảo mật và QoS của mạng nội bộ không phụ thuộc trực tiếp vào địa chỉ của nhà cung cấp dịch vụ.
+
+Sau khi được vBond xác thực, SD-WAN Edge thiết lập các phiên điều khiển bảo mật đến vSmart và vManage. vSmart phân phối địa chỉ mạng, thuộc tính đường truyền và chính sách giữa các site thông qua OMP. Từ thông tin nhận được, các Edge thiết lập đường hầm IPsec trực tiếp qua Internet, MPLS hoặc cả hai. Vì lưu lượng dữ liệu được chuyển trực tiếp giữa các Edge nên các Controller không nằm trên đường đi của gói tin người dùng. Khi một Controller tạm thời mất kết nối, các đường hầm và tuyến đã học vẫn có thể tiếp tục được sử dụng trong thời gian hệ thống điều khiển được khôi phục.
+
+Mạng overlay có thể tổ chức theo mô hình hub-and-spoke hoặc full-mesh tùy loại lưu lượng. Campus chính đóng vai trò hub vì tập trung Server Farm, DMZ và các dịch vụ dùng chung. Lưu lượng từ cơ sở phụ đến hệ thống quản lý đào tạo, máy chủ tập tin, DHCP, xác thực hoặc các ứng dụng nội bộ được chuyển về Campus chính. Đối với những dịch vụ cần trao đổi trực tiếp giữa các cơ sở, Controller có thể cho phép tạo đường hầm site-to-site để giảm độ trễ. Các luồng không có nhu cầu liên lạc trực tiếp vẫn được giới hạn theo mô hình hub-and-spoke nhằm đơn giản hóa kiểm soát truy cập.
+
+Chính sách định tuyến ứng dụng được xây dựng dựa trên loại lưu lượng và chất lượng thực tế của từng đường truyền. Các Edge sử dụng BFD để theo dõi độ trễ, độ biến thiên trễ, tỷ lệ mất gói và trạng thái của đường hầm. Controller căn cứ vào các số liệu này để lựa chọn tuyến đáp ứng yêu cầu của ứng dụng. Chính sách đề xuất cho các nhóm lưu lượng được trình bày trong Bảng~\ref{tab:chinh_sach_sla_sdwan}.
+
+\begin{table}[H]
+    \centering
+    \caption{Chính sách lựa chọn đường truyền SD-WAN đề xuất}
+    \label{tab:chinh_sach_sla_sdwan}
+    \begin{tabularx}{\textwidth}{|P{3.2cm}|P{4.0cm}|X|}
+        \hline
+        \textbf{Nhóm lưu lượng} & \textbf{Đường truyền ưu tiên} & \textbf{Nguyên tắc xử lý} \\
+        \hline
+        Quản lý đào tạo, xác thực và dịch vụ hành chính & MPLS & Ưu tiên tuyến ổn định; chuyển sang Internet khi MPLS không đạt ngưỡng chất lượng hoặc bị gián đoạn. \\
+        \hline
+        Học trực tuyến, thoại và hội nghị trực tuyến & Tuyến có SLA tốt nhất & Chọn đường có độ trễ, độ biến thiên trễ và tỷ lệ mất gói thấp nhất tại thời điểm truyền. \\
+        \hline
+        Truy cập Web và dịch vụ Internet thông thường & Internet cục bộ & Thực hiện local breakout tại cơ sở nếu chính sách bảo mật cho phép, tránh chuyển lưu lượng không cần thiết về Campus chính. \\
+        \hline
+        Sao lưu và truyền tập tin dung lượng lớn & Đường còn băng thông phù hợp & Giới hạn băng thông hoặc lập lịch ngoài giờ cao điểm để không ảnh hưởng đến ứng dụng quan trọng. \\
+        \hline
+        Mạng khách & Internet cục bộ & Chỉ cho phép truy cập Internet, không quảng bá tuyến đến Server Farm, DMZ và các VLAN nội bộ. \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Cơ chế local Internet breakout được áp dụng có kiểm soát tại các cơ sở phụ. Lưu lượng truy cập các dịch vụ công cộng có thể đi trực tiếp ra Internet tại site để giảm tải cho đường truyền về Campus chính. Trước khi ra Internet, lưu lượng phải đi qua firewall hoặc chức năng bảo mật tương đương trên SD-WAN Edge. Ngược lại, lưu lượng truy cập Server Farm, vùng quản trị và các ứng dụng nội bộ bắt buộc đi qua mạng overlay đến Campus chính. Việc phân loại được thực hiện dựa trên VPN dịch vụ, subnet nguồn, địa chỉ đích và loại ứng dụng.
+
+Khi một đường truyền WAN gặp sự cố, quy trình chuyển tuyến được thực hiện tự động như sau:
+
+\begin{enumerate}
+    \item SD-WAN Edge phát hiện phiên BFD hoặc đường hầm tương ứng không còn đáp ứng điều kiện hoạt động.
+    \item Tuyến gắn với đường truyền lỗi bị loại khỏi tập đường đi có thể sử dụng và trạng thái mới được thông báo đến hệ thống điều khiển.
+    \item Edge lựa chọn đường hầm còn hoạt động có mức ưu tiên và chất lượng phù hợp với chính sách của ứng dụng.
+    \item Lưu lượng được chuyển sang Internet hoặc MPLS còn lại mà không yêu cầu quản trị viên cấu hình lại thủ công.
+    \item Khi đường truyền cũ khôi phục và duy trì trạng thái ổn định, hệ thống đưa tuyến trở lại sử dụng theo chính sách đã cấu hình.
+\end{enumerate}
+
+Thiết kế cũng dự phòng lỗi thiết bị tại những vị trí quan trọng. Tại Campus chính, SD-WAN Edge có kết nối đến cả hai Core Switch để tránh gián đoạn khi một Core hoặc một liên kết nội bộ gặp sự cố. Trong giai đoạn mở rộng, có thể triển khai cặp Edge hoạt động dự phòng tại Campus chính và các cơ sở có số lượng người dùng lớn. Các Controller được triển khai theo cụm, sử dụng nhiều địa chỉ và đường kết nối khác nhau để hạn chế điểm lỗi đơn trên mặt phẳng điều khiển.
+
+Về bảo mật, mỗi Edge và Controller phải được xác thực bằng chứng thư số trước khi tham gia SD-WAN. Các kênh điều khiển và đường hầm dữ liệu được mã hóa; chỉ các site đã được cấp quyền mới nhận được tuyến và chính sách tương ứng. vManage áp dụng phân quyền theo vai trò, ghi nhật ký thao tác và sao lưu mẫu cấu hình. Chính sách tập trung trên vSmart giới hạn việc trao đổi tuyến giữa các vùng dịch vụ, ngăn mạng khách hoặc subnet không tin cậy truy cập trực tiếp vào tài nguyên nội bộ của nhà trường.
+
+Quá trình bổ sung cơ sở mới được chuẩn hóa bằng mẫu cấu hình. Quản trị viên khai báo Site ID, System IP, các giao diện WAN, subnet LAN và nhóm chính sách trên vManage. Sau khi SD-WAN Edge được kết nối và xác thực, thiết bị tự nhận cấu hình, thiết lập phiên với Controller, học tuyến và hình thành các đường hầm cần thiết. Cơ chế này giúp giảm thời gian triển khai, hạn chế sai lệch cấu hình giữa các cơ sở và cho phép mở rộng hệ thống mà không phải xây dựng lại mạng WAN hiện hữu.
+
+Như vậy, phương án SD-WAN tạo ra một hạ tầng kết nối liên cơ sở có khả năng quản lý tập trung nhưng vẫn chuyển tiếp dữ liệu phân tán tại từng site. Việc kết hợp Internet và MPLS, lựa chọn đường dựa trên chất lượng, local Internet breakout và chuyển tuyến tự động giúp tăng tính sẵn sàng, sử dụng hiệu quả băng thông và bảo đảm các cơ sở phụ truy cập ổn định đến dịch vụ tập trung tại Campus chính.
+
+\subsection{Thiết kế chính sách bảo mật}
+
+Chính sách bảo mật của hệ thống được thiết kế theo nguyên tắc phòng thủ nhiều lớp, kết hợp phân đoạn mạng, kiểm soát truy cập, bảo vệ thiết bị đầu cuối, giám sát tập trung và mã hóa kết nối liên cơ sở. Mục tiêu chính là ngăn truy cập trái phép giữa các nhóm người dùng, hạn chế phạm vi ảnh hưởng khi xảy ra sự cố và vẫn bảo đảm người dùng hợp lệ truy cập được các dịch vụ cần thiết. Chính sách được áp dụng thống nhất tại firewall, Core/Distribution Switch, SDN Controller và SD-WAN Controller thay vì chỉ phụ thuộc vào một thiết bị bảo mật duy nhất.
+
+Nguyên tắc mặc định của hệ thống là từ chối các luồng truy cập không được khai báo rõ ràng. Mỗi VLAN chỉ được phép truy cập những vùng và dịch vụ phù hợp với chức năng của mình. Các ACL được đặt gần nguồn lưu lượng tại tầng Distribution hoặc trên gateway của VLAN để loại bỏ sớm lưu lượng không hợp lệ. Đối với lưu lượng đi Internet, đi qua DMZ hoặc đi giữa Campus chính và cơ sở phụ, firewall và chính sách SD-WAN tiếp tục kiểm tra theo trạng thái kết nối, địa chỉ nguồn, địa chỉ đích, cổng dịch vụ và vùng bảo mật.
+
+Hệ thống được chia thành các vùng bảo mật logic sau:
+
+\begin{itemize}
+    \item \textbf{Vùng người dùng:} gồm VLAN 10 của Khoa Công nghệ thông tin, VLAN 20 của Khoa Toán Thống kê và VLAN 30 của Khoa Luật.
+    \item \textbf{Vùng hành chính:} VLAN 40 dành cho cán bộ thuộc các phòng ban quản lý và được áp dụng mức kiểm soát cao hơn các VLAN người dùng thông thường.
+    \item \textbf{Server Farm:} chứa DHCP Server, máy chủ xác thực, máy chủ tập tin, hệ thống quản lý đào tạo và các dịch vụ nội bộ.
+    \item \textbf{DMZ:} chứa các dịch vụ cần công bố ra Internet như Web Server hoặc Mail Server và được tách khỏi mạng nội bộ.
+    \item \textbf{Vùng quản trị:} dành cho SDN Controller, hệ thống giám sát, máy trạm quản trị và địa chỉ quản lý của thiết bị mạng.
+    \item \textbf{Vùng khách:} phục vụ thiết bị không thuộc quyền quản lý của nhà trường và chỉ được phép truy cập Internet.
+    \item \textbf{Vùng WAN:} gồm SD-WAN Edge, các đường truyền Internet/MPLS và các mạng LAN tại cơ sở phụ.
+\end{itemize}
+
+Ma trận truy cập tổng quát giữa các vùng được đề xuất trong Bảng~\ref{tab:ma_tran_truy_cap_bao_mat}. Quyền ``cho phép có điều kiện'' nghĩa là chỉ mở các giao thức, địa chỉ đích và cổng dịch vụ cần thiết; những lưu lượng còn lại vẫn bị từ chối.
+
+\begingroup
+\small
+\begin{longtable}{|P{2.4cm}|P{2.6cm}|P{2.8cm}|P{5.7cm}|}
+        \caption{Ma trận chính sách truy cập giữa các vùng mạng}
+        \label{tab:ma_tran_truy_cap_bao_mat} \\
+        \hline
+        \textbf{Nguồn} & \textbf{Đích} & \textbf{Chính sách} & \textbf{Phạm vi cho phép} \\
+        \hline
+        \endfirsthead
+        \multicolumn{4}{c}{\textit{Bảng~\ref{tab:ma_tran_truy_cap_bao_mat} (tiếp theo)}} \\
+        \hline
+        \textbf{Nguồn} & \textbf{Đích} & \textbf{Chính sách} & \textbf{Phạm vi cho phép} \\
+        \hline
+        \endhead
+        \hline
+        \multicolumn{4}{r}{\textit{Tiếp tục ở trang sau}} \\
+        \endfoot
+        \hline
+        \endlastfoot
+        VLAN 10, 20, 30 & Server Farm & Cho phép có điều kiện & Chỉ truy cập DNS, DHCP, xác thực, học trực tuyến, máy chủ tập tin và dịch vụ đào tạo được cấp quyền. \\
+        \hline
+        VLAN 10, 20, 30 & VLAN 40 & Từ chối & Không cho phép người dùng khởi tạo kết nối trực tiếp đến máy trạm và tài nguyên hành chính. \\
+        \hline
+        VLAN 10, 20, 30 & Giữa các VLAN người dùng & Từ chối mặc định & Chỉ mở luồng phục vụ học tập hoặc nghiên cứu khi có yêu cầu được phê duyệt. \\
+        \hline
+        VLAN 40 & Server Farm & Cho phép có điều kiện & Truy cập hệ thống quản lý đào tạo, tài chính, nhân sự và dịch vụ nội bộ theo vai trò. \\
+        \hline
+        Vùng khách & Mạng nội bộ & Từ chối & Không được truy cập VLAN người dùng, VLAN hành chính, Server Farm, DMZ nội bộ và vùng quản trị. \\
+        \hline
+        Vùng khách & Internet & Cho phép có kiểm soát & Cho phép Web, DNS và các dịch vụ Internet cần thiết; áp dụng giới hạn băng thông và lọc nội dung nếu có. \\
+        \hline
+        Internet & DMZ & Cho phép có điều kiện & Chỉ công bố các cổng dịch vụ của Web Server, Mail Server hoặc dịch vụ công cộng đã xác định. \\
+        \hline
+        DMZ & Mạng nội bộ & Từ chối mặc định & Chỉ mở kết nối đến DNS, xác thực, cơ sở dữ liệu hoặc máy chủ nhật ký nếu ứng dụng thực sự yêu cầu. \\
+        \hline
+        Máy trạm quản trị & Thiết bị mạng và Controller & Cho phép có điều kiện & Cho phép SSH, HTTPS, SNMPv3, NETCONF hoặc giao thức quản trị đã được mã hóa. \\
+        \hline
+        Các VLAN khác & Vùng quản trị & Từ chối & Không cho phép người dùng truy cập trực tiếp địa chỉ quản lý của thiết bị và Controller. \\
+        \hline
+        Cơ sở phụ & Campus chính & Cho phép có điều kiện & Chỉ cho phép truy cập các dịch vụ tập trung tương ứng với vai trò và subnet của từng cơ sở. \\
+\end{longtable}
+\endgroup
+
+Tại biên mạng Campus chính, firewall được triển khai theo cặp active--standby để kiểm soát lưu lượng giữa mạng nội bộ, DMZ, Internet và SD-WAN Edge. Firewall thực hiện kiểm tra trạng thái kết nối, NAT, lọc theo vùng và ghi nhật ký các phiên bị từ chối. Các dịch vụ công cộng không được đặt trực tiếp trong Server Farm mà được bố trí tại DMZ. Khi công bố dịch vụ ra Internet, chỉ địa chỉ và cổng cần thiết được ánh xạ bằng NAT; giao diện quản trị của máy chủ tuyệt đối không được công bố ra bên ngoài.
+
+Server Farm được bảo vệ bằng ACL theo nguyên tắc quyền tối thiểu. Máy chủ sử dụng địa chỉ IP tĩnh và chỉ chấp nhận kết nối từ các subnet đã được cấp quyền. DHCP Server chỉ nhận yêu cầu chuyển tiếp từ các gateway hợp lệ; máy chủ tập tin và hệ thống quản lý đào tạo kiểm soát thêm quyền người dùng ở tầng ứng dụng. Các máy chủ không được tự do khởi tạo kết nối đến VLAN người dùng, trừ những luồng phục vụ cập nhật, giám sát hoặc quản trị đã được xác định. Lưu lượng quản trị máy chủ chỉ xuất phát từ vùng quản trị và được ghi nhật ký.
+
+Tại tầng Access, các cổng kết nối người dùng được gán cố định vào VLAN phù hợp và áp dụng các cơ chế bảo vệ lớp 2. Những cổng không sử dụng phải bị vô hiệu hóa và đưa vào VLAN cách ly. Port Security hoặc 802.1X được sử dụng để hạn chế thiết bị không hợp lệ; DHCP Snooping ngăn máy chủ DHCP giả mạo; Dynamic ARP Inspection và IP Source Guard giảm nguy cơ giả mạo ARP hoặc địa chỉ IP. BPDU Guard được bật trên cổng người dùng để ngăn thiết bị đầu cuối tác động đến cây STP, trong khi Storm Control hạn chế lưu lượng broadcast, multicast hoặc unicast bất thường.
+
+Đối với mạng Wi-Fi, mỗi SSID được ánh xạ vào một VLAN riêng theo nhóm giảng viên, sinh viên, khách hoặc thiết bị chuyên dụng. Người dùng nội bộ cần được xác thực trước khi truy cập mạng; chính sách truy cập được gắn theo vai trò thay vì chỉ dựa vào mật khẩu dùng chung. SSID khách sử dụng vùng khách độc lập, bật cơ chế cô lập thiết bị nếu phù hợp và chỉ cho phép local Internet breakout qua firewall. Việc tách SSID và VLAN giúp chính sách bảo mật giữa mạng có dây và không dây được áp dụng nhất quán.
+
+Mặt phẳng quản trị của thiết bị mạng được tách khỏi lưu lượng người dùng. Switch, router, firewall, SDN Controller và SD-WAN Controller sử dụng địa chỉ quản trị riêng; chỉ máy trạm quản trị được phép truy cập. Telnet, HTTP và các giao thức quản trị không mã hóa phải bị vô hiệu hóa, thay bằng SSH, HTTPS, SNMPv3 và các API sử dụng TLS. Tài khoản quản trị được phân quyền theo vai trò, sử dụng mật khẩu mạnh hoặc xác thực tập trung và khóa tạm thời khi đăng nhập sai nhiều lần. Cấu hình thiết bị được sao lưu định kỳ và lưu tại vị trí có kiểm soát truy cập.
+
+SDN Controller là thành phần điều khiển quan trọng nên phải được bảo vệ ở cả giao diện northbound và southbound. Kết nối từ Controller đến switch sử dụng kênh được xác thực và mã hóa khi thiết bị hỗ trợ. API quản trị yêu cầu xác thực, phân quyền và giới hạn địa chỉ nguồn; không công bố trực tiếp ra Internet. Cụm Controller được cập nhật bản vá, sao lưu cơ sở dữ liệu và giám sát tính toàn vẹn cấu hình. Mọi thay đổi VLAN, ACL, QoS hoặc bảng luồng đều được ghi lại để phục vụ kiểm tra và khôi phục khi xảy ra cấu hình sai.
+
+Đối với SD-WAN, chỉ Edge có chứng thư số hợp lệ mới được phép tham gia mạng overlay. Kênh điều khiển giữa vManage, vSmart, vBond và các Edge được xác thực; dữ liệu giữa các site được truyền qua đường hầm IPsec. Chính sách trên vSmart chỉ phân phối tuyến cần thiết đến từng VPN dịch vụ, tránh để mạng khách hoặc subnet không tin cậy học được tuyến đến Server Farm và vùng quản trị. Giao diện quản trị của SD-WAN Edge không được truy cập từ mạng truyền tải công cộng, ngoại trừ các phiên điều khiển đã được xác định.
+
+Các giao thức hoạt động tại Core và Distribution cũng được giới hạn trên mặt phẳng điều khiển. OSPF chỉ hình thành quan hệ láng giềng trên các liên kết hạ tầng đã chỉ định và sử dụng xác thực khi nền tảng hỗ trợ. Gói tin VRRP, STP và các giao thức quản lý lớp 2 không được tiếp nhận từ cổng người dùng. ACL bảo vệ control plane giới hạn lưu lượng gửi đến CPU của thiết bị, qua đó giảm nguy cơ quét cổng, tấn công từ chối dịch vụ hoặc tạo phiên định tuyến giả mạo.
+
+Hệ thống giám sát tập trung thu thập nhật ký từ firewall, Core/Distribution Switch, SDN Controller, SD-WAN Edge và các máy chủ quan trọng. Tất cả thiết bị đồng bộ thời gian với NTP để bảo đảm dấu thời gian nhất quán. SNMPv3, syslog và thông tin luồng được sử dụng để theo dõi trạng thái cổng, thay đổi cấu hình, số lần đăng nhập thất bại, lưu lượng bị ACL từ chối và các kết nối bất thường. Các cảnh báo quan trọng gồm thiết bị mất kết nối, xuất hiện DHCP Server lạ, cổng chuyển trạng thái liên tục, lưu lượng tăng đột biến hoặc có nhiều lần truy cập trái phép.
+
+Khi phát hiện thiết bị đầu cuối có dấu hiệu bị xâm nhập, quản trị viên có thể sử dụng SDN Controller để đưa cổng hoặc địa chỉ của thiết bị vào VLAN cách ly. Thiết bị bị cô lập chỉ được phép truy cập máy chủ cập nhật hoặc hệ thống kiểm tra an toàn, không được liên lạc với các VLAN khác. Sau khi nguyên nhân được xác định và thiết bị đáp ứng yêu cầu bảo mật, chính sách cách ly mới được gỡ bỏ. Quy trình này giúp hạn chế mã độc lan truyền trong mạng Campus và giảm thời gian xử lý sự cố.
+
+Chính sách bảo mật phải được rà soát định kỳ và cập nhật khi có VLAN, dịch vụ, cơ sở phụ hoặc nhóm người dùng mới. Các ACL không còn sử dụng cần được loại bỏ; tài khoản quản trị của nhân sự đã thay đổi vị trí phải được thu hồi; chứng thư số và bản sao lưu cấu hình phải được kiểm tra thời hạn và khả năng khôi phục. Đồng thời, nhà trường cần thực hiện kiểm thử định kỳ đối với chính sách liên VLAN, truy cập DMZ, local Internet breakout, mất đường truyền và cơ chế cách ly thiết bị.
+
+Như vậy, thiết kế bảo mật kết hợp phân đoạn VLAN, ACL, firewall, bảo vệ tầng Access, quản trị mã hóa và giám sát tập trung để kiểm soát toàn bộ luồng dữ liệu trong hệ thống. Cách tiếp cận này vừa bảo vệ tài nguyên nội bộ tại Campus chính, vừa duy trì chính sách thống nhất cho mạng Wi-Fi và các cơ sở phụ kết nối qua SD-WAN, đồng thời tạo điều kiện mở rộng hệ thống mà không làm giảm mức độ an toàn chung.

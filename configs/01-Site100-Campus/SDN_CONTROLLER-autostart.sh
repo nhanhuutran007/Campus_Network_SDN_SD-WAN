@@ -20,10 +20,16 @@ if [[ -z "$ryu_bin" ]]; then
 fi
 
 readonly ryu_app=/root/ryu-app/campus_switch_13.py
+readonly noc_app=/root/ryu-app/campus_noc_monitor.py
 if [[ ! -f "$ryu_app" ]]; then
     echo "[campus-ryu] Missing $ryu_app" >&2
     exit 1
 fi
+if [[ -f "$noc_app" ]]; then
+    NOC_ARGS=( "$noc_app" )
+else
+    NOC_ARGS=()
+fi
 
 exec "$ryu_bin" --ofp-tcp-listen-port 6653 \
-    "$ryu_app" ryu.app.ofctl_rest >> /root/ryu.log 2>&1
+    "$ryu_app" "${NOC_ARGS[@]}" ryu.app.ofctl_rest >> /root/ryu.log 2>&1

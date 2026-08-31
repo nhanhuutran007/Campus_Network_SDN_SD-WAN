@@ -1,0 +1,13 @@
+\babel@toc {vietnamese}{}\relax 
+\contentsline {table}{\numberline {3.1}{\ignorespaces Phân hoạch VLAN tại Campus chính}}{40}{table.caption.16}%
+\contentsline {table}{\numberline {3.2}{\ignorespaces Các mạng dịch vụ và hạ tầng tại Campus chính}}{41}{table.caption.17}%
+\contentsline {table}{\numberline {3.3}{\ignorespaces Phân hoạch VLAN tại các cơ sở phụ}}{42}{table.caption.18}%
+\contentsline {table}{\numberline {3.4}{\ignorespaces Quy hoạch System-IP và TLOC của các SD-WAN Edge}}{44}{table.caption.19}%
+\contentsline {table}{\numberline {3.5}{\ignorespaces Chính sách lựa chọn đường truyền SD-WAN đề xuất}}{49}{table.caption.20}%
+\contentsline {table}{\numberline {3.6}{\ignorespaces Ma trận chính sách truy cập giữa các vùng mạng}}{53}{table.3.6}%
+\contentsline {table}{\numberline {4.1}{\ignorespaces Nền tảng sử dụng trong mô hình triển khai}}{58}{table.caption.21}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces Nguồn dữ liệu và phương thức triển khai cấu hình}}{59}{table.caption.22}%
+\contentsline {table}{\numberline {4.3}{\ignorespaces Kết quả kiểm thử DHCP tại các cơ sở phụ}}{62}{table.caption.23}%
+\contentsline {table}{\numberline {4.4}{\ignorespaces Ánh xạ switch OVS với SDN Controller}}{62}{table.caption.24}%
+\contentsline {table}{\numberline {4.5}{\ignorespaces Ánh xạ vEdge, System-IP và TLOC thực tế}}{65}{table.caption.25}%
+\contentsline {table}{\numberline {4.6}{\ignorespaces Tổng hợp kịch bản kiểm thử và bằng chứng}}{66}{table.4.6}%

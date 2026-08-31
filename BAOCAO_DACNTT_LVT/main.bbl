@@ -1,0 +1,158 @@
+\begin{thebibliography}{}
+
+\bibitem [\protect \citeauthoryear {%
+{Cisco Systems}%
+}{%
+{Cisco Systems}%
+}{%
+{\protect \APACyear {2026}}%
+}]{%
+cisco_sdwan_omp}
+\APACinsertmetastar {%
+cisco_sdwan_omp}%
+\begin{APACrefauthors}%
+{Cisco Systems}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2026}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Cisco Catalyst SD-WAN Routing Configuration Guide:
+  Configure OMP} {Cisco catalyst sd-wan routing configuration guide: Configure
+  omp}{\BBCQ}\ [\bibcomputersoftwaremanual].
+\newblock
+\APACrefnote{Available at:
+  \url{https://www.cisco.com/c/en/us/td/docs/routers/sdwan/26x-later/routing/routing-configuration-guide/OMP-routing-protocol-ref/configure-omp.html},
+  accessed 2026-09-01}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Moy%
+}{%
+Moy%
+}{%
+{\protect \APACyear {1998}}%
+}]{%
+rfc2328_ospfv2}
+\APACinsertmetastar {%
+rfc2328_ospfv2}%
+\begin{APACrefauthors}%
+Moy, J.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{1998}{{\APACmonth{04}}}{}.
+\newblock
+\APACrefbtitle {OSPF Version 2} {Ospf version 2}\ \APACbVolEdTR {}{RFC\ \BNUM\
+  2328}.
+\newblock
+\APACaddressInstitution{}{Internet Engineering Task Force}.
+\newblock
+\APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc2328/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Nadas%
+}{%
+Nadas%
+}{%
+{\protect \APACyear {2010}}%
+}]{%
+rfc5798_vrrpv3}
+\APACinsertmetastar {%
+rfc5798_vrrpv3}%
+\begin{APACrefauthors}%
+Nadas, S.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2010}{{\APACmonth{03}}}{}.
+\newblock
+\APACrefbtitle {Virtual Router Redundancy Protocol (VRRP) Version 3 for IPv4
+  and IPv6} {Virtual router redundancy protocol (vrrp) version 3 for ipv4 and
+  ipv6}\ \APACbVolEdTR {}{RFC\ \BNUM\ 5798}.
+\newblock
+\APACaddressInstitution{}{Internet Engineering Task Force}.
+\newblock
+\APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc5798/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{Open Networking Foundation}%
+}{%
+{Open Networking Foundation}%
+}{%
+{\protect \APACyear {2014}}%
+}]{%
+onf_openflow_134}
+\APACinsertmetastar {%
+onf_openflow_134}%
+\begin{APACrefauthors}%
+{Open Networking Foundation}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2014}{{\APACmonth{03}}}{}.
+\newblock
+{\BBOQ}\APACrefatitle {OpenFlow Switch Specification, Version 1.3.4} {Openflow
+  switch specification, version 1.3.4}{\BBCQ}\ [\bibcomputersoftwaremanual].
+\newblock
+\APACrefnote{Available at:
+  \url{https://opennetworking.org/wp-content/uploads/2014/10/openflow-switch-v1.3.4.pdf}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Rekhter%
+, Li%
+\BCBL {}\ \BBA {} Hares%
+}{%
+Rekhter%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2006}}%
+}]{%
+rfc4271_bgp4}
+\APACinsertmetastar {%
+rfc4271_bgp4}%
+\begin{APACrefauthors}%
+Rekhter, Y.%
+, Li, T.%
+\BCBL {}\ \BBA {} Hares, S.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2006}{{\APACmonth{01}}}{}.
+\newblock
+\APACrefbtitle {A Border Gateway Protocol 4 (BGP-4)} {A border gateway protocol
+  4 (bgp-4)}\ \APACbVolEdTR {}{RFC\ \BNUM\ 4271}.
+\newblock
+\APACaddressInstitution{}{Internet Engineering Task Force}.
+\newblock
+\APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc4271/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{Ryu SDN Framework Community}%
+}{%
+{Ryu SDN Framework Community}%
+}{%
+{\protect \APACyear {2021}}%
+}]{%
+ryu_434_docs}
+\APACinsertmetastar {%
+ryu_434_docs}%
+\begin{APACrefauthors}%
+{Ryu SDN Framework Community}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2021}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Ryu 4.34 Documentation: Writing Your Ryu Application}
+  {Ryu 4.34 documentation: Writing your ryu application}{\BBCQ}\
+  [\bibcomputersoftwaremanual].
+\newblock
+\APACrefnote{Available at:
+  \url{https://ryu.readthedocs.io/en/latest/developing.html}}
+\PrintBackRefs{\CurrentBib}
+
+\end{thebibliography}
