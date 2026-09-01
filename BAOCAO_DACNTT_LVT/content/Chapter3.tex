@@ -126,21 +126,64 @@ Topology chi tiết của hệ thống được xây dựng theo hướng kết 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{image/topology.png}
-    \caption{Sơ đồ bố trí tổng thể của hệ thống mạng Campus}
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}[
+        font=\scriptsize,
+        >=stealth,
+        controller/.style={draw=purple!70!black, fill=purple!7, rounded corners, align=center, minimum height=1.35cm, text width=8.0cm},
+        transport/.style={draw=black!70, fill=gray!12, rounded corners, align=center, minimum height=0.9cm, text width=3.5cm},
+        campus/.style={draw=blue!65!black, fill=blue!5, rounded corners, align=center, minimum height=1.75cm, text width=6.2cm},
+        branch/.style={draw=teal!70!black, fill=teal!5, rounded corners, align=center, minimum height=1.55cm, text width=5.1cm},
+        controlLink/.style={draw=purple!75!black, dashed, ->, line width=0.7pt},
+        internetLink/.style={draw=blue!75!black, line width=0.9pt},
+        mplsLink/.style={draw=orange!85!black, line width=0.9pt}
+    ]
+        \node[controller] (s900) at (0,5.1) {\textbf{Site 900 -- Control plane SD-WAN}\\
+        vManage \texttt{10.9.0.10}; vSmart \texttt{10.9.0.11} (System-IP \texttt{10.9.0.13}); vBond \texttt{10.9.0.12}\\
+        vEdge65 staging: System-IP \texttt{10.200.90.1} -- không thuộc tập tám edge nghiệm thu};
+
+        \node[transport] (internet) at (-4.6,3.25) {\textbf{Internet underlay}\\AS 64511 -- color \texttt{biz-internet}};
+        \node[transport] (mpls) at (4.6,3.25) {\textbf{MPLS underlay}\\AS 64512 -- color \texttt{mpls}};
+
+        \node[campus] (s100) at (0,1.35) {\textbf{Site 100 -- Campus chính, AS 65000}\\
+        vEdge1/2: \texttt{10.200.100.1/.2}, mỗi edge có Internet và MPLS TLOC\\
+        ASAv HA -- Core-SW1/2 -- Ryu \texttt{10.1.99.10} điều khiển 6 OVS -- VLAN 10/20/30/40/90/99};
+
+        \node[branch] (s200) at (-6.1,-1.35) {\textbf{Site 200 -- Cần Thơ, AS 65010}\\
+        vEdge1 \texttt{10.200.200.1} (MPLS)\\vEdge2 \texttt{10.200.200.2} (Internet)\\Brand-FW -- VLAN 60/70};
+        \node[branch] (s300) at (0,-1.35) {\textbf{Site 300 -- Đà Nẵng, AS 65020}\\
+        vEdge1 \texttt{10.200.30.1} (MPLS)\\vEdge2 \texttt{10.200.30.2} (Internet)\\Brand-FW -- VLAN 80/90};
+        \node[branch] (s400) at (6.1,-1.35) {\textbf{Site 400 -- Nha Trang, AS 65030}\\
+        vEdge1 \texttt{10.200.40.1} (MPLS)\\vEdge2 \texttt{10.200.40.2} (Internet)\\Brand-FW -- VLAN 50/60};
+
+        \begin{pgfonlayer}{background}
+            \draw[internetLink] (internet) -- (s100.north west);
+            \draw[internetLink] (internet.south) -- (s200.north);
+            \draw[internetLink] (internet.south east) -- (s300.north west);
+            \draw[internetLink] (internet.east) -- (s400.north west);
+            \draw[mplsLink] (mpls) -- (s100.north east);
+            \draw[mplsLink] (mpls.west) -- (s200.north east);
+            \draw[mplsLink] (mpls.south west) -- (s300.north east);
+            \draw[mplsLink] (mpls.south) -- (s400.north);
+
+            \draw[controlLink] (s900.south) -- (s100.north);
+            \draw[controlLink] (s900.south west) to[bend right=18] (s200.north);
+            \draw[controlLink] (s900.south) to[bend right=10] (s300.north);
+            \draw[controlLink] (s900.south east) to[bend left=18] (s400.north);
+        \end{pgfonlayer}
+
+        \node[align=center, font=\scriptsize] at (0,-3.0) {\textcolor{blue!75!black}{\rule{1.0cm}{0.8pt}} Internet \quad
+        \textcolor{orange!85!black}{\rule{1.0cm}{0.8pt}} MPLS \quad
+        \textcolor{purple!75!black}{- - - $\triangleright$} OMP/control connection};
+    \end{tikzpicture}%
+    }
+    \caption{Topology logic đã chuẩn hóa theo cấu hình hiện hành}
     \label{fig:topology_mang_campus}
 \end{figure}
 
-\noindent\textit{Lưu ý về hình topology:} các ảnh trong mục này dùng để minh họa bố trí thiết bị và liên kết tại thời điểm thiết kế. Địa chỉ, tên node và cấu hình dùng để triển khai được chốt theo các bảng trong chương, tệp \texttt{Campus Network SDN SD-WAN.unl} và cây \texttt{configs/}; các nguồn dạng văn bản này được ưu tiên khi một nhãn nhỏ trên ảnh chụp cũ chưa được cập nhật.
+\noindent Sơ đồ vector trên được dựng lại từ tệp \texttt{Campus Network SDN SD-WAN.unl}, cây \texttt{configs/} và bảng quy hoạch hiện hành. Các ảnh xuất từ topology ở giai đoạn thiết kế được giữ trong thư mục lưu trữ nhưng không dùng làm bằng chứng địa chỉ trong báo cáo.
 
 \subsubsection{Topology tại Campus chính}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{image/campuschinh.png}
-    \caption{Topology chi tiết tại Campus chính}
-    \label{fig:topology_campus_chinh}
-\end{figure}
 
 Campus chính được triển khai tại Site ID 100 và đóng vai trò trung tâm cung cấp dịch vụ cho toàn hệ thống. Phần LAN sử dụng mô hình Core--Distribution--Access với hai Core Switch, hai Distribution Switch và bốn Access Switch. Hai Core Switch được kết nối trực tiếp với nhau và cung cấp gateway dự phòng thông qua VRRP. Giao thức OSPF Area 0 được sử dụng trên các liên kết lớp 3 giữa Core và các thiết bị hạ tầng liên quan, giúp hệ thống tự động cập nhật đường đi và hội tụ khi một liên kết thay đổi trạng thái.
 
@@ -156,13 +199,6 @@ Biên mạng Campus chính sử dụng hai firewall hoạt động theo cơ ch�
 
 \subsubsection{Topology vùng điều khiển và mạng truyền tải SD-WAN}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{image/site900.png}
-    \caption{Topology vùng điều khiển SD-WAN tại Site 900}
-    \label{fig:topology_site900}
-\end{figure}
-
 Vùng điều khiển SD-WAN được triển khai tại Site ID 900 với Controller LAN 10.9.0.0/24 và mạng cloud 10.9.1.0/24. Các thành phần chính gồm vManage, vSmart và vBond, cùng máy trạm quản trị và Switch32. vManage cung cấp giao diện cấu hình và giám sát tập trung; vSmart tiếp nhận, xử lý và phân phối thông tin định tuyến OMP; vBond xác thực các SD-WAN Edge và hỗ trợ quá trình thiết lập phiên điều khiển ban đầu. Các thiết bị điều khiển được tách khỏi các VLAN người dùng tại những Campus khác.
 
 Mạng truyền tải được mô phỏng bởi hai miền độc lập. Internet Router thuộc AS 64511, MPLS Router thuộc AS 64512; hai router trao đổi các subnet transit bằng eBGP. Tại Site 100, mỗi vEdge có cả Internet và MPLS TLOC. Tại các chi nhánh, vEdge1 mang MPLS TLOC còn vEdge2 mang Internet TLOC. Trên các kết nối này, Edge thiết lập đường hầm bảo mật đến những Edge khác và gửi thông tin định tuyến lên vSmart thông qua OMP.
@@ -171,30 +207,9 @@ Các Controller chỉ tham gia mặt phẳng điều khiển và quản trị, k
 
 \subsubsection{Topology tại các cơ sở phụ}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.72\textwidth]{image/site200.png}
-    \caption{Topology Campus Cần Thơ tại Site 200}
-    \label{fig:topology_site200}
-\end{figure}
-
 Campus Cần Thơ tại Site ID 200 được triển khai với hai SD-WAN Edge, một firewall chi nhánh, một switch tập trung và hai switch truy cập lớp 2. vEdge1 kết nối miền MPLS, còn vEdge2 kết nối miền Internet để cung cấp hai hướng truyền tải độc lập. Phía LAN được chia thành VLAN 60 dành cho khu Nông nghiệp và VLAN 70 dành cho khu Y tế. Các máy trạm kết nối vào switch của từng VLAN, sau đó lưu lượng được tập trung qua switch chi nhánh, firewall và SD-WAN Edge trước khi đi đến Campus chính hoặc Internet.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{image/site300.png}
-    \caption{Topology Campus Đà Nẵng tại Site 300}
-    \label{fig:topology_site300}
-\end{figure}
-
 Campus Đà Nẵng tại Site ID 300 có cấu trúc tương tự, gồm hai SD-WAN Edge, firewall chi nhánh, một switch tập trung và hai switch truy cập lớp 2. vEdge1 mang TLOC MPLS, còn vEdge2 mang TLOC Internet. Mạng nội bộ được phân chia thành VLAN 80 cho khu Du lịch và VLAN 90 cho khu Tài chính. Việc tách hai nhóm người dùng thành các VLAN độc lập giúp giới hạn miền quảng bá và tạo điều kiện áp dụng chính sách truy cập khác nhau, đặc biệt đối với VLAN Tài chính có yêu cầu bảo mật cao hơn.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.72\textwidth]{image/site400.png}
-    \caption{Topology Campus Nha Trang tại Site 400}
-    \label{fig:topology_site400}
-\end{figure}
 
 Campus Nha Trang tại Site ID 400 cũng sử dụng hai SD-WAN Edge, một firewall, một switch tập trung và hai switch truy cập lớp 2. vEdge1 kết nối MPLS, còn vEdge2 kết nối Internet. Phần LAN gồm VLAN 50 cho khu Thủy sản và VLAN 60 cho khu Lữ hành. Switch chi nhánh tập trung các VLAN và chuyển lưu lượng đến firewall trước khi đi qua SD-WAN Edge. Mặc dù VLAN ID có thể được sử dụng lại tại các site khác nhau, các subnet IP của từng cơ sở phải độc lập để tránh trùng lặp khi quảng bá tuyến trên mạng overlay.
 

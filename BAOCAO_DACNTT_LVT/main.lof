@@ -6,9 +6,4 @@
 \contentsline {figure}{\numberline {2.5}{\ignorespaces Nguyên lý hoạt động của SDN}}{12}{figure.caption.7}%
 \contentsline {figure}{\numberline {2.6}{\ignorespaces Minh họa công nghệ SD-WAN}}{16}{figure.caption.8}%
 \contentsline {figure}{\numberline {3.1}{\ignorespaces Kiến trúc tổng thể mạng Campus đề xuất}}{27}{figure.caption.9}%
-\contentsline {figure}{\numberline {3.2}{\ignorespaces Sơ đồ bố trí tổng thể của hệ thống mạng Campus}}{30}{figure.caption.10}%
-\contentsline {figure}{\numberline {3.3}{\ignorespaces Topology chi tiết tại Campus chính}}{31}{figure.caption.11}%
-\contentsline {figure}{\numberline {3.4}{\ignorespaces Topology vùng điều khiển SD-WAN tại Site 900}}{33}{figure.caption.12}%
-\contentsline {figure}{\numberline {3.5}{\ignorespaces Topology Campus Cần Thơ tại Site 200}}{34}{figure.caption.13}%
-\contentsline {figure}{\numberline {3.6}{\ignorespaces Topology Campus Đà Nẵng tại Site 300}}{35}{figure.caption.14}%
-\contentsline {figure}{\numberline {3.7}{\ignorespaces Topology Campus Nha Trang tại Site 400}}{36}{figure.caption.15}%
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Topology logic đã chuẩn hóa theo cấu hình hiện hành}}{30}{figure.caption.10}%
