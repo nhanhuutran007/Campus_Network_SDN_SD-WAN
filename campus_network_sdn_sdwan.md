@@ -816,7 +816,7 @@ graph TB
 | 7 | Internet — Gi0/2 = 203.0.113.250/30 | Switch32 — Gi1/0 = 203.0.113.249/30 | 203.0.113.248/30 | Uplink Internet của Controller |
 | 8 | MPLS — Gi0/1 = 100.64.255.250/30 | Switch32 — Gi1/1 = 100.64.255.249/30 | 100.64.255.248/30 | Uplink MPLS của Controller |
 | 9 | Switch32 — SVI VLAN 10 = 10.9.0.2/24 | — | 10.9.0.0/24 | Gateway Controller LAN |
-| 10 | Switch61 — e0/0 = — | Cloud "Net" — — | — | Uplink cloud (Internet) |
+| 10 | Switch61 — e0/0 = DHCP (10.215.28.x) | Cloud "Net" (pnet0) — — | LAN thật 10.215.28.0/24 | Uplink cloud (Internet), e0/0 = routed port `no switchport` + `ip address dhcp` |
 | 11 | vManager — eth1 = 10.9.1.10/24 | Switch61 — e0/1 = — | 10.9.1.0/24 | Mặt cloud của vManager |
 | 12 | vSmart — eth1 = 10.9.1.11/24 | Switch61 — e0/2 = — | 10.9.1.0/24 | Mặt cloud của vSmart |
 | 13 | vBond — eth0 = 10.9.1.12/24 | Switch61 — e0/3 = — | 10.9.1.0/24 | Mặt cloud của vBond (NAT 1:1 → 203.0.113.100) |
@@ -860,7 +860,7 @@ graph TB
 
 | Thành phần | Interface | IP Address | Subnet | Vai trò |
 |---|---|---|---|---|
-| **Web-Server** | e0 | 10.1.1.10 | /28 | Web Server — DMZ (gw 10.1.1.1) |
+| **Web-Server** | e0 | 10.1.1.10 | /28 | Ubuntu Server 18.04 — Web Server DMZ (gw 10.1.1.1) |
 | **Mail-Server** | e0 | 10.1.1.11 | /28 | Mail Server — DMZ (gw 10.1.1.1) |
 | **DHCP-Server** | e0 | 10.1.90.10 | /24 | Cấp IP động (relay từ Core SVIs) |
 | **Syslog-Server** | e0 | 10.1.90.11 | /24 | Centralized Logging |
@@ -1025,7 +1025,7 @@ graph TB
 | **90** | Server Farm | 10.1.90.0/24 | 10.1.90.1 | Static IP | DHCP/Syslog Server |
 | **99** | Management | 10.1.99.0/24 | 10.1.99.1 | Static IP | Quản lý IP các Switch/FW |
 
-> DHCP Server = DHCP-Server (10.1.90.10). Trên SVI của Core-SW1/Core-SW2 (VLAN 10/20/30/40) khai báo `ip helper-address 10.1.90.10` để relay DHCP. **Trạng thái (08/2026): DHCP-Server node 72 chưa cài role DHCP — cấp DHCP campus sẽ triển khai sau** (các VPC mặc định `ip dhcp` nên chưa nhận IP cho tới khi role DHCP hoàn tất).
+> DHCP Server = DHCP-Server (10.1.90.10). Trên SVI của Core-SW1/Core-SW2 (VLAN 10/20/30/40) khai báo `ip helper-address 10.1.90.10` để relay DHCP. **Trạng thái (01/09/2026): ĐÃ HOÀN TẤT cấu hình DHCP — role DHCP Server + đủ 4 scope VLAN10/20/30/40, mỗi scope trạng thái Active** (xác minh qua OCR VNC node 72: MMC `DHCP > IPv4` hiển thị 4 scope `[10.1.10.0]`, `[10.1.20.0]`, `[10.1.30.0]`, `[10.1.40.0]` — Active). **Lưu ý**: DHCP Discover từ VPC access hiện chưa tới được Core SVI do issue datapath SDN campus (MAC VPC không học ở Core, không có gói DHCP trên `vunl6_72_0`) — không phải lỗi cấu hình DHCP, chờ datapath campus hoạt động.
 
 #### 2.4.2. Chi nhánh — Site 200 / 300 / 400
 
