@@ -1,0 +1,9 @@
+Mở CMD:
+B1: route add 10.9.1.0 mask 255.255.255.0 10.215.28.x (X LÀ IP MÀ SERVER CẤP DHCP CHO E0/0)
+B2: ssh -L 8443:10.9.1.10:443 root@10.215.28.26 (pass là: #PKT@2026#)
+B3: mở https://localhost:8443
+
+Nếu mở không được:
+Tại root@10.215.28.26 gõ thêm 2 lênh dưới
+ip route show 10.9.1.0/24 ( Kiểm tra có route tới 10.215.28.x chưa nếu chưa thêm câu dưới)
+ip route add 10.9.1.0/24 via 10.215.28.x dev pnet0
