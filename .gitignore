@@ -1,7 +1,8 @@
 *.iso
 *.img
 
-# Agent skill/config cục bộ (chứa mật khẩu lab — không đưa lên git)
-.opencode/
+# Agent skill/config cục bộ (chỉ đẩy skills/ lên git, ẩn cấu hình nhạy cảm)
+.opencode/*
+!.opencode/skills/
 .codex/
 
