@@ -82,55 +82,34 @@ ip addr replace "$CAMPUS_MGMT_CIDR" dev br-mgmt
 
 ovs-vsctl --timeout=10 set Bridge br0 protocols=OpenFlow13
 ovs-vsctl --timeout=10 set Bridge br0 other_config:datapath-id="$CAMPUS_DPID"
+# In-band control cua OVS tu cai flow AN voi action NORMAL cho ARP khi chua ket noi
+# controller (canh bao "in_band: cannot find route for controller") => flood ARP ra moi
+# cong, bo qua flow chong vong => broadcast storm luc boot. Controller di qua
+# br-mgmt (khong qua cong local cua br0) nen tat in-band, dung flow bootstrap cua ta.
+ovs-vsctl --timeout=10 set Bridge br0 other_config:disable-in-band=true
 ovs-vsctl --timeout=10 set-controller br0 tcp:10.1.99.10:6653 tcp:10.1.99.10:6654   # 6653 = Ryu (chuyen tiep), 6654 = ONOS (GUI/giam sat)
 ovs-vsctl --timeout=10 set Bridge br0 fail_mode=secure
 ovs-vsctl --timeout=10 set Bridge br0 stp_enable=false
 
-read -r -a campus_bootstrap99_ports <<< "$CAMPUS_BOOTSTRAP99_PORTS"
-
-# Bootstrap VLAN 99 (mgmt/control) tren CAY ACYCLIC — KHONG dung NORMAL.
-# Topology lab co lai (Access dual-home 2 Dist + inter-dist ens8 + 2 Dist-Core
-# uplink + Core1/2 noi Farm) nen NORMAL chi can flood tren toan bo port mang
-# VLAN 99 la tao broadcast loop ngay khi ca 6 node OVS boot truoc khi Ryu kip
-# cai TREE-BLOCK (storm 09/2026). Thay vao do, moi node chi flood VLAN 99
-# trong tap CAMPUS_BOOTSTRAP99_PORTS = cay management (khac cay data), khop
-# voi VLAN99_TREE_BLOCK cua controller. Dung port trentrunk (vlan_mode=trunk)
-# neu muon giu 99 o cac port du phong cho failover (ens5/ens8/ens10): chung
-# van nhan mong VLAN 99 nhung flow bootstrap nay KHONG flood ra chung.
-bootstrap_ofports=()
-for campus_port in "${campus_bootstrap99_ports[@]}"; do
-    campus_ofport=$(ovs-vsctl --timeout=10 --if-exists get Interface "$campus_port" ofport)
-    if [[ ! "$campus_ofport" =~ ^[0-9]+$ ]]; then
-        echo "[campus-ovs] BOOTSTRAP99 port $campus_port khong co ofport ($campus_ofport)" >&2
-        exit 1
-    fi
-    bootstrap_ofports+=("$campus_ofport")
+# VLAN 99 (mgmt/control) tren Access: flow CO DINH (khong bi Ryu xoa), khong NORMAL.
+# - 'tag=99' cua patch-mgmt CHI ap dung cho NORMAL: frame tu br-mgmt vao OpenFlow
+#   khong co tag => match in_port, tu gan VLAN 99 khi ra uplink; strip_vlan khi vao patch.
+# - Mo CA hai uplink (ens4->Dist-SW1, ens5->Dist-SW2) de failover khong can Ryu;
+#   Access KHONG noi cau VLAN 99 giua hai uplink (moi flow chi di patch <-> uplink),
+#   va Dist-SW2 chan cong Access khi khong failover => khong tao vong.
+# - cookie 0xba5f + priority 45000: app Ryu chi xoa cookie 0xba5e va priority 50000.
+ovs-ofctl -O OpenFlow13 del-flows br0 'cookie=0xba5e/-1' 2>/dev/null || true
+ovs-ofctl -O OpenFlow13 del-flows br0 'cookie=0xba5f/-1' 2>/dev/null || true
+ovs-ofctl -O OpenFlow13 del-flows br0 'priority=50000,dl_vlan=99' 2>/dev/null || true
+campus_all_outs=""
+for campus_o in "${campus_trunk99_ports[@]}"; do
+    campus_all_outs="${campus_all_outs:+$campus_all_outs,}output:${campus_o}"
 done
-
-# Xoa NORMAL bootstrap cu (priority 50000) neu con sot tu phien truoc.
-# (Field dl_vlan=99 + priority 50000: trong ca in_port, nen non-strict del
-#  se xoa duoc ca flow per-port bootstrap cua lan chay truoc -> idempotent.)
-ovs-ofctl -O OpenFlow13 del-flows br0 'priority=50000,dl_vlan=99'
-
-# Flow bootstrap: moi port cay output den cac port cay con lai (loai in_port
-# de tranh hairpin echo -> khong the tao loop). Bao gom patch-mgmt de traffic
-# in-band tu br-mgmt den controller di dung mot uplink cua cay.
-for campus_idx in "${!bootstrap_ofports[@]}"; do
-    campus_src="${bootstrap_ofports[$campus_idx]}"
-    campus_actions=""
-    for campus_other in "${bootstrap_ofports[@]}"; do
-        if [[ "$campus_other" == "$campus_src" ]]; then
-            continue
-        fi
-        if [[ -n "$campus_actions" ]]; then
-            campus_actions+=","
-        fi
-        campus_actions+="output:$campus_other"
-    done
-    if [[ -z "$campus_actions" ]]; then
-        continue
-    fi
+ovs-ofctl -O OpenFlow13 add-flow br0 \
+    "cookie=0xba5f,priority=45000,in_port=patch-mgmt,actions=mod_vlan_vid:99,${campus_all_outs}"
+for campus_in in "${campus_trunk99_ports[@]}"; do
     ovs-ofctl -O OpenFlow13 add-flow br0 \
-        "priority=50000,dl_vlan=99,cookie=0xba5e,in_port=$campus_src,actions=$campus_actions"
+        "cookie=0xba5f,priority=45000,dl_vlan=99,in_port=${campus_in},actions=strip_vlan,output:patch-mgmt"
 done
-echo "[campus-ovs] VLAN99 bootstrap tree ${CAMPUS_NODE_NAME}: ${CAMPUS_BOOTSTRAP99_PORTS}"
+
+echo "[campus-ovs] Restored ${CAMPUS_NODE_NAME}: ${CAMPUS_MGMT_CIDR}, DPID ${CAMPUS_DPID}, persistent VLAN99 uplinks=(${CAMPUS_TRUNK99_PORTS})"

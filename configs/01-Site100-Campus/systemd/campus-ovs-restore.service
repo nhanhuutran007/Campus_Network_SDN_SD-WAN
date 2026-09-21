@@ -9,7 +9,7 @@ Type=oneshot
 ExecStartPre=/usr/bin/test -r /etc/default/campus-ovs
 ExecStart=/root/Campus-OVS-restore.sh
 RemainAfterExit=yes
-TimeoutStartSec=45
+TimeoutStartSec=90
 
 [Install]
 WantedBy=multi-user.target openvswitch-switch.service

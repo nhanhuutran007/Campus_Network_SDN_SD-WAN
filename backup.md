@@ -1,3 +1,32 @@
+# backup — bản cũ trước khi vá (20/09/2026)
+
+File này giữ **bản cũ** của `/root/Campus-OVS-restore.sh` trên 4 OVS Access, để khôi phục nếu bản vá có vấn đề. Không lưu backup trên node (đỡ tốn dung lượng).
+
+- **Node bị vá:** Access-SW1 (68), Access-SW2 (66), Access-SW3 (70), Access-SW4 (69).
+- **Vị trí trên node:** `/root/Campus-OVS-restore.sh` (service `campus-ovs-restore.service` gọi file này).
+- **Bản cũ:** md5 `53d8d515103ffd0d737cc936d5e21984` (101 dòng) — bootstrap VLAN 99 bằng `actions=NORMAL` (gây storm khi OVS restart/reboot).
+- **Bản mới (đang chạy):** md5 `8eeb6adbacefbdcd637a9423c9e9808a` (115 dòng) — flow bootstrap cố định (cookie 0xba5f), bỏ NORMAL, tắt in-band (`disable-in-band`). Bản trung gian `2096a61a…` (dùng khối cây của Dist) **không chạy đúng cho Access** nên đã thay. Bản đầy đủ: `configs/01-Site100-Campus/ovs-deployed/`.
+- **Không đụng:** `/etc/default/campus-ovs` (env) và service — đã khớp repo.
+- Dist-SW1/SW2 (5, 8) **không** bị vá (đã dùng bootstrap theo cây).
+
+## Cách khôi phục một node (ví dụ node 68)
+
+1. Lưu nội dung khối bên dưới ra file `old.sh`.
+2. Trên host EVE: dừng node → ghi đĩa → khởi động lại:
+
+```
+W=/opt/unetlab/wrappers/unl_wrapper; UNL="/opt/unetlab/labs/TranHuuNhan-PKT/Campus Network SDN SD-WAN.unl"
+$W -a stop -T 6 -F "$UNL" -D 68
+LIBGUESTFS_BACKEND=direct guestfish -a /opt/unetlab/tmp/6/<lab-uuid>/68/virtioa.qcow2 -i <<'GF'
+upload /tmp/old.sh /root/Campus-OVS-restore.sh
+chmod 0755 /root/Campus-OVS-restore.sh
+GF
+$W -a start -T 6 -F "$UNL" -D 68
+```
+
+## Nội dung bản cũ (`Campus-OVS-restore.sh` của Access)
+
+```bash
 #!/usr/bin/env bash
 # Restore idempotent OVS/OpenFlow state after boot or openvswitch restart.
 # Node-specific values are read from /etc/default/campus-ovs.
@@ -82,55 +111,21 @@ ip addr replace "$CAMPUS_MGMT_CIDR" dev br-mgmt
 
 ovs-vsctl --timeout=10 set Bridge br0 protocols=OpenFlow13
 ovs-vsctl --timeout=10 set Bridge br0 other_config:datapath-id="$CAMPUS_DPID"
-ovs-vsctl --timeout=10 set-controller br0 tcp:10.1.99.10:6653 tcp:10.1.99.10:6654   # 6653 = Ryu (chuyen tiep), 6654 = ONOS (GUI/giam sat)
+ovs-vsctl --timeout=10 set-controller br0 tcp:10.1.99.10:6653
 ovs-vsctl --timeout=10 set Bridge br0 fail_mode=secure
 ovs-vsctl --timeout=10 set Bridge br0 stp_enable=false
 
-read -r -a campus_bootstrap99_ports <<< "$CAMPUS_BOOTSTRAP99_PORTS"
+campus_vlan_flow='priority=50000,dl_vlan=99,actions=NORMAL'
+if ovs-ofctl -O OpenFlow13 dump-flows br0 | grep -q 'priority=50000.*dl_vlan=99'; then
+    ovs-ofctl -O OpenFlow13 --strict mod-flows br0 "$campus_vlan_flow"
+else
+    ovs-ofctl -O OpenFlow13 add-flow br0 "$campus_vlan_flow"
+fi
 
-# Bootstrap VLAN 99 (mgmt/control) tren CAY ACYCLIC — KHONG dung NORMAL.
-# Topology lab co lai (Access dual-home 2 Dist + inter-dist ens8 + 2 Dist-Core
-# uplink + Core1/2 noi Farm) nen NORMAL chi can flood tren toan bo port mang
-# VLAN 99 la tao broadcast loop ngay khi ca 6 node OVS boot truoc khi Ryu kip
-# cai TREE-BLOCK (storm 09/2026). Thay vao do, moi node chi flood VLAN 99
-# trong tap CAMPUS_BOOTSTRAP99_PORTS = cay management (khac cay data), khop
-# voi VLAN99_TREE_BLOCK cua controller. Dung port trentrunk (vlan_mode=trunk)
-# neu muon giu 99 o cac port du phong cho failover (ens5/ens8/ens10): chung
-# van nhan mong VLAN 99 nhung flow bootstrap nay KHONG flood ra chung.
-bootstrap_ofports=()
-for campus_port in "${campus_bootstrap99_ports[@]}"; do
-    campus_ofport=$(ovs-vsctl --timeout=10 --if-exists get Interface "$campus_port" ofport)
-    if [[ ! "$campus_ofport" =~ ^[0-9]+$ ]]; then
-        echo "[campus-ovs] BOOTSTRAP99 port $campus_port khong co ofport ($campus_ofport)" >&2
-        exit 1
-    fi
-    bootstrap_ofports+=("$campus_ofport")
-done
+# Bootstrap only a loop-free VLAN 99 tree.  NORMAL cannot be used here:
+# all six OVS nodes start before Ryu can install TREE-BLOCK rules, so NORMAL
+# briefly recreates the dual-home/full-mesh loop and datapaths flap before
+# the controller can take ownership.
+echo "[campus-ovs] Restored ${CAMPUS_NODE_NAME}: ${CAMPUS_MGMT_CIDR}, DPID ${CAMPUS_DPID}"
 
-# Xoa NORMAL bootstrap cu (priority 50000) neu con sot tu phien truoc.
-# (Field dl_vlan=99 + priority 50000: trong ca in_port, nen non-strict del
-#  se xoa duoc ca flow per-port bootstrap cua lan chay truoc -> idempotent.)
-ovs-ofctl -O OpenFlow13 del-flows br0 'priority=50000,dl_vlan=99'
-
-# Flow bootstrap: moi port cay output den cac port cay con lai (loai in_port
-# de tranh hairpin echo -> khong the tao loop). Bao gom patch-mgmt de traffic
-# in-band tu br-mgmt den controller di dung mot uplink cua cay.
-for campus_idx in "${!bootstrap_ofports[@]}"; do
-    campus_src="${bootstrap_ofports[$campus_idx]}"
-    campus_actions=""
-    for campus_other in "${bootstrap_ofports[@]}"; do
-        if [[ "$campus_other" == "$campus_src" ]]; then
-            continue
-        fi
-        if [[ -n "$campus_actions" ]]; then
-            campus_actions+=","
-        fi
-        campus_actions+="output:$campus_other"
-    done
-    if [[ -z "$campus_actions" ]]; then
-        continue
-    fi
-    ovs-ofctl -O OpenFlow13 add-flow br0 \
-        "priority=50000,dl_vlan=99,cookie=0xba5e,in_port=$campus_src,actions=$campus_actions"
-done
-echo "[campus-ovs] VLAN99 bootstrap tree ${CAMPUS_NODE_NAME}: ${CAMPUS_BOOTSTRAP99_PORTS}"
+```

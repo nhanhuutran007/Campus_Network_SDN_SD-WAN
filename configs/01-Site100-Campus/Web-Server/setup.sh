@@ -47,7 +47,13 @@ EOF
 chmod 0600 "${NETPLAN_FILE}"
 
 netplan generate
-netplan apply
+
+if ip -4 -o address show dev "${INTERFACE}" | grep -Fq "${IPV4_CIDR}" \
+    && ip -4 route show default | grep -Eq "^default via ${GATEWAY} dev ${INTERFACE}([[:space:]]|$)"; then
+  echo "Network settings are already active; skipping netplan apply."
+else
+  netplan apply
+fi
 
 for _ in {1..15}; do
   if ip -4 -o address show dev "${INTERFACE}" | grep -Fq "${IPV4_CIDR}"; then
@@ -124,7 +130,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 -m http.server 80 --bind 0.0.0.0 --directory ${WEB_ROOT}
+WorkingDirectory=${WEB_ROOT}
+ExecStart=/usr/bin/python3 -m http.server 80 --bind 0.0.0.0
 Restart=on-failure
 User=root
 Group=root
