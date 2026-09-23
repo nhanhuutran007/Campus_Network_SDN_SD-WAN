@@ -72,3 +72,11 @@
 ## Cách cập nhật snapshot
 
 Ghi: ngày, việc đã làm + **bằng chứng** (lệnh + kết quả), việc chưa làm, blocker, file liên quan. Không ghi mật khẩu, không ghi md5/serial nếu có thể tính lại từ file. Xoá mục đã lỗi thời thay vì để chồng chéo (skill cũ lặp 3 lần một bảng md5 mâu thuẫn nhau — đừng lặp lại).
+
+## Kiểm tra SD-WAN liên site 23/09/2026 (live, chỉ đọc)
+
+- **Overlay chưa mang dữ liệu người dùng:** không vEdge nào có service VPN (`vpn 1` không tồn tại); cổng LAN về FW nằm trong `vpn 512`; vSmart `show omp peers` R/I/S = `0/0/0` với mọi vEdge; `show omp routes` rỗng. ⇒ VPC các site không thể thông nhau qua SD-WAN.
+- **vSmart** chạy CLI mode (`vManaged: false`), `show running-config policy`/`apply-policy` rỗng ⇒ chưa có SLA class/AAR/data policy; có thể cấu hình policy trực tiếp bằng CLI trên vSmart.
+- **Control plane OK:** 6 vEdge đang chạy (28, 6, 29, 42, 30, 40) đều lên vBond/vManage/vSmart; BFD mpls↔mpls, mpls↔biz, biz↔biz Up; `biz-internet → mpls` Down (SP Internet không có route tới `100.64.x`) — bình thường.
+- **Khắc phục 23/09 (~19:00, live, đã commit):** (1) vEdge 6 `ge0/3` shutdown→no shutdown (gõ trong submode) ⇒ NIC hết treo RX, BGP MPLS established, TLOC mpls lên vBond/vSmart. (2) BFD chéo color của Site 100 down vì mỗi TLOC chỉ có route tới transport bên kia qua 1 cổng ⇒ thêm default route mỗi transport trong `vpn 0`: vEdge 28 `0.0.0.0/0 100.64.100.2` + `203.0.113.2`; vEdge 6 `203.0.113.6` + `100.64.100.6`. Kết quả **BFD 56/56 up** (28, 6: 12/12; chi nhánh 8/8). (3) vSmart áp SLA_REALTIME/SLA_BUSINESS + `AAR_LAN` (site 100–400) + `DP_BRANCH` from-service (BRANCHES) — xem `configs/05-*/vSmart-34/policy-sla-aar-data.cfg`; vEdge nhận `show policy from-vsmart` đúng, counter `ICMP_BRANCH` tăng; app-route stats S200→S300 mpls: loss 0, latency 37 ms, jitter 6. (4) `bfd app-route poll-interval 120000` trên 8 vEdge. Ping VPC S200/S300/S400 chéo 10/10. `configs/` 8 vEdge + vSmart đã đồng bộ. Chưa kiểm được: Telnet→Server Farm bị drop và AAR tới Farm (Site 100 đang tắt); config nhúng `.unl` vEdge chưa embed.
+- **Còn theo dõi:** đợt rớt đồng loạt 20:20–02:24 UTC 22–23/09 (chưa rõ nguyên nhân, đã tự hết) — kiểm `show control connections-history` các vEdge lần sau; nếu lặp lại khi Site 100 bật ⇒ nghi storm Site 100 (tap Core/FW tx_dropped rất lớn).
