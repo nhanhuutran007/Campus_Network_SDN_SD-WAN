@@ -42,7 +42,7 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | VPC15 | 15 | vpcs |
 | VPC16 | 16 | vpcs |
 | VPC17 | 17 | vpcs |
-| VPC18 | 18 | vpcs |
+| PC-HanhChinh-S100 (cũ VPC18) | 18 | linux (Ubuntu 18.04 GNOME, config="0") |
 | VPC19 | 19 | vpcs |
 | VPC20 | 20 | vpcs |
 | VPC21 | 21 | vpcs |
@@ -67,7 +67,8 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | vEdge2-S300 | 40 | vtedge |
 | vEdge2-S400 | 41 | vtedge |
 | vEdge2-S200 | 42 | vtedge |
-| VPC43–VPC54 | 43,44,45,46,47,48,49,50,51,52,53,54 | vpcs |
+| VPC43–VPC54 | 43,44,45,46,48,49,50,51,54 | vpcs |
+| PC-YTe-S200 / PC-LuHanh-S400 / PC-TaiChinh-S300 (cũ VPC47/52/53) | 47, 52, 53 | linux (Ubuntu 18.04 GNOME, config="0") |
 | SW55, SW56, SW57, SW58, SW59, SW60 | 55,56,57,58,59,60 | iol |
 | Switch61 | 61 | iol |
 | SwitchBrand-S300 | 62 | iol |
@@ -110,7 +111,7 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | iol (Core-SW1/2, SW55–61, SwitchBrand, SwitchDMZ, SwitchServerFarm) | `config.cfg` | ✅ (cần `config="1"`) |
 | viosl2 / vios (Internet, MPLS — dự phòng) | `config.cfg` | ✅ (cần `config="1"`) |
 | asav (FW-ASAv, Brand-FW) | `config.cfg` | ✅ (cần `config="1"`) |
-| vpcs (VPC14–54) | `config.txt` | ✅ |
+| vpcs (VPC14–54, trừ 18/47/52/53 đã đổi sang PC Linux) | `config.txt` | ✅ |
 | vtedge (vEdge1/2, vEdge65) | `config.cfg` | ⚠️ dán tay qua console an toàn nhất |
 | linux (SDN_CONTROLLER, Access/Dist-SW) | `.sh` | ❌ chạy script thủ công trong VM |
 | linux (Web-Server) | — | ❌ cấu hình IP và Web service thủ công trong VM |
