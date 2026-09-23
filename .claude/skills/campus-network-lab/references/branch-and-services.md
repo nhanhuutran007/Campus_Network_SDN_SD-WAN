@@ -14,9 +14,9 @@ Mỗi site: 1 **Brand-FW** (ASAv; gateway `.1` + `dhcpd` theo VLAN qua sub-inter
 
 | Site | Brand-FW | SwitchBrand | SW (IP mgmt VLAN 99) | VLAN / VPC |
 |---|---:|---:|---|---|
-| 200 Cần Thơ | 37 | 63 (SVI `10.2.99.2`) | SW55 `.11`, SW56 `.12` | v60: VPC43,44 (SW55) · v70: VPC46,47 (SW56) |
-| 300 Đà Nẵng | 39 | 62 (SVI `10.3.99.2`) | SW58 `.11`, SW59 `.12` | v80: VPC50,54 (SW58) · v90: VPC53,48 (SW59) |
-| 400 Nha Trang | 38 | 64 (SVI `10.4.99.2`) | SW60 `.11`, SW57 `.12` | v50: VPC51,45 (SW60) · v60: VPC49,52 (SW57) |
+| 200 Cần Thơ | 37 | 63 (SVI `10.2.99.2`) | SW55 `.11`, SW56 `.12` | v60: VPC43,44 (SW55) · v70: VPC46, PC-YTe 47 (SW56) |
+| 300 Đà Nẵng | 39 | 62 (SVI `10.3.99.2`) | SW58 `.11`, SW59 `.12` | v80: VPC50,54 (SW58) · v90: PC-TaiChinh 53, VPC48 (SW59) |
+| 400 Nha Trang | 38 | 64 (SVI `10.4.99.2`) | SW60 `.11`, SW57 `.12` | v50: VPC51,45 (SW60) · v60: VPC49, PC-LuHanh 52 (SW57) |
 
 Cổng chính xác của từng site khác nhau (S400: e0/0→FW; S200: e0/2→FW; …) — **lấy từ `config.cfg` và bảng 2.2.x, không hard-code**. SW phòng ban: `e0/0` trunk (vlanX + 99) lên SwitchBrand, `e0/1`,`e0/2` access vlanX cho 2 VPC.
 

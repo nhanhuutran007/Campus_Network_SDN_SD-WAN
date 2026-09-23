@@ -34,8 +34,8 @@ Chỉ đọc file cần cho tác vụ. Mỗi file có mục lục ở đầu.
 ## Công cụ cục bộ
 
 `python .claude/skills/campus-network-lab/scripts/unl_tool.py <lệnh>` (chỉ đọc/ghi file local, không chạm EVE):
-- `validate` — **chạy sau mọi thay đổi `.unl`**: XML, ID trùng, network treo, đúng 51 `config="1"`, config nhúng hợp lệ.
-- `drift` — config nhúng vs `configs/` (hiện lệch 12/51).
+- `validate` — **chạy sau mọi thay đổi `.unl`**: XML, ID trùng, network treo, đúng 47 `config="1"`, config nhúng hợp lệ.
+- `drift` — config nhúng vs `configs/` (lệch 12 node chi nhánh, xem project-status).
 - `nodes` — bảng node/image/port console; `dump <id>`; `embed <id> <file> [--write]` (thay khối ở mức byte, mặc định dry-run).
 
 ## Bất biến cốt lõi (phải giữ)
@@ -43,7 +43,7 @@ Chỉ đọc file cần cho tác vụ. Mỗi file có mục lục ở đầu.
 - **IP**: octet 2 = site (1/2/3/4/9); VLAN `/24`, gateway `.1`, server `.10/.11`, **DHCP pool `.100–.199`**; System-IP OMP `10.200.<site>.x` (300→`30`, 400→`40`, 900→`90`); Internet `203.0.113.0/24`, MPLS `100.64.x.x/30`.
 - **Control plane SDN** = VLAN 99 (`10.1.99.0/24`, controller `10.1.99.10:6653`); không có mạng điều khiển riêng; không khôi phục `10.1.100/101.0/24`, `192.168.100.0/24`.
 - **Node dễ nhầm**: Access-SW1 **68**, Access-SW2 **66**, Access-SW3 **70**, Access-SW4 **69**; vEdge2 S200/S300/S400 = **42/40/41**; Brand-FW S200/S300/S400 = **37/39/38**; DHCP-Server **72**. Tên node trong `.unl` trùng nhau → dùng **id**. Bảng đầy đủ ở `topology-and-conventions.md`.
-- `.unl` giữ đúng **51** node `config="1"` (=51 config nhúng); `config="0"` cho Windows, vtmgmt/vtsmart/vtbond, Linux/OVS. Không tạo `.unl.bak`. Sửa `.unl` **ở mức byte**.
+- `.unl` giữ đúng **47** node `config="1"` (=47 config nhúng; 23/09/2026 VPC 18/47/52/53 thành PC Linux); `config="0"` cho Windows, vtmgmt/vtsmart/vtbond, Linux/OVS. Không tạo `.unl.bak`. Sửa `.unl` **ở mức byte**.
 - Ryu/OVS: giữ `tag=/trunks=`, `OpenFlow13`, `fail_mode=secure`, `stp_enable=false`, OF1.3 dùng `vlan_vid` (không `dl_vlan`).
 - Chi nhánh = Firewall-as-Core; Core-SW1/2 = IOL (`vtp mode off` + `trunk encapsulation dot1q` trước `mode trunk`); underlay = BGP; DHCP-Server node 72 (Win Server 2012 R2).
 - **Không lặp lại** thứ đã xoá/từ chối: AccessTest 10, VPC11/12, node 23, OSPF underlay, SwitchBrand làm router.
@@ -79,4 +79,4 @@ Vật lý/link → L2 (VLAN, trunk, STP/loop) → L3 (gateway, route, BGP) → d
 
 ## Bảo trì skill
 
-Giữ SKILL.md ngắn; kiến thức chi tiết vào `references/`. Khi phát hiện sự thật mới hoặc điều đã sai: sửa **tại chỗ** trong file chủ đề (không thêm mục nhật ký chồng chéo). Bảng node-id và invariant 51 node là chỗ dễ lệch nhất — đối chiếu bằng `unl_tool.py nodes`/`validate`.
+Giữ SKILL.md ngắn; kiến thức chi tiết vào `references/`. Khi phát hiện sự thật mới hoặc điều đã sai: sửa **tại chỗ** trong file chủ đề (không thêm mục nhật ký chồng chéo). Bảng node-id và invariant 47 node là chỗ dễ lệch nhất — đối chiếu bằng `unl_tool.py nodes`/`validate`.

@@ -31,12 +31,13 @@ if hasattr(sys.stdout, "reconfigure"):  # Windows cp1252 sẽ lỗi với tiến
 UNL_NAME = "Campus Network SDN SD-WAN.unl"
 TENANT = 6  # tenant của host EVE 1; console = 32768 + 128*tenant + node-id
 
-# Invariant đã chốt: đúng 51 node dùng config nhúng (config="1").
+# Invariant đã chốt: đúng 47 node dùng config nhúng (config="1").
+# 23/09/2026: VPC 18, 47, 52, 53 đổi thành PC Linux (config="0") để test Web/Mail.
 # Khi cố ý đổi (thêm/bớt node có config nhúng) phải sửa hằng số này VÀ SKILL.md.
 EXPECTED_CONFIG_NODE_IDS = {
-    1, 2, 3, 4, 6, 7, 14, 15, 16, 17, 18, 19, 20, 21, 24, 26, 27, 28,
-    29, 30, 31, 32, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
-    50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65,
+    1, 2, 3, 4, 6, 7, 14, 15, 16, 17, 19, 20, 21, 24, 26, 27, 28,
+    29, 30, 31, 32, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 48, 49,
+    50, 51, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65,
 }
 
 S100, S200, S300 = "01-Site100-Campus", "02-Site200-CanTho", "03-Site300-DaNang"
@@ -72,11 +73,11 @@ def _build_config_map() -> dict[int, str]:
         64: f"{S400}/SwitchBrand/config.cfg",
         65: f"{S900}/vEdge65/config.cfg",
     }
-    for i in range(14, 22):
+    for i in (14, 15, 16, 17, 19, 20, 21):
         m[i] = f"{S100}/VPC{i}/config.txt"
-    for i, site in [(43, S200), (44, S200), (46, S200), (47, S200),
-                    (48, S300), (50, S300), (53, S300), (54, S300),
-                    (45, S400), (49, S400), (51, S400), (52, S400)]:
+    for i, site in [(43, S200), (44, S200), (46, S200),
+                    (48, S300), (50, S300), (54, S300),
+                    (45, S400), (49, S400), (51, S400)]:
         m[i] = f"{site}/VPC{i}/config.txt"
     for i, site in [(55, S200), (56, S200), (58, S300), (59, S300), (57, S400), (60, S400)]:
         m[i] = f"{site}/SW{i}/config.cfg"
@@ -151,7 +152,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     if embedded - flagged:
         errors.append(f'Có config nhúng nhưng node không bật config="1": {sorted(embedded - flagged)}')
     if flagged != EXPECTED_CONFIG_NODE_IDS:
-        errors.append("Tập config=\"1\" lệch invariant 51 node — thiếu: "
+        errors.append("Tập config=\"1\" lệch invariant 47 node — thiếu: "
                       f"{sorted(EXPECTED_CONFIG_NODE_IDS - flagged)}, thừa: "
                       f"{sorted(flagged - EXPECTED_CONFIG_NODE_IDS)}")
     for nid, b64 in blocks.items():
@@ -168,7 +169,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     print(f"File: {path}")
     print(f"  node={len(nodes)} (chuẩn 67)  network={len(networks)} (chuẩn 100)  "
-          f'config="1"={len(flagged)} (chuẩn 51)  config nhúng={len(embedded)}')
+          f'config="1"={len(flagged)} (chuẩn 47)  config nhúng={len(embedded)}')
     for w in warnings:
         print(f"CẢNH BÁO: {w}")
     for e in errors:

@@ -125,8 +125,8 @@
       <node id="17" name="VPC17" type="vpcs" template="vpcs" image="" ethernet="1" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="1" left="1509" top="1944">
         <interface id="0" name="eth0" type="ethernet" network_id="39"/>
       </node>
-      <node id="18" name="VPC18" type="vpcs" template="vpcs" image="" ethernet="1" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="1" left="1596" top="1944">
-        <interface id="0" name="eth0" type="ethernet" network_id="40"/>
+      <node id="18" name="PC-HanhChinh-S100" type="qemu" template="linux" image="linux-ubuntu-18.04-server" console="vnc" cpu="2" cpulimit="0" ram="3072" ethernet="1" firstmac="00:06:00:00:18:00" qemu_options="-machine type=pc,accel=kvm -vga std -usbdevice tablet -boot order=cd -cpu host" qemu_version="2.12.0" qemu_arch="x86_64" qemu_nic="virtio-net-pci" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="0" left="1596" top="1944">
+        <interface id="0" name="e0" type="ethernet" network_id="40"/>
       </node>
       <node id="19" name="VPC19" type="vpcs" template="vpcs" image="" ethernet="1" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="1" left="747" top="1953">
         <interface id="0" name="eth0" type="ethernet" network_id="33"/>
@@ -164,8 +164,8 @@
       <node id="46" name="VPC" type="vpcs" template="vpcs" image="" ethernet="1" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="1" left="534" top="594">
         <interface id="0" name="eth0" type="ethernet" network_id="60"/>
       </node>
-      <node id="47" name="VPC" type="vpcs" template="vpcs" image="" ethernet="1" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="1" left="672" top="597">
-        <interface id="0" name="eth0" type="ethernet" network_id="61"/>
+      <node id="47" name="PC-YTe-S200" type="qemu" template="linux" image="linux-ubuntu-18.04-server" console="vnc" cpu="2" cpulimit="0" ram="3072" ethernet="1" firstmac="00:06:00:00:47:00" qemu_options="-machine type=pc,accel=kvm -vga std -usbdevice tablet -boot order=cd -cpu host" qemu_version="2.12.0" qemu_arch="x86_64" qemu_nic="virtio-net-pci" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="0" left="672" top="597">
+        <interface id="0" name="e0" type="ethernet" network_id="61"/>
       </node>
       <node id="48" name="VPC" type="vpcs" template="vpcs" image="" ethernet="1" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="1" left="2562" top="420">
         <interface id="0" name="eth0" type="ethernet" network_id="82"/>
@@ -179,11 +179,11 @@
       <node id="51" name="VPC" type="vpcs" template="vpcs" image="" ethernet="1" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="1" left="2022" top="1101">
         <interface id="0" name="eth0" type="ethernet" network_id="88"/>
       </node>
-      <node id="52" name="VPC" type="vpcs" template="vpcs" image="" ethernet="1" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="1" left="2385" top="1095">
-        <interface id="0" name="eth0" type="ethernet" network_id="91"/>
+      <node id="52" name="PC-LuHanh-S400" type="qemu" template="linux" image="linux-ubuntu-18.04-server" console="vnc" cpu="2" cpulimit="0" ram="3072" ethernet="1" firstmac="00:06:00:00:52:00" qemu_options="-machine type=pc,accel=kvm -vga std -usbdevice tablet -boot order=cd -cpu host" qemu_version="2.12.0" qemu_arch="x86_64" qemu_nic="virtio-net-pci" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="0" left="2385" top="1095">
+        <interface id="0" name="e0" type="ethernet" network_id="91"/>
       </node>
-      <node id="53" name="VPC" type="vpcs" template="vpcs" image="" ethernet="1" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="1" left="2436" top="420">
-        <interface id="0" name="eth0" type="ethernet" network_id="81"/>
+      <node id="53" name="PC-TaiChinh-S300" type="qemu" template="linux" image="linux-ubuntu-18.04-server" console="vnc" cpu="2" cpulimit="0" ram="3072" ethernet="1" firstmac="00:06:00:00:53:00" qemu_options="-machine type=pc,accel=kvm -vga std -usbdevice tablet -boot order=cd -cpu host" qemu_version="2.12.0" qemu_arch="x86_64" qemu_nic="virtio-net-pci" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="0" left="2436" top="420">
+        <interface id="0" name="e0" type="ethernet" network_id="81"/>
       </node>
       <node id="54" name="VPC" type="vpcs" template="vpcs" image="" ethernet="1" delay="0" icon="PC-2D-Desktop-Generic-S.svg" config="1" left="2328" top="420">
         <interface id="0" name="eth0" type="ethernet" network_id="80"/>
@@ -827,7 +827,6 @@
       <config id="15">aXAgZGhjcAo=</config>
       <config id="16">aXAgZGhjcAo=</config>
       <config id="17">aXAgZGhjcAo=</config>
-      <config id="18">aXAgZGhjcAo=</config>
       <config id="19">aXAgZGhjcAo=</config>
       <config id="20">aXAgZGhjcAo=</config>
       <config id="21">aXAgZGhjcAo=</config>
@@ -838,13 +837,10 @@
       <config id="44">aXAgZGhjcAo=</config>
       <config id="45">aXAgZGhjcAo=</config>
       <config id="46">aXAgZGhjcAo=</config>
-      <config id="47">aXAgZGhjcAo=</config>
       <config id="48">aXAgZGhjcAo=</config>
       <config id="49">aXAgZGhjcAo=</config>
       <config id="50">aXAgZGhjcAo=</config>
       <config id="51">aXAgZGhjcAo=</config>
-      <config id="52">aXAgZGhjcAo=</config>
-      <config id="53">aXAgZGhjcAo=</config>
       <config id="54">aXAgZGhjcAo=</config>
       <config id="55">IQpob3N0bmFtZSBTVzU1CiEKdmxhbiA2MAogbmFtZSBOT05HLU5HSElFUAohCnZsYW4gOTkKIG5hbWUgTUFOQUdFTUVOVAohCmludGVyZmFjZSBFdGhlcm5ldDAvMAogZGVzY3JpcHRpb24gVG8gU3dpdGNoQnJhbmQtUzIwMCBlMC8wCiBzd2l0Y2hwb3J0IHRydW5rIGFsbG93ZWQgdmxhbiA2MCw5OQogc3dpdGNocG9ydCBtb2RlIHRydW5rCiEKaW50ZXJmYWNlIEV0aGVybmV0MC8xCiBkZXNjcmlwdGlvbiBUbyBWUEM0MyAoUEMgTk4tMSAtIDEwLjIuNjAuMTApCiBzd2l0Y2hwb3J0IGFjY2VzcyB2bGFuIDYwCiBzd2l0Y2hwb3J0IG1vZGUgYWNjZXNzCiEKaW50ZXJmYWNlIEV0aGVybmV0MC8yCiBkZXNjcmlwdGlvbiBUbyBWUEM0NCAoUEMgTk4tMiAtIDEwLjIuNjAuMTEpCiBzd2l0Y2hwb3J0IGFjY2VzcyB2bGFuIDYwCiBzd2l0Y2hwb3J0IG1vZGUgYWNjZXNzCiEKaW50ZXJmYWNlIFZsYW45OQogaXAgYWRkcmVzcyAxMC4yLjk5LjExIDI1NS4yNTUuMjU1LjAKIQplbmQK</config>
       <config id="56">IQpob3N0bmFtZSBTVzU2CiEKdmxhbiA3MAogbmFtZSBZLVRFCiEKdmxhbiA5OQogbmFtZSBNQU5BR0VNRU5UCiEKaW50ZXJmYWNlIEV0aGVybmV0MC8wCiBkZXNjcmlwdGlvbiBUbyBTd2l0Y2hCcmFuZC1TMjAwIGUwLzEKIHN3aXRjaHBvcnQgdHJ1bmsgYWxsb3dlZCB2bGFuIDcwLDk5CiBzd2l0Y2hwb3J0IG1vZGUgdHJ1bmsKIQppbnRlcmZhY2UgRXRoZXJuZXQwLzEKIGRlc2NyaXB0aW9uIFRvIFZQQzQ2IChQQyBZVC0xIC0gMTAuMi43MC4xMCkKIHN3aXRjaHBvcnQgYWNjZXNzIHZsYW4gNzAKIHN3aXRjaHBvcnQgbW9kZSBhY2Nlc3MKIQppbnRlcmZhY2UgRXRoZXJuZXQwLzIKIGRlc2NyaXB0aW9uIFRvIFZQQzQ3IChQQyBZVC0yIC0gMTAuMi43MC4xMSkKIHN3aXRjaHBvcnQgYWNjZXNzIHZsYW4gNzAKIHN3aXRjaHBvcnQgbW9kZSBhY2Nlc3MKIQppbnRlcmZhY2UgVmxhbjk5CiBpcCBhZGRyZXNzIDEwLjIuOTkuMTIgMjU1LjI1NS4yNTUuMAohCmVuZAo=</config>
