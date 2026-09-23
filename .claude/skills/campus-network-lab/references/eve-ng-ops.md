@@ -71,7 +71,7 @@ Wrapper trả 0 nhưng node không chạy: nguyên nhân thường là `.lock` 0
 ## Host 2 dự phòng (EVE 6.7.5, USB boot trong VMware)
 
 - IP đổi theo mạng nơi đặt laptop (đã thấy 192.168.2.18 → 10.0.239.137 → 10.0.227.112): không kết nối được ≠ host chết, hỏi IP mới.
-- Host 1 không với tới host 2 trực tiếp → đồng bộ qua PC trung gian (SFTP get từ host 1 → put lên host 2): tải `.unl` + thư mục node config → kiểm tra bản local (67 node / 51 `config="1"` / 51 config nhúng / 100 network) → upload → `chown -R root:root`, dir 755, file 644 → kiểm tra lại trên host 2 → **xoá thư mục tạm trên PC**.
+- Host 1 không với tới host 2 trực tiếp → đồng bộ qua PC trung gian (SFTP get từ host 1 → put lên host 2): tải `.unl` + thư mục node config → kiểm tra bản local (67 node / 47 `config="1"` / 47 config nhúng / 100 network) → upload → `chown -R root:root`, dir 755, file 644 → kiểm tra lại trên host 2 → **xoá thư mục tạm trên PC**.
 - Khi start CLI trên host 2 dùng `-T 0` (GUI 6.7.5 quản lý ở tenant 0). Dùng `-T 6` sẽ tạo qemu song song và xung đột port.
 - Image của host 2 đã đủ (asav, vios, viosl2, IOL + iourc, vtedge/vtmgmt/vtsmart/vtbond 20.10.1, win7, `linux-ubuntu-ovs-16p`, `winserver-S2012-R2-x64`…).
 

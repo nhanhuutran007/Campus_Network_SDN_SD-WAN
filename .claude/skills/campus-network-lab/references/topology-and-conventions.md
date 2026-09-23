@@ -1,6 +1,6 @@
 # Kiến trúc, quy ước và node-id
 
-Nguồn đã đối chiếu ngày 2026-09-20: `Campus Network SDN SD-WAN.unl` (67 node, 100 network, 51 config nhúng), `configs/README.md`, `campus_network_sdn_sdwan.md`. Khi nghi ngờ, chạy `python .claude/skills/campus-network-lab/scripts/unl_tool.py nodes`.
+Nguồn đã đối chiếu ngày 2026-09-20: `Campus Network SDN SD-WAN.unl` (67 node, 100 network, 47 config nhúng — cập nhật 23/09/2026), `configs/README.md`, `campus_network_sdn_sdwan.md`. Khi nghi ngờ, chạy `python .claude/skills/campus-network-lab/scripts/unl_tool.py nodes`.
 
 ## Mục lục
 - Kiến trúc tổng thể
@@ -44,7 +44,7 @@ Không tin bảng node-id/trạng thái trong ghi chú cũ (`.opencode`, `.codex
 - P2P `/30`: phía gần WAN (FW/vEdge) = `.1`. Loopback OSPF `10.<site>.0.x/32`.
 - System-IP OMP: `10.200.<site>.x`, riêng site 300/400/900 rút octet thành `30/40/90` (octet >255 vô hiệu). System-IP không phải gateway.
 - WAN: Internet `203.0.113.0/24` (Internet G0/0 nối pnet0 = **DHCP, cấm IP tĩnh**); MPLS `100.64.x.x/30` (S100 `.100.0/.100.4`, S200 `.200.0`, S300 `.30.0`, S400 `.40.0`, backbone `.254.0/30`).
-- **Campus chính VLAN**: 10 Khoa CNTT (VPC14, 19), 20 Toán-TK (VPC20, 21), 30 Luật (VPC15, 16), 40 Hành chính (VPC17, 18), 90 Server Farm, 99 Management.
+- **Campus chính VLAN**: 10 Khoa CNTT (VPC14, 19), 20 Toán-TK (VPC20, 21), 30 Luật (VPC15, 16), 40 Hành chính (VPC17, PC-HanhChinh-S100 node 18), 90 Server Farm, 99 Management.
 - **VLAN 99 (10.1.99.0/24)**: `.1/.2` Core (SVI), `.10` SDN_CONTROLLER, `.11/.12` Dist-SW1/2, `.21–.24` Access-SW1–4, `.31` DMZ, `.32` Farm, `.33/.34` FW-Active/Standby (ASDM), `.50` PC-Management.
 - Server Farm `10.1.90.0/24`: DHCP-Server `.10`, Syslog `.11`. Core SVI có `ip helper-address 10.1.90.10`.
 - Chi nhánh: S200 v60 Nông nghiệp + v70 Y tế; S300 v80 Du lịch + v90 Tài chính; S400 v50 Thủy sản + v60 Lữ hành; mỗi site thêm v99.
@@ -70,7 +70,8 @@ Không tin bảng node-id/trạng thái trong ghi chú cũ (`.opencode`, `.codex
 | Brand-FW | S200 **37**, S400 **38**, S300 **39** |
 | SwitchBrand | S300 62, S200 63, S400 64 |
 | SW phòng ban | S200: 55, 56; S300: 58, 59; S400: 57, 60 |
-| VPC | Site100: 14–21; S200: 43, 44, 46, 47; S300: 48, 50, 53, 54; S400: 45, 49, 51, 52 |
+| VPC | Site100: 14–17, 19–21; S200: 43, 44, 46; S300: 48, 50, 54; S400: 45, 49, 51 |
+| PC Linux (Ubuntu 18.04 GNOME, Firefox/Thunderbird, DHCP, VNC `eve`) | S100 v40: **18** PC-HanhChinh · S200 v70: **47** PC-YTe · S300 v90: **53** PC-TaiChinh · S400 v60: **52** PC-LuHanh; `firstmac` 00:06:00:00:<id>:00 |
 
 Tên node trong `.unl` trùng nhau (nhiều `vEdge1`, `SW`, `VPC`) — luôn phân biệt bằng **id**. Node 10, 11, 12, 23 đã xoá vĩnh viễn.
 
@@ -86,7 +87,7 @@ DPID OVS = node-id dạng hex 16 chữ số: Dist-SW1 `…05`, Dist-SW2 `…08`,
 6. **FW HA** chạy: Active = Primary, Standby = Secondary, config tự replicate; chỉ FW-Active chạy OSPF với Core. ASDM qua Management0/0 trong VLAN 99 (`.33/.34`), cần `crypto key generate rsa modulus 2048` ở config-mode **trên từng unit**, và JRE 8 32-bit trên PC Win7.
 7. **Underlay SP = BGP** (quyết định 15/08/2026, "thực tế & chuyên nghiệp"). `default-originate` phải đặt **trong address-family** (IOS).
 8. **Ryu quản lý toàn bộ L2 campus**: giữ `tag=/trunks=` của OVS, `protocols=OpenFlow13`, `fail_mode=secure`, `stp_enable=false` (STP của OVS chặn frame trước pipeline), controller `tcp:10.1.99.10:6653`.
-9. `config="1"` đúng **51 node** (danh sách trong `unl_tool.py`); Windows/vtmgmt/vtsmart/vtbond/Linux-OVS giữ `config="0"` (cấu hình tay). Không tái tạo `.unl.bak`.
+9. `config="1"` đúng **47 node** (danh sách trong `unl_tool.py`); Windows/vtmgmt/vtsmart/vtbond/Linux-OVS giữ `config="0"` (cấu hình tay). Không tái tạo `.unl.bak`.
 10. Nhãn IP thiết bị mạng trên canvas giữ nguyên; nhãn IP tĩnh của VPC đã xoá — không khôi phục.
 
 ## Image IOL: đừng đoán theo tên

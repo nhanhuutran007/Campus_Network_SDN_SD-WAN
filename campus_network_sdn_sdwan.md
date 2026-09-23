@@ -56,7 +56,7 @@ subgraph SITE100["CAMPUS CHINH - SITE ID 100 - AS 65000"]
     S1_VPC15["VPC15"]
     S1_VPC16["VPC16"]
     S1_VPC17["VPC17"]
-    S1_VPC18["VPC18"]
+    S1_VPC18["PC-HanhChinh (Linux)"]
 end
 
 %% ================== SITE 200 - CAMPUS CAN THO ==================
@@ -357,7 +357,7 @@ graph TB
             PC_V15["VPC15 (VLAN 30)"]
             PC_V16["VPC16 (VLAN 30)"]
             PC_V17["VPC17 (VLAN 40)"]
-            PC_V18["VPC18 (VLAN 40)"]
+            PC_V18["PC-HanhChinh Linux (VLAN 40)"]
         end
 
         VEDGE1["vEdge1<br/>System-IP: 10.200.100.1"]
@@ -619,7 +619,7 @@ graph TB
 | 10.1.10.0/24 | 10 | Khoa CNTT | VPC14, VPC19 |
 | 10.1.20.0/24 | 20 | Khoa Toán-TK | VPC20, VPC21 |
 | 10.1.30.0/24 | 30 | Khoa Luật | VPC15, VPC16 |
-| 10.1.40.0/24 | 40 | Phòng Hành chính | VPC17, VPC18 |
+| 10.1.40.0/24 | 40 | Phòng Hành chính | VPC17, PC-HanhChinh-S100 (Linux) |
 | 10.1.90.0/24 | 90 | Server Farm | DHCP + Syslog Server |
 | 10.1.99.0/24 | 99 | Management | IP quản lý switch/FW — switch .1/.2 (Core), .10 (SDN controller), .11/.12 (Dist), .21–.24 (Access), .31 (DMZ), .32 (Farm), **.33/.34 (FW ASDM, failover mgmt)**, **.50 (PC-Management)** |
 | 10.1.1.0/28 | — | DMZ | Web, Mail |
@@ -741,7 +741,7 @@ graph TB
 | 35 | Access-SW3 — e3 = — | VPC15 (PC Luật-1) — eth0 = DHCP (10.1.30.100–.199) | VLAN 30 | gw 10.1.30.1 |
 | 36 | Access-SW3 — e4 = — | VPC16 (PC Luật-2) — eth0 = DHCP (10.1.30.100–.199) | VLAN 30 | Access VLAN 30 |
 | 37 | Access-SW4 — e3 = — | VPC17 (PC HC-1) — eth0 = DHCP (10.1.40.100–.199) | VLAN 40 | gw 10.1.40.1 |
-| 38 | Access-SW4 — e4 = — | VPC18 (PC HC-2) — eth0 = DHCP (10.1.40.100–.199) | VLAN 40 | Access VLAN 40 |
+| 38 | Access-SW4 — e4 = — | PC-HanhChinh-S100 (Ubuntu, node 18) — e0 = DHCP (10.1.40.100–.199) | VLAN 40 | Access VLAN 40 |
 
 #### 2.2.3. Site 100 — SDN Controller & Test (OpenFlow)
 
@@ -767,7 +767,7 @@ graph TB
 | 9 | SW55 — e0/1 = — | VPC43 (PC NN-1) — eth0 = DHCP (10.2.60.100–.199) | VLAN 60 | gw 10.2.60.1 |
 | 10 | SW55 — e0/2 = — | VPC44 (PC NN-2) — eth0 = DHCP (10.2.60.100–.199) | VLAN 60 | Access VLAN 60 |
 | 11 | SW56 — e0/1 = — | VPC46 (PC YT-1) — eth0 = DHCP (10.2.70.100–.199) | VLAN 70 | gw 10.2.70.1 |
-| 12 | SW56 — e0/2 = — | VPC47 (PC YT-2) — eth0 = DHCP (10.2.70.100–.199) | VLAN 70 | Access VLAN 70 |
+| 12 | SW56 — e0/2 = — | PC-YTe-S200 (Ubuntu, node 47) — e0 = DHCP (10.2.70.100–.199) | VLAN 70 | Access VLAN 70 |
 
 #### 2.2.5. Đà Nẵng — Site 300
 
@@ -783,7 +783,7 @@ graph TB
 | 8 | SwitchBrand — e0/2 = — | SW59 — e0/0 = — | Trunk (90,99) | L2 |
 | 9 | SW58 — e0/1 = — | VPC50 (PC DL-1) — eth0 = DHCP (10.3.80.100–.199) | VLAN 80 | gw 10.3.80.1 |
 | 10 | SW58 — e0/2 = — | VPC54 (PC DL-2) — eth0 = DHCP (10.3.80.100–.199) | VLAN 80 | Access VLAN 80 |
-| 11 | SW59 — e0/1 = — | VPC53 (PC TC-1) — eth0 = DHCP (10.3.90.100–.199) | VLAN 90 | gw 10.3.90.1 |
+| 11 | SW59 — e0/1 = — | PC-TaiChinh-S300 (Ubuntu, node 53) — e0 = DHCP (10.3.90.100–.199) | VLAN 90 | gw 10.3.90.1 |
 | 12 | SW59 — e0/2 = — | VPC48 (PC TC-2) — eth0 = DHCP (10.3.90.100–.199) | VLAN 90 | Access VLAN 90 |
 
 #### 2.2.6. Nha Trang — Site 400
@@ -801,7 +801,7 @@ graph TB
 | 9 | SW60 — e0/1 = — | VPC51 (PC TS-1) — eth0 = DHCP (10.4.50.100–.199) | VLAN 50 | gw 10.4.50.1 |
 | 10 | SW60 — e0/2 = — | VPC45 (PC TS-2) — eth0 = DHCP (10.4.50.100–.199) | VLAN 50 | Access VLAN 50 |
 | 11 | SW57 — e0/1 = — | VPC49 (PC LH-1) — eth0 = DHCP (10.4.60.100–.199) | VLAN 60 | gw 10.4.60.1 |
-| 12 | SW57 — e0/2 = — | VPC52 (PC LH-2) — eth0 = DHCP (10.4.60.100–.199) | VLAN 60 | Access VLAN 60 |
+| 12 | SW57 — e0/2 = — | PC-LuHanh-S400 (Ubuntu, node 52) — e0 = DHCP (10.4.60.100–.199) | VLAN 60 | Access VLAN 60 |
 
 #### 2.2.7. SD-WAN Controller — Site 900
 
@@ -1021,7 +1021,7 @@ graph TB
 | **10** | Khoa CNTT | 10.1.10.0/24 | 10.1.10.1 | 10.1.10.100 – 10.1.10.199 | VPC14, VPC19 |
 | **20** | Khoa Toán TK | 10.1.20.0/24 | 10.1.20.1 | 10.1.20.100 – 10.1.20.199 | VPC20, VPC21 |
 | **30** | Khoa Luật | 10.1.30.0/24 | 10.1.30.1 | 10.1.30.100 – 10.1.30.199 | VPC15, VPC16 |
-| **40** | Phòng HC | 10.1.40.0/24 | 10.1.40.1 | 10.1.40.100 – 10.1.40.199 | VPC17, VPC18 |
+| **40** | Phòng HC | 10.1.40.0/24 | 10.1.40.1 | 10.1.40.100 – 10.1.40.199 | VPC17, PC-HanhChinh-S100 |
 | **90** | Server Farm | 10.1.90.0/24 | 10.1.90.1 | Static IP | DHCP/Syslog Server |
 | **99** | Management | 10.1.99.0/24 | 10.1.99.1 | Static IP | Quản lý IP các Switch/FW |
 
@@ -1032,13 +1032,13 @@ graph TB
 | Site | VLAN ID | Tên VLAN | Mạng con | Gateway (Brand-FW) | DHCP Range | Phân khu |
 |---|---|---|---|---|---|---|
 | 200 | **60** | Khoa Nông nghiệp | 10.2.60.0/24 | 10.2.60.1 | 10.2.60.100 – 10.2.60.199 | VPC43, VPC44 |
-| 200 | **70** | Khoa Y Tế | 10.2.70.0/24 | 10.2.70.1 | 10.2.70.100 – 10.2.70.199 | VPC46, VPC47 |
+| 200 | **70** | Khoa Y Tế | 10.2.70.0/24 | 10.2.70.1 | 10.2.70.100 – 10.2.70.199 | VPC46, PC-YTe-S200 |
 | 200 | **99** | Management | 10.2.99.0/24 | 10.2.99.1 | Static IP | SwitchBrand/SW55/SW56 |
 | 300 | **80** | Khoa Du lịch | 10.3.80.0/24 | 10.3.80.1 | 10.3.80.100 – 10.3.80.199 | VPC50, VPC54 |
-| 300 | **90** | Khoa Tài chính | 10.3.90.0/24 | 10.3.90.1 | 10.3.90.100 – 10.3.90.199 | VPC53, VPC48 |
+| 300 | **90** | Khoa Tài chính | 10.3.90.0/24 | 10.3.90.1 | 10.3.90.100 – 10.3.90.199 | PC-TaiChinh-S300, VPC48 |
 | 300 | **99** | Management | 10.3.99.0/24 | 10.3.99.1 | Static IP | SwitchBrand/SW58/SW59 |
 | 400 | **50** | Khoa Thủy sản | 10.4.50.0/24 | 10.4.50.1 | 10.4.50.100 – 10.4.50.199 | VPC51, VPC45 |
-| 400 | **60** | Khoa Lữ hành | 10.4.60.0/24 | 10.4.60.1 | 10.4.60.100 – 10.4.60.199 | VPC49, VPC52 |
+| 400 | **60** | Khoa Lữ hành | 10.4.60.0/24 | 10.4.60.1 | 10.4.60.100 – 10.4.60.199 | VPC49, PC-LuHanh-S400 |
 | 400 | **99** | Management | 10.4.99.0/24 | 10.4.99.1 | Static IP | SwitchBrand/SW60/SW57 |
 
 > DHCP cho chi nhánh: cấu hình **DHCP server trên Brand-FW** (scope theo từng VLAN), hoặc relay về DHCP-Server campus (10.1.90.10) qua SD-WAN.
