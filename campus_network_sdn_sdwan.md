@@ -699,7 +699,7 @@ graph TB
 | 2 | FW-ASAv-Active — Gi0/1 = 10.1.2.5/30 | Core-SW2 — E0/3 = 10.1.2.6/30 | 10.1.2.4/30 | FW Inside 2 → Core2 |
 | 3 | FW-ASAv-Standby — Gi0/0 = 10.1.2.9/30 | Core-SW2 — E1/0 = 10.1.2.10/30 | 10.1.2.8/30 | FW Inside 3 → Core2 |
 | 4 | FW-ASAv-Standby — Gi0/1 = 10.1.2.13/30 | Core-SW1 — E0/3 = 10.1.2.14/30 | 10.1.2.12/30 | FW Inside 4 → Core1 |
-| 5 | FW-ASAv-Active — Gi0/2 = 10.1.3.1/30 | vEdge1-S100 — ge0/0 = 10.1.3.2/30 | 10.1.3.0/30 | FW Outside 1 → vEdge1 (VPN 512) |
+| 5 | FW-ASAv-Active — Gi0/2 = 10.1.3.1/30 | vEdge1-S100 — ge0/0 = 10.1.3.2/30 | 10.1.3.0/30 | FW Outside 1 → vEdge1 (VPN 1) |
 | 6 | FW-ASAv-Active — Gi0/3 = 10.1.3.5/30 | vEdge2-S100 — ge0/1 = 10.1.3.6/30 | 10.1.3.4/30 | FW Outside 2 → vEdge2 |
 | 7 | FW-ASAv-Standby — Gi0/2 = 10.1.3.9/30 | vEdge2-S100 — ge0/0 = 10.1.3.10/30 | 10.1.3.8/30 | FW Outside 3 → vEdge2 |
 | 8 | FW-ASAv-Standby — Gi0/3 = 10.1.3.13/30 | vEdge1-S100 — ge0/1 = 10.1.3.14/30 | 10.1.3.12/30 | FW Outside 4 → vEdge1 |
@@ -790,8 +790,8 @@ graph TB
 
 | # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
 |---|---|---|---|---|
-| 1 | Brand-FW — Gi0/0 = 10.4.1.1/30 | vEdge1-S400 — eth0 = 10.4.1.2/30 | 10.4.1.0/30 | Outside → vEdge1 |
-| 2 | Brand-FW — Gi0/1 = 10.4.1.5/30 | vEdge2-S400 — eth0 = 10.4.1.6/30 | 10.4.1.4/30 | Outside → vEdge2 |
+| 1 | Brand-FW — Gi0/0 = 10.4.1.1/30 | vEdge1-S400 — ge0/2 = 10.4.1.2/30 | 10.4.1.0/30 | Outside → vEdge1 |
+| 2 | Brand-FW — Gi0/1 = 10.4.1.5/30 | vEdge2-S400 — ge0/2 = 10.4.1.6/30 | 10.4.1.4/30 | Outside → vEdge2 |
 | 3 | Brand-FW — Gi0/2.50 = 10.4.50.1/24, Gi0/2.60 = 10.4.60.1/24, Gi0/2.99 = 10.4.99.1/24 | SwitchBrand — e0/0 = — | Trunk (50,60,99) | Sub-interface |
 | 4 | vEdge1-S400 — ge0/1 = 10.4.2.1/30 | vEdge2-S400 — ge0/1 = 10.4.2.2/30 | 10.4.2.0/30 | Liên kết 2 vEdge |
 | 5 | vEdge1-S400 — ge0/0 = 100.64.40.1/30 | MPLS — Gi0/6 = 100.64.40.2/30 | 100.64.40.0/30 | WAN MPLS (TLOC) |
@@ -918,13 +918,13 @@ graph TB
 | **Access-SW2** | SVI (Mgmt) | 10.1.99.22 | /24 | 99 | Access VLAN 20 — TTK (dpid 66, controller 10.1.99.10) |
 | **Access-SW3** | SVI (Mgmt) | 10.1.99.23 | /24 | 99 | Access VLAN 30 — Luật (dpid 70, controller 10.1.99.10) |
 | **Access-SW4** | SVI (Mgmt) | 10.1.99.24 | /24 | 99 | Access VLAN 40 — Hành chính (dpid 69, controller 10.1.99.10) |
-| **vEdge1-S100** | ge0/0 | 10.1.3.2 | /30 | — | VPN 512 → FW-Active Outside |
-| **vEdge1-S100** | ge0/1 | 10.1.3.14 | /30 | — | VPN 512 → FW-Standby Outside |
+| **vEdge1-S100** | ge0/0 | 10.1.3.2 | /30 | — | VPN 1 → FW-Active Outside |
+| **vEdge1-S100** | ge0/1 | 10.1.3.14 | /30 | — | VPN 1 → FW-Standby Outside |
 | **vEdge1-S100** | ge0/2 | 100.64.100.1 | /30 | — | VPN 0 → MPLS (TLOC) |
 | **vEdge1-S100** | ge0/3 | 203.0.113.1 | /30 | — | VPN 0 → Internet (TLOC) |
 | **vEdge1-S100** | System-IP | 10.200.100.1 | /32 | — | OMP |
-| **vEdge2-S100** | ge0/0 | 10.1.3.10 | /30 | — | VPN 512 → FW-Standby Outside |
-| **vEdge2-S100** | ge0/1 | 10.1.3.6 | /30 | — | VPN 512 → FW-Active Outside |
+| **vEdge2-S100** | ge0/0 | 10.1.3.10 | /30 | — | VPN 1 → FW-Standby Outside |
+| **vEdge2-S100** | ge0/1 | 10.1.3.6 | /30 | — | VPN 1 → FW-Active Outside |
 | **vEdge2-S100** | ge0/2 | 203.0.113.5 | /30 | — | VPN 0 → Internet (TLOC) |
 | **vEdge2-S100** | ge0/3 | 100.64.100.5 | /30 | — | VPN 0 → MPLS (TLOC) |
 | **vEdge2-S100** | System-IP | 10.200.100.2 | /32 | — | OMP |
@@ -938,13 +938,13 @@ graph TB
 | **Brand-FW** | Gi0/0.99 | 10.2.99.1 | /24 | Gateway Management |
 | **Brand-FW** | Gi0/1 | 10.2.1.1 | /30 | Outside → vEdge1 |
 | **Brand-FW** | Gi0/2 | 10.2.1.5 | /30 | Outside → vEdge2 |
-| **vEdge1-S200** | ge0/0 | 10.2.1.2 | /30 | VPN 512 → Brand-FW |
+| **vEdge1-S200** | ge0/0 | 10.2.1.2 | /30 | VPN 1 → Brand-FW |
 | **vEdge1-S200** | ge0/2 | 100.64.200.1 | /30 | VPN 0 → MPLS (TLOC) |
-| **vEdge1-S200** | ge0/3 | 10.2.2.1 | /30 | VPN 512 ↔ vEdge2 |
+| **vEdge1-S200** | ge0/3 | 10.2.2.1 | /30 | VPN 1 ↔ vEdge2 |
 | **vEdge1-S200** | System-IP | 10.200.200.1 | /32 | OMP |
-| **vEdge2-S200** | ge0/1 | 10.2.1.6 | /30 | VPN 512 → Brand-FW |
+| **vEdge2-S200** | ge0/1 | 10.2.1.6 | /30 | VPN 1 → Brand-FW |
 | **vEdge2-S200** | ge0/0 | 203.0.113.9 | /30 | VPN 0 → Internet (TLOC) |
-| **vEdge2-S200** | ge0/2 | 10.2.2.2 | /30 | VPN 512 ↔ vEdge1 |
+| **vEdge2-S200** | ge0/2 | 10.2.2.2 | /30 | VPN 1 ↔ vEdge1 |
 | **vEdge2-S200** | System-IP | 10.200.200.2 | /32 | OMP |
 | **SwitchBrand** | SVI (Mgmt) | 10.2.99.2 | /24 | Trunking (thuần L2) |
 | **SW55 (VLAN 60)** | SVI (Mgmt) | 10.2.99.11 | /24 | Access Switch (Nông nghiệp) |
@@ -959,13 +959,13 @@ graph TB
 | **Brand-FW** | Gi0/2.99 | 10.3.99.1 | /24 | Gateway Management |
 | **Brand-FW** | Gi0/1 | 10.3.1.1 | /30 | Outside → vEdge1 |
 | **Brand-FW** | Gi0/0 | 10.3.1.5 | /30 | Outside → vEdge2 |
-| **vEdge1-S300** | ge0/2 | 10.3.1.2 | /30 | VPN 512 → Brand-FW |
+| **vEdge1-S300** | ge0/2 | 10.3.1.2 | /30 | VPN 1 → Brand-FW |
 | **vEdge1-S300** | ge0/0 | 100.64.30.1 | /30 | VPN 0 → MPLS (TLOC) |
-| **vEdge1-S300** | ge0/1 | 10.3.2.1 | /30 | VPN 512 ↔ vEdge2 |
+| **vEdge1-S300** | ge0/1 | 10.3.2.1 | /30 | VPN 1 ↔ vEdge2 |
 | **vEdge1-S300** | System-IP | 10.200.30.1 | /32 | OMP |
-| **vEdge2-S300** | ge0/2 | 10.3.1.6 | /30 | VPN 512 → Brand-FW |
+| **vEdge2-S300** | ge0/2 | 10.3.1.6 | /30 | VPN 1 → Brand-FW |
 | **vEdge2-S300** | ge0/0 | 203.0.113.13 | /30 | VPN 0 → Internet (TLOC) |
-| **vEdge2-S300** | ge0/1 | 10.3.2.2 | /30 | VPN 512 ↔ vEdge1 |
+| **vEdge2-S300** | ge0/1 | 10.3.2.2 | /30 | VPN 1 ↔ vEdge1 |
 | **vEdge2-S300** | System-IP | 10.200.30.2 | /32 | OMP |
 | **SwitchBrand** | SVI (Mgmt) | 10.3.99.2 | /24 | Trunking (thuần L2) |
 | **SW58 (VLAN 80)** | SVI (Mgmt) | 10.3.99.11 | /24 | Access Switch (Du lịch) |
@@ -980,13 +980,13 @@ graph TB
 | **Brand-FW** | Gi0/2.99 | 10.4.99.1 | /24 | Gateway Management |
 | **Brand-FW** | Gi0/0 | 10.4.1.1 | /30 | Outside → vEdge1 |
 | **Brand-FW** | Gi0/1 | 10.4.1.5 | /30 | Outside → vEdge2 |
-| **vEdge1-S400** | eth0 | 10.4.1.2 | /30 | VPN 512 → Brand-FW |
+| **vEdge1-S400** | ge0/2 | 10.4.1.2 | /30 | VPN 1 → Brand-FW |
 | **vEdge1-S400** | ge0/0 | 100.64.40.1 | /30 | VPN 0 → MPLS (TLOC) |
-| **vEdge1-S400** | ge0/1 | 10.4.2.1 | /30 | VPN 512 ↔ vEdge2 |
+| **vEdge1-S400** | ge0/1 | 10.4.2.1 | /30 | VPN 1 ↔ vEdge2 |
 | **vEdge1-S400** | System-IP | 10.200.40.1 | /32 | OMP |
-| **vEdge2-S400** | eth0 | 10.4.1.6 | /30 | VPN 512 → Brand-FW |
+| **vEdge2-S400** | ge0/2 | 10.4.1.6 | /30 | VPN 1 → Brand-FW |
 | **vEdge2-S400** | ge0/0 | 203.0.113.17 | /30 | VPN 0 → Internet (TLOC) |
-| **vEdge2-S400** | ge0/1 | 10.4.2.2 | /30 | VPN 512 ↔ vEdge1 |
+| **vEdge2-S400** | ge0/1 | 10.4.2.2 | /30 | VPN 1 ↔ vEdge1 |
 | **vEdge2-S400** | System-IP | 10.200.40.2 | /32 | OMP |
 | **SwitchBrand** | SVI (Mgmt) | 10.4.99.2 | /24 | Trunking (thuần L2) |
 | **SW60 (VLAN 50)** | SVI (Mgmt) | 10.4.99.11 | /24 | Access Switch (Thủy sản) |
@@ -1114,7 +1114,7 @@ interface GigabitEthernet0/2
 route outside 0.0.0.0 0.0.0.0 10.1.3.2
 ```
 
-**3) vEdge1-S100 — System-IP, WAN (VPN 0) và LAN (VPN 512):**
+**3) vEdge1-S100 — System-IP, WAN (VPN 0) và LAN (service VPN 1):**
 
 ```
 system
@@ -1125,7 +1125,7 @@ vpn 0
  interface ge0/3
   ip address 203.0.113.1/30
 !
-vpn 512
+vpn 1
  interface ge0/0
   ip address 10.1.3.2/30
 ```

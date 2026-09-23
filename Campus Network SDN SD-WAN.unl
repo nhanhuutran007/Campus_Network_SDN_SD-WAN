@@ -84,7 +84,7 @@
         <interface id="3" name="ge0/2" type="ethernet" network_id="75"/>
       </node>
       <node id="31" name="vEdge1" type="qemu" template="vtedge" image="vtedge-20.10.1" console="telnet" cpu="1" cpulimit="0" ram="1024" ethernet="5" uuid="52e8b3bc-b87d-45e5-a2e7-6d6c1517c65d" qemu_options="-machine type=pc,accel=kvm -cpu host -vga std -usbdevice tablet -boot order=dc -cpu host" qemu_version="2.12.0" qemu_arch="x86_64" qemu_nic="e1000" delay="0" icon="SDWAN-2D-Velo-vEdge-S.svg" config="1" left="1965" top="633">
-        <interface id="0" name="eth0" type="ethernet" network_id="83"/>
+        <interface id="3" name="ge0/2" type="ethernet" network_id="83"/>
         <interface id="1" name="ge0/0" type="ethernet" network_id="71"/>
         <interface id="2" name="ge0/1" type="ethernet" network_id="73"/>
       </node>
@@ -267,7 +267,7 @@
         <interface id="3" name="ge0/2" type="ethernet" network_id="74"/>
       </node>
       <node id="41" name="vEdge2" type="qemu" template="vtedge" image="vtedge-20.10.1" console="telnet" cpu="1" cpulimit="0" ram="1024" ethernet="5" uuid="f5c63587-4675-4123-82fa-bc32d038d098" qemu_options="-machine type=pc,accel=kvm -cpu host -vga std -usbdevice tablet -boot order=dc -cpu host" qemu_version="2.12.0" qemu_arch="x86_64" qemu_nic="e1000" delay="0" icon="SDWAN-2D-Velo-vEdge-S.svg" config="1" left="1968" top="804">
-        <interface id="0" name="eth0" type="ethernet" network_id="84"/>
+        <interface id="3" name="ge0/2" type="ethernet" network_id="84"/>
         <interface id="1" name="ge0/0" type="ethernet" network_id="72"/>
         <interface id="2" name="ge0/1" type="ethernet" network_id="73"/>
       </node>
