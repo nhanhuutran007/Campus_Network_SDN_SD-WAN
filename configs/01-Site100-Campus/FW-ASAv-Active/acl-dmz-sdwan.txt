@@ -1,0 +1,33 @@
+configure terminal
+object-group service WEB_SVC tcp
+ port-object eq www
+ port-object eq https
+exit
+object-group service MAIL_SVC tcp
+ port-object eq smtp
+ port-object eq 587
+ port-object eq imap4
+ port-object eq 993
+exit
+clear configure access-list SDWAN_IN
+access-list SDWAN_IN remark Chi nhanh SD-WAN -> DMZ: chi cho phep dich vu cong khai
+access-list SDWAN_IN extended permit tcp 10.0.0.0 255.0.0.0 host 10.1.1.10 object-group WEB_SVC
+access-list SDWAN_IN extended permit tcp 10.0.0.0 255.0.0.0 host 10.1.1.11 object-group MAIL_SVC
+access-list SDWAN_IN extended permit icmp 10.0.0.0 255.0.0.0 10.1.1.0 255.255.255.240 echo
+access-list SDWAN_IN extended deny ip 10.0.0.0 255.0.0.0 10.1.1.0 255.255.255.240 log
+access-list SDWAN_IN remark Chi nhanh SD-WAN -> DNS noi bo va mang campus
+access-list SDWAN_IN extended permit udp 10.0.0.0 255.0.0.0 host 10.1.90.10 eq domain
+access-list SDWAN_IN extended permit tcp 10.0.0.0 255.0.0.0 host 10.1.90.10 eq domain
+access-list SDWAN_IN extended permit ip 10.0.0.0 255.0.0.0 10.1.0.0 255.255.0.0
+access-group SDWAN_IN in interface outside
+access-group SDWAN_IN in interface outside2
+access-list DMZ_IN remark DMZ -> noi bo: chi Syslog, DNS va ping
+access-list DMZ_IN extended permit udp 10.1.1.0 255.255.255.240 host 10.1.90.11 eq syslog
+access-list DMZ_IN extended permit udp 10.1.1.0 255.255.255.240 host 10.1.90.10 eq domain
+access-list DMZ_IN extended permit tcp 10.1.1.0 255.255.255.240 host 10.1.90.10 eq domain
+access-list DMZ_IN extended permit icmp 10.1.1.0 255.255.255.240 10.0.0.0 255.0.0.0 echo
+access-list DMZ_IN extended deny ip 10.1.1.0 255.255.255.240 10.0.0.0 255.0.0.0 log
+access-list DMZ_IN extended permit ip 10.1.1.0 255.255.255.240 any
+access-group DMZ_IN in interface dmz
+end
+write memory

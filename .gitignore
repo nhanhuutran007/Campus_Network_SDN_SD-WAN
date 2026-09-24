@@ -6,3 +6,6 @@
 !.opencode/skills/
 .codex/
 
+
+# Bộ cài nhị phân (tải tay, không commit)
+tools/*.exe
