@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cổng thông tin nội bộ Campus</title>
+  <style>
+    body { margin: 0; font: 16px/1.6 "Segoe UI", Ubuntu, sans-serif; color: #1f2937; background: #f4f6fa; }
+    header { background: #0b3d91; color: #fff; padding: 20px 32px; }
+    header h1 { margin: 0; font-size: 24px; }
+    main { max-width: 900px; margin: 24px auto; padding: 0 20px; }
+    .card { background: #fff; border-radius: 8px; padding: 18px 22px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    table { border-collapse: collapse; width: 100%; }
+    td, th { border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
+    code { color: #0b3d91; }
+    #ip { font-weight: 600; color: #b45309; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Cổng thông tin nội bộ — Campus Network SDN + SD-WAN</h1>
+    <div>www.campus.internal · Web-Server DMZ 10.1.1.10</div>
+  </header>
+  <main>
+    <div class="card">
+      <h2>Kết nối của bạn</h2>
+      <p>Địa chỉ IP bạn đang dùng: <span id="ip">đang kiểm tra…</span></p>
+      <p>Người dùng ở chi nhánh truy cập trang này qua overlay SD-WAN (service VPN 1). Máy chủ thấy IP thật của máy bạn vì không có NAT giữa các site.</p>
+    </div>
+    <div class="card">
+      <h2>Dịch vụ nội bộ</h2>
+      <table>
+        <tr><th>Dịch vụ</th><th>Địa chỉ</th><th>Ghi chú</th></tr>
+        <tr><td>Cổng thông tin</td><td><code>https://www.campus.internal</code></td><td>Nginx, HTTPS</td></tr>
+        <tr><td>Thư điện tử</td><td><code>mail.campus.internal</code></td><td>SMTP 25/587, IMAP 143</td></tr>
+        <tr><td>DNS nội bộ</td><td><code>10.1.90.10</code></td><td>Zone <code>campus.internal</code></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Các cơ sở</h2>
+      <table>
+        <tr><th>Site</th><th>Cơ sở</th><th>Mạng</th></tr>
+        <tr><td>100</td><td>Campus chính</td><td>10.1.0.0/16</td></tr>
+        <tr><td>200</td><td>Chi nhánh Cần Thơ</td><td>10.2.0.0/16</td></tr>
+        <tr><td>300</td><td>Chi nhánh Đà Nẵng</td><td>10.3.0.0/16</td></tr>
+        <tr><td>400</td><td>Chi nhánh Nha Trang</td><td>10.4.0.0/16</td></tr>
+      </table>
+    </div>
+  </main>
+  <script>
+    fetch('/whoami').then(r => r.text()).then(t => {
+      const m = t.match(/client=(\S+)/);
+      document.getElementById('ip').textContent = m ? m[1] : t;
+    }).catch(() => { document.getElementById('ip').textContent = 'không xác định'; });
+  </script>
+</body>
+</html>

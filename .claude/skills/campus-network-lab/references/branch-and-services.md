@@ -52,7 +52,12 @@ Tình trạng (theo bảng tiến độ 05/09): S400 đã verify DHCP; commit `4
 
 ## Web / Mail / Syslog / PC-Management
 
-- Web-Server node 22: `linux-ubuntu-18.04-server`, cấu hình tay (`configs/01-Site100-Campus/Web-Server/setup.sh`, đang sửa dở — xem git status). Trạng thái checkpoint: kiểm live trước khi hành động.
+- Web-Server node 22 (Ubuntu 18.04, 10.1.1.10/28 DMZ): Nginx HTTPS `www.campus.internal` (chứng chỉ tự ký có SAN) + `/setup/` (HTTP) làm kho script/bộ cài nội bộ cho máy Windows; cài/sửa **offline** bằng `virt-customize` khi node tắt (`configs/01-Site100-Campus/Web-Server/offline-install.sh`). VM không có Internet.
+- Domain nội bộ = **`campus.internal`** (đổi từ `campus.local` ngày 24/09/2026: `.local` là của mDNS/RFC 6762, Ubuntu/macOS không hỏi DNS cho `*.local`; `.internal` là TLD ICANN dành cho mạng riêng). Zone `campus.local` còn trên DNS 72 và là domain alias trong hMailServer để chuyển tiếp — xoá sau bằng `Remove-DnsServerZone campus.local`.
+- DNS `campus.internal` chạy trên DHCP-Server 72 (`DHCP-Server/dns-setup.ps1`); Mail = hMailServer 5.6.8 **x86** trên Win7 node 13 (`Mail-Server/mail-setup.ps1`). Đĩa Windows tắt ngang ⇒ NTFS "unclean", guestfish từ chối ghi — đưa file qua `/setup/` rồi chạy trong VM (VNC).
+- **Không dùng lại `.local`.** PC 47 đã trả `nsswitch.conf` về mặc định và vẫn phân giải `*.campus.internal`; PC 18/52/53 còn bản vá cũ `hosts: files dns` (vô hại).
+- **Gõ VNC:** Windows (72/13) ổn định. Linux (22, PC) bị QEMU đảo Caps Lock giữa các phiên VNC, phím Caps Lock/XTest không sửa được ⇒ mỗi phiên in thử một vạch màu rồi đo pixel để biết có phải gõ ngược hoa/thường không (script `lx.py` ở scratchpad). Mật khẩu nhập bằng `read -s`/`Read-Host -AsSecureString`, cuối phiên `history -c`.
+- PowerShell không phân biệt hoa/thường tên biến: `$domain` ghi đè tham số `$Domain` (lỗi đã gặp trong `mail-setup.ps1`). Node 72 tải file bằng `Net.WebClient` với `Proxy=$null` (`iwr` báo lỗi "Unable to connect").
 - Mail 13, Syslog 25, Win 36, PC-Management 73: Win7 (4096 MB). Syslog: Kiwi Syslog ở `10.1.90.11`; Core/Farm/FW-HA có `logging host`. Kiểm Syslog bằng UDP/514 đang lắng nghe, Windows Firewall, log đến thực tế — ping thành công chưa chứng minh gì.
 - Thao tác GUI trên các node Windows do **người dùng** làm (gõ phím qua VNC không đáng tin).
 
