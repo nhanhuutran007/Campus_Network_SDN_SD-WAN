@@ -9,3 +9,13 @@
 
 # Bộ cài nhị phân (tải tay, không commit)
 tools/*.exe
+
+# LaTeX build artifacts (giữ lại .tex và .pdf)
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.fls
+*.fdb_latexmk

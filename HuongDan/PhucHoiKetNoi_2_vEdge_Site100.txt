@@ -1,0 +1,108 @@
+====================================================================
+PHỤC HỒI KẾT NỐI 2 vEdge CAMPUS CHÍNH (vEdge1-S100 + vEdge2-S100)
+VÀO SD-WAN FABRIC (CONTROLLER SITE 900)
+---- Thực hiện & xác minh thành công ngày 19/09/2026 ----
+====================================================================
+
+TRIỆU CHỨNG
+  - 2 vEdge S100 mất kết nối controller: `show control summary`
+    toàn bộ counts = 0, `show control connections` trống.
+  - `show control connections-history` trên vEdge ghi:
+        vbond   dtls ...  mpls          challenge_resp  RXTRDWN  BIDNTVRFD
+        vbond   dtls ...  biz-internet  challenge_resp  RXTRDWN  BIDNTVRFD
+    => LỖI "BID NOT VERIFIED": vBond/vSmart/vManage REJECT vì serial
+       KHÔNG CÓ trong whitelist (valid-vedges) của controller.
+  - Nguyên nhân: whitelist DB trên controller bị MẤT/TRỐNG 2 entry
+    F989 (node 28) + F98B (node 6) -> chỉ cần ADD lại là xong.
+    (TUYỆT ĐỐI KHÔNG cần reboot/wipe vEdge hay controller.)
+
+--------------------------------------------------------------------
+0) THÔNG TIN
+--------------------------------------------------------------------
+  - Console port (host EVE 10.215.28.26, telnet qua paramiko
+    direct-tcpip tới 127.0.0.1:<port>):
+        node 28 vEdge1-S100 : 33536 + 28 = 33564
+        node  6 vEdge2-S100 : 33536 +  6 = 33542
+        node 33 vManager    : 33536 + 33 = 33569
+        node 34 vSmart      : 33536 + 34 = 33570
+        node 35 vBond       : 33536 + 35 = 33571
+  - Mật khẩu:
+        vEdge S100 (6, 28) : admin / vnpro@2026
+        vManager / vBond   : admin / vnpro@123
+        vSmart             : admin / okok
+  - Console đôi khi chỉ hiện ANSI title "\x1b]0;vEdge2\x07": gõ Enter
+    để refresh ra banner + login prompt.
+  - vEdge tự retry DTLS mỗi 16s: sau khi fix controller, đợi 1-2 phút
+    là control lên UP, KHÔNG cần gõ lệnh gì thêm trên vEdge.
+
+--------------------------------------------------------------------
+1) CHẨN ĐOÁN (chạy trên CẢ 2 vEdge, login console)
+--------------------------------------------------------------------
+screen-length 0
+show clock
+show certificate installed
+show control local-properties      (đọc chassis-num + serial-num HIỆN TẠI)
+show control summary
+show control connections
+show control connections-history   (xem lệnh history: manh mối rõ nhất)
+
+  Chú thích các lệnh "show" chỉ để chẩn đoán, không sửa gì trên vEdge.
+
+--------------------------------------------------------------------
+2) FIX TRÊN CONTROLLER (LỆNH THỰC SỰ KHÔI PHỤC KẾT NỐI)
+   Chạy trên CẢ 3 controller: vManager(33) + vBond(35) + vSmart(34)
+   - THIẾU MỘT NƠI LÀ KHÔNG LÊN controller đó.
+--------------------------------------------------------------------
+  -> login vManager (33569, admin/vnpro@123):
+request vedge add chassis-num e69fb31e-45eb-4ec1-ac15-04483f980f2e serial-num 050CC67238AF8949E4AE8D4CDF8083AA9A73F989
+request vedge add chassis-num fb5c2475-cf31-41e2-aba5-25c21ba93d7e serial-num 050CC67238AF8949E4AE8D4CDF8083AA9A73F98B
+
+  -> login vBond (33571, admin/vnpro@123):  (2 lệnh y hệt ở trên)
+request vedge add chassis-num e69fb31e-45eb-4ec1-ac15-04483f980f2e serial-num 050CC67238AF8949E4AE8D4CDF8083AA9A73F989
+request vedge add chassis-num fb5c2475-cf31-41e2-aba5-25c21ba93d7e serial-num 050CC67238AF8949E4AE8D4CDF8083AA9A73F98B
+
+  -> login vSmart (33570, admin/okok):      (2 lệnh y hệt ở trên)
+request vedge add chassis-num e69fb31e-45eb-4ec1-ac15-04483f980f2e serial-num 050CC67238AF8949E4AE8D4CDF8083AA9A73F989
+request vedge add chassis-num fb5c2475-cf31-41e2-aba5-25c21ba93d7e serial-num 050CC67238AF8949E4AE8D4CDF8083AA9A73F98B
+
+  Kết quả đúng: "status success" cho từng lệnh.
+
+  GHÉP CHÚ:
+   - node 28 vEdge1-S100: chassis e69fb31e-45eb-4ec1-ac15-04483f980f2e / serial F989
+   - node  6 vEdge2-S100: chassis fb5c2475-cf31-41e2-aba5-25c21ba93d7e / serial F98B
+   - Lấy serial/chassis HIỆN TẠI khi cần: `show control local-properties`
+     trên vEdge. Nếu serial ĐỔI (do ký lại cert) -> add serial mới, entry
+     tự ghi đè theo chassis, không cần xóa entry cũ.
+
+--------------------------------------------------------------------
+3) VERIFY
+--------------------------------------------------------------------
+  -> Trên controller:
+show control valid-vedges        (vManager 33569, vSmart 33570)
+show orchestrator valid-vedges   (vBond 33571 - LƯU Ý tên lệnh KHÁC)
+     => Cần đủ 8 entry, trong đó có ...F989 + ...F98B, org site-900.
+
+  -> Trên vEdge (đợi 1-2 phút, chạy lại):
+show control summary
+      vbond_counts           2
+      vmanage_counts         1
+      vsmart_counts          2
+      valid_controller_counts 2
+show control connections
+      vsmart dtls 10.9.0.13  ... Up   (mpls + biz-internet)
+      vbond  dtls  0.0.0.0   ... Up   (mpls + biz-internet)
+      vmanage dtls 10.9.3.10 ... Up
+
+  -> Trên vManager web/API: /dataservice/device -> 2 vEdge S100 green/normal.
+
+====================================================================
+LƯU Ý LẦN SAU
+  - Khi 2 vEdge "mất kết nối" bất kỳ: đầu tiên check `show control
+    connections-history` trên vEdge. Nếu thấy BIDNTVRFD / RXTRDWN ->
+    chỉ cần làm BƯỚC 2 (add whitelist cả 3 controller), KHÔNG reboot gì.
+  - Khác biệt 3 lỗi reject trong log controller:
+      (a) O != "Cisco Systems"          -> phải ký lại cert (RECIPE PKI)
+      (b) serial not found in vedge-list -> THIẾU WHITELIST (bài này)
+      (c) unable to get local issuer certificate -> vEdge thiếu
+          `request root-cert-chain install`
+====================================================================
