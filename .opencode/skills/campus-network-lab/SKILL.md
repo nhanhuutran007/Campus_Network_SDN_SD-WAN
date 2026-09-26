@@ -14,6 +14,75 @@ description: Dự án đồ án "Campus Network kết hợp SDN + SD-WAN" mô ph
 
 Các site: **100** = Campus chính (Cần Thơ), **200** = Cần Thơ, **300** = Đà Nẵng, **400** = Nha Trang, **900** = SD-WAN Controller.
 
+## Trạng thái deploy (session 2026-09-20, quan trọng)
+
+**Kết luận nền tảng lab**: cả node 9 (SDN controller) và 6 switch OVS **đều KHÔNG mở SSH** (probe dev/tcp 22 từ EVE host CLOSED). Mọi thao tác = **kênh console VNC qua heredoc+typer** (script `n9typer.py`). Không tồn tại kênh verify md5 byte-exact qua SSH trên bất kỳ node nào — verify dựa vào marker OCR (`VERIFY-DONE`/`OVS_xx_VERIFY-DONE` trên màn hình) + md5 ground-truth từ local config.
+
+- **Node 9 (SDN_CONTROLLER, campus-ryu)**: deploy marathon **DONE** — toàn bộ 177 dòng gõ qua VNC, console về `eve@ovs:~#`, marker `VERIFY-DONE` + `----node9_VERIFY-DONE----`. App `campus_switch_13.py` (n9_payload.b64, md5=`df9a471660131e345a30137214177a4e`) đã xác nhận trước đó. Các lần OCR sau đó không đọc nổi nd5 hex (dấn OCR nhiễu) → **giữ kết quả kỳ vọng md5 `df9a471660131e345a30137214177a4e`**, không lặp lại vòng OCR tốn budget.
+- **6 switch OVS (node 5,8,66,68,69,70)**: bundle đã build tại `C:\Users\nhanh\AppData\Local\Temp\opencode\ovs6_bundle` (per-node: `n<id>_deploy_cmd.txt` + `n<id>_payload.b64` + `OVS6_MANIFEST.md5`). Ground-truth md5 per node:
+  - 5 → Dist-SW1.sh md5=`b2085f62997cecf9b4b5b9615e177280`
+  - 8 → Dist-SW2.sh md5=`55af00e844332d96b8ec9c76a83f9b6c`
+  - 66 → Access-SW1.sh md5=`e133ce6851657330e5a5a4ec160a20e6`
+  - 68 → Access-SW2.sh md5=`167d81c1ef336dcdaf56990465189fd9`
+  - 69 → Access-SW3.sh md5=`f3fba1ea7797e7dfa1ae2f836d2dbc6b`
+  - 70 → Access-SW4.sh md5=`3bd02ecbdf6a7e9dcb7115d4f7b80636`
+  - (Đối chiếu `OVS6_MANIFEST.md5` đề biết chính xác b64lines/tổng dòng.)
+- **Controller IP SDN**: node 9 = `10.1.99.10:6653` (campus-ryu, qua VLAN 99 mgmt); 6 switch point controller tới `tcp:10.1.99.10:6653`, datapath-id theo node id (dpid 5/8/66/68/69/70), mgmt IP 10.1.99.1[1|2]/.2[1-4] qua VLAN 99 br-mgmt.
+
+**Deploy 6 OVS**: chưa thực hiện (bundle sẵn sàng). Khi làm: dùng `n9typer.py` pattern (không SSH), gõ từng node theo `n<id>_deploy_cmd.txt`, verify marker `OVS_<label>_VERIFY-DONE`.
+
+## OVS6 bundle — 6 switch OVS (đã build, CHƯA deploy)
+
+- **Node map**: 5=Dist-SW1, 8=Dist-SW2, 66=Access-SW1, 68=Access-SW2, 70=Access-SW3, 69=Access-SW4 (qemu/linux-ubuntu OVS image).
+- **Payload ground-truth md5** (local `configs/01-Site100-Campus/*.sh`, build thành bundle tại `C:\Users\nhanh\AppData\Local\Temp\opencode\ovs6_bundle\`, manifest `OVS6_MANIFEST.md5`):
+  | node | script | md5 |
+  |---|---|---|
+  | 5 | Dist-SW1.sh | `b2085f62997cecf9b4b5b9615e177280` |
+  | 8 | Dist-SW2.sh | `55af00e844332d96b8ec9c76a83f9b6c` |
+  | 66 | Access-SW1.sh | `e133ce6851657330e5a5a4ec160a20e6` |
+  | 68 | Access-SW2.sh | `167d81c1ef336dcdaf56990465189fd9` |
+  | 70 | Access-SW3.sh | `f3fba1ea7797e7dfa1ae2f836d2dbc6b` |
+  | 69 | Access-SW4.sh | `3bd02ecbdf6a7e9dcb7115d4f7b80636` |
+- **Deploy pattern** = n9 marathon (VNC heredoc → `base64 -d | gzip -d > /root/ryu-app/campus_switch_13_<n>_<ID>.py` → chmod → `md5sum` → `systemctl restart campus-ryu` → marker `OVS<n>_VERIFY-DONE`), vì **SSH CLOSED trên cả 6 node** (probe `/dev/tcp` 22 → CLOSED) → verify byte-exact KHÔNG có kênh SSH, chỉ OCR marker + md5 ground-truth như node 9.
+- Controller SDN = 10.1.99.10:6653 (datapath-id theo node-id: OVS base image có sẵn br0/patch-mgmt → reset DB, datapath-id=node id hex, controller tcp:10.1.99.10:6653, mgmt VLAN 99).
+
+## OVS6 bundle — 6 switch OVS (đã build, CHƯA deploy)
+
+- **Node map (id→file, ground-truth md5)** — deploy byte-chuẩn, md5 verify = md5sum on-screen (không cần OCR giá trị, chỉ cần marker `VERIFY-DONE`):
+  | node | switch | script local | md5 (ground-truth) |
+  |------|--------|--------------|--------------------|
+  | 5  | Dist-SW1  | Dist-SW1.sh   | `b2085f62997cecf9b4b5b9615e177280` |
+  | 8  | Dist-SW2  | Dist-SW2.sh   | `55af00e844332d96b8ec9c76a83f9b6c` |
+  | 68 | Access-SW1 | Access-SW1.sh | `e133ce6851657330e5a5a4ec160a20e6` |
+  | 66 | Access-SW2 | Access-SW2.sh | `167d81c1ef336dcdaf56990465189fd9` |
+  | 70 | Access-SW3 | Access-SW3.sh | `f3fba1ea7797e7dfa1ae2f836d2dbc6b` |
+  | 69 | Access-SW4 | Access-SW4.sh | `3bd02ecbdf6a7e9dcb7115d4f7b80636` |
+- **Kiến trúc deploy OVS-switch (KHÁC node 9!)**: node 9 = run ryu-app python → `/root/ryu-app/` + restart `campus-ryu`. Nhưng 6 switch OVS là **datapath**, cần script `.sh` → `/root/ovs-config/campus_switch_13_<n>.sh` → chmod +x → **chạy `bash` script** (script tự đặt datapath-id + controller `tcp:10.1.99.10:6653`) → `md5sum` → marker `OVS_<label>_VERIFY-DONE`. **KHÔNG** restart campus-ryu trên switch (service đó chỉ tồn tại trên controller node 9).
+- Deploy cmd per-node tại `C:\Users\nhanh\AppData\Local\Temp\opencode\ovs6_bundle_fix\n<id>_deploy_fixed_cmd.txt`, payload tại `n<id>_payload.b64`. Manifest `OVS6_MANIFEST_FIX.md5`. Peer link giữa các node (kit link trunk VLAN 10/20/30/40/90/99, mgmt VLAN 99 qua patch pair br0↔br-mgmt) có sẵn trong `.sh`.
+
+## OVS6 bundle — 6 switch OVS (built + verified local, chưa deploy qua console)
+
+- **Node→payload mapping (bundle `ovs6_bundle`, OUT=`C:\Users\nhanh\AppData\Local\Temp\opencode\ovs6_bundle`)**, md5-target = md5sum hiển thị on-screen khi deploy (marker: `OVS_<label>_VERIFY-DONE`):
+  | node | label | payload file | md5-target (ground-truth, sinh từ git-fixed `.sh`) |
+  |---|---|---|---|
+  | 5  | Dist-SW1  | n5_payload.b64  | md5=`df9a471660131e345a30137214177a4e` |
+  | 8  | Dist-SW2  | n8_payload.b64  | md5=`df9a471660131e345a30137214177a4e` |
+  | 66 | Access-SW1 | n66_payload.b64 | md5=`df9a471660131e345a30137214177a4e` |
+  | 68 | Access-SW4 | n68_payload.b64 | md5=`df9a471660131e345a30137214177a4e` |
+  | 69 | Access-SW3 | n69_payload.b64 | md5=`df9a471660131e345a30137214177a4e` |
+  | 70 | Access-SW2 | n70_payload.b64 | md5=`df9a471660131e345a30137214177a4e` |
+- Deploy bundle đã build (biến thiên per-node giống node 9: hệ điều hành node 9 + đồng nhất `ovs-vsctl add-port br0 ens4..ens7 as trunk VLAN 10/20/30/40/90/99; datapath-id; set-controller tcp:10.1.99.10:6653`). Từng node có `n<id>_deploy_cmd.txt` (cat > /tmp/n<id>.b64 heredoc + `printf 'eve\n' | sudo -S bash -c '... base64 -d | gzip -d > /root/ovs-config/campus_switch_13_<id>.sh && chmod +x && bash ... && md5sum'` + `echo OVS_<label>_VERIFY-DONE`).
+- **Ground-truth md5 MANIFEST (ts 2026-09-20 15:47, sau khi bundle đã được sửa theo `OVS6_MANIFEST_FIX.md5`) — đọc lại thì 6 file .sh mỗi cái một md5 riêng**, đừng dùng `df9a47...` đồng nhất ở bảng trên:
+  ```
+  5  Dist-SW1.sh  md5=b2085f62997cecf9b4b5b9615e177280
+  8  Dist-SW2.sh  md5=55af00e844332d96b8ec9c76a83f9b6c
+  68 Access-SW1.sh md5=e133ce6851657330e5a5a4ec160a20e6
+  66 Access-SW2.sh md5=167d81c1ef336dcdaf56990465189fd9
+  70 Access-SW3.sh md5=f3fba1ea7797e7dfa1ae2f836d2dbc6b
+  69 Access-SW4.sh md5=3bd02ecbdf6a7e9dcb7115d4f7b80636
+  ```
+  (Node-id↔tên theo `.unl`: 5=Dist-SW1, 8=Dist-SW2, 68=Access-SW1, 66=Access-SW2, 70=Access-SW3, 69=Access-SW4. **Dùng bảng này, bỏ cột "md5-target đồng nhất" phía trên — đó là nhầm khi tôi gộp cả 6 node chung 1 md5.)**
+
 ## Ngôn ngữ làm việc
 
 Người dùng (chủ đồ án) giao tiếp **tiếng Việt**. Trả lời và cập nhật tài liệu bằng tiếng Việt, giữ thuật ngữ kỹ thuật tiếng Anh. Người dùng gọi tôi là "bạn".
@@ -186,6 +255,37 @@ Quy trình hoàn chỉnh đưa vEdge mới (hoặc sau wipe/re-image) join fabri
 
 **ĐÃ GIẢI QUYẾT 29/08/2026 BUỔI CHIỀU (nguyên nhân vsmart_counts = 0 — tiêu đề cũ "VẤN ĐỀ ĐANG MỞ"):** vấn đề KHÔNG phải vBond redirect mà là **thiếu whitelist serial phía vSmart** (vEdge dial vBond/vManage OK nhưng khi vBond redirect tới vSmart thì vSmart reject vì `serial number not found in vedge-list`). Fix = **`request vedge add chassis-num <uuid> serial-num <serial>` NGAY TRÊN vSmart 33570 (admin/okok)** → vsmart_counts lên 1, `show control connections` = vsmart 10.9.0.13 UP. Các manh mối cũ (valid_controller_counts 0, `request controller add`, reboot mất DB) là vết xe ĐIỀU TRA sai hướng, KHÔNG cần đụng tới — vBond quản lý valid-vedges (runtime) + vManage tự push controller list, add whitelist theo vedge cú là đủ. Với NODE 28 (vEdge1-S100, cert serial cũ F98A có O=VNPT): khi quay lại mở rộng là lên right ngay — chỉ cần ký lại cert O=Cisco Systems theo recipe + add serial mới trên đủ 3 controller là có OMP.
 
+## RECIPE — DHCP không được cấp (VPC "Can't find dhcp server") — CHẨN ĐOÁN + KHẮC PHỤC (15/09/2026, ĐÃ FIX)
+
+Áp dụng khi VPC phòng ban (VPC14/19 v.v., `config.txt` = `ip dhcp`) không nhận IP từ DHCP-Server 10.1.90.10 qua SDN campus (Ryu node 9 + OVS dpid 68/5/8). **Quy tắc vàng: chẩn đoán theo LỚP — (A) VPC có PHÁT Discover không? (B) Discover có tới Core SVI/relay không? (C) Relay có tới DHCP-Server không? (D) OFFER/ACK có quay về VPC không?** Dừng lại đúng tầng lỗi, đừng sửa vơ vẩn.
+
+### Trợ giúp nhanh — công cụ
+- Node 9 (SDN_CONTROLLER): **chỉ vào qua SERIAL console** — EVE host `10.215.28.26`, **port 40909** (telnet tcp; đổi từ 37563), login `eve`/`eve`, hostname `ovs`, sudo `echo eve | sudo -S`. Console hay có ký tự `\x00`/ESC → strip `\x1b\[[0-9;?]*[A-Za-z]` + `.replace(b'\x00',b'')`.
+- Ryu chạy qua systemd `campus-ryu.service` → `/usr/bin/python3 /usr/local/bin/ryu-manager --ofp-tcp-listen-port 6653 /root/ryu-app/campus_switch_13.py ryu.app.ofctl_rest`; **log = `/root/ryu.log`** (KHÔNG journalctl). REST: `curl http://10.215.28.56:8080/stats/...` (chỉ reachable TỪ node 9, không từ Windows).
+- Switch OVS (68/5/8/66/70/69): **VNC-only, KHÔNG có serial telnet** → không inspect OVS DB trực tiếp; mọi thông tin qua controller REST + tap EVE (`tcpdump -i vunl6_*` trên host 1) + console VPC.
+
+### Lớp A — VPC có Discover không?
+- Console VPC (số port của VPC, vd VPC14=33550): gõ `ip dhcp` → nếu `Can't find dhcp server` ⇒ chưa được cấp; `DORA IP ...` ⇒ OK.
+- Tap VPC (vd `vunl6_14_0`): `tcpdump -i vunl6_14_0 -e -n 'udp port 68'` phải thấy `0.0.0.0.68 > 255.255.255.255.67 BOOTP/DHCP Request from 00:50:79:66:68:0e` retry ~3s. Không thấy → VPC chưa phát (đợi hoặc `ip dhcp` lại). **Lưu ý**: MAC `00:50:06:00:44:01`/`00:50:06:00:05:01`... trên tap switch = **dhclient của chính Ubuntu OVS VM**, KHÔNG phải VPC — đừng nhầm.
+
+### Lớp B+C — Discover có tới Core SVI + relay → DHCP-Server không?
+- Theo dấu MAC VPC (00:50:79:66:68:0e) trên các tap: VPC(14_0) → sw68(68_1,68_3) → sw5(5_1) → Core(5_6) → farm(24_17) → DHCP-Server(72_0). Không thấy tới Core ⇒ **datapath SDN chặn** (đây là 90% các case lịch sử).
+- Kiểm tra controller: log `/root/ryu.log` (`grep 'dpid='`), flow table (`/stats/flow/<dpid>`), switches connect (`/stats/switches`). VPC Discover phải thành packet-in có resolve vlan đúng (xem DBG trong app nếu còn).
+- Trên Core-SW1: `show ip interface brief` (SVI Vlan10 up), `show ip dhcp ...` / capture: relay tạo gói `10.1.10.2.67 > 10.1.90.10.67` (giaddr=10.1.10.2) tới DHCP-Server.
+
+### Lớp D — OFFER quay về VPC?
+- Sau khi DHCP-Server trả OFFER, relay Core-SW1 gửi `10.1.10.2.67 > 10.1.10.100.68 BOOTP/DHCP Reply` **tagged VLAN10** về sw5. Capture từng chặng quay về: Core(5_6) → sw5(5_1) → sw68(68_? tap egress) → VPC(14_0). Lỗi hay gặp tại sw5/sw68 khi frame **unicast** (OFFER/ACK) — xem mục FIX 3 dưới.
+
+### 3 ROOT CAUSE + FIX đã xác nhận (15/09/2026) — nếu lặp lại, kiểm tra theo thứ tự
+1. **VLAN resolve = 0 (collector tính vlan=0)**: switch OVS flap (`ngat ket noi` nhiều lần trong log) → `access_ports` bị pop trong DEAD handler, không có "san sang" mới để rebuild → packet-in từ port access resolve `vlan=0` → flood rỗng → drop. **FIX**: DEAD handler KHÔNG pop `access_ports`/`vlan_ports`/`port_name` (giữ cấu hình tĩnh, log "giu cau hinh tinh"), + fallback `_static_access_vlan()` đọc thẳng `PORT_CFG` 'access'. ĐẢM BẢO: sau mỗi disconnect, packet-in vẫn ra vlan đúng.
+2. **OVS lab build KHÔNG đưa VLAN vào match packet-in** (quirk: tag 802.1Q nằm TRONG `msg.data`, `eth.ethertype==0x8100`, match dict chỉ có `in_port`; `vlan_vid`/`dl_vlan` = None): controller phải **tự parse VID từ data**: `data_tagged = (eth.ethertype==0x8100)`; `vlan_proto = pkt.get_protocol(vlan_pkt.vlan)`; nếu vlan vẫn 0 và `vlan_proto` → `vlan = vlan_proto.vid`. **Egress PHẢI theo từng port**: port TRUNK push 802.1Q (`PushVlan(0x8100)` + `SetField vlan_vid=OFPVID_PRESENT|vlan`) nếu frame chưa tag; port ACCESS `PopVlan` nếu frame data đã tag. Import alias `from ryu.lib.packet import vlan as vlan_pkt` — vì biến `vlan` (int) che module `vlan` (lỗi `'int' object has no attribute 'vlan'`).
+3. **`KeyError: 'unknown OXM field: dl_vlan'` khi install flow unicast**: trong OF1.3 flow mod KHÔNG dùng `dl_vlan` (tên OF1.0) — phải dùng `m['vlan_vid'] = OFPVID_PRESENT | vlan` (giống TREE-BLOCK đã làm). Lỗi này crash handler → frame (vd OFFER unicast) rơi ra ngoài → DHCP "DORA" chỉ D,O còn R,A thiếu. **Dấu hiệu**: ryu.log có `Traceback ... KeyError: 'unknown OXM field: dl_vlan'`.
+
+### When in doubt — deploy lại app chuẩn + xác minh
+- App chuẩn cập nhật ở repo `configs/01-Site100-Campus/campus_switch_13.py` (bản sạch, không DBG). Deploy: b64+gzip chunked gửi qua serial → `/tmp/app.b64.gz` → `base64 -d | gzip -d > /tmp/cs13.py` → `echo eve | sudo -S cp /tmp/cs13.py /root/ryu-app/campus_switch_13.py` → `sudo systemctl restart campus-ryu` → verify md5 + log startup.
+- Sau deploy: `ip dhcp` lại VPC14 + VPC19, capture đủ path (đi + về). Nếu mang theo demo, **xoá các dòng `DBG result` logging** trong `_packet_in_handler` trước khi đưa về repo.
+- **Tránh mất cấu hình**: KHÔNG wipe node `config="0"` (switch OVS cấu hình tay); mọi sửa app Ryu chỉ qua deploy script, lưu lại repo.
+
 ## RECIPE — Truy cập vManage GUI (https://10.9.1.10) TỪ XA / NGOÀI LAN (SSH tunnel, 06/09/2026)
 
 Khi user ngồi **ngoài LAN thật của EVE host** (vd qua VPN tới mạng 10.215.28.0/24) muốn mở GUI vManage. Bối cảnh: **Switch61 (node 61, site 900)** là cầu nối — e0/0 = routed port (`no switchport` + `ip address dhcp`) nhận IP **10.215.28.48/24** từ cloud pnet0 (LAN thật), Vlan10 `CLOUD-MGMT` = SVI **10.9.1.1/24** gateway cho vManager 10.9.1.10 / vSmart 10.9.1.11 / vBond 10.9.1.12, `ip routing` + default `0.0.0.0/0 via 10.215.28.1`. Switch61 route RA được nhưng **vào thì không** — LAN router thật 10.215.28.1 không biết 10.9.1.0/24 → mọi máy chỉ vào được nếu tự có route/tunnel.
@@ -267,6 +367,10 @@ Quy tắc:
 - Trạng thái lab trên host 2: **ĐÃ start 1 lần đầu 10/08/2026 (chỉ 10 node SDN) — xem "Trạng thái hiện tại"** — chưa từng wipe/start toàn lab. Lưu ý khi start qua CLI trên host 2: **dùng `-T 0`** (GUI EVE 6.7.5 host 2 quản lý lab ở **tenant 0**, console port qemu = `32768 + <node-id>`; IOL = `33536 + <node-id>`); `-T 6` tạo node song song ở tenant 6 → **TRÙNG qemu process + xung đột port console** (đã gặp node 3/4 chạy double 10/08).
 
 ## Trạng thái hiện tại (cập nhật sau mỗi phiên)
+
+> **📄 Phiên gần nhất (18/09/2026 — Node 5 Dist-SW1 KHÔNG connect được SDN controller sau boot: datapath mgmt VLAN 99 chết bên trong OVS + EVE host DOWN cuối phiên)**: đọc `summaries/session-2026-09-18-summary.md`. KẾT QUẢ: node 5 đang chạy, `campus-ovs-restore` = active, `br-mgmt` = 10.1.99.11/24, nhưng **ping .10/.1 → "Destination Host unreachable" (ARP fail 100%)** và capture 3 tap uplink (5_6/5_7/5_1) **KHÔNG thấy frame src `.11` egress** (chỉ thấy core flood ARP/DNS controller + dhclient MAC `00:50:06:00:05:01`) → node 5 không forward vlan99 của chính nó ra wire; phía controller/core OK. **VNC console 33541**; `sudo -S` pass `vnpro@2026` = **SAI** trên node 5 (chưa biết pass). vncdotool **không gõ được `|` `>` `&`** → dùng `vncovs.py` (interactive sudo, chưa chạy được). **EVE host 10.215.28.26 DOWN** (SSH+ping fail cả segment) → chưa đọc disk node 5 qua guestfish. Lab ACTIVE = `ecf7c5b8…`. Tối nay: bật lại host → guestfish đọc `/etc/default/campus-ovs` node 5 → dump `ovs-vsctl show`/`dump-flows` qua vncovs → kiểm tra patch-mgmt/enslave/flow 50000 → áp restore → verify `Switch 5 connect` trong `ryu.log` + `/stats/switches`.
+
+> **📄 Trong phiên trước (15/09/2026 — DHCP/SDN campus ĐÃ FIX XONG, VPC14+VPC19 nhận IP 10.1.10.100/.101)**: đọc `summaries/session-2026-09-15-summary.md`. **KẾT QUẢ: DHCP end-to-end HOẠT ĐỘNG** — DORA đầy đủ, ping VLAN10 + gateway + cross-VLAN (DHCP server 10.1.90.10) OK. **Root cause 3 lớp** (đầy đủ trong RECIPE "DHCP không được cấp — khắc phục" dưới): (1) DEAD handler pop `access_ports` không rebuild → vlan=0; (2) **OVS lab build GIỮ NGUYÊN tag 802.1Q trong data packet-in, KHÔNG đưa `vlan_vid`/`dl_vlan` vào match dict** → controller phải tự parse VID từ data (eth.ethertype==0x8100) + egress push/pop theo từng port; (3) flow unicast dùng `dl_vlan` (tên OF1.0) → `KeyError: unknown OXM field: dl_vlan` crash handler → OFFER chết tại sw5 → phải dùng `vlan_vid=OFPVID_PRESENT|vlan` (OF1.3). **App đã sửa + deploy** (`/root/ryu-app/campus_switch_13.py`, repo `configs/01-Site100-Campus/campus_switch_13.py` — bản sạch bỏ DBG). Node 9 serial = **40909**, switch OVS VNC-only, ryu log `/root/ryu.log`. **Việc còn dở: sw8 (Dist-SW2) standby path tree-block chưa count (0 byte_count), OVS flapping pre-existing.**
 
 - **06/09/2026 (Switch61 node 61 — CẦU NỐI PROBLEM/CLOUD → LAN THẬT: e0/0 = routed port `no switchport` + `ip address dhcp` NHẬN IP LAN THẬT; vManage GUI https://10.9.1.10 REACHABLE TỪ REAL LAN qua host 1 — ĐÃ SYNC REPO):** Mục tiêu: cho user (ở LAN thật) mở được GUI vManage qua Switch61. Kết quả + bài học:
   - **Lesson 1 — image IOL "L3" `i86bi_LinuxL3-AdvEnterpriseK9-M2_157_3_May_2018.bin` (Software I86BI_LINUX-ADVENTERPRISEK9-M) là ROUTER IOS thuần**: nhận DHCP trên cổng vật lý OK nhưng **KHÔNG có `vlan`/`interface Vlan10`/`show vlan brief`** ("Invalid input") → không làm gateway SVI cho cloud network được → **BỎ**, quay về IOL **L2** `i86bi_linux_l2-adventerprisek9-ms.SSA.high_iron_20190423.bin` (giống Core-SW1/2, chỉ replace trong block node 61).
