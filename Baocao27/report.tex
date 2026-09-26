@@ -1,0 +1,228 @@
+\documentclass[aspectratio=169, 10pt]{beamer}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{times}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins}
+
+\definecolor{primaryDark}{RGB}{0, 51, 102}
+\definecolor{primaryLight}{RGB}{0, 85, 150}
+\definecolor{accentTeal}{RGB}{0, 100, 100}
+\definecolor{alertRed}{RGB}{220, 50, 50}
+\definecolor{doneGreen}{RGB}{0, 130, 60}
+\definecolor{textBlack}{RGB}{30, 30, 30}
+\definecolor{lightGrayBg}{RGB}{245, 245, 245}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\setbeamercolor{structure}{fg=primaryDark}
+\setbeamercolor{palette primary}{bg=primaryDark, fg=white}
+\setbeamercolor{palette secondary}{bg=primaryLight, fg=white}
+\setbeamercolor{palette tertiary}{bg=accentTeal, fg=white}
+\setbeamercolor{frametitle}{bg=primaryDark, fg=white}
+\setbeamercolor{title}{bg=primaryDark, fg=white}
+\setbeamercolor{block title}{bg=primaryDark, fg=white}
+\setbeamercolor{block body}{bg=lightGrayBg, fg=textBlack}
+\setbeamercolor{block title alerted}{bg=alertRed, fg=white}
+\setbeamercolor{block title example}{bg=doneGreen, fg=white}
+\setbeamercolor{alerted text}{fg=alertRed}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{blocks}[default]
+\setbeamertemplate{itemize item}{\color{accentTeal}$\blacksquare$}
+\setbeamertemplate{itemize subitem}{\color{accentTeal}$\bullet$}
+\setbeamertemplate{enumerate item}{\color{primaryDark}\textbf{\insertenumlabel.}}
+
+\title[SDN \& SD-WAN Campus]{\texorpdfstring{XÂY DỰNG MẠNG CAMPUS NETWORK\\SỬ DỤNG SDN VÀ SD-WAN}{XÂY DỰNG MẠNG CAMPUS NETWORK SỬ DỤNG SDN VÀ SD-WAN}}
+\subtitle{Báo cáo tiến độ hằng tuần -- Dự án Công nghệ Thông tin}
+\author[Trần Hữu Nhân -- Nguyễn Nhật Hào]{Trần Hữu Nhân -- 52300235\\Nguyễn Nhật Hào -- 52300198}
+\institute[TDTU]{Khoa Công nghệ Thông tin -- Trường Đại học Tôn Đức Thắng}
+\date{\today}
+
+\begin{document}
+
+% ============================================================
+% TITLE
+% ============================================================
+\begin{frame}[plain]
+    \titlepage
+\end{frame}
+
+\begin{frame}{Nội dung báo cáo}
+    \tableofcontents
+\end{frame}
+
+% ============================================================
+% OBJECTIVE
+% ============================================================
+\section{Mục tiêu}
+
+\begin{frame}{Mục tiêu đề tài}
+    \begin{block}{Mục tiêu tổng quát}
+        Xây dựng mô hình mạng Campus đa cơ sở cho trường đại học trên EVE-NG, kết hợp
+        \textbf{SDN} (điều khiển tập trung mạng LAN campus chính) và
+        \textbf{SD-WAN} (kết nối thông minh giữa các cơ sở qua Internet và MPLS).
+    \end{block}
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item Thiết kế kiến trúc phân cấp Core -- Distribution -- Access, dự phòng VRRP, OSPF Area 0.
+        \item Quy hoạch VLAN, IP, DHCP cho Site 100 (Campus chính) và 3 chi nhánh
+              Cần Thơ (200), Đà Nẵng (300), Nha Trang (400).
+        \item Quản lý tập trung các switch OVS bằng Ryu Controller qua OpenFlow 1.3.
+        \item Dựng fabric Cisco SD-WAN (vManage/vSmart/vBond -- Site 900) với 8 vEdge,
+              underlay BGP 2 nhà cung cấp (Internet AS 64511, MPLS AS 64512).
+        \item Bảo mật và dịch vụ: FW-ASAv HA, DMZ, Server Farm, Syslog, giám sát NOC.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Mục tiêu của tuần}
+    \begin{enumerate}
+        \item Ổn định fabric SD-WAN: đủ 8/8 vEdge \emph{reachable}, BFD/tunnel full-mesh lên đủ 2 màu.
+        \item Khắc phục đường dữ liệu SDN campus để gói DHCP đi xuyên các switch OVS.
+        \item Đưa giao diện quản trị vManage ra mạng LAN thật để thao tác từ laptop.
+        \item Phân tích, giải thích số liệu tunnel và Transport Health trên vManage.
+        \item Đồng bộ cấu hình lab (host 1 $\rightarrow$ repo $\rightarrow$ host 2) và cập nhật tài liệu.
+    \end{enumerate}
+\end{frame}
+
+% ============================================================
+% PROGRESS
+% ============================================================
+\section{Tiến độ đã thực hiện}
+
+\begin{frame}{Tổng quan tiến độ theo hạng mục}
+    \centering
+    \small
+    \begin{tabular}{@{}llc@{}}
+        \toprule
+        \textbf{Giai đoạn} & \textbf{Hạng mục} & \textbf{Trạng thái} \\
+        \midrule
+        Khảo sát \& thiết kế    & Lý thuyết SDN/SD-WAN, topo, bảng IP/VLAN/ASN   & \textcolor{doneGreen}{\textbf{Hoàn thành}} \\
+        Hạ tầng campus L2/L3    & Core/Dist/Access, VRRP, OSPF, FW-ASAv HA, ASDM & \textcolor{doneGreen}{\textbf{Hoàn thành}} \\
+        Chi nhánh 200/300/400   & Brand-FW, DHCP, SwitchBrand, VPC              & \textcolor{doneGreen}{\textbf{Hoàn thành}} \\
+        SD-WAN                  & Controllers, PKI, 8 vEdge, BGP underlay        & \textcolor{doneGreen}{\textbf{Hoàn thành}} \\
+        SDN campus chính        & Ryu + 6 OVS, app L2, NOC Dashboard             & \textcolor{orange}{\textbf{Đang làm}} \\
+        DHCP campus chính       & Win Server 2012 R2, 4 scope, relay trên Core   & \textcolor{orange}{\textbf{Đang làm}} \\
+        Dịch vụ \& kiểm thử     & Web/Mail, ma trận test, failover               & \textcolor{alertRed}{\textbf{Chưa làm}} \\
+        \bottomrule
+    \end{tabular}
+\end{frame}
+
+\begin{frame}{Tiến độ -- SD-WAN}
+    \begin{columns}[T]
+        \begin{column}{0.5\textwidth}
+            \begin{exampleblock}{Đã hoàn thành}
+                \begin{itemize}
+                    \item 3 controller (vManage/vSmart/vBond) + CA gốc, quy trình CSR/ký/cài root-cert-chain.
+                    \item Whitelist đủ 8 serial vEdge trên \textbf{cả 3 controller}.
+                    \item 8/8 vEdge \emph{reachable}; 10 TLOC, 36 tunnel duy nhất (72 phiên BFD).
+                    \item Underlay BGP: backbone eBGP 64511 $\leftrightarrow$ 64512 \emph{Established}, CE--PE trên 8 vEdge.
+                \end{itemize}
+            \end{exampleblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Sự cố đã xử lý trong tuần}
+                \begin{itemize}
+                    \item vEdge S100 chỉ \emph{1/3 vSmart}: thêm route /24 tới controller qua ngả
+                          biz-internet (ECMP) $\Rightarrow$ đủ 3/3 control.
+                    \item vEdge S100 rơi fabric sau reboot: bổ sung lại whitelist valid-vedges.
+                    \item Switch61 nối Cloud $\rightarrow$ LAN thật: truy cập vManage GUI từ laptop.
+                    \item Viết tài liệu giải thích Tunnel \& Transport Health.
+                \end{itemize}
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Tiến độ -- SDN campus chính \& hạ tầng}
+    \begin{columns}[T]
+        \begin{column}{0.5\textwidth}
+            \begin{block}{SDN (Ryu + Open vSwitch)}
+                \begin{itemize}
+                    \item Ryu chạy trên SDN\_CONTROLLER (10.1.99.10, port 6653/8080), điều khiển qua VLAN 99.
+                    \item Sửa app \texttt{campus\_switch\_13.py}: table-miss
+                          \texttt{CONTROLLER} $\rightarrow$ \texttt{NORMAL}, tự cài lại khi switch kết nối.
+                    \item DHCP Discover đã đi xuyên campus, relay trên 2 Core hoạt động.
+                    \item Triển khai app NOC \texttt{campus\_noc\_monitor.py}: Dashboard + REST API.
+                \end{itemize}
+            \end{block}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Hạ tầng \& vận hành lab}
+                \begin{itemize}
+                    \item DHCP-Server (Win Server 2012 R2): 4 scope VLAN 10/20/30/40 Active.
+                    \item OVS/Ryu tự khôi phục khi khởi động (systemd services).
+                    \item Syslog (Kiwi) nhận log từ Core, Server Farm, FW-ASAv HA.
+                    \item Quy trình đồng bộ một chiều host 1 $\rightarrow$ repo $\rightarrow$ host 2;
+                          cấu hình nhúng trong file \texttt{.unl}.
+                \end{itemize}
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============================================================
+% UNFINISHED
+% ============================================================
+\section{Công việc chưa hoàn thành}
+
+\begin{frame}{Công việc còn lại}
+    \begin{columns}[T]
+        \begin{column}{0.5\textwidth}
+            \begin{alertblock}{Đang dở}
+                \begin{itemize}
+                    \item DHCP-Server nhận Discover nhưng \textbf{chưa trả OFFER}
+                          $\rightarrow$ kiểm tra service, scope, giaddr, bắt gói 2 chiều.
+                    \item Access-SW3/SW4 chưa kết nối ổn định với Ryu.
+                    \item NOC Dashboard còn hiển thị tổng Rx/Tx = 0 do chưa có traffic qua datapath OVS.
+                    \item Đưa bản patch app Ryu về repo \texttt{configs/}.
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Kế hoạch tiếp theo}
+                \begin{itemize}
+                    \item Ping liên site 100 $\rightarrow$ 200/300/400 qua tunnel, kiểm tra route OMP/BGP.
+                    \item Dịch vụ Web/Mail, truy cập đa site; hoàn thiện kịch bản ASDM.
+                    \item Ma trận kiểm thử: DHCP từng site, failover FW-HA, cắt 1 màu WAN, mất controller SDN.
+                    \item Hoàn thiện báo cáo, slide và kịch bản demo bảo vệ (dự kiến cuối 11/2026).
+                \end{itemize}
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% ============================================================
+% DIFFICULTIES
+% ============================================================
+\section{Khó khăn}
+
+\begin{frame}{Khó khăn gặp phải}
+    \begin{itemize}
+        \item \textbf{Tài nguyên lab lớn:} hơn 50 node (IOL, ASAv, vEdge, Windows Server) trên EVE-NG
+              $\Rightarrow$ khởi động chậm, node có thể không chạy sau khi start (vd.\ SDN\_CONTROLLER).
+        \item \textbf{Trạng thái runtime bị mất sau reboot:} whitelist valid-vedges trên controller
+              phải bổ sung lại, nếu không vEdge rơi khỏi fabric.
+        \item \textbf{Lỗi khó chẩn đoán trên SD-WAN:} thiếu root-cert-chain, sai \texttt{color} trên
+              tunnel-interface, route tới controller chỉ có 1 ngả $\Rightarrow$ tunnel down, health đỏ.
+        \item \textbf{Hành vi OpenFlow:} table-miss gửi về controller làm rơi broadcast DHCP;
+              Ryu bản cũ (Python 3.6) khác API so với tài liệu hiện hành.
+        \item \textbf{Đồng bộ nhiều host:} cấu hình nhúng trong \texttt{.unl} dễ bị ghi đè khi
+              export/import hoặc merge git $\Rightarrow$ phải chuẩn hoá quy trình một chiều.
+        \item \textbf{Truy cập từ xa:} GUI vManage nằm trong lab, cần route và SSH tunnel để mở từ laptop.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[plain]
+    \centering
+    \vfill
+    {\Huge\color{primaryDark}\textbf{Cảm ơn thầy/cô đã lắng nghe!}}
+    \vfill
+\end{frame}
+
+\end{document}
