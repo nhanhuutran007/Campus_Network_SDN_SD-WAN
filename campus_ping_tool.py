@@ -16,6 +16,9 @@ Ho tro:
     (+VRRP) + OSPF network tren Core-SW1/2 qua console Cisco IOS, roi kiem
     chung qua SD-WAN va do thoi gian: SVI up -> FW-ASAv hoc OSPF -> vManage
     API xac nhan OMP+BFD -> VPC site khac ping thong (+traceroute qua vEdge)
+  * [Kiem Thu Nang Cao] Chinh sach tap trung: kiem chung policy vSmart
+    (data-policy / app-route / control-policy) bang traffic that tu VPC chi
+    nhanh + counter policy tren vEdge qua vManage API; tu day lai whitelist
 
 Cach chay:
   python campus_ping_tool.py
@@ -465,18 +468,62 @@ def console_send(chan, cmd, wait=0.8, read_timeout=4):
 
 
 def vedge_login(chan, user='admin', password='admin', timeout=5):
-    """Dang nhap console vEdge (Viptela CLI) neu dang o prompt 'login:',
-    va don session neu dang ket 'Uncommitted changes' tu lan truoc."""
-    banner = _read_chan(chan, timeout=timeout)
-    if re.search(r'login\s*:', banner, re.IGNORECASE):
-        chan.send(user + '\n'); time.sleep(0.6)
-        chan.send(password + '\n'); time.sleep(1.0)
+    """Dang nhap console vEdge (Viptela CLI) va DAM BAO dung o prompt exec '#'.
+    console_open da xoa buffer nen prompt 'login:' cu khong con -> phai gui Enter
+    de goi prompt ra truoc (neu chi cho 'login:' xuat hien, tool se go nham lenh
+    vao prompt login ma khong bao loi). Thoat config mode / 'Uncommitted changes'
+    con treo tu lan truoc. Nem RuntimeError neu khong vao duoc '#'."""
+    banner = ''
+    for _ in range(3):
+        chan.send('\n')
         banner += _read_chan(chan, timeout=timeout)
-    if re.search(r'uncommitted changes', banner, re.IGNORECASE):
-        chan.send('exit\n'); time.sleep(0.5)
-        chan.send('no\n'); time.sleep(0.5)
-        banner += _read_chan(chan, timeout=3)
-    return banner
+        tail = _last_line(banner)
+        if re.search(r'uncommitted changes', banner, re.IGNORECASE):
+            chan.send('no\n'); time.sleep(0.8)
+            banner += _read_chan(chan, timeout=3); continue
+        if '(config' in tail:
+            chan.send('end\n'); time.sleep(0.8)
+            banner += _read_chan(chan, timeout=3); continue
+        if tail.endswith('#'):
+            return banner
+        if re.search(r'login\s*:\s*$', tail, re.IGNORECASE):
+            chan.send(user + '\n')
+            banner += _read_until(chan, 'assword', timeout)
+            chan.send(password + '\n'); time.sleep(1.5)
+            banner += _read_chan(chan, timeout=timeout)
+            if _last_line(banner).endswith('#'):
+                return banner
+            if re.search(r'login incorrect', banner, re.IGNORECASE):
+                raise RuntimeError('sai user/password vEdge ({})'.format(user))
+    raise RuntimeError('khong vao duoc prompt # tren vEdge (cuoi: {!r})'.format(_last_line(banner)[-60:]))
+
+
+VEDGE_LAB_PASSWORDS = ('vnpro@123', 'vnpro@2026', 'okok')   # mat khau lab da ghi nhan (S200-S400 / S100 / node 65)
+
+
+def vedge_config(ssh, node_id, user, password, cmds):
+    """Dang nhap vEdge (thu password nhap vao roi cac password lab), chay cmds
+    trong config mode, commit va XAC NHAN 'Commit complete'. Tra ve output;
+    nem RuntimeError neu dang nhap hoac commit that bai."""
+    chan = console_open(ssh, node_id)
+    try:
+        for pw in [password] + [p for p in VEDGE_LAB_PASSWORDS if p != password]:
+            try:
+                vedge_login(chan, user, pw); break
+            except RuntimeError as e:
+                if 'sai user/password' not in str(e): raise
+        else:
+            raise RuntimeError('khong dang nhap duoc vEdge node {} (sai password?)'.format(node_id))
+        out = console_send(chan, 'config', wait=1.0)
+        for cmd in cmds:
+            out += console_send(chan, cmd)
+        res = console_send(chan, 'commit', wait=2.0, read_timeout=8)
+        if 'Commit complete' not in res and 'No modifications to commit' not in res:
+            console_send(chan, 'abort')     # bo thay doi chua commit, ve exec mode
+            raise RuntimeError('commit khong thanh cong: {!r}'.format(_last_line(res)[-120:]))
+        return out + res + console_send(chan, 'end')
+    finally:
+        chan.close()
 
 
 def cidr_to_mask(prefix):
@@ -558,7 +605,7 @@ def asa_open_active(ssh_client, enable_pw='', log=None):
 
 
 class VManageAPI:
-    """Doc REST API vManage (chi GET). Uu tien curl tu host EVE; neu host khong
+    """Doc REST API vManage (GET; POST chi cho day whitelist). Uu tien curl tu host EVE; neu host khong
     co route toi 10.9.x (Switch61 down) thi di qua console vManage -> vshell ->
     curl https://127.0.0.1:8443 ngay tren vManage."""
     CJ = '/tmp/.vm_cj_campus_tool'
@@ -604,6 +651,15 @@ class VManageAPI:
         _read_until(self.chan, '@@L@@', 25)
         return 'console vManage (node {})'.format(VMANAGE_NODE_ID)
 
+    def _exec(self, cmd, timeout=40):
+        """Chay 1 lenh shell tren host EVE hoac trong vshell vManage -> stdout."""
+        if self.chan is None:
+            return self._host(cmd, timeout)
+        self.chan.send('echo "@@""B@@"; {}; echo; echo "@@""E@@"\n'.format(cmd))
+        buf = _read_until(self.chan, '@@E@@', timeout)
+        m = re.search(r'@@B@@(.*)@@E@@', buf, re.S)
+        return m.group(1).replace('\r', '') if m else ''
+
     def get(self, path, grep=None):
         """GET /dataservice/<path> -> list cac dong (dict) trong 'data'.
         Loc NGAY TREN vManage: tach moi object JSON phang ra 1 dong (grep -o) va
@@ -613,13 +669,7 @@ class VManageAPI:
             self.CJ, self.base, path)
         if grep:
             cmd += " | grep -E '{}'".format(grep)
-        if self.chan is None:
-            raw = self._host(cmd)
-        else:
-            self.chan.send('echo "@@""B@@"; {}; echo "@@""E@@"\n'.format(cmd))
-            buf = _read_until(self.chan, '@@E@@', 40)
-            m = re.search(r'@@B@@(.*)@@E@@', buf, re.S)
-            raw = m.group(1) if m else ''
+        raw = self._exec(cmd)
         rows = []
         for line in raw.replace('\r', '').split('\n'):
             line = line.strip()
@@ -627,6 +677,17 @@ class VManageAPI:
                 try: rows.append(json.loads(line))
                 except ValueError: pass
         return rows
+
+    def post(self, path, body='{}'):
+        """POST /dataservice/<path> (can XSRF token) -> chuoi response tho.
+        Chi dung cho thao tac an toan, idempotent (vd day whitelist vEdge)."""
+        tok = self._exec("curl -sk --max-time 20 -b {} '{}/dataservice/client/token'".format(
+            self.CJ, self.base)).strip().split('\n')[-1].strip()
+        if not tok or '<' in tok:
+            raise RuntimeError('khong lay duoc XSRF token vManage')
+        return self._exec("curl -sk --max-time 30 -b {} -X POST -H 'X-XSRF-TOKEN: {}' "
+                          "-H 'Content-Type: application/json' '{}/dataservice/{}' -d '{}'".format(
+                              self.CJ, tok, self.base, path, body)).strip()
 
     def close(self):
         try:
@@ -1438,7 +1499,7 @@ class AdvancedToolsWindow(tk.Toplevel):
     def __init__(self, gui):
         super().__init__(gui)
         self.gui = gui
-        self.title('Kiem Thu Nang Cao - Failover SD-WAN & Quan ly VLAN')
+        self.title('Kiem Thu Nang Cao - Failover SD-WAN, Quan ly VLAN & Chinh sach tap trung')
         self.configure(bg=BG)
         self.geometry('960x780')
         self.minsize(860, 700)
@@ -1452,8 +1513,10 @@ class AdvancedToolsWindow(tk.Toplevel):
         nb.pack(fill='both', expand=True, padx=10, pady=(0, 10))
         self.failover_tab = FailoverTab(nb, gui)
         self.vlan_tab = VlanTab(nb, gui)
+        self.policy_tab = PolicyTab(nb, gui)
         nb.add(self.failover_tab, text='  SD-WAN Failover Test  ')
         nb.add(self.vlan_tab, text='  Quan ly VLAN  ')
+        nb.add(self.policy_tab, text='  Chinh sach tap trung  ')
 
 
 class FailoverTab(tk.Frame):
@@ -1517,7 +1580,7 @@ class FailoverTab(tk.Frame):
             row=4, column=0, sticky='w', pady=4)
         upf = tk.Frame(row, bg=BG2); upf.grid(row=4, column=1, sticky='w')
         self.vuser_var = tk.StringVar(value='admin')
-        self.vpass_var = tk.StringVar(value='admin')
+        self.vpass_var = tk.StringVar(value='vnpro@123')
         tk.Entry(upf, textvariable=self.vuser_var, width=9, bg=BG3, fg=WHITE,
                  insertbackground=WHITE, relief='flat').pack(side='left', padx=2)
         tk.Entry(upf, textvariable=self.vpass_var, width=9, bg=BG3, fg=WHITE,
@@ -1598,12 +1661,9 @@ class FailoverTab(tk.Frame):
         log = self.gui._log
         log('[FAILOVER] Khoi phuc thu cong {} interface {}...\n'.format(vname, iface), 'info')
         try:
-            chan = console_open(ssh, VEDGE_NODE_IDS[vname])
-            vedge_login(chan, self.vuser_var.get(), self.vpass_var.get())
-            for cmd in ['config', 'vpn 0 interface {}'.format(iface), 'no shutdown', 'commit', 'end']:
-                console_send(chan, cmd)
-            chan.close()
-            log('[FAILOVER] Da gui no-shutdown cho {} {}\n'.format(vname, iface), 'ok')
+            vedge_config(ssh, VEDGE_NODE_IDS[vname], self.vuser_var.get(), self.vpass_var.get(),
+                         ['vpn 0 interface {}'.format(iface), 'no shutdown'])
+            log('[FAILOVER] Da no-shutdown (Commit complete) {} {}\n'.format(vname, iface), 'ok')
         except Exception as e:
             log('[FAILOVER] Loi khoi phuc: {}\n'.format(e), 'err')
 
@@ -1628,9 +1688,10 @@ class FailoverTab(tk.Frame):
         t_start = time.time()
         cut_t = None
         recover_t = None
-        chan = None
         vpc = None
         cut_done = False
+        saw_loss = False     # co goi nao mat SAU khi cat khong
+        no_outage = False    # cat xong ma suot thoi gian giam sat khong mat goi nao
 
         def sample():
             """1 goi ping tu VPC nguon (console VPCS) -> (elapsed, latency, loss)."""
@@ -1658,14 +1719,10 @@ class FailoverTab(tk.Frame):
                 return
 
             log('  [*] Dang gui lenh shutdown {} tren {}...\n'.format(iface, vname), 'info')
-            chan = console_open(ssh, node_id)
-            vedge_login(chan, user, pwd)
-            cut_done = True
-            for cmd in ['config', 'vpn 0 interface {}'.format(iface), 'shutdown', 'commit', 'end']:
-                console_send(chan, cmd)
-            chan.close(); chan = None
+            cut_done = True      # tu day tro di LUON khoi phuc, ke ca khi commit loi giua chung
+            vedge_config(ssh, node_id, user, pwd, ['vpn 0 interface {}'.format(iface), 'shutdown'])
             cut_t = time.time() - t_start
-            log('  [CUT] Da cat mau "{}" luc t={:.1f}s\n'.format(color, cut_t), 'err')
+            log('  [CUT] Da cat mau "{}" luc t={:.1f}s (vEdge xac nhan Commit complete)\n'.format(color, cut_t), 'err')
 
             consecutive_ok = 0
             while (time.time() - t_start) < cut_t + duration:
@@ -1674,13 +1731,15 @@ class FailoverTab(tk.Frame):
                     'ok' if r.success else 'err')
                 if r.success:
                     consecutive_ok += 1
-                    if consecutive_ok >= 3:
+                    if consecutive_ok >= 3 and saw_loss:
                         recover_t = samples[-3][0]   # goi dau tien cua chuoi thong lien tiep
                         log('  [RECOVER] Thong tro lai tu t={:.1f}s (RTO={:.1f}s)\n'.format(
                             recover_t, recover_t - cut_t), 'ok')
                         break
                 else:
                     consecutive_ok = 0
+                    saw_loss = True
+            no_outage = not saw_loss
         except Exception as e:
             log('  [!] Loi trong qua trinh test: {}\n'.format(e), 'err')
         finally:
@@ -1690,19 +1749,21 @@ class FailoverTab(tk.Frame):
             # LUON khoi phuc lien ket neu da gui lenh cat, du test thanh cong hay loi giua duong
             if cut_done:
                 try:
-                    if chan is None:
-                        chan = console_open(ssh, node_id)
-                        vedge_login(chan, user, pwd)
-                    for cmd in ['config', 'vpn 0 interface {}'.format(iface), 'no shutdown', 'commit', 'end']:
-                        console_send(chan, cmd)
-                    chan.close()
-                    log('  [OK] Da khoi phuc (no-shutdown) {} tren {}\n'.format(iface, vname), 'ok')
+                    vedge_config(ssh, node_id, user, pwd, ['vpn 0 interface {}'.format(iface), 'no shutdown'])
+                    log('  [OK] Da khoi phuc (no-shutdown, Commit complete) {} tren {}\n'.format(iface, vname), 'ok')
                 except Exception as e:
                     log('  [!] KHONG khoi phuc duoc tu dong ({}) -> bam "Khoi Phuc Ngay"!\n'.format(e), 'err')
 
         if not cut_done:
             log('=' * 55 + '\n\n', 'sep'); return
-        if recover_t is None:
+        if no_outage:
+            log('  [!] KHONG MAT GOI NAO trong {}s sau khi cat mau "{}" cua {} -> KHONG do duoc RTO.\n'
+                '      Co 2 kha nang: (1) luong ping khong di qua mau nay (vd FW chi nhanh dung vEdge1 lam\n'
+                '      default, hoac tunnel cheo mau dang mang luong) -> cat mau khac hoac doi VPC/dich;\n'
+                '      (2) chuyen duong nhanh hon chu ky lay mau ~1.2s (vEdge rut TLOC qua OMP ngay khi\n'
+                '      interface down) -> ghi nhan "gian doan < 1.2s", khong phai RTO = 0.\n'.format(
+                    duration, color, vname), 'err')
+        elif recover_t is None:
             log('  [!] Khong ghi nhan khoi phuc trong {}s sau khi cat.\n'.format(duration), 'err')
             if len(WAN_IFACE.get(vname, {})) == 1:
                 log('  [i] {} chi co 1 mau WAN: cat mau nay = vEdge mat het tunnel. Neu FW chi nhanh dung\n'
@@ -2427,6 +2488,372 @@ class VlanTab(tk.Frame):
         if ok and e:
             log('  [i] Da luu ban sao cau hinh -> co the "Khoi phuc".\n', 'info')
             self._commit(str(vid), dict(e, status='deleted'))
+
+
+# =========================================================
+#  CHINH SACH TAP TRUNG  –  kiem chung policy vSmart (Centralized Policy)
+#  Policy that tren vSmart (configs/05-Site900-SDWAN-Controllers/vSmart-34):
+#    DP_BRANCH        data-policy from-service, site 200-400: drop telnet ->
+#                     Server Farm, drop ssh/telnet -> DMZ, count ICMP
+#    AAR_LAN          app-route-policy, site 100-400: ICMP/DSCP46 -> SLA_REALTIME,
+#                     web/mail/Server Farm -> SLA_BUSINESS; KHONG ep mau: moi tunnel dat SLA
+#                     deu dung, vi pham SLA thi bi loai, tat ca vi pham -> fallback tunnel tre
+#                     thap nhat (fallback-best-tunnel latency loss); co count AAR_*
+#    PREFER-VE1       control-policy out, site 100-400: route tu vEdge1 moi site
+#                     preference 200 -> chi nhanh vao campus qua vEdge1
+#  Tool KHONG sua policy: chi sinh traffic that tu VPC chi nhanh roi doc
+#  counter policy tren vEdge qua vManage API (truoc/sau) de chung minh policy
+#  do vSmart day xuong duoc thuc thi. Rieng whitelist vEdge (mat sau khi
+#  reboot controller) co the day lai tu vManage (POST, idempotent).
+# =========================================================
+POLICY_CSV  = 'case_policy.csv'
+POLICY_COLS = ['timestamp', 'test_id', 'policy', 'test', 'src_host', 'target',
+               'check', 'delta', 'detail', 'result']
+IP_SITE = {1: 100, 2: 200, 3: 300, 4: 400}     # octet thu 2 cua 10.X.0.0/16 -> site-id
+VEDGE_REJOIN_TIMEOUT = 150                      # giay cho vEdge len lai sau khi day whitelist
+
+
+def site_of_ip(ip):
+    try:
+        return IP_SITE.get(int(ip.split('.')[1]))
+    except (IndexError, ValueError):
+        return None
+
+
+class PolicyTab(tk.Frame):
+    """Kiem chung chinh sach tap trung SD-WAN (vSmart -> OMP -> vEdge).
+    Tra loi tieu chi de bai: 'Kha nang quan ly chinh sach tap trung' va muc
+    tieu 'Quan ly tap trung luong du lieu giua cac khu vuc'."""
+    def __init__(self, parent, gui):
+        super().__init__(parent, bg=BG2)
+        self.gui = gui
+        self._busy = False
+        self._build()
+
+    def _build(self):
+        tk.Label(self, bg=BG2, fg=GREY, font=FONT_SMALL, justify='left', anchor='w', wraplength=880,
+                 text='Kiem chung policy tap trung tren vSmart: W whitelist vEdge tren vBond (tu day lai tu '
+                      'vManage neu thieu), DP data-policy DP_BRANCH (chan telnet/ssh), AAR app-route AAR_LAN '
+                      '(chon tunnel dat SLA, fallback tunnel tre thap nhat), CP control-policy PREFER-VE1. '
+                      'Tool sinh traffic that tu 1 VPC chi nhanh roi so counter policy tren vEdge (vManage API) '
+                      'truoc/sau. Khong sua policy tren vSmart.'
+                 ).pack(fill='x', padx=10, pady=(10, 6))
+
+        row = tk.Frame(self, bg=BG2); row.pack(fill='x', padx=10, pady=2)
+        srcs = sorted(h for h in VPC_NODE_IDS
+                      if h in HOST_SITE and SITES[HOST_SITE[h]]['site_id'] != CORE_SITE_ID)
+        self.src_var = tk.StringVar(value='VPC43' if 'VPC43' in srcs else (srcs[0] if srcs else ''))
+        self.farm_var = tk.StringVar(value='10.1.90.10')
+        self.dmz_var = tk.StringVar(value='10.1.1.10')
+        self.icmp_var = tk.StringVar(value='10.1.10.1')
+        self.count_var = tk.IntVar(value=10)
+        self.vm_user_var = tk.StringVar(value='admin')
+        self.vm_pw_var = tk.StringVar(value='')
+        fields = [('VPC nguon (chi nhanh):', None, '(DP_BRANCH chi ap cho site 200-400)'),
+                  ('IP Server Farm:', self.farm_var, '(dich test Telnet bi chan + ICMP)'),
+                  ('IP DMZ (Web/Mail):', self.dmz_var, '(dich test SSH bi chan + HTTP cho qua)'),
+                  ('IP dich ICMP lien site:', self.icmp_var, '(host/gateway o site KHAC, vd 10.1.10.1, 10.3.90.101)'),
+                  ('So goi ICMP:', self.count_var, ''),
+                  ('vManage user:', self.vm_user_var, ''),
+                  ('vManage pass:', self.vm_pw_var, '(bat buoc - doc counter qua vManage API)')]
+        for i, (lbl, var, hint) in enumerate(fields):
+            tk.Label(row, text=lbl, bg=BG2, fg=WHITE, width=20, anchor='w').grid(row=i, column=0, sticky='w', pady=2)
+            if var is None:
+                ttk.Combobox(row, textvariable=self.src_var, values=srcs, width=18,
+                             state='readonly').grid(row=i, column=1, padx=4, pady=2, sticky='w')
+            elif var is self.count_var:
+                tk.Spinbox(row, from_=3, to=100, textvariable=var, width=8, bg=BG3, fg=WHITE,
+                           insertbackground=WHITE, buttonbackground=BG3, relief='flat').grid(
+                    row=i, column=1, padx=4, pady=2, sticky='w')
+            else:
+                tk.Entry(row, textvariable=var, bg=BG3, fg=WHITE, insertbackground=WHITE, width=20,
+                         relief='flat', show='*' if 'pass' in lbl else '').grid(row=i, column=1, padx=4, pady=2, sticky='w')
+            if hint:
+                tk.Label(row, text=hint, bg=BG2, fg=GREY, font=FONT_SMALL).grid(row=i, column=2, sticky='w', padx=6)
+
+        cf = tk.LabelFrame(self, text=' Nhom kiem tra ', bg=BG2, fg=CYAN,
+                           font=('Segoe UI', 9, 'bold'), bd=1, relief='groove')
+        cf.pack(fill='x', padx=10, pady=(8, 0))
+        self.chk = {}
+        for i, (key, text) in enumerate([
+                ('W', 'W  Whitelist vEdge tren vBond (tu dong day lai tu vManage neu thieu)'),
+                ('DP', 'DP Data-policy DP_BRANCH: Telnet->Farm, SSH->DMZ bi chan; HTTP->DMZ, ICMP cho qua'),
+                ('AAR', 'AAR App-route AAR_LAN: ICMP lien site khop luat SLA_REALTIME (AAR_ICMP)'),
+                ('CP', 'CP Control-policy PREFER-VE1: chi nhanh chon route 10.1.0.0/16 cua vEdge1-S100')]):
+            var = tk.BooleanVar(value=True); self.chk[key] = var
+            tk.Checkbutton(cf, text=text, variable=var, bg=BG2, fg=TEAL, selectcolor=BG3,
+                           activebackground=BG2, font=FONT_UI).grid(row=i, column=0, sticky='w', padx=4)
+
+        bf = tk.Frame(self, bg=BG2); bf.pack(fill='x', padx=10, pady=8)
+        for text, color, cmd in [('Chay kiem tra chinh sach', ORANGE, self._run_all),
+                                 ('Chi kiem tra whitelist', CYAN, self._run_whitelist)]:
+            tk.Button(bf, text=text, bg=BG3, fg=color, font=('Segoe UI', 9, 'bold'),
+                      bd=0, relief='flat', activebackground='#2d333b', cursor='hand2',
+                      command=cmd, pady=6, padx=10).pack(side='left', padx=4)
+
+    # ---- button handlers (main thread) --------------------------------------
+    def _read_opts(self):
+        opts = {'src': self.src_var.get(), 'farm': self.farm_var.get().strip(),
+                'dmz': self.dmz_var.get().strip(), 'icmp': self.icmp_var.get().strip(),
+                'count': self.count_var.get(), 'vm_user': self.vm_user_var.get().strip() or 'admin',
+                'vm_pw': self.vm_pw_var.get(), 'groups': {k for k, v in self.chk.items() if v.get()}}
+        if not opts['vm_pw']:
+            raise ValueError('Nhap vManage pass (counter policy doc qua vManage API).')
+        for k in ('farm', 'dmz', 'icmp'):
+            ipaddress.ip_address(opts[k])   # nem ValueError neu sai
+        if opts['groups'] & {'DP', 'AAR'} and opts['src'] not in VPC_NODE_IDS:
+            raise ValueError('Chon VPC nguon.')
+        return opts
+
+    def _start(self, only_whitelist=False):
+        ssh = self.gui._ssh_client
+        if not ssh:
+            messagebox.showerror('Chua SSH', 'Ket noi SSH (man hinh chinh, SSH Mode) truoc khi chay.'); return
+        if self._busy:
+            messagebox.showwarning('Dang chay', 'Dang co 1 lan kiem tra khac, vui long doi.'); return
+        try:
+            opts = self._read_opts()
+        except ValueError as e:
+            messagebox.showerror('Tham so sai', str(e)); return
+        if only_whitelist:
+            opts['groups'] = {'W'}
+        if not opts['groups']:
+            messagebox.showwarning('Chua chon', 'Tick it nhat 1 nhom kiem tra.'); return
+        self._busy = True
+
+        def _run():
+            try: self._thread(ssh, opts)
+            except Exception as e: self.gui._log('[POLICY] Loi: {}\n'.format(e), 'err')
+            finally: self._busy = False
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _run_all(self):
+        self._start()
+
+    def _run_whitelist(self):
+        self._start(only_whitelist=True)
+
+    # ---- helpers (worker thread) ---------------------------------------------
+    @staticmethod
+    def _snapshot(api, edges):
+        """Counter data-policy + app-route-policy tren cac vEdge -> {(edge, policy, counter): packets}."""
+        d = {}
+        for e in edges:
+            for kind in ('datapolicyfilter', 'approutepolicyfilter'):
+                for r in api.get('device/policy/{}?deviceId={}'.format(kind, e)):
+                    if 'counter-name' in r and 'vdevice-name' in r:
+                        try: d[(e, r.get('policy-name'), r['counter-name'])] = int(r.get('packets') or 0)
+                        except ValueError: pass
+        return d
+
+    @staticmethod
+    def _delta(before, after, policy, counter):
+        """Tong delta 1 counter tren moi vEdge + chuoi chi tiet theo vEdge."""
+        names = {ip: n for d in SITE_VEDGES.values() for ip, n in d.items()}
+        total, parts = 0, []
+        for k, v in after.items():
+            if k[1] == policy and k[2] == counter:
+                dv = v - before.get(k, 0)
+                total += dv
+                if dv: parts.append('{}+{}'.format(names.get(k[0], k[0]), dv))
+        return total, ' '.join(parts)
+
+    def _record(self, rows, test_id, policy, test, opts, target, check, delta, detail, ok):
+        rows.append({'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'test_id': test_id,
+                     'policy': policy, 'test': test, 'src_host': opts.get('src', ''), 'target': target,
+                     'check': check, 'delta': delta, 'detail': detail, 'result': 'PASS' if ok else 'FAIL'})
+        self.gui._log('    [{}] {} {} = {} {}\n'.format('PASS' if ok else 'FAIL', test_id, check, delta,
+                                                      '({})'.format(detail) if detail else ''),
+                      'ok' if ok else 'err')
+
+    def _whitelist(self, api, rows, opts):
+        log = self.gui._log
+        log('  [W] Doi chieu whitelist vManage <-> vBond...\n', 'info')
+        valid = {r.get('serialNumber'): r.get('host-name') for r in api.get('system/device/vedges', grep='validity')
+                 if r.get('validity') == 'valid' and r.get('serialNumber')}
+        vbond = next((r.get('system-ip') for r in api.get('device', grep='vbond') if r.get('system-ip')), None)
+        if not vbond:
+            self._record(rows, 'W-1', 'whitelist', 'vBond co mat trong vManage', opts, '-', 'vbond', 0, '', False)
+            return
+        onbond = {r.get('serial-number') for r in api.get('device/orchestrator/validvedges?deviceId=' + vbond)
+                  if 'vdevice-name' in r}
+        missing = {s: n for s, n in valid.items() if s not in onbond}
+        log('      vManage valid={} | vBond {} co={} | thieu: {}\n'.format(
+            len(valid), vbond, len(onbond), ', '.join(sorted(missing.values())) or 'khong'), 'info')
+        if not missing:
+            self._record(rows, 'W-1', 'whitelist', 'vBond du whitelist', opts, vbond, 'missing', 0, '', True)
+            return
+        log('  [W] Day whitelist tu vManage xuong controller (Send to Controllers)...\n', 'info')
+        t0 = time.time()
+        log('      vManage: {}\n'.format(api.post('certificate/vedge/list?action=push')[:120]), 'info')
+        pending = set(missing.values())
+        while pending and time.time() - t0 < VEDGE_REJOIN_TIMEOUT:
+            time.sleep(10)
+            up = {r.get('host-name') for r in api.get('device', grep='reachability')
+                  if r.get('reachability') == 'reachable'}
+            for n in sorted(pending & up):
+                log('      {} reachable sau {:.0f}s\n'.format(n, time.time() - t0), 'ok')
+            pending -= up
+        ok = not pending
+        self._record(rows, 'W-1', 'whitelist', 'Day lai whitelist -> vEdge len lai fabric', opts, vbond,
+                     'rejoin_s', round(time.time() - t0, 1),
+                     'thieu {}'.format(','.join(sorted(missing.values()))) +
+                     ('' if ok else ' | chua len: ' + ','.join(sorted(pending))), ok)
+
+    def _traffic_test(self, api, vpc, rows, opts, edges, test_id, name, cmd, target, checks, timeout=45):
+        """Chup counter -> chay lenh VPCS -> chup lai -> danh gia tung check (policy, counter, 'gt0'|'eq0')."""
+        log = self.gui._log
+        log('  [{}] {}: {}\n'.format(test_id, name, cmd), 'info')
+        before = self._snapshot(api, edges)
+        out = vpcs_cmd(vpc, cmd, timeout)
+        lines = [l.strip() for l in out.replace('\r', '').split('\n')
+                 if l.strip() and 'VPCS>' not in l and not l.strip().startswith('ping ')]
+        for l in lines[-6:]:
+            log('      {}\n'.format(l), 'info')
+        time.sleep(5)            # cho vEdge cap nhat counter
+        after = self._snapshot(api, edges)
+        replies = sum('bytes from' in l for l in lines)
+        icmp = ' -P ' not in cmd
+        for pol, counter, cond in checks:
+            d, detail = self._delta(before, after, pol, counter)
+            ok = d > 0 if cond == 'gt0' else d == 0
+            if icmp:
+                detail = (detail + ' | reply {}'.format(replies)).strip(' |')
+            self._record(rows, test_id, pol, name, opts, target, counter, d, detail, ok)
+        if icmp and replies == 0 and site_of_ip(target) != SITES[HOST_SITE[opts['src']]]['site_id']:
+            log('    [i] 0 reply tu {}: policy da khop o chieu di, nhung dich khong tra loi (host/FW/Core site '
+                'dich dang tat?) -> chua chung minh duoc thong dau-cuoi. Nen chon dich dang chay, '
+                'vd VPC chi nhanh khac.\n'.format(target), 'info')
+
+    def _control(self, api, rows, opts, edges):
+        log = self.gui._log
+        log('  [CP] Route OMP 10.1.0.0/16 tren vEdge site nguon...\n', 'info')
+        for e in edges:
+            routes = {r.get('originator'): r.get('status', '')
+                      for r in api.get('device/omp/routes/received?deviceId=' + e, grep='"10\\.1\\.0\\.0/16"')
+                      if r.get('prefix') == '10.1.0.0/16'}
+            ve1, ve2 = routes.get('10.200.100.1', ''), routes.get('10.200.100.2', '')
+            ok = 'C' in ve1 and 'C' not in ve2
+            name = {ip: n for d in SITE_VEDGES.values() for ip, n in d.items()}.get(e, e)
+            self._record(rows, 'CP-1', 'PREFER-VE1', 'Chi nhanh uu tien vEdge1-S100 ({})'.format(name),
+                         opts, '10.1.0.0/16', 'status', 've1=[{}] ve2=[{}]'.format(ve1 or '-', ve2 or '-'),
+                         '', ok)
+
+    def _open_src_vpc(self, ssh, opts):
+        """Mo console VPC nguon; neu node dang tat thi tu chon VPC chi nhanh khac
+        dang chay (ghi ro vao log va opts['src']). Tra ve channel hoac None."""
+        log = self.gui._log
+        branch = sorted(h for h in VPC_NODE_IDS
+                        if h in HOST_SITE and SITES[HOST_SITE[h]]['site_id'] != CORE_SITE_ID)
+        for name in [opts['src']] + [h for h in branch if h != opts['src']]:
+            try:
+                chan = console_open(ssh, VPC_NODE_IDS[name])
+            except Exception:
+                if name == opts['src']:
+                    log('  [!] Khong mo duoc console {} (node {} dang tat?) -> tim VPC chi nhanh khac...\n'.format(
+                        name, VPC_NODE_IDS[name]), 'err')
+                continue
+            chan.send('\n'); time.sleep(0.4); _flush_chan(chan)
+            if name != opts['src']:
+                log('  [i] Dung {} lam VPC nguon thay cho {}.\n'.format(name, opts['src']), 'info')
+                opts['src'] = name
+            return chan
+        log('  [!] Khong co VPC chi nhanh nao dang chay -> bo qua DP/AAR (can traffic that).\n', 'err')
+        return None
+
+    def _chart(self, rows):
+        if not HAS_MPL: return None
+        data = [r for r in rows if isinstance(r['delta'], (int, float)) and r['test_id'] != 'W-1']
+        if not data: return None      # chi co whitelist -> khong co counter de ve
+        path = os.path.join(LOG_DIR, 'policy_{}.png'.format(datetime.now().strftime('%Y%m%d_%H%M%S')))
+        ChartEngine.bar_chart(['{} {}'.format(r['test_id'], r['check']) for r in data],
+                              [r['delta'] for r in data],
+                              'Chinh sach tap trung SD-WAN - delta counter (xanh=PASS, do=FAIL)',
+                              'goi / giay', path, horiz=True,
+                              color=[GREEN if r['result'] == 'PASS' else RED for r in data])
+        return path
+
+    # ---- worker ---------------------------------------------------------------
+    def _thread(self, ssh, opts):
+        log = self.gui._log
+        groups = opts['groups']
+        log('\n' + '='*55 + '\n', 'sep')
+        log('[POLICY] Kiem chung chinh sach tap trung: {}\n'.format(' '.join(
+            g for g in ('W', 'DP', 'AAR', 'CP') if g in groups)), 'hdr')
+        rows, skipped = [], []
+        api = VManageAPI(ssh, opts['vm_user'], opts['vm_pw'])
+        vpc = None
+        try:
+            log('  [*] vManage API qua {}\n'.format(api.open()), 'info')
+            if 'W' in groups:
+                self._whitelist(api, rows, opts)
+            if groups & {'DP', 'AAR'}:
+                vpc = self._open_src_vpc(ssh, opts)
+                if vpc is None:
+                    skipped += [g for g in ('DP', 'AAR') if g in groups]
+                    groups = groups - {'DP', 'AAR'}
+            src_site = SITES[HOST_SITE[opts['src']]]['site_id'] if opts['src'] in HOST_SITE else None
+            src_edges = sorted(SITE_VEDGES.get(src_site, {}))
+            if vpc is not None:
+                log('  [*] {} (site {}) - vEdge doc counter: {}\n'.format(
+                    opts['src'], src_site, ', '.join(SITE_VEDGES[src_site][e] for e in src_edges)), 'info')
+            if 'DP' in groups:
+                dp = [('DP-1', 'Telnet -> Server Farm bi chan', 'ping {} -P 6 -p 23 -c 3'.format(opts['farm']),
+                       opts['farm'], [('DP_BRANCH', 'TELNET_TO_FARM', 'gt0')]),
+                      ('DP-2', 'SSH -> DMZ bi chan', 'ping {} -P 6 -p 22 -c 3'.format(opts['dmz']),
+                       opts['dmz'], [('DP_BRANCH', 'ADMIN_TO_DMZ', 'gt0')]),
+                      ('DP-3', 'HTTP -> DMZ cho qua (+AAR SLA_BUSINESS)',
+                       'ping {} -P 6 -p 80 -c 3'.format(opts['dmz']), opts['dmz'],
+                       [('DP_BRANCH', 'ADMIN_TO_DMZ', 'eq0'), ('DP_BRANCH', 'TELNET_TO_FARM', 'eq0'),
+                        ('AAR_LAN', 'AAR_WEB', 'gt0')]),
+                      ('DP-4', 'ICMP -> Server Farm duoc dem', 'ping {} -c 5'.format(opts['farm']),
+                       opts['farm'], [('DP_BRANCH', 'ICMP_BRANCH', 'gt0')])]
+                for tid, name, cmd, target, checks in dp:
+                    self._traffic_test(api, vpc, rows, opts, src_edges, tid, name, cmd, target, checks)
+            if 'AAR' in groups:
+                dst_edges = sorted(SITE_VEDGES.get(site_of_ip(opts['icmp']), {}))
+                edges = sorted(set(src_edges) | set(dst_edges))
+                n = max(3, int(opts['count']))
+                self._traffic_test(api, vpc, rows, opts, edges, 'AAR-1',
+                                   'ICMP lien site -> luat SLA_REALTIME',
+                                   'ping {} -c {}'.format(opts['icmp'], n), opts['icmp'],
+                                   [('AAR_LAN', 'AAR_ICMP', 'gt0')], timeout=n * 2 + 20)
+            if 'CP' in groups:
+                if src_site == CORE_SITE_ID or not src_edges:
+                    log('  [CP] Bo qua: control-policy chi ap cho chi nhanh (site 200-400).\n', 'info')
+                else:
+                    self._control(api, rows, opts, src_edges)
+        except Exception as e:
+            log('  [!] Loi: {}\n'.format(e), 'err')
+        finally:
+            if vpc is not None:
+                try: vpc.close()
+                except Exception: pass
+            api.close()
+
+        if not rows:
+            log('=' * 55 + '\n\n', 'sep'); return
+        fname = POLICY_CSV
+        try:
+            for r in rows:
+                path = VlanTab._append_csv(fname, r, POLICY_COLS)
+        except PermissionError:
+            # file dang mo trong Excel (bi khoa) -> ghi sang file rieng, khong mat ket qua
+            fname = 'case_policy_{}.csv'.format(datetime.now().strftime('%Y%m%d_%H%M%S'))
+            log('  [!] {} dang bi khoa (dang mo trong Excel?) -> ghi sang {}\n'.format(POLICY_CSV, fname), 'err')
+            for r in rows:
+                path = VlanTab._append_csv(fname, r, POLICY_COLS)
+        log('  [OK] Ket qua ghi vao (append): {}\n'.format(path), 'ok')
+        try:
+            png = self._chart(rows)
+            if png: log('  [OK] PNG: {}\n'.format(png), 'ok')
+        except Exception as e:
+            log('  [!] Loi ve PNG: {}\n'.format(e), 'err')
+        npass = sum(r['result'] == 'PASS' for r in rows)
+        log('  === Chinh sach tap trung: {}/{} kiem tra PASS{} ===\n'.format(
+            npass, len(rows), ' | BO QUA: {}'.format(', '.join(skipped)) if skipped else ''),
+            'hdr' if npass == len(rows) and not skipped else 'err')
+        log('=' * 55 + '\n\n', 'sep')
 
 
 # =========================================================
