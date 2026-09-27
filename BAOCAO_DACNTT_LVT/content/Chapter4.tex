@@ -222,11 +222,13 @@ access-group SDWAN_IN in interface outside1
 access-group SDWAN_IN in interface outside2
 sla monitor 10
  type echo protocol ipIcmpEcho 10.1.255.1 interface outside1
+ num-packets 1
  frequency 2
 sla monitor schedule 10 life forever start-time now
 track 1 rtr 10 reachability
 route outside1 0.0.0.0 0.0.0.0 10.2.1.2 1 track 1
 route outside2 0.0.0.0 0.0.0.0 10.2.1.6 2
+route outside1 10.1.255.1 255.255.255.255 10.2.1.2 1
 dhcpd dns 10.1.90.10
 dhcpd domain campus.internal
 dhcpd address 10.2.60.100-10.2.60.199 vlan60
@@ -322,6 +324,8 @@ vpn 1
   ip address 10.1.3.2/30
  interface ge0/1
   ip address 10.1.3.14/30
+ interface loopback0
+  ip address 10.1.255.1/32
  ip route 10.1.0.0/16 10.1.3.1
 omp
  advertise connected
@@ -365,6 +369,8 @@ omp
     Sau khi khôi phục cổng MPLS, TLOC MPLS không được quảng bá lại & VPN 0 thiếu tuyến cụ thể đến controller qua MPLS & Thêm tuyến \texttt{10.9.0.0/24} qua MPLS; sau khoảng 60 giây DTLS, OMP và BFD phục hồi \\
     \hline
     Overlay lên nhưng máy trạm các site không thông nhau & Chưa có VPN dịch vụ, cổng LAN nằm trong VPN 512 & Tạo VPN 1 \texttt{LAN}, chuyển cổng LAN vào VPN 1, thêm tuyến tổng hợp và quảng bá OMP \\
+    \hline
+    Mất MPLS tại chi nhánh làm mất 100\% gói, không tự phục hồi & Brand-FW không biết đường MPLS phía xa đã đứt nên vẫn đẩy lưu lượng về vEdge1; vEdge2 chuyển lưu lượng LAN qua vEdge1 nên chiều về đi vào cổng khác chiều đi và bị tường lửa trạng thái hủy & Brand-FW theo dõi beacon \texttt{10.1.255.1} bằng \texttt{sla monitor} và \texttt{track}; tuyến LAN của vEdge2 trỏ thẳng về \texttt{outside2}; control policy ưu tiên vEdge1 của mọi site \\
 \end{longtable}
 \endgroup
 
@@ -375,11 +381,39 @@ omp
     \item \textbf{Underlay:} mọi phiên eBGP CE--PE và phiên giữa hai nhà cung cấp ở trạng thái Established; các vEdge nhận tuyến mặc định qua transport tương ứng.
     \item \textbf{BFD:} toàn bộ phiên đều up --- mỗi vEdge Site 100 12/12, mỗi vEdge chi nhánh 8/8.
     \item \textbf{Overlay dữ liệu:} ping giữa máy trạm các chi nhánh 200, 300, 400 thành công 10/10; máy trạm chi nhánh truy cập được dịch vụ tại Campus chính.
-    \item \textbf{Chính sách:} mọi vEdge nhận đúng chính sách từ vSmart (\texttt{show policy from-vsmart}); bộ đếm \texttt{ICMP\_BRANCH} tăng khi ping; thống kê app-route từ Site 200 đến Site 300 qua MPLS: mất gói 0\%, độ trễ 37~ms, jitter 6~ms --- thỏa \texttt{SLA\_REALTIME}.
-    \item \textbf{Failover transport:} khi tắt cổng MPLS trên cả hai vEdge Site 100, các đường hầm qua Internet tiếp tục mang lưu lượng, quan sát chuyển đổi khoảng 2 giây; khi bật lại, TLOC MPLS phục hồi sau khi bổ sung tuyến controller qua MPLS.
+    \item \textbf{Chất lượng đường truyền:} thống kê app-route từ Site 200 đến Site 300 qua MPLS: mất gói 0\%, độ trễ 37~ms, jitter 6~ms --- thỏa \texttt{SLA\_REALTIME}.
+    \item \textbf{Chính sách tập trung:} mọi vEdge nhận đúng chính sách từ vSmart (\texttt{show policy from-vsmart}). Để chứng minh chính sách được thực thi, nhóm xây dựng công cụ kiểm thử tự động: đọc bộ đếm của từng luật qua API của vManage, sinh lưu lượng thật từ máy trạm chi nhánh (PC-YTe-S200-2), rồi đọc lại bộ đếm. Kết quả 10/10 phép thử đạt (Bảng~\ref{tab:kiem_thu_chinh_sach}).
+    \item \textbf{Failover transport tại chi nhánh:} công cụ đăng nhập vEdge1 của chi nhánh, tắt cổng MPLS (xác nhận bằng thông báo \texttt{Commit complete}), ping liên tục mỗi khoảng 1,2 giây qua overlay, rồi tự bật lại cổng. Thời gian khôi phục (RTO) đo được là 3,3 giây (Site 200), 4,4 giây (Site 300) và 3,3 giây (Site 400); trước khi áp thiết kế beacon, chi nhánh mất 100\% gói và không tự phục hồi. Khi MPLS trở lại, lưu lượng tự quay về vEdge1. RTO chủ yếu phụ thuộc chu kỳ thăm dò 2 giây của Brand-FW.
+    \item \textbf{Failover transport tại Site 100:} khi tắt cổng MPLS trên cả hai vEdge Site 100, các đường hầm qua Internet tiếp tục mang lưu lượng; khi bật lại, TLOC MPLS chỉ phục hồi sau khi bổ sung tuyến controller qua MPLS.
 \end{itemize}
 
-Quy tắc chặn Telnet vào Server Farm và SSH/Telnet vào DMZ đã được áp và được vEdge chi nhánh nhận, nhưng phép thử đếm gói bị chặn chưa được thực hiện đầy đủ; mục này được ghi nhận là \textit{Chưa nghiệm thu}.
+\begin{table}[H]
+    \centering
+    \scriptsize
+    \caption{Kết quả kiểm thử chính sách tập trung (nguồn: PC-YTe-S200-2)}
+    \label{tab:kiem_thu_chinh_sach}
+    \begin{tabularx}{\textwidth}{|c|P{4.3cm}|P{2.6cm}|X|c|}
+        \hline
+        \textbf{Mã} & \textbf{Phép thử} & \textbf{Bộ đếm} & \textbf{Thay đổi quan sát} & \textbf{Kết quả} \\
+        \hline
+        W-1 & vBond có đủ danh sách vEdge hợp lệ & -- & Không thiếu serial & Đạt \\
+        \hline
+        DP-1 & TCP 23 đến Server Farm bị chặn & TELNET\_TO\_FARM & +9 gói tại vEdge1-S200 & Đạt \\
+        \hline
+        DP-2 & TCP 22 đến DMZ bị chặn & ADMIN\_TO\_DMZ & +9 gói tại vEdge1-S200 & Đạt \\
+        \hline
+        DP-3 & HTTP đến DMZ được đi qua & ADMIN\_TO\_DMZ, TELNET\_TO\_FARM, AAR\_WEB & +0, +0 và +17 (được phân loại SLA\_BUSINESS) & Đạt \\
+        \hline
+        DP-4 & ICMP đến Server Farm được đếm & ICMP\_BRANCH & +15 & Đạt \\
+        \hline
+        AAR-1 & ICMP liên site theo SLA\_REALTIME & AAR\_ICMP & +54 tại vEdge1-S100, +28 tại vEdge1-S200 & Đạt \\
+        \hline
+        CP-1 & Chi nhánh chọn vEdge1-S100 cho 10.1.0.0/16 & Bảng tuyến OMP & Tuyến của vEdge1 có cờ C (được chọn), của vEdge2 chỉ có R, xem trên cả vEdge1-S200 và vEdge2-S200 & Đạt \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Bảng~\ref{tab:kiem_thu_chinh_sach} gồm 7 mã phép thử nhưng ứng với 10 lần kiểm tra: DP-3 kiểm tra đồng thời ba bộ đếm, còn CP-1 được xem trên hai vEdge của Site 200. Công cụ dùng lệnh \texttt{ping -P 6 -p <cổng>} của VPCS để gửi gói TCP SYN đến cổng đích, tương đương một lần mở kết nối Telnet/SSH đối với vEdge. Các bộ đếm tăng đúng như mong đợi đồng thời tại vEdge chi nhánh, chứng minh chính sách chỉ khai báo một lần trên vSmart đã được đẩy xuống và thực thi tại các Edge. Giới hạn của phép thử: mới đo trên luồng xuất phát từ Site 200 và một luồng ICMP; tại thời điểm đo, tường lửa và Core Site 100 đang tắt nên lưu lượng vào Campus chính được chứng minh qua bộ đếm chứ không qua phản hồi đầu--cuối.
 
 \subsection{Triển khai dịch vụ}
 
@@ -457,11 +491,11 @@ Syslog Server nhận nhật ký thực tế từ tường lửa và các thiết
     \hline
     T15 & Overlay dữ liệu & Máy trạm các site thông nhau & \textbf{Đạt} & Ping chéo chi nhánh 10/10 \\
     \hline
-    T16 & SLA và AAR & Chính sách được nhận, số liệu đạt SLA & \textbf{Đạt} & Loss 0\%, 37 ms, jitter 6 ms (S200--S300 MPLS) \\
+    T16 & SLA và AAR & Chính sách được nhận, lưu lượng được phân loại đúng & \textbf{Đạt} & Loss 0\%, 37 ms, jitter 6 ms; bộ đếm AAR\_ICMP, AAR\_WEB tăng \\
     \hline
-    T17 & Data policy & Chặn Telnet/SSH vào Farm, DMZ & \textbf{Chưa nghiệm thu} & Chính sách đã nhận; chưa đo bộ đếm chặn \\
+    T17 & Data policy và control policy & Chặn Telnet/SSH vào Farm, DMZ; chi nhánh chọn vEdge1 & \textbf{Đạt} & 10/10 lần kiểm tra qua bộ đếm và bảng tuyến OMP \\
     \hline
-    T18 & Failover transport Site 100 & Chuyển sang Internet khi mất MPLS & \textbf{Đạt} & Khoảng 2 giây; MPLS phục hồi \\
+    T18 & Failover transport Site 100 & Chuyển sang Internet khi mất MPLS & \textbf{Đạt} & Lưu lượng đi qua Internet; MPLS phục hồi sau khi bổ sung tuyến controller \\
     \hline
     T19 & DNS, Web, Mail từ chi nhánh & Phân giải tên, HTTPS, gửi/nhận thư & \textbf{Đạt} & Kiểm thử từ PC-YTe-S200 \\
     \hline
@@ -470,6 +504,8 @@ Syslog Server nhận nhật ký thực tế từ tường lửa và các thiết
     T21 & Syslog & Nhận nhật ký UDP 514 & \textbf{Đạt} & Nhật ký từ tường lửa và thiết bị hạ tầng \\
     \hline
     T22 & Mail từ VLAN 40 Campus & Máy trạm Campus dùng Mail & \textbf{Chưa đạt} & TCP đến Mail quá thời gian; đang điều tra \\
+    \hline
+    T23 & Failover transport chi nhánh & Tự chuyển sang vEdge2 khi mất MPLS và quay lại & \textbf{Đạt} & RTO 3,3 / 4,4 / 3,3 giây (S200 / S300 / S400) \\
 \end{longtable}
 \endgroup
 
@@ -477,11 +513,11 @@ Syslog Server nhận nhật ký thực tế từ tường lửa và các thiết
 
 \subsubsection{Mức độ đáp ứng yêu cầu chức năng}
 
-Trong 22 kịch bản, 18 kịch bản đạt, một kịch bản đạt một phần, hai kịch bản chưa nghiệm thu và một kịch bản chưa đạt. Các chức năng cốt lõi của đề tài đều đã được chứng minh: phân đoạn VLAN; gateway dự phòng VRRP; OSPF nội bộ; tường lửa HA với DMZ; DHCP tập trung qua relay và DHCP cục bộ tại chi nhánh; điều khiển toàn bộ lớp 2 Campus chính bằng Ryu với cây chống vòng; quan sát topology bằng ONOS; overlay SD-WAN tám Edge trên hai transport với BGP underlay, PKI, chính sách SLA/AAR/data/control; và các dịch vụ DNS, Web, Mail, Syslog truy cập được từ chi nhánh.
+Trong 23 kịch bản, 20 kịch bản đạt, một kịch bản đạt một phần, một kịch bản chưa nghiệm thu và một kịch bản chưa đạt. Các chức năng cốt lõi của đề tài đều đã được chứng minh: phân đoạn VLAN; gateway dự phòng VRRP; OSPF nội bộ; tường lửa HA với DMZ; DHCP tập trung qua relay và DHCP cục bộ tại chi nhánh; điều khiển toàn bộ lớp 2 Campus chính bằng Ryu với cây chống vòng; quan sát topology bằng ONOS; overlay SD-WAN tám Edge trên hai transport với BGP underlay, PKI, chính sách SLA/AAR/data/control; và các dịch vụ DNS, Web, Mail, Syslog truy cập được từ chi nhánh.
 
 \subsubsection{Tính sẵn sàng}
 
-Tại lớp 3 và WAN, hệ thống có dự phòng ở mọi vị trí trọng yếu và phép thử failover transport cho thấy lưu lượng được chuyển trong khoảng 2 giây. Tại lớp 2 SDN, khả năng tự phục hồi khi khởi động lại Controller hoặc switch đã đạt, nhưng failover Distribution mới giữ được kết nối điều khiển, chưa giữ được dịch vụ DHCP; đây là điểm cần hoàn thiện. SDN Controller vẫn là một máy đơn; khi Controller dừng, flow đã cài được giữ nhưng máy trạm mới, ARP và DHCP mới không được xử lý.
+Tại lớp 3 và WAN, hệ thống có dự phòng ở mọi vị trí trọng yếu; phép thử cắt MPLS thật tại ba chi nhánh cho thấy lưu lượng tự khôi phục qua Internet sau 3,3--4,4 giây và tự quay về khi MPLS trở lại. Tại lớp 2 SDN, khả năng tự phục hồi khi khởi động lại Controller hoặc switch đã đạt, nhưng failover Distribution mới giữ được kết nối điều khiển, chưa giữ được dịch vụ DHCP; đây là điểm cần hoàn thiện. SDN Controller vẫn là một máy đơn; khi Controller dừng, flow đã cài được giữ nhưng máy trạm mới, ARP và DHCP mới không được xử lý.
 
 \subsubsection{Hiệu năng và khả năng quan sát}
 

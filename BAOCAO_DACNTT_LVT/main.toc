@@ -64,56 +64,56 @@
 \contentsline {subsubsection}{\numberline {3.5.1}Định tuyến tại Campus chính}{37}{subsubsection.3.5.1}%
 \contentsline {subsubsection}{\numberline {3.5.2}Định tuyến underlay}{38}{subsubsection.3.5.2}%
 \contentsline {subsubsection}{\numberline {3.5.3}Định tuyến tại chi nhánh}{38}{subsubsection.3.5.3}%
-\contentsline {subsection}{\numberline {3.6}Thiết kế quản lý tập trung bằng SDN Controller}{38}{subsection.3.6}%
-\contentsline {subsubsection}{\numberline {3.6.1}Phạm vi và kênh điều khiển}{38}{subsubsection.3.6.1}%
-\contentsline {subsubsection}{\numberline {3.6.2}Ứng dụng điều khiển chuyển mạch}{39}{subsubsection.3.6.2}%
+\contentsline {subsection}{\numberline {3.6}Thiết kế quản lý tập trung bằng SDN Controller}{39}{subsection.3.6}%
+\contentsline {subsubsection}{\numberline {3.6.1}Phạm vi và kênh điều khiển}{39}{subsubsection.3.6.1}%
+\contentsline {subsubsection}{\numberline {3.6.2}Ứng dụng điều khiển chuyển mạch}{40}{subsubsection.3.6.2}%
 \contentsline {subsubsection}{\numberline {3.6.3}Khởi động và phục hồi}{41}{subsubsection.3.6.3}%
 \contentsline {subsubsection}{\numberline {3.6.4}Cơ chế failover Distribution}{41}{subsubsection.3.6.4}%
-\contentsline {subsubsection}{\numberline {3.6.5}Giám sát và quan sát topology}{41}{subsubsection.3.6.5}%
+\contentsline {subsubsection}{\numberline {3.6.5}Giám sát và quan sát topology}{42}{subsubsection.3.6.5}%
 \contentsline {subsection}{\numberline {3.7}Thiết kế kết nối các cơ sở bằng SD-WAN}{42}{subsection.3.7}%
 \contentsline {subsubsection}{\numberline {3.7.1}Mặt phẳng điều khiển và xác thực}{42}{subsubsection.3.7.1}%
-\contentsline {subsubsection}{\numberline {3.7.2}Mặt phẳng dữ liệu}{42}{subsubsection.3.7.2}%
+\contentsline {subsubsection}{\numberline {3.7.2}Mặt phẳng dữ liệu}{43}{subsubsection.3.7.2}%
 \contentsline {subsubsection}{\numberline {3.7.3}Chính sách tập trung trên vSmart}{43}{subsubsection.3.7.3}%
-\contentsline {subsubsection}{\numberline {3.7.4}Truy cập Internet trực tiếp}{44}{subsubsection.3.7.4}%
-\contentsline {subsection}{\numberline {3.8}Thiết kế dịch vụ}{45}{subsection.3.8}%
-\contentsline {subsection}{\numberline {3.9}Thiết kế chính sách bảo mật}{45}{subsection.3.9}%
-\contentsline {subsubsection}{\numberline {3.9.1}Vùng bảo mật}{45}{subsubsection.3.9.1}%
-\contentsline {subsubsection}{\numberline {3.9.2}Chính sách trên tường lửa biên Campus chính}{46}{subsubsection.3.9.2}%
-\contentsline {subsubsection}{\numberline {3.9.3}Chính sách tại chi nhánh và trên overlay}{46}{subsubsection.3.9.3}%
-\contentsline {subsubsection}{\numberline {3.9.4}Bảo mật mặt phẳng điều khiển}{46}{subsubsection.3.9.4}%
-\contentsline {subsubsection}{\numberline {3.9.5}Các biện pháp tăng cường theo định hướng}{47}{subsubsection.3.9.5}%
-\contentsline {subsection}{\numberline {3.10}Tổng kết chương}{47}{subsection.3.10}%
-\contentsline {section}{\numberline {4}TRIỂN KHAI, KIỂM THỬ VÀ ĐÁNH GIÁ}{48}{section.4}%
-\contentsline {subsection}{\numberline {4.1}Phương pháp triển khai và kiểm thử}{48}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}Môi trường triển khai}{48}{subsection.4.2}%
-\contentsline {subsection}{\numberline {4.3}Triển khai mạng LAN tại Campus chính}{50}{subsection.4.3}%
-\contentsline {subsubsection}{\numberline {4.3.1}Core Switch: VLAN, VRRP, DHCP Relay và OSPF}{50}{subsubsection.4.3.1}%
-\contentsline {subsubsection}{\numberline {4.3.2}Tường lửa HA, DMZ và quản trị}{51}{subsubsection.4.3.2}%
-\contentsline {subsection}{\numberline {4.4}Triển khai SDN tại Campus chính}{52}{subsection.4.4}%
-\contentsline {subsubsection}{\numberline {4.4.1}Cấu hình Open vSwitch}{52}{subsubsection.4.4.1}%
-\contentsline {subsubsection}{\numberline {4.4.2}Các vấn đề kỹ thuật và nguyên nhân gốc}{53}{subsubsection.4.4.2}%
-\contentsline {subsubsection}{\numberline {4.4.3}Kết quả kiểm thử SDN}{54}{subsubsection.4.4.3}%
-\contentsline {subsection}{\numberline {4.5}Triển khai mạng LAN tại các cơ sở phụ}{55}{subsection.4.5}%
-\contentsline {subsection}{\numberline {4.6}Triển khai SD-WAN}{57}{subsection.4.6}%
-\contentsline {subsubsection}{\numberline {4.6.1}Controller, PKI và underlay}{57}{subsubsection.4.6.1}%
-\contentsline {subsubsection}{\numberline {4.6.2}Cấu hình vEdge}{58}{subsubsection.4.6.2}%
-\contentsline {subsubsection}{\numberline {4.6.3}Các vấn đề kỹ thuật và nguyên nhân gốc}{59}{subsubsection.4.6.3}%
-\contentsline {subsubsection}{\numberline {4.6.4}Kết quả kiểm thử SD-WAN}{60}{subsubsection.4.6.4}%
-\contentsline {subsection}{\numberline {4.7}Triển khai dịch vụ}{61}{subsection.4.7}%
-\contentsline {subsubsection}{\numberline {4.7.1}DHCP và DNS}{61}{subsubsection.4.7.1}%
-\contentsline {subsubsection}{\numberline {4.7.2}Web và Mail}{61}{subsubsection.4.7.2}%
-\contentsline {subsubsection}{\numberline {4.7.3}Các vấn đề kỹ thuật tại lớp dịch vụ}{61}{subsubsection.4.7.3}%
-\contentsline {subsubsection}{\numberline {4.7.4}Kết quả kiểm thử dịch vụ}{62}{subsubsection.4.7.4}%
-\contentsline {subsection}{\numberline {4.8}Tổng hợp kết quả kiểm thử}{62}{subsection.4.8}%
-\contentsline {subsection}{\numberline {4.9}Đánh giá}{63}{subsection.4.9}%
-\contentsline {subsubsection}{\numberline {4.9.1}Mức độ đáp ứng yêu cầu chức năng}{63}{subsubsection.4.9.1}%
-\contentsline {subsubsection}{\numberline {4.9.2}Tính sẵn sàng}{64}{subsubsection.4.9.2}%
-\contentsline {subsubsection}{\numberline {4.9.3}Hiệu năng và khả năng quan sát}{64}{subsubsection.4.9.3}%
-\contentsline {subsubsection}{\numberline {4.9.4}Khả năng tái lập và mở rộng}{64}{subsubsection.4.9.4}%
-\contentsline {section}{\numberline {5}KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}{65}{section.5}%
-\contentsline {subsection}{\numberline {5.1}Kết quả đạt được}{65}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}Hạn chế của đề tài}{66}{subsection.5.2}%
-\contentsline {subsection}{\numberline {5.3}Hướng phát triển}{67}{subsection.5.3}%
-\contentsline {subsection}{\numberline {5.4}Kết luận chung}{68}{subsection.5.4}%
-\contentsline {section}{TÀI LIỆU THAM KHẢO}{69}{subsection.5.4}%
-\contentsline {section}{\hbox to\@tempdima {\hfil } PHỤ LỤC}{71}{section*.29}%
+\contentsline {subsubsection}{\numberline {3.7.4}Truy cập Internet trực tiếp}{45}{subsubsection.3.7.4}%
+\contentsline {subsection}{\numberline {3.8}Thiết kế dịch vụ}{46}{subsection.3.8}%
+\contentsline {subsection}{\numberline {3.9}Thiết kế chính sách bảo mật}{46}{subsection.3.9}%
+\contentsline {subsubsection}{\numberline {3.9.1}Vùng bảo mật}{46}{subsubsection.3.9.1}%
+\contentsline {subsubsection}{\numberline {3.9.2}Chính sách trên tường lửa biên Campus chính}{47}{subsubsection.3.9.2}%
+\contentsline {subsubsection}{\numberline {3.9.3}Chính sách tại chi nhánh và trên overlay}{47}{subsubsection.3.9.3}%
+\contentsline {subsubsection}{\numberline {3.9.4}Bảo mật mặt phẳng điều khiển}{47}{subsubsection.3.9.4}%
+\contentsline {subsubsection}{\numberline {3.9.5}Các biện pháp tăng cường theo định hướng}{48}{subsubsection.3.9.5}%
+\contentsline {subsection}{\numberline {3.10}Tổng kết chương}{48}{subsection.3.10}%
+\contentsline {section}{\numberline {4}TRIỂN KHAI, KIỂM THỬ VÀ ĐÁNH GIÁ}{49}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Phương pháp triển khai và kiểm thử}{49}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Môi trường triển khai}{49}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Triển khai mạng LAN tại Campus chính}{51}{subsection.4.3}%
+\contentsline {subsubsection}{\numberline {4.3.1}Core Switch: VLAN, VRRP, DHCP Relay và OSPF}{51}{subsubsection.4.3.1}%
+\contentsline {subsubsection}{\numberline {4.3.2}Tường lửa HA, DMZ và quản trị}{52}{subsubsection.4.3.2}%
+\contentsline {subsection}{\numberline {4.4}Triển khai SDN tại Campus chính}{53}{subsection.4.4}%
+\contentsline {subsubsection}{\numberline {4.4.1}Cấu hình Open vSwitch}{53}{subsubsection.4.4.1}%
+\contentsline {subsubsection}{\numberline {4.4.2}Các vấn đề kỹ thuật và nguyên nhân gốc}{54}{subsubsection.4.4.2}%
+\contentsline {subsubsection}{\numberline {4.4.3}Kết quả kiểm thử SDN}{55}{subsubsection.4.4.3}%
+\contentsline {subsection}{\numberline {4.5}Triển khai mạng LAN tại các cơ sở phụ}{56}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Triển khai SD-WAN}{58}{subsection.4.6}%
+\contentsline {subsubsection}{\numberline {4.6.1}Controller, PKI và underlay}{58}{subsubsection.4.6.1}%
+\contentsline {subsubsection}{\numberline {4.6.2}Cấu hình vEdge}{59}{subsubsection.4.6.2}%
+\contentsline {subsubsection}{\numberline {4.6.3}Các vấn đề kỹ thuật và nguyên nhân gốc}{60}{subsubsection.4.6.3}%
+\contentsline {subsubsection}{\numberline {4.6.4}Kết quả kiểm thử SD-WAN}{61}{subsubsection.4.6.4}%
+\contentsline {subsection}{\numberline {4.7}Triển khai dịch vụ}{63}{subsection.4.7}%
+\contentsline {subsubsection}{\numberline {4.7.1}DHCP và DNS}{63}{subsubsection.4.7.1}%
+\contentsline {subsubsection}{\numberline {4.7.2}Web và Mail}{63}{subsubsection.4.7.2}%
+\contentsline {subsubsection}{\numberline {4.7.3}Các vấn đề kỹ thuật tại lớp dịch vụ}{63}{subsubsection.4.7.3}%
+\contentsline {subsubsection}{\numberline {4.7.4}Kết quả kiểm thử dịch vụ}{64}{subsubsection.4.7.4}%
+\contentsline {subsection}{\numberline {4.8}Tổng hợp kết quả kiểm thử}{65}{subsection.4.8}%
+\contentsline {subsection}{\numberline {4.9}Đánh giá}{66}{subsection.4.9}%
+\contentsline {subsubsection}{\numberline {4.9.1}Mức độ đáp ứng yêu cầu chức năng}{66}{subsubsection.4.9.1}%
+\contentsline {subsubsection}{\numberline {4.9.2}Tính sẵn sàng}{66}{subsubsection.4.9.2}%
+\contentsline {subsubsection}{\numberline {4.9.3}Hiệu năng và khả năng quan sát}{66}{subsubsection.4.9.3}%
+\contentsline {subsubsection}{\numberline {4.9.4}Khả năng tái lập và mở rộng}{67}{subsubsection.4.9.4}%
+\contentsline {section}{\numberline {5}KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}{68}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Kết quả đạt được}{68}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Hạn chế của đề tài}{69}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Hướng phát triển}{70}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Kết luận chung}{71}{subsection.5.4}%
+\contentsline {section}{TÀI LIỆU THAM KHẢO}{73}{subsection.5.4}%
+\contentsline {section}{\hbox to\@tempdima {\hfil } PHỤ LỤC}{75}{section*.30}%

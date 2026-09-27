@@ -317,7 +317,7 @@ Hai router nhà cung cấp là Cisco vIOS. Router Internet (AS 64511) có bảy 
 
 \textbf{Campus chính ra WAN:} Core học tuyến mặc định từ OSPF do tường lửa Active quảng bá; tường lửa chuyển gói đến vEdge1 (tuyến chính) hoặc vEdge2 (tuyến dự phòng); vEdge đóng gói IPsec và gửi qua TLOC được chọn theo chính sách AAR.
 
-\textbf{Chi nhánh về Campus chính:} máy trạm chi nhánh gửi gói đến Brand-FW (gateway \texttt{.1}); Brand-FW dùng tuyến mặc định về vEdge1 (MPLS) khi đường chính còn tốt, ngược lại về vEdge2 (Internet); vEdge chuyển gói qua overlay đến vEdge Site 100, qua tường lửa biên và Core đến đích. Lưu lượng đến DMZ được tường lửa biên kiểm tra theo ACL \texttt{SDWAN\_IN}.
+\textbf{Chi nhánh về Campus chính:} máy trạm chi nhánh gửi gói đến Brand-FW (gateway \texttt{.1}); Brand-FW dùng tuyến mặc định về vEdge1 (MPLS) khi đường chính còn tốt, ngược lại về vEdge2 (Internet); vEdge chuyển gói qua overlay đến vEdge1-S100 (ưu tiên theo control policy), qua tường lửa biên và Core đến đích. Lưu lượng đến DMZ được tường lửa biên kiểm tra theo ACL \texttt{SDWAN\_IN}.
 
 \textbf{Chi nhánh với chi nhánh:} overlay full-mesh cho phép hai chi nhánh dựng đường hầm trực tiếp mà không đi vòng qua Campus chính, lưu lượng vẫn chịu chính sách dữ liệu tập trung.
 
@@ -420,6 +420,8 @@ Tại VLAN 10--40 và 90, Core-SW1 dùng địa chỉ SVI \texttt{.2} với VRRP
         10.1.1.0/28 & DMZ & FW-Active Gi0/4 .1; FW-Standby Gi0/4 .2; Web .10; Mail .11 \\
         \hline
         10.1.255.0/29 & Liên kết failover Gi0/5 & Primary .1, Secondary .2 \\
+        \hline
+        10.1.255.1/32 & Beacon SLA (VPN 1) & \texttt{loopback0} trên vEdge1-S100 và vEdge2-S100; đích thăm dò của Brand-FW \\
         \hline
     \end{tabularx}
 \end{table}
@@ -540,9 +542,9 @@ Riêng hai vEdge Site 100 có thêm tuyến tĩnh trong VPN 0: tuyến mặc đ�
 
 \subsubsection{Định tuyến tại chi nhánh}
 
-Brand-FW có hai tuyến mặc định: tuyến chính qua \texttt{outside1} đến vEdge1 (MPLS) gắn với đối tượng \texttt{track 1}, và tuyến dự phòng qua \texttt{outside2} đến vEdge2 (Internet) với khoảng cách 2. \texttt{sla monitor 10} gửi ICMP mỗi 2 giây đến địa chỉ tham chiếu \texttt{10.1.255.1} tại Campus chính qua vEdge1; khi mất phản hồi, tuyến chính bị gỡ và lưu lượng chuyển sang vEdge2. Cơ chế này giúp chi nhánh phát hiện lỗi của cả đường MPLS phía xa chứ không chỉ lỗi cổng vật lý.
+Brand-FW có hai tuyến mặc định: tuyến chính qua \texttt{outside1} đến vEdge1 (MPLS) gắn với đối tượng \texttt{track 1}, và tuyến dự phòng qua \texttt{outside2} đến vEdge2 (Internet) với khoảng cách 2. \texttt{sla monitor 10} gửi một gói ICMP mỗi 2 giây, qua vEdge1, đến địa chỉ \textit{beacon} \texttt{10.1.255.1}. Địa chỉ này là giao diện \texttt{loopback0} (\texttt{/32}) trong VPN 1 của cả hai vEdge Site 100 và được quảng bá qua OMP, nên chỉ trả lời được khi đường overlay từ chi nhánh về Campus chính còn thông; một tuyến tĩnh \texttt{/32} ghim gói thăm dò luôn đi qua \texttt{outside1}. Khi mất phản hồi, \texttt{track 1} chuyển Down, tuyến chính bị gỡ và lưu lượng chuyển sang vEdge2; khi MPLS phục hồi, tuyến chính tự trở lại. Cơ chế này giúp chi nhánh phát hiện lỗi của cả đường MPLS phía xa chứ không chỉ lỗi cổng vật lý.
 
-Trong VPN 1 của chi nhánh, vEdge1 có tuyến tĩnh \texttt{10.x.0.0/16} về Brand-FW; vEdge2 có tuyến \texttt{10.x.0.0/16} về vEdge1 qua liên kết \texttt{10.x.2.0/30}. Cả hai quảng bá tuyến vào OMP, nên từ overlay chi nhánh luôn được tới qua cả hai TLOC.
+Trong VPN 1 của chi nhánh, mỗi vEdge có tuyến tĩnh \texttt{10.x.0.0/16} trỏ thẳng về cổng Brand-FW nối với nó: vEdge1 về \texttt{outside1} (\texttt{10.x.1.1}), vEdge2 về \texttt{outside2} (\texttt{10.x.1.5}). Cả hai quảng bá tuyến vào OMP. Khi MPLS đứt, các site khác phát hiện đường hầm tới vEdge1 chết qua BFD và gửi chiều về qua vEdge2 vào \texttt{outside2}, trùng với cổng mà Brand-FW đang dùng cho chiều đi. Nhờ lưu lượng hai chiều cùng đi qua một cổng, tường lửa trạng thái không hủy gói phản hồi. Trước khi áp thiết kế này, vEdge2 chuyển lưu lượng LAN qua vEdge1 và Brand-FW chưa theo dõi đường MPLS, khiến chi nhánh mất kết nối hoàn toàn khi MPLS đứt.
 
 \subsection{Thiết kế quản lý tập trung bằng SDN Controller}\label{sec:thiet_ke_sdn}
 
@@ -648,7 +650,9 @@ Các chính sách được khai báo tập trung trên vSmart và áp theo danh 
 
 \textbf{SLA class:} \texttt{SLA\_REALTIME} (mất gói $\le$ 2\%, trễ $\le$ 150~ms, jitter $\le$ 50~ms) cho lưu lượng thời gian thực; \texttt{SLA\_BUSINESS} (mất gói $\le$ 5\%, trễ $\le$ 300~ms, jitter $\le$ 100~ms) cho dịch vụ nghiệp vụ.
 
-\textbf{Application-Aware Routing} \texttt{AAR\_LAN} áp cho VPN 1 trên \texttt{ALL\_EDGES}, chi tiết trong Bảng~\ref{tab:aar_policy}. Lưu lượng Web và Mail được đặt color ưu tiên khác nhau để hai loại dịch vụ quan trọng không cùng phụ thuộc một đường truyền; các sequence chiều về (41, 51) bảo đảm lưu lượng phản hồi từ DMZ đi cùng đường với chiều đi.
+Mỗi SLA class có thêm tiêu chí \texttt{fallback-best-tunnel} theo độ trễ và tỷ lệ mất gói: khi không đường hầm nào thỏa SLA, Edge vẫn chọn đường hầm tốt nhất theo hai tiêu chí này thay vì chuyển sang chia tải ngẫu nhiên.
+
+\textbf{Application-Aware Routing} \texttt{AAR\_LAN} áp cho VPN 1 trên \texttt{ALL\_EDGES}, chi tiết trong Bảng~\ref{tab:aar_policy}. Chính sách không cố định color ưu tiên mà để Edge chọn giữa mọi đường hầm thỏa SLA, kèm hành động \texttt{fallback-to-best-path} khi không đường nào thỏa. Việc không ghim color giúp chính sách AAR không mâu thuẫn với lựa chọn Edge của control policy bên dưới. Mỗi sequence có bộ đếm riêng để kiểm chứng lưu lượng đã được phân loại đúng; các sequence chiều về (41, 51) bảo đảm lưu lượng phản hồi từ DMZ cũng được áp SLA.
 
 \begin{table}[H]
     \centering
@@ -657,24 +661,24 @@ Các chính sách được khai báo tập trung trên vSmart và áp theo danh 
     \label{tab:aar_policy}
     \begin{tabularx}{\textwidth}{|c|X|P{2.6cm}|P{2.6cm}|}
         \hline
-        \textbf{Seq} & \textbf{Điều kiện khớp} & \textbf{SLA class} & \textbf{Color ưu tiên} \\
+        \textbf{Seq} & \textbf{Điều kiện khớp} & \textbf{SLA class} & \textbf{Bộ đếm} \\
         \hline
-        10 & ICMP (protocol 1) & SLA\_REALTIME & mpls \\
+        10 & ICMP (protocol 1) & SLA\_REALTIME & AAR\_ICMP \\
         \hline
-        20 & DSCP 46 (thoại) & SLA\_REALTIME & mpls \\
+        20 & DSCP 46 (thoại) & SLA\_REALTIME & AAR\_VOICE \\
         \hline
-        30 & Đích Server Farm 10.1.90.0/24 & SLA\_BUSINESS & biz-internet \\
+        30 & Đích Server Farm 10.1.90.0/24 & SLA\_BUSINESS & AAR\_FARM \\
         \hline
-        40 / 41 & Web: đích DMZ cổng 80/443 / nguồn DMZ cổng 80/443 & SLA\_BUSINESS & biz-internet \\
+        40 / 41 & Web: đích DMZ cổng 80/443 / nguồn DMZ cổng 80/443 & SLA\_BUSINESS & AAR\_WEB, AAR\_WEB\_RET \\
         \hline
-        50 / 51 & Mail: đích DMZ cổng 25/143/587/993 / chiều về & SLA\_BUSINESS & mpls \\
+        50 / 51 & Mail: đích DMZ cổng 25/143/587/993 / chiều về & SLA\_BUSINESS & AAR\_MAIL, AAR\_MAIL\_RET \\
         \hline
     \end{tabularx}
 \end{table}
 
 \textbf{Data policy} \texttt{DP\_BRANCH} áp chiều \texttt{from-service} (lưu lượng từ LAN chi nhánh vào overlay) trên \texttt{BRANCHES}: sequence 10 chặn Telnet (TCP 23) vào Server Farm và đếm \texttt{TELNET\_TO\_FARM}; sequence 15 chặn SSH/Telnet (TCP 22, 23) vào DMZ và đếm \texttt{ADMIN\_TO\_DMZ}; sequence 20 cho phép và đếm ICMP; hành động mặc định là accept. Chính sách này thể hiện khả năng áp một quy tắc bảo mật lên nhiều chi nhánh cùng lúc từ một điểm.
 
-\textbf{Control policy} \texttt{PREFER-S100-VE1} áp chiều ra đến \texttt{BRANCHES}: tuyến OMP do vEdge1-S100 (\texttt{10.200.100.1}) khởi tạo được đặt \textit{preference} 200, cao hơn tuyến tương ứng của vEdge2-S100. Như vậy chi nhánh luôn gửi lưu lượng về Campus chính qua vEdge1, khớp với tuyến chính của tường lửa biên và tránh lưu lượng bất đối xứng khi đi qua tường lửa trạng thái; vEdge2 chỉ được dùng khi vEdge1 mất.
+\textbf{Control policy} \texttt{PREFER-VE1} áp chiều ra đến \texttt{ALL\_EDGES}: tuyến OMP do vEdge1 của mỗi site khởi tạo (\texttt{10.200.100.1}, \texttt{10.200.200.1}, \texttt{10.200.30.1}, \texttt{10.200.40.1}) được đặt \textit{preference} 200, cao hơn tuyến cùng prefix của vEdge2. Như vậy ở trạng thái bình thường, mọi site đều gửi lưu lượng vào site khác qua vEdge1 của site đích. Điều này khớp với tuyến mặc định chính của tường lửa (tường lửa biên Campus chính và Brand-FW đều ra qua vEdge1), nên hai chiều lưu lượng đi qua cùng một cổng tường lửa và tránh lưu lượng bất đối xứng. vEdge2 chỉ được dùng khi vEdge1 hoặc đường truyền của nó hỏng.
 
 \subsubsection{Truy cập Internet trực tiếp}
 

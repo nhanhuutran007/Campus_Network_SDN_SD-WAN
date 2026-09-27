@@ -62,16 +62,20 @@ mod = parser.OFPFlowMod(datapath=dp, priority=1,
 
 \subsection*{B. Chính sách tập trung trên vSmart}
 
-\begin{lstlisting}[style=customcode, caption={SLA class, AAR và data policy trên vSmart (rút gọn)}]
+\begin{lstlisting}[style=customcode, caption={SLA class, AAR, data policy và control policy trên vSmart (rút gọn)}]
 policy
  sla-class SLA_REALTIME
   loss 2
   latency 150
   jitter 50
+  fallback-best-tunnel
+   criteria latency loss
  sla-class SLA_BUSINESS
   loss 5
   latency 300
   jitter 100
+  fallback-best-tunnel
+   criteria latency loss
  lists
   vpn-list VPN_LAN
    vpn 1
@@ -89,15 +93,24 @@ policy
     match
      protocol 1
     action
-     sla-class SLA_REALTIME preferred-color mpls
+     count AAR_ICMP
+     sla-class SLA_REALTIME fallback-to-best-path
    sequence 40
     match
      destination-data-prefix-list DMZ
      destination-port 443 80
     action
-     sla-class SLA_BUSINESS preferred-color biz-internet
+     count AAR_WEB
+     sla-class SLA_BUSINESS fallback-to-best-path
  data-policy DP_BRANCH
   vpn-list VPN_LAN
+   sequence 10
+    match
+     destination-data-prefix-list SERVER_FARM
+     destination-port 23
+     protocol 6
+    action drop
+     count TELNET_TO_FARM
    sequence 15
     match
      destination-data-prefix-list DMZ
@@ -106,23 +119,41 @@ policy
     action drop
      count ADMIN_TO_DMZ
    default-action accept
- control-policy PREFER-S100-VE1
+ control-policy PREFER-VE1
   sequence 10
    match route
     originator 10.200.100.1
    action accept
     set
      preference 200
+  ! sequence 20/30/40: originator 10.200.200.1,
+  ! 10.200.30.1, 10.200.40.1 -> preference 200
   default-action accept
 apply-policy
  site-list ALL_EDGES
+  control-policy PREFER-VE1 out
   app-route-policy AAR_LAN
  site-list BRANCHES
-  control-policy PREFER-S100-VE1 out
   data-policy DP_BRANCH from-service
 \end{lstlisting}
 
-\subsection*{C. Danh sách truy cập trên tường lửa biên Campus chính}
+\subsection*{C. Theo dõi đường MPLS tại tường lửa chi nhánh}
+
+\begin{lstlisting}[style=customcode, caption={IP SLA và tuyến dự phòng trên Brand-FW Site 200}]
+sla monitor 10
+ type echo protocol ipIcmpEcho 10.1.255.1 interface outside1
+ num-packets 1
+ timeout 1000
+ threshold 1000
+ frequency 2
+sla monitor schedule 10 life forever start-time now
+track 1 rtr 10 reachability
+route outside1 0.0.0.0 0.0.0.0 10.2.1.2 1 track 1
+route outside2 0.0.0.0 0.0.0.0 10.2.1.6 2
+route outside1 10.1.255.1 255.255.255.255 10.2.1.2 1
+\end{lstlisting}
+
+\subsection*{D. Danh sách truy cập trên tường lửa biên Campus chính}
 
 \begin{lstlisting}[style=customcode, caption={ACL SDWAN\_IN và DMZ\_IN}]
 object-group service WEB_SVC tcp
