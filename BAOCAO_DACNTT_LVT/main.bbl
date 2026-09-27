@@ -1,6 +1,60 @@
 \begin{thebibliography}{}
 
 \bibitem [\protect \citeauthoryear {%
+Cheshire%
+\ \BBA {} Krochmal%
+}{%
+Cheshire%
+\ \BBA {} Krochmal%
+}{%
+{\protect \APACyear {2013}}%
+}]{%
+rfc6762_mdns}
+\APACinsertmetastar {%
+rfc6762_mdns}%
+\begin{APACrefauthors}%
+Cheshire, S.%
+\BCBT {}\ \BBA {} Krochmal, M.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2013}{{\APACmonth{02}}}{}.
+\newblock
+\APACrefbtitle {Multicast DNS} {Multicast dns}\ \APACbVolEdTR {}{RFC\ \BNUM\
+  6762}.
+\newblock
+\APACaddressInstitution{}{Internet Engineering Task Force}.
+\newblock
+\APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc6762/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{Cisco Systems}%
+}{%
+{Cisco Systems}%
+}{%
+{\protect \APACyear {2024}}%
+}]{%
+cisco_asa_failover}
+\APACinsertmetastar {%
+cisco_asa_failover}%
+\begin{APACrefauthors}%
+{Cisco Systems}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2024}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Cisco Secure Firewall ASA Series General Operations CLI
+  Configuration Guide: Failover for High Availability} {Cisco secure firewall
+  asa series general operations cli configuration guide: Failover for high
+  availability}{\BBCQ}\ [\bibcomputersoftwaremanual].
+\newblock
+\APACrefnote{Available at:
+  \url{https://www.cisco.com/c/en/us/support/security/adaptive-security-appliance-asa-software/products-installation-and-configuration-guides-list.html}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
 {Cisco Systems}%
 }{%
 {Cisco Systems}%
@@ -24,6 +78,34 @@ cisco_sdwan_omp}%
 \APACrefnote{Available at:
   \url{https://www.cisco.com/c/en/us/td/docs/routers/sdwan/26x-later/routing/routing-configuration-guide/OMP-routing-protocol-ref/configure-omp.html},
   accessed 2026-09-01}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Katz%
+\ \BBA {} Ward%
+}{%
+Katz%
+\ \BBA {} Ward%
+}{%
+{\protect \APACyear {2010}}%
+}]{%
+rfc5880_bfd}
+\APACinsertmetastar {%
+rfc5880_bfd}%
+\begin{APACrefauthors}%
+Katz, D.%
+\BCBT {}\ \BBA {} Ward, D.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2010}{{\APACmonth{06}}}{}.
+\newblock
+\APACrefbtitle {Bidirectional Forwarding Detection (BFD)} {Bidirectional
+  forwarding detection (bfd)}\ \APACbVolEdTR {}{RFC\ \BNUM\ 5880}.
+\newblock
+\APACaddressInstitution{}{Internet Engineering Task Force}.
+\newblock
+\APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc5880/}}
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -102,6 +184,30 @@ onf_openflow_134}%
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
+{Open Networking Foundation}%
+}{%
+{Open Networking Foundation}%
+}{%
+{\protect \APACyear {2022}}%
+}]{%
+onos_docs}
+\APACinsertmetastar {%
+onos_docs}%
+\begin{APACrefauthors}%
+{Open Networking Foundation}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2022}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {ONOS -- Open Network Operating System Documentation}
+  {Onos -- open network operating system documentation}{\BBCQ}\
+  [\bibcomputersoftwaremanual].
+\newblock
+\APACrefnote{Available at: \url{https://wiki.onosproject.org/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
 Rekhter%
 , Li%
 \BCBL {}\ \BBA {} Hares%
@@ -153,6 +259,29 @@ ryu_434_docs}%
 \newblock
 \APACrefnote{Available at:
   \url{https://ryu.readthedocs.io/en/latest/developing.html}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{The Linux Foundation}%
+}{%
+{The Linux Foundation}%
+}{%
+{\protect \APACyear {2024}}%
+}]{%
+ovs_docs}
+\APACinsertmetastar {%
+ovs_docs}%
+\begin{APACrefauthors}%
+{The Linux Foundation}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2024}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Open vSwitch Documentation} {Open vswitch
+  documentation}{\BBCQ}\ [\bibcomputersoftwaremanual].
+\newblock
+\APACrefnote{Available at: \url{https://docs.openvswitch.org/}}
 \PrintBackRefs{\CurrentBib}
 
 \end{thebibliography}

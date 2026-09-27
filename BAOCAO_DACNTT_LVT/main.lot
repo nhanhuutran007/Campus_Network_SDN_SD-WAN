@@ -1,13 +1,20 @@
 \babel@toc {vietnamese}{}\relax 
-\contentsline {table}{\numberline {3.1}{\ignorespaces Phân hoạch VLAN tại Campus chính}}{36}{table.caption.11}%
-\contentsline {table}{\numberline {3.2}{\ignorespaces Các mạng dịch vụ và hạ tầng tại Campus chính}}{37}{table.caption.12}%
-\contentsline {table}{\numberline {3.3}{\ignorespaces Phân hoạch VLAN tại các cơ sở phụ}}{38}{table.caption.13}%
-\contentsline {table}{\numberline {3.4}{\ignorespaces Quy hoạch System-IP và TLOC của các SD-WAN Edge}}{40}{table.caption.14}%
-\contentsline {table}{\numberline {3.5}{\ignorespaces Chính sách lựa chọn đường truyền SD-WAN đề xuất}}{45}{table.caption.15}%
-\contentsline {table}{\numberline {3.6}{\ignorespaces Ma trận chính sách truy cập giữa các vùng mạng}}{49}{table.3.6}%
-\contentsline {table}{\numberline {4.1}{\ignorespaces Nền tảng sử dụng trong mô hình triển khai}}{54}{table.caption.16}%
-\contentsline {table}{\numberline {4.2}{\ignorespaces Nguồn dữ liệu và phương thức triển khai cấu hình}}{55}{table.caption.17}%
-\contentsline {table}{\numberline {4.3}{\ignorespaces Kết quả kiểm thử DHCP tại các cơ sở phụ}}{58}{table.caption.18}%
-\contentsline {table}{\numberline {4.4}{\ignorespaces Ánh xạ switch OVS với SDN Controller}}{58}{table.caption.19}%
-\contentsline {table}{\numberline {4.5}{\ignorespaces Ánh xạ vEdge, System-IP và TLOC thực tế}}{61}{table.caption.20}%
-\contentsline {table}{\numberline {4.6}{\ignorespaces Tổng hợp kịch bản kiểm thử và bằng chứng}}{62}{table.4.6}%
+\contentsline {table}{\numberline {3.1}{\ignorespaces Các site và vai trò trong mô hình}}{26}{table.caption.9}%
+\contentsline {table}{\numberline {3.2}{\ignorespaces Ánh xạ cổng của Core-SW1 và Core-SW2}}{30}{table.caption.13}%
+\contentsline {table}{\numberline {3.3}{\ignorespaces Thiết bị và máy trạm tại các cơ sở phụ}}{32}{table.caption.15}%
+\contentsline {table}{\numberline {3.4}{\ignorespaces Phân hoạch VLAN tại Campus chính}}{34}{table.caption.16}%
+\contentsline {table}{\numberline {3.5}{\ignorespaces Địa chỉ trong VLAN 99 (10.1.99.0/24)}}{35}{table.caption.17}%
+\contentsline {table}{\numberline {3.6}{\ignorespaces Các mạng hạ tầng tại Campus chính}}{35}{table.caption.18}%
+\contentsline {table}{\numberline {3.7}{\ignorespaces Phân hoạch VLAN tại các cơ sở phụ}}{36}{table.caption.19}%
+\contentsline {table}{\numberline {3.8}{\ignorespaces Quy hoạch địa chỉ Site 900}}{36}{table.caption.20}%
+\contentsline {table}{\numberline {3.9}{\ignorespaces Quy hoạch System-IP, TLOC và BGP của các vEdge}}{37}{table.caption.21}%
+\contentsline {table}{\numberline {3.10}{\ignorespaces Datapath OVS do SDN Controller quản lý}}{39}{table.caption.22}%
+\contentsline {table}{\numberline {3.11}{\ignorespaces Cây chuyển tiếp dữ liệu và cạnh bị chặn}}{40}{table.caption.23}%
+\contentsline {table}{\numberline {3.12}{\ignorespaces Chính sách Application-Aware Routing AAR\_LAN}}{43}{table.caption.24}%
+\contentsline {table}{\numberline {3.13}{\ignorespaces Các dịch vụ trong hệ thống}}{45}{table.caption.25}%
+\contentsline {table}{\numberline {3.14}{\ignorespaces Danh sách truy cập trên tường lửa biên Campus chính}}{46}{table.caption.26}%
+\contentsline {table}{\numberline {4.1}{\ignorespaces Nền tảng và số lượng node trong mô hình}}{49}{table.caption.27}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces Các vấn đề SDN, nguyên nhân gốc và cách khắc phục}}{53}{table.4.2}%
+\contentsline {table}{\numberline {4.3}{\ignorespaces Kết quả kiểm thử DHCP tại các cơ sở phụ}}{57}{table.caption.28}%
+\contentsline {table}{\numberline {4.4}{\ignorespaces Các vấn đề SD-WAN, nguyên nhân gốc và cách khắc phục}}{59}{table.4.4}%
+\contentsline {table}{\numberline {4.5}{\ignorespaces Tổng hợp kịch bản kiểm thử và kết quả}}{63}{table.4.5}%

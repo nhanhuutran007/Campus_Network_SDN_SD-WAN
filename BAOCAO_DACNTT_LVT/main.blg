@@ -25,48 +25,50 @@ Reallocating 'wiz_functions' (item size: 4) to 9000 items.
 Reallocating 'singl_function' (item size: 4) to 100 items.
 Database file #1: tailieuthamkhao.bib
 apacite.bst [2013/07/21 v6.03 APA bibliography style]
+Warning--No address in rfc6762_mdns
+Warning--No address in rfc5880_bfd
 Warning--No address in rfc2328_ospfv2
 Warning--No address in rfc5798_vrrpv3
 Warning--No address in rfc4271_bgp4
-You've used 6 entries,
+You've used 11 entries,
             6951 wiz_defined-function locations,
-            1308 strings with 11843 characters,
-and the built_in function-call counts, 9604 in all, are:
-= -- 1178
-> -- 81
-< -- 405
-+ -- 357
-- -- 18
-* -- 580
-:= -- 1738
-add.period$ -- 27
-call.type$ -- 6
-change.case$ -- 110
+            1331 strings with 12619 characters,
+and the built_in function-call counts, 17618 in all, are:
+= -- 2178
+> -- 147
+< -- 747
++ -- 658
+- -- 34
+* -- 1067
+:= -- 3167
+add.period$ -- 49
+call.type$ -- 11
+change.case$ -- 199
 chr.to.int$ -- 0
-cite$ -- 15
-duplicate$ -- 219
-empty$ -- 446
-format.name$ -- 102
-if$ -- 1911
+cite$ -- 27
+duplicate$ -- 407
+empty$ -- 812
+format.name$ -- 192
+if$ -- 3520
 int.to.chr$ -- 0
-int.to.str$ -- 18
+int.to.str$ -- 33
 missing$ -- 0
-newline$ -- 145
-num.names$ -- 48
-pop$ -- 382
+newline$ -- 265
+num.names$ -- 88
+pop$ -- 719
 preamble$ -- 1
-purify$ -- 32
+purify$ -- 56
 quote$ -- 0
-skip$ -- 490
+skip$ -- 874
 stack$ -- 0
-substring$ -- 412
-swap$ -- 150
-text.length$ -- 38
+substring$ -- 757
+swap$ -- 275
+text.length$ -- 65
 text.prefix$ -- 0
 top$ -- 1
-type$ -- 480
-warning$ -- 3
-while$ -- 48
+type$ -- 880
+warning$ -- 5
+while$ -- 83
 width$ -- 0
-write$ -- 163
-(There were 3 warnings)
+write$ -- 301
+(There were 5 warnings)
