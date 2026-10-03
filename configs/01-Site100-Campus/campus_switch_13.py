@@ -287,6 +287,8 @@ class CampusSwitch13(_RyuApp):
         self.test_cut = {}          # lid -> mode dang mo phong
         self.core_mac = {}          # lid -> MAC SVI Core (hoc tu ARP reply)
         self.hosts = {}             # (vlan, mac) -> (dpid, cong access, ts)
+        self.pktin = collections.Counter()      # dpid -> tong packet-in (tai len controller)
+        self.pktin_kind = collections.Counter()  # 'probe' | 'data'
         self.policies = collections.OrderedDict()   # id -> luat
         self.policy_stats = {}      # id -> {'packets':, 'bytes':, 'ts':}
         self._stats_acc = {}        # dpid -> {pid: [pk, by]} (dang gom reply nhieu phan)
@@ -855,13 +857,16 @@ class CampusSwitch13(_RyuApp):
         parser = dp.ofproto_parser
         ofp = dp.ofproto
         in_port = msg.match['in_port']
+        self.pktin[dpid] += 1
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocol(ethernet.ethernet)
         if eth is None:
             return
         if eth.ethertype == PROBE_ETHERTYPE or eth.dst.startswith(PROBE_MAC_BASE):
+            self.pktin_kind['probe'] += 1
             self._probe_received(dpid, in_port, msg.data, eth)
             return
+        self.pktin_kind['data'] += 1
         if dpid not in self.port_no:
             return
         n2n = self.port_no[dpid]
@@ -944,6 +949,10 @@ class CampusSwitch13(_RyuApp):
                 'timers': {'probe_ms': PROBE_INTERVAL * 1000, 'link_timeout_ms': LINK_TIMEOUT * 1000,
                            'core_probe_ms': CORE_PROBE_INTERVAL * 1000,
                            'core_timeout_ms': CORE_TIMEOUT * 1000}}
+
+    def api_counters(self):
+        return {'pktin': dict(self.pktin), 'pktin_kind': dict(self.pktin_kind),
+                'hosts': len(self.hosts), 'policies': len(self.policies)}
 
     def api_events(self, since_id=0, kinds=None):
         return [e for e in list(self.event_log)

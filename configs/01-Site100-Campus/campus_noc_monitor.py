@@ -57,6 +57,10 @@ MIN_PORT_SPEED = 100 * 1000 * 1000
 CONGEST_LOW = 70.0
 CONGEST_HIGH = 90.0
 SWITCH_APP = 'CampusSwitch13'
+# Cong OVS noi Core (dem luu luong qua Core khi Core la IOL khong OpenFlow)
+CORE_UPLINKS = {'Core-SW1': [(5, 'ens9'), (8, 'ens10')], 'Core-SW2': [(5, 'ens10'), (8, 'ens9')]}
+SNMP_CFG = '/root/ryu-app/state/snmp.json'   # {"community": "...", "targets": {"Core-SW1": "10.1.99.1", ...}}
+SNMP_CPU_OID = '1.3.6.1.4.1.9.9.109.1.1.1.1.6.1'   # cpmCPUTotal5secRev (Cisco)
 REPLY_TIMEOUT = 1.0         # ping: qua thoi gian nay coi la mat
 
 
@@ -209,6 +213,93 @@ class Pinger(object):
 
 
 # =====================================================================
+#  SNMP v2c GET toi thieu (khong can thu vien ngoai - node 9 khong ra Internet)
+# =====================================================================
+def _ber_len(n):
+    if n < 0x80:
+        return bytes([n])
+    b = n.to_bytes((n.bit_length() + 7) // 8, 'big')
+    return bytes([0x80 | len(b)]) + b
+
+
+def _tlv(t, v):
+    return bytes([t]) + _ber_len(len(v)) + v
+
+
+def _ber_int(i):
+    return _tlv(0x02, i.to_bytes(max(1, (i.bit_length() + 8) // 8), 'big', signed=True))
+
+
+def _ber_oid(oid):
+    parts = [int(x) for x in oid.split('.')]
+    out = bytes([parts[0] * 40 + parts[1]])
+    for p in parts[2:]:
+        enc = [p & 0x7f]
+        p >>= 7
+        while p:
+            enc.insert(0, 0x80 | (p & 0x7f))
+            p >>= 7
+        out += bytes(enc)
+    return _tlv(0x06, out)
+
+
+def _ber_parse(data, i=0):
+    t = data[i]
+    l = data[i + 1]
+    i += 2
+    if l & 0x80:
+        n = l & 0x7f
+        l = int.from_bytes(data[i:i + n], 'big')
+        i += n
+    return t, data[i:i + l], i + l
+
+
+def snmp_get(host, community, oids, timeout=1.5):
+    """SNMPv2c GET -> {oid: int|bytes|None}. Chi doc (RO)."""
+    rid = random.randint(1, 0x7fffffff)
+    vbl = b''.join(_tlv(0x30, _ber_oid(o) + b'\x05\x00') for o in oids)
+    pdu = _tlv(0xa0, _ber_int(rid) + _ber_int(0) + _ber_int(0) + _tlv(0x30, vbl))
+    msg = _tlv(0x30, _ber_int(1) + _tlv(0x04, community.encode()) + pdu)
+    sk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sk.settimeout(timeout)
+    try:
+        sk.sendto(msg, (host, 161))
+        data, _ = sk.recvfrom(4096)
+    finally:
+        sk.close()
+    _, body, _ = _ber_parse(data)
+    _, _, i = _ber_parse(body)             # version
+    _, _, i = _ber_parse(body, i)          # community
+    _, pdu, _ = _ber_parse(body, i)
+    _, _, j = _ber_parse(pdu)              # request-id
+    _, _, j = _ber_parse(pdu, j)           # error-status
+    _, _, j = _ber_parse(pdu, j)           # error-index
+    _, vbl, _ = _ber_parse(pdu, j)
+    out, k = {}, 0
+    for o in oids:
+        _, vb, k = _ber_parse(vbl, k)
+        _, _, m = _ber_parse(vb)
+        t, val, _ = _ber_parse(vb, m)
+        out[o] = int.from_bytes(val, 'big') if t in (0x02, 0x41, 0x42, 0x43, 0x46) else (
+            None if t in (0x80, 0x81, 0x82) else val)
+    return out
+
+
+def _read_proc():
+    """CPU % toan node + RSS/CPU tien trinh Ryu (doc /proc, khong can psutil)."""
+    with open('/proc/stat') as f:
+        cpu = [int(x) for x in f.readline().split()[1:]]
+    with open('/proc/meminfo') as f:
+        mem = dict((l.split(':')[0], int(l.split()[1])) for l in f if ':' in l)
+    with open('/proc/self/stat') as f:
+        st = f.read().rsplit(')', 1)[1].split()
+    return {'cpu_total': sum(cpu), 'cpu_idle': cpu[3] + cpu[4],
+            'mem_total_kb': mem.get('MemTotal', 0), 'mem_avail_kb': mem.get('MemAvailable', 0),
+            'proc_ticks': int(st[11]) + int(st[12]), 'proc_rss_kb': int(st[21]) * 4,
+            'ncpu': os.cpu_count() or 1}
+
+
+# =====================================================================
 class CampusNocMonitor(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
     _CONTEXTS = {'wsgi': WSGIApplication}
@@ -225,6 +316,10 @@ class CampusNocMonitor(app_manager.RyuApp):
         self.congestion = {}
         self.history = collections.deque(maxlen=HISTORY_LEN)
         self.pinger = Pinger(self.logger)
+        self.table_stats = {}       # dpid -> {table: {'active':, 'lookup':, 'matched':}}
+        self.load_hist = collections.deque(maxlen=HISTORY_LEN)
+        self._load_prev = None
+        self.snmp = {}              # 'Core-SW1' -> {'cpu':, 'ts':, 'error':}
         wsgi = kwargs['wsgi']
         try:
             mapper = wsgi.mapper
@@ -238,6 +333,7 @@ class CampusNocMonitor(app_manager.RyuApp):
                               ('/campus/pinger', 'c_pinger_get'),
                               ('/campus/vlans', 'c_vlans'),
                               ('/campus/policies', 'c_policies'),
+                              ('/campus/load', 'c_load'),
                               ('/campus/export/events.csv', 'c_export_events'),
                               ('/campus/export/pinger.csv', 'c_export_pinger'),
                               ('/', 'index')]:
@@ -251,6 +347,7 @@ class CampusNocMonitor(app_manager.RyuApp):
             self.logger.warning('NOC: wsgi register fail: %s', e)
         hub.spawn(self._poll_loop)
         hub.spawn(self._history_loop)
+        hub.spawn(self._load_loop)
 
     def sw(self):
         return app_manager.lookup_service_brick(SWITCH_APP)
@@ -291,6 +388,7 @@ class CampusNocMonitor(app_manager.RyuApp):
                 try:
                     dp.send_msg(dp.ofproto_parser.OFPPortStatsRequest(
                         datapath=dp, flags=0, port_no=dp.ofproto.OFPP_ANY))
+                    dp.send_msg(dp.ofproto_parser.OFPTableStatsRequest(dp, 0))
                 except Exception:
                     pass
             hub.sleep(POLL_INTERVAL)
@@ -326,6 +424,92 @@ class CampusNocMonitor(app_manager.RyuApp):
             self.congestion[dpid][p.port_no] = {'util': round(util, 2), 'level': level, 'ts': now}
         self.port_prev[dpid] = {p.port_no: p for p in ev.msg.body if p.port_no < 0xffff0000}
         self.prev_ts[dpid] = now
+
+    @set_ev_cls(ofp_event.EventOFPTableStatsReply, MAIN_DISPATCHER)
+    def _table_stats_handler(self, ev):
+        d = {}
+        for t in ev.msg.body:
+            if t.active_count or t.table_id in (0, 1):
+                d[t.table_id] = {'active': t.active_count, 'lookup': t.lookup_count,
+                                 'matched': t.matched_count}
+        self.table_stats[ev.msg.datapath.id] = d
+
+    def _load_loop(self):
+        """Moi 5 s: tai tung switch (Mbps, pps, packet-in/s, so flow), tai Core qua
+        uplink OVS (+ CPU qua SNMP neu cau hinh), CPU/RAM controller."""
+        while True:
+            hub.sleep(POLL_INTERVAL)
+            try:
+                self._load_sample()
+            except Exception as e:
+                self.logger.debug('load sample: %s', e)
+
+    def _load_sample(self):
+        now = time.time()
+        s = self.sw()
+        cnt = s.api_counters() if s else {'pktin': {}}
+        proc = _read_proc()
+        prev = self._load_prev
+        self._load_prev = {'ts': now, 'pktin': dict(cnt['pktin']), 'proc': proc,
+                           'lookup': {d: sum(t['lookup'] for t in v.values())
+                                      for d, v in self.table_stats.items()}}
+        if prev is None:
+            return
+        dt = now - prev['ts']
+        sw = {}
+        for dpid in SWITCH_INFO:
+            r = self.rate.get(dpid, {})
+            ts = self.table_stats.get(dpid, {})
+            lk = self._load_prev['lookup'].get(dpid, 0) - prev['lookup'].get(dpid, 0)
+            sw[dpid] = {
+                'name': SWITCH_INFO[dpid]['name'], 'role': SWITCH_INFO[dpid]['role'],
+                'connected': dpid in self.switches,
+                'mbps': round(sum(v['rx'] + v['tx'] for v in r.values()) / 1e6, 3),
+                'pps': round(sum(v['rxpkt'] + v['txpkt'] for v in r.values()), 1),
+                'drop_pps': round(sum(v['rxdrop'] + v['txdrop'] for v in r.values()), 2),
+                'pktin_ps': round((cnt['pktin'].get(dpid, 0) - prev['pktin'].get(dpid, 0)) / dt, 2),
+                'flows_t0': ts.get(0, {}).get('active', 0), 'flows_t1': ts.get(1, {}).get('active', 0),
+                'lookup_ps': round(max(lk, 0) / dt, 1),
+            }
+        core = {}
+        for name, ends in CORE_UPLINKS.items():
+            mb = pp = 0.0
+            for dpid, pname in ends:
+                pno = next((k for k, v in self.port_name.get(dpid, {}).items() if v == pname), None)
+                r = self.rate.get(dpid, {}).get(pno, {})
+                mb += (r.get('rx', 0) + r.get('tx', 0)) / 1e6
+                pp += r.get('rxpkt', 0) + r.get('txpkt', 0)
+            core[name] = {'uplink_mbps': round(mb, 3), 'uplink_pps': round(pp, 1),
+                          'cpu': self.snmp.get(name, {}).get('cpu'),
+                          'snmp_error': self.snmp.get(name, {}).get('error')}
+        p0, p1 = prev['proc'], proc
+        dtot = p1['cpu_total'] - p0['cpu_total']
+        ctl = {'cpu_pct': round(100.0 * (1 - (p1['cpu_idle'] - p0['cpu_idle']) / dtot), 1) if dtot else 0,
+               'ryu_cpu_pct': round(100.0 * (p1['proc_ticks'] - p0['proc_ticks']) * p1['ncpu'] / dtot, 1)
+               if dtot else 0,
+               'mem_used_pct': round(100.0 * (1 - p1['mem_avail_kb'] / float(p1['mem_total_kb'] or 1)), 1),
+               'ryu_rss_mb': round(p1['proc_rss_kb'] / 1024.0, 1),
+               'pktin_ps_total': round(sum(v['pktin_ps'] for v in sw.values()), 1)}
+        self.load_hist.append({'ts': now, 'sw': sw, 'core': core, 'ctl': ctl})
+        self._snmp_poll()
+
+    def _snmp_poll(self):
+        try:
+            with open(SNMP_CFG) as f:
+                cfg = json.load(f)
+        except (IOError, OSError, ValueError):
+            return          # SNMP chua cau hinh -> chi dung luu luong uplink
+        for name, host in cfg.get('targets', {}).items():
+            try:
+                v = snmp_get(host, cfg['community'], [SNMP_CPU_OID])
+                self.snmp[name] = {'cpu': v.get(SNMP_CPU_OID), 'ts': time.time(), 'error': None}
+            except Exception as e:
+                self.snmp[name] = {'cpu': None, 'ts': time.time(), 'error': str(e)[:60]}
+
+    def get_load(self, n=120):
+        h = list(self.load_hist)
+        return {'latest': h[-1] if h else None, 'history': h[-n:],
+                'snmp_configured': os.path.exists(SNMP_CFG)}
 
     def _history_loop(self):
         while True:
@@ -474,6 +658,13 @@ class NocController(ControllerBase):
             return _json(s.api_policy_apply(b.get('action', 'add'), b.get('rule'), b.get('id')))
         except Exception as e:
             return _err(str(e))
+
+    def c_load(self, req, **kw):
+        try:
+            n = int(req.GET.get('n') or 120)
+        except ValueError:
+            n = 120
+        return _json(self.m.get_load(n))
 
     def c_pinger_get(self, req, **kw):
         return _json([t.stats() for t in self.m.pinger.targets.values()])
@@ -650,13 +841,22 @@ svg text{fill:var(--text);font-size:12px}.legend span{margin-right:14px;font-siz
   <div class="muted" style="font-size:12px;margin-bottom:6px">SDN: 1 lenh API -> 4 Access xac nhan (barrier). Truyen thong (uoc tinh): ACL dat tren SVI cua 2 Core (L3) hoac VACL tren tung switch: moi luat x moi thiet bi = nhieu lenh CLI.</div>
   <table id="tb-polev"></table></div>
 </section>
-<section class="tab" id="t-load"><div class="card"><h2>Tai Core / Distribution</h2><p class="muted">Giai doan 4 (OpenFlow + SNMP Core).</p></div></section>
+<section class="tab" id="t-load">
+ <div class="grid g4" id="ld-cards"></div>
+ <div class="grid g2">
+  <div class="card"><h2>Distribution - Mbps theo thoi gian</h2><canvas id="c-ld-dist" height="190"></canvas></div>
+  <div class="card"><h2>Packet-in/s len controller (tai dieu khien)</h2><canvas id="c-ld-pktin" height="190"></canvas></div>
+  <div class="card"><h2>Core-SW1/2 - luu luong qua uplink tu OVS (Mbps)</h2><canvas id="c-ld-core" height="190"></canvas><div class="muted" id="ld-snmp" style="font-size:12px;margin-top:6px"></div></div>
+  <div class="card"><h2>Controller (node 9) - CPU %</h2><canvas id="c-ld-ctl" height="190"></canvas></div>
+ </div>
+ <div class="card"><h2>Chi tiet tung switch (mau 5 s gan nhat)</h2><table id="tb-ld"></table></div>
+</section>
 <section class="tab" id="t-perf"><div class="card"><h2>Hieu nang giua cac VLAN</h2><p class="muted">Giai doan 5.</p></div></section>
 </main><div id="toast"></div>
 <script>
 const TABS=[['overview','Tong quan'],['topo','Topology'],['recovery','Khoi phuc'],['traffic','Luu luong'],
  ['vlan','VLAN'],['policy','Chinh sach'],['load','Tai thiet bi'],['perf','Hieu nang']];
-const SOON={load:'gd4',perf:'gd5'};
+const SOON={perf:'gd5'};
 let cur=localStorage.getItem('tab')||'overview';
 const nav=document.getElementById('nav');
 TABS.forEach(([id,l])=>{const b=document.createElement('button');b.id='nb-'+id;
@@ -756,6 +956,22 @@ function polTables(P){let h='<tr><th>#</th><th>Ten</th><th>Hanh dong</th><th>Ngu
  let g='<tr><th>Gio</th><th>Thao tac</th><th>Luat</th><th class="num">SDN (ms)</th><th class="num">Switch</th><th class="num">flow-mod</th><th class="num">Thiet bi CLI (truyen thong)</th></tr>';
  pe.slice().reverse().forEach(e=>{g+=`<tr><td>${tstr(e.ts)}</td><td><span class="b b-acc">${e.kind}</span></td><td>${e.detail}</td><td class="num">${fmt(e.converge_ms)}</td><td class="num">${e.switches==null?'-':e.switches}</td><td class="num">${e.flow_mods==null?'-':e.flow_mods}</td><td class="num">2 Core + 6 switch</td></tr>`});
  $('tb-polev').innerHTML=g}
+// ---- TAI THIET BI ----
+function loadView(L){const h=L.history||[],x=L.latest;if(!x){$('ld-cards').innerHTML='<div class="card muted">dang thu mau (5 s)...</div>';return}
+ const d5=x.sw[5]||{},d8=x.sw[8]||{},c1=x.core['Core-SW1']||{},c2=x.core['Core-SW2']||{};
+ const card=(t,v,s)=>`<div class="card kpi"><h2>${t}</h2><div class="v">${v}</div><div class="s">${s}</div></div>`;
+ $('ld-cards').innerHTML=card('Dist-SW1',fmt(d5.mbps,2)+' Mbps',fmt(d5.pps,0)+' pps, '+d5.flows_t0+'+'+d5.flows_t1+' flow, '+fmt(d5.pktin_ps,1)+' pkt-in/s')+
+  card('Dist-SW2',fmt(d8.mbps,2)+' Mbps',fmt(d8.pps,0)+' pps, '+d8.flows_t0+'+'+d8.flows_t1+' flow, '+fmt(d8.pktin_ps,1)+' pkt-in/s')+
+  card('Core-SW1 / Core-SW2',fmt(c1.uplink_mbps,2)+' / '+fmt(c2.uplink_mbps,2)+' Mbps','uplink OVS'+(c1.cpu!=null?' &middot; CPU '+c1.cpu+'% / '+(c2.cpu==null?'-':c2.cpu)+'%':''))+
+  card('Controller',fmt(x.ctl.cpu_pct,1)+' % CPU','Ryu '+fmt(x.ctl.ryu_cpu_pct,1)+'% CPU, '+x.ctl.ryu_rss_mb+' MB, RAM '+x.ctl.mem_used_pct+'%');
+ chart($('c-ld-dist'),[5,8].map((d,i)=>({name:NAME[d],color:COLORS[i],pts:h.map(p=>[p.ts,(p.sw[d]||{}).mbps])})),{timeAxis:1});
+ chart($('c-ld-pktin'),[5,8,68,66,70,69].map((d,i)=>({name:NAME[d],color:COLORS[i],pts:h.map(p=>[p.ts,(p.sw[d]||{}).pktin_ps])})),{timeAxis:1});
+ chart($('c-ld-core'),['Core-SW1','Core-SW2'].map((c,i)=>({name:c,color:COLORS[i+2],pts:h.map(p=>[p.ts,(p.core[c]||{}).uplink_mbps])})),{timeAxis:1});
+ chart($('c-ld-ctl'),[{name:'node 9',color:COLORS[0],pts:h.map(p=>[p.ts,p.ctl.cpu_pct])},{name:'Ryu',color:COLORS[2],pts:h.map(p=>[p.ts,p.ctl.ryu_cpu_pct])}],{timeAxis:1});
+ $('ld-snmp').textContent=L.snmp_configured?('SNMP: Core-SW1 '+(c1.snmp_error||'OK')+', Core-SW2 '+(c2.snmp_error||'OK')):'SNMP chua cau hinh (state/snmp.json) - CPU Core chua do; tai Core tinh qua luu luong uplink OVS.';
+ let t='<tr><th>Switch</th><th>Vai tro</th><th class="num">Mbps</th><th class="num">pps</th><th class="num">drop/s</th><th class="num">packet-in/s</th><th class="num">flow bang 0</th><th class="num">flow bang 1</th><th class="num">lookup/s</th></tr>';
+ [5,8,68,66,70,69].forEach(d=>{const v=x.sw[d]||{};t+=`<tr><td>${v.name}${v.connected?'':' <span class="b b-bad">mat ket noi</span>'}</td><td>${v.role}</td><td class="num">${fmt(v.mbps,3)}</td><td class="num">${fmt(v.pps,0)}</td><td class="num">${fmt(v.drop_pps,2)}</td><td class="num">${fmt(v.pktin_ps,1)}</td><td class="num">${v.flows_t0}</td><td class="num">${v.flows_t1}</td><td class="num">${fmt(v.lookup_ps,0)}</td></tr>`});
+ $('tb-ld').innerHTML=t}
 // ---- refresh ----
 let EV=[];
 async function refresh(){try{
@@ -783,6 +999,7 @@ async function refresh(){try{
   $('tb-ports').innerHTML=h}
  if(cur==='vlan'){VLANS=await J('/campus/vlans');vlanForm(VLANS);vlanTables(VLANS)}
  if(cur==='policy'){polTables(await J('/campus/policies'))}
+ if(cur==='load'){loadView(await J('/campus/load'))}
 }catch(e){console.log(e)}}
 show(cur);setInterval(refresh,2000);
 </script></body></html>"""

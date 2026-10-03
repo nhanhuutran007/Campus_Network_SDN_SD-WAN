@@ -29,7 +29,8 @@ ryu-manager --ofp-tcp-listen-port 6653 campus_switch_13.py campus_noc_monitor.py
 | Lưu lượng | Mbps từng switch theo thời gian, bảng cổng (Mbps, pps, drop, %) | 4 |
 | VLAN | Thêm/xoá VLAN, gán cổng access trên Access (1 lệnh API), lịch sử thời gian triển khai, **đoạn IOS cho Core-SW1/2 do controller sinh**, bảng so sánh với cấu hình truyền thống | 1 |
 | Chính sách | Thêm luật deny/allow (VLAN `vlan:N`, CIDR, IP; ip/icmp/tcp/udp; cổng; hai chiều; ưu tiên), bật/tắt/xoá, **bộ đếm gói khớp từng luật**, lịch sử thời gian áp toàn campus, mẫu dựng sẵn | 5 |
-| Tải thiết bị / Hiệu năng | các giai đoạn 4–5 | 4, 3 |
+| Tải thiết bị | Từng Dist/Access: Mbps, pps, drop, **packet-in/s**, số flow bảng 0/1, lookup/s (TableStats); Core-SW1/2: lưu lượng qua uplink OVS (+ CPU qua SNMP nếu cấu hình `state/snmp.json`); CPU/RAM node 9 và tiến trình Ryu | 4 |
+| Hiệu năng | giai đoạn 5 | 3 |
 
 ## REST
 
@@ -44,6 +45,7 @@ ryu-manager --ofp-tcp-listen-port 6653 campus_switch_13.py campus_noc_monitor.py
 | `POST /campus/vlan` | `{"action":"add|ports|delete","vid":50,"name":"Phong Lab","ports":["Access-SW1.ens7"]}` → sự kiện `vlan_*` (thời gian tới barrier) + `core_config` (IOS cho Core-SW1/2) |
 | `GET /campus/policies` | Luật + `packets`/`bytes` khớp (FlowStats theo cookie, 5 s) |
 | `POST /campus/policy` | `{"action":"add","rule":{"action":"deny","src":"vlan:10","dst":"vlan:40","proto":"icmp","bidir":true,"prio":100}}`; `{"action":"delete|enable|disable","id":1}` |
+| `GET /campus/load?n=120` | Mẫu tải 5 s: `sw` (từng switch), `core` (uplink + CPU SNMP), `ctl` (CPU/RAM, packet-in/s) |
 | `GET/POST /campus/pinger` | `{"target":"10.1.40.102","action":"start|stop|reset|remove","interval":0.1}` |
 | `GET /campus/export/events.csv`, `/campus/export/pinger.csv?target=IP` | Xuất CSV cho báo cáo |
 
@@ -111,6 +113,22 @@ Kịch bản `scripts/lab/sdn_policy_test.py`: luật deny ICMP hai chiều VLAN
 | Xoá luật | **5,2 ms**, thông lại 3/3 |
 
 Truyền thống tương đương: ACL trên SVI 2 Core (hoặc VACL từng switch) – mỗi luật × mỗi thiết bị nhiều lệnh CLI, không có bộ đếm tập trung.
+
+## Kết quả đo mục tiêu 4 – tải Core / Distribution (04/10/2026)
+
+`scripts/lab/sdn_load_test.py` – 3 pha × 60 s, mẫu 5 s (trung bình):
+
+| Chỉ số | Nền | Có lưu lượng | Lưu lượng + cắt D1-C1 |
+|---|---|---|---|
+| Dist-SW1 Mbps / pps | 1,10 / 848 | 2,72 / 1 062 | 1,19 / 916 |
+| Dist-SW2 Mbps / pps | 3,20 / 2 443 | 3,19 / 2 458 | 3,29 / 2 584 |
+| Uplink Core-SW1 Mbps / pps | 0,67 / 466 | 1,48 / 575 | 0,72 / 523 |
+| Packet-in/s tổng | 92,9 | 93,8 | 95,6 |
+| CPU node 9 / Ryu | 8,8 % / 5,0 % | 6,3 % / 5,7 % | 9,6 % / 5,6 % |
+
+- Tải điều khiển ổn định, **không phụ thuộc lưu lượng người dùng** (luồng đã học đi thẳng bằng flow, không qua controller). Packet-in nền chủ yếu: probe liên kết (~40/s), LLDP/BDDP của ONOS (chạy song song cổng 6654), ARP/broadcast.
+- Dist-SW2 tải cao nhất vì gánh toàn bộ VLAN 99 (Access ↔ controller đi qua nó).
+- Hạn chế: VPCS chỉ sinh vài trăm kbit/s nên chưa thử được tải cao; CPU Core cần bật SNMP (chưa bật – cần community string, quyết định bảo mật).
 
 ## Bảo mật
 

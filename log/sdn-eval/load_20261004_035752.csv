@@ -1,0 +1,13 @@
+chi so,1 nen (tb),2 luu luong (tb),3 luu luong + su co (tb),1 nen (dinh),2 luu luong (dinh),3 luu luong + su co (dinh)
+Dist-SW1 Mbps,1.1,2.72,1.19,1.16,2.95,1.73
+Dist-SW1 pps,847.67,1062.21,915.85,886.9,1123.0,1086.3
+Dist-SW1 pkt-in/s,22.19,22.41,22.28,23.59,23.59,25.59
+Dist-SW2 Mbps,3.2,3.19,3.29,3.4,3.41,3.78
+Dist-SW2 pps,2443.22,2457.95,2584.45,2564.8,2592.9,2921.6
+Dist-SW2 pkt-in/s,22.16,22.34,22.76,23.4,23.79,26.39
+Core-SW1 uplink Mbps,0.67,1.48,0.72,0.73,1.6,0.98
+Core-SW1 uplink pps,465.99,574.6,522.62,493.4,612.0,586.2
+Core-SW2 uplink Mbps,0.01,0.01,0.01,0.01,0.01,0.01
+Controller CPU %,8.75,6.31,9.56,14.3,7.2,37.7
+Ryu CPU %,4.96,5.66,5.64,9.1,6.2,7.1
+Packet-in/s tong,92.88,93.83,95.56,98.0,99.4,111.0
