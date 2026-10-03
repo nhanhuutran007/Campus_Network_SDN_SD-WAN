@@ -25,6 +25,10 @@ if (-not (Get-DnsServerResourceRecord -ZoneName $zone -RRType MX -ErrorAction Si
     Add-DnsServerResourceRecordMX -ZoneName $zone -Name '.' -MailExchange "mail.$zone" -Preference 10
 }
 
+# Internet breakout giai đoạn 4 (03/10/2026): tên ngoài forward ra 8.8.8.8/1.1.1.1, không đệ quy root hints
+# (đệ quy root hints từng lấp bảng conn 100 của FW-ASAv unlicensed). FW chỉ cho riêng 10.1.90.10 hỏi DNS ra ngoài.
+Set-DnsServerForwarder -IPAddress 8.8.8.8, 1.1.1.1 -UseRootHint $false -Timeout 3
+
 # Reverse zone cho DMZ (PTR www / mail)
 $rev = '1.1.10.in-addr.arpa'
 if (-not (Get-DnsServerZone -Name $rev -ErrorAction SilentlyContinue)) {
@@ -48,6 +52,8 @@ Get-DhcpServerv4Scope | ForEach-Object {
 
 Get-DnsServerResourceRecord -ZoneName $zone | Format-Table -AutoSize | Out-String -Width 200
 Resolve-DnsName "www.$zone" -Server 127.0.0.1 -ErrorAction SilentlyContinue | Format-Table | Out-String
+Get-DnsServerForwarder | Format-List | Out-String
+Resolve-DnsName google.com -Server 127.0.0.1 -ErrorAction SilentlyContinue | Format-Table | Out-String
 Get-DhcpServerv4OptionValue | Format-Table -AutoSize | Out-String
 Write-Output 'DNS_SETUP_DONE'
 Stop-Transcript
