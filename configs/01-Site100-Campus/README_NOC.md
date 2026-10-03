@@ -1,76 +1,70 @@
-# NOC Monitoring – Campus SDN (Ryu)
+# Campus SDN Console – giao diện tập trung đo đạc & đánh giá SDN (Site 100)
 
-Module giám sát mạng campus theo chuẩn NOC, chạy trực tiếp trên **SDN_CONTROLLER (10.1.99.10)** như một Ryu app. Lấy dữ liệu trực tiếp qua **OpenFlow PortStats/PortDescStats** — không cần cài agent trên switch, không dùng SNMP.
+Hai app Ryu chạy cùng tiến trình trên **SDN_CONTROLLER (node 9, 10.1.99.10)**:
 
-## File
-
-- `campus_noc_monitor.py` — app Ryu: thu thập PortStats định kỳ, tính bandwidth, phát hiện tắc nghẽn, xuất REST JSON + serve Web Dashboard.
-- `SDN_CONTROLLER-autostart.sh` / `SDN_CONTROLLER.sh` — đã bổ sung nạp app này cùng `campus_switch_13.py` khi khởi động Ryu.
-
-## Các app Ryu chạy cùng controller
+| File | Vai trò |
+|---|---|
+| `campus_switch_13.py` (v2, 10/2026) | Điều khiển: L2 theo VLAN, **cây dữ liệu tính tập trung** trên đồ thị liên kết, **thăm dò liên kết chủ động**, VLAN 99 tĩnh có hướng, nhật ký sự kiện + đo thời gian hội tụ |
+| `campus_noc_monitor.py` (v2) | Giao diện **Campus SDN Console** + REST + đo lưu lượng (PortStats) + **ping liên tục** từ controller |
 
 ```
-ryu-manager --ofp-tcp-listen-port 6653 \
-    campus_switch_13.py \
-    campus_noc_monitor.py \
-    ryu.app.ofctl_rest
+ryu-manager --ofp-tcp-listen-port 6653 campus_switch_13.py campus_noc_monitor.py ryu.app.ofctl_rest
 ```
+(`SDN_CONTROLLER-autostart.sh` / `campus-ryu.service` tự nạp NOC nếu file tồn tại.)
 
-Tất cả chung WSGI của Ryu → **REST & Dashboard nằm trên port 8080** (cùng với `ofctl_rest`).
+## Truy cập giao diện
 
-## Truy cập Dashboard NOC (từ PC-Management / PC quản lý)
+- Từ PC-Management (VLAN 99): `http://10.1.99.10:8080/`
+- Từ laptop qua host 1 (node 9 có IP LAN ở `ens6`, hiện `10.215.28.71`, DHCP – có thể đổi):
+  `ssh -L 8080:10.215.28.71:8080 root@<host1>` rồi mở `http://localhost:8080/`
+- Không dùng CDN (VLAN 99 không ra Internet): biểu đồ vẽ bằng canvas trong trang.
 
-Mở trình duyệt tại PC trong VLAN 99 management:
+## Các tab và mục tiêu đánh giá
 
-```
-http://10.1.99.10:8080/
-```
+| Tab | Nội dung | Mục tiêu đề bài |
+|---|---|---|
+| Tổng quan | Switch/liên kết sống, hội tụ gần nhất & trung bình, băng thông tổng | – |
+| Topology | Sơ đồ liên kết: thuộc cây / dự phòng / chết / đang mô phỏng cắt; nút **Cắt/Khôi phục** từng liên kết (silent / admin) | 2 |
+| Khôi phục | Ping liên tục từ controller (chu kỳ 0,1–1 s), RTT + vùng mất gói, bảng sự kiện `detect/converge/total`, xuất CSV | 2 |
+| Lưu lượng | Mbps từng switch theo thời gian, bảng cổng (Mbps, pps, drop, %) | 4 |
+| VLAN / Chính sách / Tải thiết bị / Hiệu năng | các giai đoạn 2–5 | 1, 5, 4, 3 |
 
-Dashboard hiển thị (tự refresh mỗi 3 giây):
-- **KPI**: tổng Rx/Tx (Mbps), số switch online, số cảnh báo.
-- **Biểu đồ bandwidth tổng** (Rx/Tx) theo thời gian (Chart.js, lịch sử ~60s).
-- **Bảng chi tiết từng port**: Rx/Tx, % utilization (thanh màu), trạng thái OK/WARN/HIGH.
-- **Danh sách switch** (vai trò, trạng thái kết nối).
-- **Cảnh báo tắc nghẽn** (congestion) — sắp theo mức độ.
-
-## REST API NOC (JSON, northbound)
+## REST
 
 | Endpoint | Ý nghĩa |
 |---|---|
-| `GET /noc/switches` | Danh sách switch + trạng thái kết nối + uptime |
-| `GET /noc/ports` (`?dpid=`) | Chi tiết port: rate Rx/Tx, pps, lỗi, drop, %util |
-| `GET /noc/congestion` | Danh sách cảnh báo tắc nghẽn (WARN/HIGH) |
-| `GET /noc/topology` | Topo switch cho mục đích vẽ sơ đồ |
-| `GET /noc/summary` | Tổng hợp (switch up, tổng BW, số cảnh báo) |
-| `GET /noc/history` | Lịch sử sample (cho biểu đồ) |
+| `GET /noc/summary` | Tổng hợp (switch, liên kết, gốc cây, hội tụ gần nhất/trung bình, BW) |
+| `GET /noc/switches`, `/noc/ports`, `/noc/congestion`, `/noc/history` | như phiên bản 1 (PortStats nay được poll định kỳ 5 s) |
+| `GET /campus/topology` | Đồ thị: nút, liên kết (`up`, `in_tree`, tuổi probe), cổng bị chặn, VLAN, tham số thăm dò |
+| `GET /campus/events?since=N` | Sự kiện: `link_down/up`, `switch_down/up`, `tree_change`, `test_inject/restore` kèm `detect_ms`, `converge_ms`, `total_ms`, `switches`, `flow_mods`, `announced`, `unanswered` |
+| `POST /campus/linktest` | `{"link":"A1-D1","action":"down|up","mode":"silent|admin"}` |
+| `GET/POST /campus/pinger` | `{"target":"10.1.40.102","action":"start|stop|reset|remove","interval":0.1}` |
+| `GET /campus/export/events.csv`, `/campus/export/pinger.csv?target=IP` | Xuất CSV cho báo cáo |
 
-Ví dụ:
-```bash
-curl http://10.1.99.10:8080/noc/summary
-curl http://10.1.99.10:8080/noc/congestion
-curl http://10.1.99.10:8080/noc/ports
-```
+## Cách đo (mục tiêu 2 – thời gian khôi phục)
 
-## Cách tính bandwidth & phát hiện tắc nghẽn
+- **detect** = mốc phát hiện − mốc kích hoạt (lúc bấm mô phỏng, hoặc lần cuối thấy probe).
+  - Probe OVS↔OVS: ethertype `0x88B5` mỗi 0,5 s cả hai chiều, chết sau 2,0 s.
+  - OVS↔Core (IOL không chạy OpenFlow): ARP tới SVI Core mỗi 1 s, chết sau 3,5 s.
+  - Chế độ `admin` (PortMod down): OVS báo PortStatus ngay → phát hiện ~10 ms.
+- **converge** = mốc phát hiện → **barrier reply** của mọi switch bị ảnh hưởng (hạn chờ 1 s; switch im lặng ghi ở `unanswered`).
+- **Mất gói dữ liệu** = ping liên tục từ controller tới host sau Access (gửi đều theo chu kỳ, mất = không trả lời sau 1 s).
+- Sau mỗi lần cây đổi, controller phát **RARP thay cho host** đi theo đường mới để Core-SW1/2 (switch truyền thống) học lại vị trí MAC ngay – thiếu bước này dữ liệu mất ~11–12 s.
 
-- **Bandwidth**: lấy hiệu `rx_bytes` / `tx_bytes` giữa 2 lần poll chia cho khoảng thời gian (interval 5s). Kết quả = bytes/s → hiển thị Mbps/Gbps.
-- **Utilization (%)**: `(rx+tx) / cur_speed × 100` (tốc độ port lấy từ PortDesc `cur_speed`).
-- **Ngưỡng cảnh báo** (trong `CONGEST_LOW` / `CONGEST_HIGH`):
-  - `>= 70%` → **WARN**
-  - `>= 90%` → **HIGH**
+Chạy bộ thử tự động (ghi `log/sdn-eval/`): `.claude/skills/campus-network-lab/scripts/lab/sdn_recovery_test.py`
 
-## Kiểm tra nhanh
+## Kết quả đo 04/10/2026 (host 1, ping 0,1 s tới PC-HanhChinh-S100)
 
-```bash
-# Trên EVE host, sau khi có route tới 10.1.99.10 (xem md "truy cập controller"):
-curl -s http://10.1.99.10:8080/noc/summary | python -m json.tool
+| Liên kết | Kiểu | detect | converge | Mất gói khi cắt | Khi khôi phục |
+|---|---|---|---|---|---|
+| A4-D1 (Access–Dist) | silent | 1 762 ms | 8,7 ms | 18 gói / 1,81 s | 0 |
+| A4-D1 | admin | 11 ms | 6,2 ms | 0 | 3 gói / 0,30 s |
+| D1-C1 (Dist–Core) | silent | 2 918 ms | 8,7 ms | 29 gói / 2,92 s | 3 gói / 0,30 s |
+| D1-C1 | admin | 13 ms | 8,5 ms | 3 gói / 0,30 s | 1 gói / 0,10 s |
+| Tắt hẳn Dist-SW1 (node 5) | – | ~2 s (probe) | – | 19 gói / 1,9 s | 0 |
 
-# Các switch phải hiện đủ 6 (5, 8, 68, 66, 70, 69) trong /noc/switches
-curl -s http://10.1.99.10:8080/noc/switches
-```
+Gián đoạn dữ liệu ≈ thời gian phát hiện; phần hội tụ của controller < 10 ms. Rút ngắn chu kỳ probe sẽ giảm gián đoạn khi đứt ngầm nhưng tăng nguy cơ báo nhầm.
 
-## Lưu ý
+## Bảo mật
 
-- Dashboard dùng **Chart.js từ CDN** → PC truy cập cần có Internet, hoặc tải chart.umd.min.js local về và chỉnh `<script src>`.
-- Port OpenFlow 6653: OpenFlow control. Port 8080: REST + Dashboard.
-- Nếu muốn tăng độ mượt/độ phân giải, giảm `POLL_INTERVAL` (mặc định 5s) trong `campus_noc_monitor.py`.
+REST 8080 (kể cả `ofctl_rest` sửa được flow) và ONOS 8181 đang nghe trên `ens6` (LAN thật) **không xác thực** – nên chặn bằng firewall node 9, chỉ mở cho host 1/PC quản trị.

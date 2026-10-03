@@ -1,0 +1,196 @@
+{
+ "events": [
+  {
+   "id": 13,
+   "ts": 1791058544.0970347,
+   "kind": "link_down",
+   "detail": "D1-D2 down (probe het han) - cay khong doi",
+   "link": "D1-D2",
+   "tree_version": 4,
+   "root": "C1"
+  },
+  {
+   "id": 14,
+   "ts": 1791058544.097312,
+   "kind": "link_down",
+   "detail": "A1-D1 down (probe het han)",
+   "link": "A1-D1",
+   "tree_version": 5,
+   "root": "C1",
+   "added": [
+    "A1-D2"
+   ],
+   "removed": [
+    "A1-D1"
+   ],
+   "trigger": "auto",
+   "announced": 1,
+   "unanswered": [
+    "Dist-SW1"
+   ],
+   "converge_ms": 9.4,
+   "detect_ms": 2024.8,
+   "total_ms": 2034.3,
+   "switches": 6,
+   "flow_mods": 10,
+   "done": true
+  },
+  {
+   "id": 15,
+   "ts": 1791058544.0985847,
+   "kind": "link_down",
+   "detail": "A2-D1 down (probe het han)",
+   "link": "A2-D1",
+   "tree_version": 6,
+   "root": "C1",
+   "added": [
+    "A2-D2"
+   ],
+   "removed": [
+    "A2-D1"
+   ],
+   "trigger": "auto",
+   "announced": 1,
+   "unanswered": [
+    "Dist-SW1"
+   ],
+   "converge_ms": 9.4,
+   "detect_ms": 2025.0,
+   "total_ms": 2034.4,
+   "switches": 6,
+   "flow_mods": 10,
+   "done": true
+  },
+  {
+   "id": 16,
+   "ts": 1791058544.099746,
+   "kind": "link_down",
+   "detail": "A3-D1 down (probe het han)",
+   "link": "A3-D1",
+   "tree_version": 7,
+   "root": "C1",
+   "added": [
+    "A3-D2"
+   ],
+   "removed": [
+    "A3-D1"
+   ],
+   "trigger": "auto",
+   "announced": 1,
+   "unanswered": [
+    "Dist-SW1"
+   ],
+   "converge_ms": 9.4,
+   "detect_ms": 2026.5,
+   "total_ms": 2035.9,
+   "switches": 6,
+   "flow_mods": 10,
+   "done": true
+  },
+  {
+   "id": 17,
+   "ts": 1791058544.1008704,
+   "kind": "link_down",
+   "detail": "A4-D1 down (probe het han)",
+   "link": "A4-D1",
+   "tree_version": 8,
+   "root": "C1",
+   "added": [
+    "A4-D2"
+   ],
+   "removed": [
+    "A4-D1"
+   ],
+   "trigger": "auto",
+   "announced": 1,
+   "unanswered": [
+    "Dist-SW1"
+   ],
+   "converge_ms": 9.6,
+   "detect_ms": 2025.2,
+   "total_ms": 2034.8,
+   "switches": 6,
+   "flow_mods": 10,
+   "done": true
+  },
+  {
+   "id": 18,
+   "ts": 1791058545.6161096,
+   "kind": "link_down",
+   "detail": "D1-C1 down (probe het han)",
+   "link": "D1-C1",
+   "tree_version": 9,
+   "root": "C1",
+   "added": [],
+   "removed": [
+    "D1-C1"
+   ],
+   "trigger": "auto",
+   "announced": 1,
+   "unanswered": [
+    "Dist-SW1"
+   ],
+   "converge_ms": 5.1,
+   "detect_ms": 3544.7,
+   "total_ms": 3549.8,
+   "switches": 6,
+   "flow_mods": 7,
+   "done": true
+  },
+  {
+   "id": 19,
+   "ts": 1791058545.6173916,
+   "kind": "link_down",
+   "detail": "D1-C2 down (probe het han) - cay khong doi",
+   "link": "D1-C2",
+   "tree_version": 9,
+   "root": "C1"
+  },
+  {
+   "id": 20,
+   "ts": 1791058609.957314,
+   "kind": "link_down",
+   "detail": "A1-D2 down (probe het han)",
+   "link": "A1-D2",
+   "tree_version": 10,
+   "root": "C1",
+   "added": [],
+   "removed": [
+    "A1-D2"
+   ],
+   "trigger": "auto",
+   "converge_ms": 3.9,
+   "detect_ms": 2066.3,
+   "total_ms": 2070.2,
+   "switches": 2,
+   "flow_mods": 2,
+   "done": true
+  },
+  {
+   "id": 21,
+   "ts": 1791058711.8715248,
+   "kind": "tree_change",
+   "detail": "switch_up Dist-SW1",
+   "link": null,
+   "tree_version": 10,
+   "root": "C1",
+   "added": [],
+   "removed": [],
+   "trigger": "auto",
+   "converge_ms": 7.1,
+   "switches": 3,
+   "flow_mods": 9,
+   "done": true
+  }
+ ],
+ "outages": [
+  {
+   "start": 1791058542.2086098,
+   "end": 1791058544.123722,
+   "lost": 19,
+   "duration_ms": 1915.1
+  }
+ ],
+ "sent": 2354,
+ "loss_pct": 0.81
+}

@@ -69,8 +69,12 @@ Bảng lệnh kiểm tra nhanh: IOL `show vlan brief` / `show ip route` / `show 
 
 Các node Linux OVS/Windows dùng VNC; SSH tới OVS và node 9 **đóng**. Đường duy nhất là VNC (hoặc serial của node 9), đã rút ra:
 
-- `vncdotool` **không gõ được** `|`, `>`, `&` (lệnh có pipe/redirect bị hỏng, OCR thấy `sudo -S ovs-vsctl show bro`…). Gõ lệnh chỉ gồm ký tự thường/khoảng trắng; dùng `sudo -S <cmd>` tương tác (gõ lệnh → Enter → chờ → gõ mật khẩu → Enter → chụp màn hình).
-- Từng gặp gõ phím ra **CHỮ HOA toàn bộ** (10/08): thử giữ Shift khi gõ, cờ `--force-caps`, hoặc kiểm tra keymap trong VM. Trên PC Win7 gõ phím qua VNC không có tác dụng → thao tác GUI do người dùng làm.
+- **Script dùng lại (`scripts/lab/`, 04/10/2026)** — đều đọc mật khẩu từ file credentials lúc chạy, đi qua SSH host 1 (direct-tcpip tới `127.0.0.1:33536+id`), PC không cần tới thẳng port console:
+  - `asa.py <id> "cmd;;cmd" [quiet]` — ASAv (enable bằng mật khẩu, `terminal pager 0`); `rd.py <id> ios|vedge "cmd;;cmd"` — IOS/IOL (enable, `terminal length 0`) hoặc vEdge (đăng nhập admin, `paginate false`, tự `exit`); `vpc.py <id> "cmd;;cmd"` — VPCS. Lệnh cấu hình dùng được (`configure terminal;;…;;end`), nhớ `write memory` riêng.
+  - `vnccap.py <id> out.png` — chụp màn hình VNC; `vnccmd.py <id> out.png [login] [INV] "cmd" … [SUDOPASS]` — gõ lệnh vào console VNC rồi chụp (`login` = eve + mật khẩu OVS; `SUDOPASS` = gõ mật khẩu cho prompt sudo, vd `"sudo -s" SUDOPASS`). Xem ảnh xong **xoá ngay**.
+- **Ký tự Shift qua VNC (đã giải quyết):** gửi keysym `>`/`&`/`|` thẳng thì QEMU gõ ra `.`/`7`/`\` — `vnccmd.py` tự giữ Shift cho ký hiệu, nên pipe/redirect/`&&`/`||` dùng được.
+- **"Chữ hoa toàn bộ" thật ra là Shift bị kẹt** từ phiên trước (script chết giữa `keyDown`/`keyUp`): dấu hiệu là cả `-`→`_`, `'`→`"`. `vnccmd.py` đầu mỗi phiên chỉ **nhả** Shift/Ctrl/Alt (không bấm) — sau khi thêm bước này gõ ổn định, không cần `INV`. `INV` chỉ còn để dự phòng khi Caps Lock trong VM thật sự bật.
+- Gõ dòng dài bị **rơi phím** (vncdotool gửi bất đồng bộ): script đã giãn 30 ms/phím và chờ theo độ dài lệnh; vẫn nên chia lệnh ngắn. Dòng dở dang/`>` tiếp nối → thêm `CTRLC`. Gõ sai chỉ ra "command not found" — không gây hại. Trên PC Win7 gõ phím qua VNC không có tác dụng → thao tác GUI do người dùng làm.
 - Đưa file lớn vào node không SSH: **heredoc + base64**: nén `gzip`, `base64` chia dòng, gõ `cat > /tmp/x.b64 <<'EOF' … EOF` qua VNC/serial, rồi `base64 -d | gzip -d > file` → `chmod` → `md5sum` → in marker (`VERIFY-DONE`). Với 177 dòng đã gõ được qua VNC cho node 9. Không có kênh md5 byte-exact tự động → so md5 đích với md5 ground-truth tính từ file trong repo.
 - Đọc màn hình: chụp VNC → OCR (Windows.Media.Ocr hoặc `pytesseract` + tesseract 5.x, phóng ảnh ×3, `--psm 6`). OCR nhiễu với hex dài (md5) — đừng lặp vòng OCR tốn công; tin marker + md5 ground-truth.
 - Serial console của node 9 hay có ký tự `\x00`/ESC → dùng `clean()` ở trên.

@@ -1,900 +1,950 @@
 # =====================================================================
-#  campus_switch_13.py - App SDN quan ly toan bo L2 campus (Ryu)
+#  campus_switch_13.py - App SDN dieu khien L2 campus chinh (Site 100)
 #  Do an: Campus Network ket hop SDN + SD-WAN (EVE-NG)
+#  Phien ban 2 (10/2026): cay du lieu tinh theo do thi + tham do lien ket
 #
-#  Switch duoc quan ly (datapath-id = node-id, khai trong script .sh):
-#     5  = Dist-SW1       8  = Dist-SW2
-#     68 = Access-SW1    66  = Access-SW2    70 = Access-SW3    69 = Access-SW4
+#  Switch (datapath-id = node-id):
+#     5  = Dist-SW1        8  = Dist-SW2
+#     68 = Access-SW1     66 = Access-SW2     70 = Access-SW3     69 = Access-SW4
+#  Core-SW1 / Core-SW2 la IOL (khong chay OpenFlow) - la "goc" cua cay.
 #
 #  Chuc nang:
-#   1) L2 switching co nhan thuc VLAN (reactive): hoc MAC theo VLAN,
-#      cai flow unicast, flood trong dung VLAN (khong tron VLAN).
-#      - table-miss -> CONTROLLER (packet-in): controller quyet dinh
-#        forward tung frame, KHONG dung NORMAL cua OVS kernel (tranh MAC
-#        flapping khi topology co L2 loop).
-#      - Cac port "access" nhan/gan VLAN qua cau hinh OVS tag=
-#        (OVS tu push VLAN o ingress, pop VLAN o egress).
-#      - Cac port "trunk" mang VLAN 10,20,30,40,90,99.
-# 2) L2_TREE_BLOCK: chong loop tap trung (STM central):
-    #      - Cac port (dpid, ten-port) trong L2_TREE_BLOCK bi LOAI khoi tap
-    #        flood cua cac VLAN data (10..90) va duoc cai flow DROP priority 100.
-    #      - VLAN 99 (mgmt/control) KHONG bi chan tren cac port THUONG de giu
-    #        ket noi OVS <-> Ryu, NHUNG bi chan tren cac port tao vong L2
-    #        (khai trong VLAN99_TREE_BLOCK) de cho control-plane trong full-mesh
-    #        (Dist inter-dist, Access dual-home, Core cheo) khong tao broadcast
-    #        storm lam switch ngat/reconnect lien tuc.
-    #      - Cay data va cay VLAN 99 khac nhau vi STP live tren Core/Farm:
-    #          data: VPC -> Access ens4 -> sw5 ens9 -> Core-SW1
-    #          vlan99: Controller -> Farm -> Core-SW1 -> sw8 ens10
-    #                  -> inter-dist ens8 -> sw5 -> Access ens4
-#   3) ACL proactive (demo bao mat tap trung): cai flow drop priority
-#      40000 cho port trong BLOCK_PORTS ngay khi switch ket noi.
-#   4) Northbound REST API: chay chung ryu.app.ofctl_rest (port 8080)
+#   1) L2 switching theo VLAN (reactive): hoc MAC theo VLAN, flood trong
+#      dung VLAN tren cac canh cua CAY DU LIEU.
+#   2) Cay du lieu (data VLAN) tinh tap trung tren do thi lien ket tinh
+#      (LINKS) + trang thai song/chet thuc te -> Dijkstra tu Core-SW1
+#      (du phong Core-SW2). Canh ngoai cay bi DROP (priority 100).
+#   3) Phat hien mat lien ket CHU DONG: probe ethertype 0x88B5 tren moi
+#      lien ket OVS<->OVS (ca hai chieu) va ARP probe toi SVI Core tren
+#      lien ket OVS<->Core. Trong EVE, mat lien ket/node KHONG lam cong
+#      ben kia doi trang thai -> khong the chi dua vao PortStatus.
+#   4) VLAN 99 (quan tri/control) KHONG phu thuoc cay: flow "guard" tinh,
+#      co huong, priority 60000 tren Dist (xem MGMT_FLOWS) -> flow cu KHONG
+#      BAO GIO cat duong ve controller (sua be tac FAILOVER/RECOVERY cua
+#      phien ban 1) va khong phan xa khung quan tri ve chinh Access.
+#   5) Nhat ky su kien + do thoi gian hoi tu: moc phat hien -> barrier
+#      reply cua moi switch bi anh huong. Ghi /root/ryu-app/metrics/.
+#   6) API cho campus_noc_monitor (giao dien tap trung): trang thai do
+#      thi/cay, su kien, mo phong mat lien ket.
 #
 #  Chay:
-#     ryu-manager --ofp-tcp-listen-port 6653 /root/ryu-app/campus_switch_13.py ryu.app.ofctl_rest
+#     ryu-manager --ofp-tcp-listen-port 6653 campus_switch_13.py \
+#         campus_noc_monitor.py ryu.app.ofctl_rest
 # =====================================================================
 
-from ryu.base import app_manager
-from ryu.controller import ofp_event
-from ryu.controller.handler import (
-    MAIN_DISPATCHER, DEAD_DISPATCHER, CONFIG_DISPATCHER, set_ev_cls,
-)
-from ryu.ofproto import ofproto_v1_3
-from ryu.lib.packet import packet, ethernet
-from ryu.lib.packet import vlan as vlan_pkt
-from ryu.lib import hub
-
-import socket
-import subprocess
+import collections
+import csv
+import heapq
+import json
+import os
+import struct
 import time
 
-OFPVID_PRESENT = ofproto_v1_3.OFPVID_PRESENT
+try:  # cho phep kiem thu logic cay ngoai Ryu (test/test_campus_tree.py)
+    from ryu.base import app_manager
+    from ryu.controller import ofp_event
+    from ryu.controller.handler import (
+        MAIN_DISPATCHER, DEAD_DISPATCHER, CONFIG_DISPATCHER, set_ev_cls,
+    )
+    from ryu.ofproto import ofproto_v1_3
+    from ryu.lib.packet import packet, ethernet, arp
+    from ryu.lib.packet import vlan as vlan_pkt
+    from ryu.lib import hub
+    _RyuApp = app_manager.RyuApp
+    OFPVID_PRESENT = ofproto_v1_3.OFPVID_PRESENT
+except ImportError:  # pragma: no cover
+    _RyuApp = object
+    OFPVID_PRESENT = 0x1000
+
+    def set_ev_cls(*a, **k):
+        return lambda f: f
+    MAIN_DISPATCHER = DEAD_DISPATCHER = CONFIG_DISPATCHER = None
+
+    class ofp_event(object):
+        EventOFPSwitchFeatures = EventOFPPortDescStatsReply = None
+        EventOFPPacketIn = EventOFPStateChange = EventOFPPortStatus = None
+        EventOFPBarrierReply = None
+
+APP_DIR = '/root/ryu-app'
+STATE_DIR = os.path.join(APP_DIR, 'state')
+METRIC_DIR = os.path.join(APP_DIR, 'metrics')
+
+# ---------------------------------------------------------------------
+#  TOPO TINH (khop campus_network_sdn_sdwan.md 2.2.2 va .unl)
+# ---------------------------------------------------------------------
+NODE_NAMES = {
+    5: 'Dist-SW1', 8: 'Dist-SW2',
+    68: 'Access-SW1', 66: 'Access-SW2', 70: 'Access-SW3', 69: 'Access-SW4',
+    'C1': 'Core-SW1', 'C2': 'Core-SW2',
+}
+DIST = (5, 8)
+ACCESS = (68, 66, 70, 69)
+OVS_NODES = DIST + ACCESS
+MGMT_VLAN = 99
+MGMT_PORT = 'patch-mgmt'
+CONTROLLER_IP = '10.1.99.10'
+MGMT_IP = {5: '10.1.99.11', 8: '10.1.99.12', 68: '10.1.99.21',
+           66: '10.1.99.22', 70: '10.1.99.23', 69: '10.1.99.24'}
+
+# VLAN du lieu mac dinh (VLAN them dong luu o state/vlans.json - giai doan 2)
+BASE_DATA_VLANS = {10: 'Khoa CNTT', 20: 'Toan-Thong ke', 30: 'Luat',
+                   40: 'Hanh chinh', 90: 'Server Farm'}
+BASE_ACCESS_PORTS = {68: {'ens6': 10, 'ens7': 10}, 66: {'ens6': 20, 'ens7': 20},
+                     70: {'ens6': 30, 'ens7': 30}, 69: {'ens6': 40, 'ens7': 40}}
+TRUNK_PORTS = {
+    5: ['ens4', 'ens5', 'ens6', 'ens7', 'ens8', 'ens9', 'ens10'],
+    8: ['ens4', 'ens5', 'ens6', 'ens7', 'ens8', 'ens9', 'ens10'],
+    68: ['ens4', 'ens5'], 66: ['ens4', 'ens5'], 70: ['ens4', 'ens5'],
+    69: ['ens4', 'ens5'],
+}
+# VLAN 99 tren Dist: luong TINH, CO HUONG, KHONG PHAN XA (khong phu thuoc cay).
+#  Access gui khung quan tri len CA HAI uplink (flow co dinh 0xba5f). Neu Dist
+#  flood tu do, khung cua Access-SW1 di sw5 -> ens8 -> sw8 -> quay ve chinh
+#  Access-SW1 qua uplink thu hai -> br-mgmt hoc sai MAC cua chinh no -> goi
+#  controller gui ve bi drop ~20s (da gap 03/10/2026). Vi vay:
+#   - Access <-> controller di THANG qua Dist-SW2 (Access ens5 -> sw8 -> ens10
+#     -> Core-SW1); ban sao di vao Dist-SW1 bi bo.
+#   - Dist-SW1 <-> controller qua inter-dist (sw5 ens8 <-> sw8 ens8).
+#   - sw5.ens10 (->Core-SW2) va ens9 (Core Et0/2 khong mang 99): drop.
+#  Loi ich: Dist-SW1 chet -> Access van noi controller -> Ryu chuyen du lieu
+#  sang Dist-SW2 ngay (khong can co che failover rieng nhu phien ban 1).
+_ACC = ['ens4', 'ens5', 'ens6', 'ens7']
+MGMT_FLOWS = {
+    8: {'ens10': _ACC + ['ens8', MGMT_PORT],
+        'ens8': ['ens10', MGMT_PORT],
+        MGMT_PORT: ['ens10', 'ens8'] + _ACC,
+        'ens4': ['ens10', MGMT_PORT], 'ens5': ['ens10', MGMT_PORT],
+        'ens6': ['ens10', MGMT_PORT], 'ens7': ['ens10', MGMT_PORT],
+        'ens9': []},
+    5: {'ens8': [MGMT_PORT],
+        MGMT_PORT: ['ens8'],
+        'ens4': [], 'ens5': [], 'ens6': [], 'ens7': [], 'ens9': [], 'ens10': []},
+}
+
+# Lien ket: id -> a=(dpid, port), b=(dpid|'C1'|'C2', port), w=trong so
+#  Trong so chon cay binh thuong: Core-SW1 -> sw5 (ens9) va sw8 (ens10);
+#  4 Access treo duoi sw5; inter-dist va Access->sw8 la du phong.
+LINKS = collections.OrderedDict([
+    ('D1-C1', {'a': (5, 'ens9'), 'b': ('C1', 'Et0/2'), 'w': 1}),
+    ('D2-C1', {'a': (8, 'ens10'), 'b': ('C1', 'Et1/2'), 'w': 2}),
+    ('D1-C2', {'a': (5, 'ens10'), 'b': ('C2', 'Et1/2'), 'w': 1}),
+    ('D2-C2', {'a': (8, 'ens9'), 'b': ('C2', 'Et0/2'), 'w': 2}),
+    ('D1-D2', {'a': (5, 'ens8'), 'b': (8, 'ens8'), 'w': 2}),
+    ('A1-D1', {'a': (68, 'ens4'), 'b': (5, 'ens4'), 'w': 1}),
+    ('A2-D1', {'a': (66, 'ens4'), 'b': (5, 'ens5'), 'w': 1}),
+    ('A3-D1', {'a': (70, 'ens4'), 'b': (5, 'ens6'), 'w': 1}),
+    ('A4-D1', {'a': (69, 'ens4'), 'b': (5, 'ens7'), 'w': 1}),
+    ('A1-D2', {'a': (68, 'ens5'), 'b': (8, 'ens4'), 'w': 2}),
+    ('A2-D2', {'a': (66, 'ens5'), 'b': (8, 'ens5'), 'w': 2}),
+    ('A3-D2', {'a': (70, 'ens5'), 'b': (8, 'ens6'), 'w': 2}),
+    ('A4-D2', {'a': (69, 'ens5'), 'b': (8, 'ens7'), 'w': 2}),
+])
+# ARP probe toi SVI Core (VLAN, IP Core, IP nguon gia - ngoai pool DHCP)
+CORE_PROBE = {
+    'D1-C1': (10, '10.1.10.2', '10.1.10.250'),
+    'D2-C1': (99, '10.1.99.1', '10.1.99.250'),
+    'D1-C2': (10, '10.1.10.3', '10.1.10.251'),
+    'D2-C2': (10, '10.1.10.3', '10.1.10.252'),
+}
+DATA_ROOTS = ('C1', 'C2')
+
+PROBE_ETHERTYPE = 0x88B5
+PROBE_DST = '02:5d:00:00:00:01'
+PROBE_SRC = '02:5d:00:00:00:02'          # probe OVS<->OVS
+PROBE_MAC_BASE = '02:5d:00:00:01:'       # + chi so lien ket (ARP probe Core)
+PROBE_MAC_MASK = 'ff:ff:ff:ff:ff:00'
+PROBE_INTERVAL = 0.5        # giay giua 2 lan probe OVS<->OVS
+CORE_PROBE_INTERVAL = 1.0   # giay giua 2 lan ARP probe toi Core
+LINK_TIMEOUT = 2.0          # OVS<->OVS: ~4 probe that bai -> chet
+OP_TIMEOUT = 1.0            # cho barrier toi da 1s (switch chet nhung TCP chua dong se khong tra loi)
+HOST_TTL = 900              # quen host khong thay goi sau 15 phut
+UP_HOLD = 1.0               # lien ket vua chet phai thay probe lien tuc >= 1s moi coi la song (chong dao dong)
+CORE_TIMEOUT = 3.5          # OVS<->Core: ~3 ARP that bai -> chet
+
+# Priority / cookie
+P_PROBE = 65000
+P_TEST_CUT = 65500          # mo phong cat lien ket "im lang"
+P_MGMT = 60000
+P_BLOCK = 100
+P_L2 = 1
+CK_GUARD = 0x5d01
+CK_TREE = 0x5d02
+CK_TEST = 0x5d03
+CK_MISS = 0x5d00
+CK_BOOT_DIST = 0xba5e       # bootstrap Campus-OVS-restore.sh (Dist)
+COOKIE_ALL = 0xffffffffffffffff
 
 
-class CampusSwitch13(app_manager.RyuApp):
-    OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
+# ---------------------------------------------------------------------
+#  LOGIC CAY (ham thuan - kiem thu duoc ngoai Ryu)
+# ---------------------------------------------------------------------
+def link_nodes(lid):
+    l = LINKS[lid]
+    return l['a'][0], l['b'][0]
 
-    # VLAN di qua cac trunk cua campus (theo bang 2.2 md)
-    TRUNK_VLANS = [10, 20, 30, 40, 90, 99]
 
-    # Cau hinh port tung switch (ten port = ten trong OVS)
-    #  - 'trunk' : noi Core/Dist/Access (mang TRUNK_VLANS)
-    #  - 'mgmt'  : patch port sang bridge quan ly (VLAN 99)
-    #  - 'access': port noi PC, ghi VLAN access cua port do
-    PORT_CFG = {
-        5:  {'trunk': ['ens4', 'ens5', 'ens6', 'ens7', 'ens8', 'ens9', 'ens10'],
-             'mgmt': ['patch-mgmt'], 'access': {}},
-        8:  {'trunk': ['ens4', 'ens5', 'ens6', 'ens7', 'ens8', 'ens9', 'ens10'],
-             'mgmt': ['patch-mgmt'], 'access': {}},
-        68: {'trunk': ['ens4', 'ens5'], 'mgmt': ['patch-mgmt'],
-             'access': {'ens6': 10, 'ens7': 10}},
-        66: {'trunk': ['ens4', 'ens5'], 'mgmt': ['patch-mgmt'],
-             'access': {'ens6': 20, 'ens7': 20}},
-        70: {'trunk': ['ens4', 'ens5'], 'mgmt': ['patch-mgmt'],
-             'access': {'ens6': 30, 'ens7': 30}},
-        69: {'trunk': ['ens4', 'ens5'], 'mgmt': ['patch-mgmt'],
-             'access': {'ens6': 40, 'ens7': 40}},
-    }
+def compute_data_tree(connected, link_up):
+    """Tinh cay du lieu.
+    connected: tap dpid OVS dang noi controller.
+    link_up:   dict lid -> bool (lien ket dung duoc).
+    Tra ve (root, tap lid thuoc cay, parent{node: (cha, lid)}).
+    Goc = Core-SW1 neu con it nhat 1 lien ket song toi no, nguoc lai Core-SW2.
+    Core khong noi L2 voi nhau -> chi dung lien ket cua goc duoc chon."""
+    usable = {}
+    for lid, l in LINKS.items():
+        if not link_up.get(lid, False):
+            continue
+        a, b = link_nodes(lid)
+        if a not in connected or (b not in ('C1', 'C2') and b not in connected):
+            continue
+        usable[lid] = l
+    for root in DATA_ROOTS:
+        if not any(link_nodes(lid)[1] == root for lid in usable):
+            continue
+        other = [r for r in DATA_ROOTS if r != root]
+        edges = {lid: l for lid, l in usable.items()
+                 if link_nodes(lid)[1] not in other}
+        adj = collections.defaultdict(list)
+        for lid, l in edges.items():
+            a, b = link_nodes(lid)
+            adj[a].append((b, lid, l['w']))
+            adj[b].append((a, lid, l['w']))
+        # Dijkstra xac dinh: (chi phi, trong so canh cuoi, id canh) nho nhat thang
+        parent = {}
+        done = set()
+        heap = [(0, 0, '', str(root), root, None)]
+        while heap:
+            d, w, lid, _k, n, frm = heapq.heappop(heap)
+            if n in done:
+                continue
+            done.add(n)
+            if frm is not None:
+                parent[n] = (frm, lid, w)
+            for m, mlid, mw in adj[n]:
+                if m not in done:
+                    heapq.heappush(heap, (d + mw, mw, mlid, str(m), m, n))
+        tree = set(p[1] for p in parent.values())
+        return root, tree, {k: (v[0], v[1]) for k, v in parent.items()}
+    return None, set(), {}
 
-    # L2_TREE_BLOCK: loai bo port khoi forward data (chong L2 loop tap trung).
-    #  - Khong them port nay vao tap flood cua VLAN 10..90.
-    #  - Cai flow DROP (priority 100, match in_port+vlan data) cho port nay.
-    #  - VLAN 99 (mgmt) luon duoc giu nguyen de OVS con ket noi controller.
-    # Ly do block: topology lab co lai (Access dual-home 2 Dist + Dist-Core
-    # full-mesh) ma OVS khong chay STP; neu de OVS NORMAL tu hoc MAC se
-    # MAC-flapping -> uni-cast (vi du DHCP OFFER) bi day sai port -> mat goi.
-    # Giai phap: controller cai "cay" tinh (CC a.k.a. spanning central).
-    L2_TREE_BLOCK = {
-        (68, 'ens5'):  'Access-SW1 -> Dist-SW2: canh 3 (dual-home)',
-        (5, 'ens8'):   'Dist-SW1 <-> Dist-SW2: inter-dist',
-        (5, 'ens10'):  'Dist-SW1 -> Core-SW2: dist chi dung Core-SW1',
-        (8, 'ens4'):   'Dist-SW2 -> Access-SW1 (standby)',
-        (8, 'ens5'):   'Dist-SW2 -> Access-SW2 (standby)',
-        (8, 'ens6'):   'Dist-SW2 -> Access-SW3 (standby)',
-        (8, 'ens7'):   'Dist-SW2 -> Access-SW4 (standby)',
-        (8, 'ens8'):   'Dist-SW2 <-> Dist-SW1 inter-dist (standby)',
-        (8, 'ens9'):   'Dist-SW2 -> Core-SW2 (standby data)',
-        (8, 'ens10'):  'Dist-SW2 -> Core-SW1 (standby data)',
-    }
 
-    # VLAN99_TREE_BLOCK: cac port nay bi TREE-BLOCK CA VLAN 99 (mgmt/control),
-    # khop voi topology "cay" du lieu. Ly do: VLAN 99 truoc day duoc flood
-    # toan mesh (Access dual-home + inter-dist + 4 link Dist->Core + Core1/2
-    # noi SwitchServerFarm) tao vong L2 -> broadcast storm -> OVS ngat ket
-    # noi controller (sw8/sw68 ngat/reconnect lien tuc, DPSET multiple conn).
-    # Live STP tren IOL chon Farm->Core-SW1 va Core-SW1->sw8.ens10 cho
-    # VLAN 99; Core-SW1 Et0/2->sw5.ens9 va Farm->Core-SW2 deu bi block 99.
-    # Vi vay cay mgmt that la:
-    #   Controller -> Farm -> Core-SW1 -> sw8.ens10 -> sw8.ens8
-    #   -> sw5.ens8 -> Access ens4.
-    # Khi FAILOVER (sw5 chet), _apply_failover_switch se xoa TREE-BLOCK
-    # (ca 99) de mo duong standby qua sw8.
-    VLAN99_TREE_BLOCK = {
-        (8, 'ens4'):   'Dist-SW2 -> Access-SW1 (mgmt standby)',
-        (8, 'ens5'):   'Dist-SW2 -> Access-SW2 (mgmt standby)',
-        (8, 'ens6'):   'Dist-SW2 -> Access-SW3 (mgmt standby)',
-        (8, 'ens7'):   'Dist-SW2 -> Access-SW4 (mgmt standby)',
-        (8, 'ens9'):   'Dist-SW2 -> Core-SW2: Farm chan nhanh Core-SW2 cho vlan99',
-        (5, 'ens9'):   'Dist-SW1 -> Core-SW1: STP Core-SW1 chan vlan99 tren Et0/2',
-        (5, 'ens10'):  'Dist-SW1 -> Core-SW2: khong nam trong cay mgmt',
-    }
+def tree_ports(tree):
+    """dpid -> tap ten cong trunk dang hoat dong (thuoc cay)."""
+    out = collections.defaultdict(set)
+    for lid in tree:
+        l = LINKS[lid]
+        for end in (l['a'], l['b']):
+            if end[0] in OVS_NODES:
+                out[end[0]].add(end[1])
+    return out
 
-    # BLOCK_PORTS: demo ACL tap trung qua controller
-    #  (dpid, ten-port) -> ly do. Port bi chan se bi DROP moi luu luong.
-    BLOCK_PORTS = {}
 
-    # FAILOVER sw5 -> sw8 (Dist-SW1 -> Dist-SW2). Mo duong standby CHI AN TOAN
-    # khi sw5 THAT SU chet: neu sw5 con song ma sw8 mo duong, moi Access (dual-
-    # home) noi cau 2 Dist -> L2 loop -> storm. Vi vay moi duong kich hoat
-    # failover deu can BANG CHUNG DOC LAP (ping mgmt IP cua sw5 that bai), khong
-    # chi dua vao socket OpenFlow (mat control-plane != mat data-plane).
-    SW5_MGMT_IP = '10.1.99.11'
-    PING_TRIES = 3              # so lan ping lien tiep that bai moi coi sw5 chet
-    SOCKET_USER_TIMEOUT_MS = 15000   # socket khong ACK >15s -> chet (xem ben duoi)
+def probe_mac(lid):
+    return PROBE_MAC_BASE + '%02x' % list(LINKS).index(lid)
+
+
+def port_link(dpid, pname):
+    for lid, l in LINKS.items():
+        if l['a'] == (dpid, pname) or l['b'] == (dpid, pname):
+            return lid
+    return None
+
+
+# ---------------------------------------------------------------------
+class CampusSwitch13(_RyuApp):
+    OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION] if _RyuApp is not object else []
 
     def __init__(self, *args, **kwargs):
         super(CampusSwitch13, self).__init__(*args, **kwargs)
-        self.mac_to_port = {}   # dpid -> {(vlan, mac): port}
-        self.vlan_ports = {}    # dpid -> {vlan: set(port_no)}
-        self.port_name = {}     # dpid -> {ten: port_no}
-        self.access_ports = {}  # dpid -> {port_no: vlan} (port access)
-        self.switches = {}      # dpid -> datapath
-        self._failover_active = False   # sw5 down → sw8 standby active
-        self._failover_pending = False  # sw5 reconnecting, wait portdesc
-        # Startup watch: neu controller vua chay lai ma sw5 KHONG connect
-        # trong ~35s -> sw5 da gap su co tu truoc (hard crash) -> kich hoat
-        # failover ngay lap tuc (khong cho DEAD event, vi switch co the
-        # mat tich tu truoc khi ryu-manager chay lai).
-        hub.spawn(self._startup_failover_watch)
-        # Liveness watch: kiem tra sw5 con song bang echo-request CHU DONG.
-        # TCP keepalive (SO_KEEPALIVE) KHONG dam bao phat hien dead peer khi
-        # node bi hard-stop/qemu kill (socket van ESTAB, khong co RST/FIN).
-        # => app tu gui OFP_EchoRequest moi ~7s va theo doi phan hoi; neu
-        # sw5 khong tra loi >= LOIVENESS_TIMEOUT thi kich hoat failover
-        # (cung dieu kien voi DEAD event trong _state_change_handler).
-        self._last_activity = {}        # dpid -> time.time() (tra loi echo gan nhat)
-        # Liveness chi la kenh GIAM SAT (probe PortStats). Failover KHONG
-        # duoc kich hoat khi switch CHI IM LANG ma socket con song (is_active
-        # True): OVS busy/luc xu ly packet-in se tre reply -> failover gia
-        # mo duong VLAN99 standby tren sw8 trong khi sw5 van song -> tao L2
-        # loop VLAN99 -> broadcast storm -> ca mang OVS ngat ket noi lap.
-        # => chi can TCP keepalive (idle 5s x3, da bat trong _enable_tcp_keepalive)
-        # phat hien socket chet (~11s) roi DEAD_DISPATCHER lo failover.
-        self._liveness_timeout = 30     # im lang >= 30s moi can kiem chung bang ping
-        hub.spawn(self._failover_liveness_watch)
-
-    def _sw5_ping_dead(self):
-        """True neu sw5 KHONG tra loi ping PING_TRIES lan lien tiep (that su chet).
-        Dung Popen + poll(hub.sleep) de khong chan cac green thread cua Ryu."""
-        for _ in range(self.PING_TRIES):
+        for d in (STATE_DIR, METRIC_DIR):
             try:
-                p = subprocess.Popen(
-                    ['ping', '-c', '1', '-W', '2', self.SW5_MGMT_IP],
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                waited = 0.0
-                while p.poll() is None and waited < 4.0:
-                    hub.sleep(0.2)
-                    waited += 0.2
-                if p.poll() is None:
-                    p.kill()
-                    p.wait()
-                elif p.returncode == 0:
-                    return False        # sw5 con tra loi -> khong chet
-            except Exception:
-                return False            # khong kiem chung duoc -> khong failover
-            hub.sleep(1)
-        return True
-
-    def _sw8_alive(self):
-        """sw8 (Dist-SW2) phai ket noi + song thi failover moi co y nghia. Cay
-        quan tri di qua sw8 (Core-SW1 -> sw8.ens10 -> ens8 -> sw5): khi sw8 reboot,
-        sw5 'bien mat' khoi controller du van song -> KHONG duoc failover."""
-        dp8 = self.switches.get(8)
-        return dp8 is not None and getattr(dp8, 'is_active', False)
-
-    def _failover_if_confirmed(self, dp, reason):
-        """Kich hoat failover CHI KHI ping xac nhan sw5 chet (chong failover gia)."""
-        if self._failover_active or self.switches.get(5) is not dp:
-            return
-        if not self._sw8_alive():
-            self.logger.warning('%s nhung sw8 khong ket noi -> KHONG failover '
-                                '(duong quan tri co the dut o sw8)', reason)
-            return
-        if self._sw5_ping_dead():
-            if not self._failover_active and self.switches.get(5) is dp:
-                self.logger.warning('*** %s + ping %s that bai -> FAILOVER ***',
-                                    reason, self.SW5_MGMT_IP)
-                self._failover_activate()
-        else:
-            self.logger.warning(
-                '%s nhung sw5 con tra loi ping -> loi control-plane, '
-                'KHONG mo duong standby (tranh loop)', reason)
-
-    def _startup_failover_watch(self):
-        time.sleep(35)
-        if not self._failover_active and 5 not in self.switches:
-            if not self._sw8_alive():
-                self.logger.warning('STARTUP: sw5 chua connect va sw8 cung khong ket noi '
-                                    '-> KHONG failover')
-            elif self._sw5_ping_dead():
-                self.logger.info('STARTUP: sw5 khong connect trong 35s va khong '
-                                 'tra loi ping -> kich hoat failover')
-                self._failover_activate()
-            else:
-                self.logger.warning('STARTUP: sw5 chua connect nhung con tra loi '
-                                    'ping -> KHONG failover (doi sw5 ket noi lai)')
-
-    # -----------------------------------------------------------------
-    # LIVENESS WATCHDOG: phat hien sw5 hard-crash ma khong can TCP
-    # keepalive/DEAD event. Gui echo-request theo dinh ky; neu sw5 khong
-    # phan hoi >= _liveness_timeout (60s) thi coi nhu down -> kich Hoat
-    # FAILOVER. Lưu ý: QUAN TRONG chống failover GIẢ:
-    #   - Chi kich Hoat FAILOVER khi socket THUC SU chet (dp.is_active == False).
-    #     Khi switch chi IM LANG (is_active True) ma khong reply thi do OVS
-    #     busy (vd packet-in flood, chu ky RECOVERY/FLUSH dang chay) chua
-    #     tra loi kip — failover luc do chi lam mo duong VLAN99 standby tren
-    #     sw8 trong luc sw5 van song -> Tao L2 loop VLAN99 -> broadcast
-    #     storm -> OVS ngat hang loat (da gap 09/2026: 5 switch ngat cung luc).
-    #   - Failover THAT (hard-crash qemu/kill) da duoc bat bang TCP keepalive
-    #     (idle 5s, interval 2s, count 3) -> phong ~11s phat DEAD event ->
-    #     _state_change_handler goi _failover_activate. Watchdog nay CHI
-    #     la lop de phong khi qemu chet nhanh ma TCP chua timeout.
-    def _failover_liveness_watch(self):
-        while True:
-            time.sleep(7)
-            # Chit kiem tra khi sw5 dang duoc dang ky (da features xong)
-            dp = self.switches.get(5)
-            if dp is None or self._failover_active:
-                continue
-            last = self._last_activity.get(5, time.time())
-            idle = time.time() - last
-            if idle >= self._liveness_timeout:
-                # Im lang lau (socket chet hoac con song): can bang chung doc lap.
-                # Ping that bai => sw5 chet that => failover; ping OK => chi la
-                # loi control-plane/OVS ban => KHONG mo duong standby (tranh loop).
-                self._failover_if_confirmed(
-                    dp, 'LIVENESS: sw5 im lang %.0fs' % idle)
-                if not getattr(dp, 'is_active', True):
-                    continue
-            elif not getattr(dp, 'is_active', True):
-                continue
-            # Ryu/OVS build cua lab co luc xu ly EchoReply noi bo, khong
-            # dispatch EventOFPEchoReply cho app. PortStats reply thi
-            # duoc dispatch on dinh, nen dung no lam probe chu dong.
-            try:
-                req = dp.ofproto_parser.OFPPortStatsRequest(
-                    datapath=dp, flags=0,
-                    port_no=dp.ofproto.OFPP_ANY)
-                dp.send_msg(req)
-            except Exception:
+                os.makedirs(d, exist_ok=True)
+            except OSError:
                 pass
+        self.switches = {}          # dpid -> datapath
+        self.port_no = {}           # dpid -> {ten: port_no}
+        self.port_hw = {}           # dpid -> {port_no: hw_addr}
+        self.port_down = {}         # dpid -> set(port_no) (PortStatus link/admin down)
+        self.mac_to_port = {}       # dpid -> {(vlan, mac): port}
+        self.data_vlans = dict(BASE_DATA_VLANS)
+        self.access_cfg = {k: dict(v) for k, v in BASE_ACCESS_PORTS.items()}
+        # Trang thai lien ket: lan cuoi nhan probe theo tung chieu
+        self.seen = {}              # (lid, 'a'|'b') -> ts nhan probe tai dau do
+        self.probe_since = {}       # lid -> ts bat dau probe (ca 2 dau ket noi)
+        self._first_seen = {}       # (lid, side) -> ts dau chuoi probe lien tuc
+        self.link_state = {lid: True for lid in LINKS}   # lac quan luc khoi dong
+        self.link_changed = {lid: time.time() for lid in LINKS}
+        self.test_cut = {}          # lid -> mode dang mo phong
+        self.core_mac = {}          # lid -> MAC SVI Core (hoc tu ARP reply)
+        self.hosts = {}             # (vlan, mac) -> (dpid, cong access, ts)
+        self.root = None
+        self.tree = set()
+        self.parent = {}
+        self.blocked = {}           # dpid -> set(ten cong dang bi DROP)
+        self.tree_version = 0
+        self.event_log = collections.deque(maxlen=500)  # KHONG dung self.events: la hang doi su kien noi bo cua RyuApp
+        self._ops = {}              # xid -> op_id ; op_id -> dict
+        self._op_seq = 0
+        self._seq = 0
+        self._pending_reason = None
+        self._load_state()
+        if _RyuApp is not object:
+            hub.spawn(self._probe_loop)
+            hub.spawn(self._liveness_loop)
 
-    # -----------------------------------------------------------------
-    @set_ev_cls(ofp_event.EventOFPEchoReply, MAIN_DISPATCHER)
-    def _echo_reply_handler(self, ev):
-        dpid = ev.msg.datapath.id
-        self._last_activity[dpid] = time.time()
+    # ================================================================
+    #  Luu / nap trang thai (VLAN dong - giai doan 2 dung tiep)
+    # ================================================================
+    def _load_state(self):
+        path = os.path.join(STATE_DIR, 'vlans.json')
+        try:
+            with open(path) as f:
+                st = json.load(f)
+            for v, name in st.get('vlans', {}).items():
+                self.data_vlans[int(v)] = name
+            for dpid, ports in st.get('access', {}).items():
+                self.access_cfg.setdefault(int(dpid), {}).update(
+                    {p: int(v) for p, v in ports.items()})
+        except (IOError, OSError, ValueError):
+            pass
 
-    @set_ev_cls(ofp_event.EventOFPPortStatsReply, MAIN_DISPATCHER)
-    def _port_stats_reply_handler(self, ev):
-        # Health reply cho watchdog sw5. Cap nhat cho moi dpid de state luon
-        # dung neu sau nay mo rong watchdog sang switch khac.
-        self._last_activity[ev.msg.datapath.id] = time.time()
+    # ================================================================
+    #  Nhat ky su kien + do thoi gian
+    # ================================================================
+    def _event(self, kind, detail, **extra):
+        self._seq += 1
+        ev = {'id': self._seq, 'ts': time.time(), 'kind': kind, 'detail': detail}
+        ev.update(extra)
+        self.event_log.append(ev)
+        self.logger.info('EVENT %s: %s %s', kind, detail,
+                         {k: v for k, v in extra.items() if k.endswith('_ms')})
+        return ev
 
+    def _write_metric(self, ev):
+        path = os.path.join(METRIC_DIR, 'events.csv')
+        cols = ['ts', 'kind', 'detail', 'trigger', 'detect_ms', 'converge_ms',
+                'total_ms', 'switches', 'flow_mods', 'tree_version', 'root']
+        try:
+            new = not os.path.exists(path)
+            with open(path, 'a') as f:
+                w = csv.writer(f)
+                if new:
+                    w.writerow(cols)
+                w.writerow([time.strftime('%Y-%m-%d %H:%M:%S',
+                                          time.localtime(ev['ts']))] +
+                           [ev.get(c, '') for c in cols[1:]])
+        except (IOError, OSError):
+            pass
+
+    def _start_op(self, ev, t_detect, t_trigger=None):
+        self._op_seq += 1
+        op = {'ev': ev, 't_detect': t_detect, 't_trigger': t_trigger,
+              'pending': set(), 'mods': 0, 'switches': 0, 'xid_dpid': {},
+              'last_reply': None, 'started': time.time()}
+        self._ops[('op', self._op_seq)] = op
+        return ('op', self._op_seq)
+
+    def _barrier(self, dp, op_id):
+        parser = dp.ofproto_parser
+        req = parser.OFPBarrierRequest(dp)
+        dp.set_xid(req)
+        self._ops[req.xid] = op_id
+        self._ops[op_id]['pending'].add(req.xid)
+        self._ops[op_id]['xid_dpid'][req.xid] = dp.id
+        self._ops[op_id]['switches'] += 1
+        dp.send_msg(req)
+
+    def _finish_if_done(self, op_id, force=False):
+        op = self._ops.get(op_id)
+        if op is None or (op['pending'] and not force):
+            return
+        now = time.time()
+        if op['pending']:
+            # Het han: chot theo reply cuoi cung nhan duoc, ghi ro switch im lang
+            op['ev']['unanswered'] = sorted(NODE_NAMES.get(op['xid_dpid'][x], x)
+                                            for x in op['pending'])
+            for x in op['pending']:
+                self._ops.pop(x, None)
+            now = op['last_reply'] or now
+        ev = op['ev']
+        ev['converge_ms'] = round((now - op['t_detect']) * 1000, 1)
+        if op['t_trigger']:
+            ev['detect_ms'] = round((op['t_detect'] - op['t_trigger']) * 1000, 1)
+            ev['total_ms'] = round((now - op['t_trigger']) * 1000, 1)
+        ev['switches'] = op['switches']
+        ev['flow_mods'] = op['mods']
+        ev['done'] = True
+        self.logger.info('HOI TU %s: converge=%sms total=%sms (%s switch, %s flow-mod)',
+                         ev['kind'], ev.get('converge_ms'), ev.get('total_ms'),
+                         op['switches'], op['mods'])
+        self._write_metric(ev)
+        del self._ops[op_id]
+
+    @set_ev_cls(ofp_event.EventOFPBarrierReply, MAIN_DISPATCHER)
+    def _barrier_reply_handler(self, ev):
+        op_id = self._ops.pop(ev.msg.xid, None)
+        if op_id is None or op_id not in self._ops:
+            return
+        self._ops[op_id]['pending'].discard(ev.msg.xid)
+        self._ops[op_id]['last_reply'] = time.time()
+        self._finish_if_done(op_id)
+
+    # ================================================================
+    #  Ket noi switch
+    # ================================================================
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def _switch_features_handler(self, ev):
         dp = ev.msg.datapath
-        dpid = dp.id
-        self.switches[dpid] = dp
-        self._last_activity[dpid] = time.time()
-        self.mac_to_port[dpid] = {}
-        self.logger.info('Switch %s connect, requesting port desc', dpid)
-        ofproto = dp.ofproto
         parser = dp.ofproto_parser
-        self._enable_tcp_keepalive(dp)
+        ofp = dp.ofproto
+        self.logger.info('Switch %s (%s) connect', dp.id, NODE_NAMES.get(dp.id))
+        self._add_flow(dp, 0, parser.OFPMatch(),
+                       [parser.OFPActionOutput(ofp.OFPP_CONTROLLER, ofp.OFPCML_NO_BUFFER)],
+                       cookie=CK_MISS)
+        dp.send_msg(parser.OFPPortDescStatsRequest(datapath=dp, flags=0))
 
-        # Table-miss: gui frame chua co flow len controller (reactive).
-        # OFPCML_NO_BUFFER tranh loi buffer_id cua mot so phien ban OVS.
-        match = parser.OFPMatch()
-        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,
-                                          ofproto.OFPCML_NO_BUFFER)]
-        instructions = [parser.OFPInstructionActions(
-            ofproto.OFPIT_APPLY_ACTIONS, actions)]
-        table_miss = parser.OFPFlowMod(datapath=dp, priority=0,
-                                       match=match,
-                                       instructions=instructions)
-        dp.send_msg(table_miss)
-
-        req = parser.OFPPortDescStatsRequest(datapath=dp, flags=0)
-        dp.send_msg(req)
-
-    def _enable_tcp_keepalive(self, dp):
-        """Bat TCP keepalive nhanh (idle 5s, probe 2s x3) de phat hien
-        switch CHET (hard crash / node down) trong ~10-15s thay vi cho
-        timeout TCP mac dinh (co the hang phut/gio). Failover sw5->sw8
-        phu thuoc vao phat hien DEAD kip thoi nay."""
-        try:
-            sk = dp.socket
-            sk.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-            sk.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 5)
-            sk.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 2)
-            sk.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 3)
-            # KEEPALIVE KHONG chay khi con du lieu chua duoc ACK (app gui probe
-            # PortStats moi 7s) -> kernel dung bo dem retransmit (tcp_retries2=15
-            # ~ 15 phut) nen socket cua sw5 chet "song" rat lau. TCP_USER_TIMEOUT
-            # cat ket noi khi du lieu khong duoc ACK trong SOCKET_USER_TIMEOUT_MS.
-            sk.setsockopt(socket.IPPROTO_TCP,
-                          getattr(socket, 'TCP_USER_TIMEOUT', 18),
-                          self.SOCKET_USER_TIMEOUT_MS)
-            self.logger.debug('TCP keepalive enabled for dpid %s', dp.id)
-        except Exception:
-            pass
-
-    # -----------------------------------------------------------------
     @set_ev_cls(ofp_event.EventOFPPortDescStatsReply, MAIN_DISPATCHER)
-    def _port_desc_stats_handler(self, ev):
+    def _port_desc_handler(self, ev):
         dp = ev.msg.datapath
         dpid = dp.id
-        if dpid not in self.switches:
+        if dpid not in OVS_NODES:
+            self.logger.warning('Switch %s khong thuoc campus - bo qua', dpid)
             return
-        # FIX ROOT CAUSE #1: Refresh dp LIVE khi switch reconnect.
-        # Khi sw8 reconnect (DEAD -> reconnect), _switch_features_handler
-        # da ghi dp moi, nhung neu DEAD event chay TRUOC features handler
-        # (dpid da bi xoa khoi self.switches) thi _failover_activate
-        # dung dp cu (stale) -> send_msg that bai.  Day la cach on dinh
-        # nhat: luon cap nhat dp tai moi PORT_DESC reply (dam bao dp dang
-        # hoat dong, socket con song).
-        self.switches[dpid] = dp
-
-        cfg = self.PORT_CFG.get(dpid)
-        if cfg is None:
-            self.logger.warning('Switch %s khong co trong PORT_CFG', dpid)
-            cfg = {'trunk': [], 'mgmt': [], 'access': {}}
-
-        name2no = {}
+        ofp = dp.ofproto
+        n2n, hw, down = {}, {}, set()
         for p in ev.msg.body:
-            pname = p.name.decode('utf-8', 'replace') if isinstance(p.name, bytes) else p.name
-            name2no[pname] = p.port_no
-        self.port_name[dpid] = name2no
-        self.logger.info('PORTDESC %s: %s', dpid, sorted(name2no.keys()))
+            name = p.name.decode('utf-8', 'replace') if isinstance(p.name, bytes) else p.name
+            n2n[name] = p.port_no
+            hw[p.port_no] = p.hw_addr
+            if (p.state & ofp.OFPPS_LINK_DOWN) or (p.config & ofp.OFPPC_PORT_DOWN):
+                down.add(p.port_no)
+        if self.switches.get(dpid) is dp and self.port_no.get(dpid) == n2n:
+            # PortDesc thu hai trong cung ket noi (vd do campus_noc_monitor yeu
+            # cau): chi cap nhat trang thai cong, khong cai lai guard/cay.
+            self.port_hw[dpid] = hw
+            self.port_down[dpid] = down
+            return
+        first = dpid not in self.switches
+        self.switches[dpid] = dp
+        self.port_no[dpid] = n2n
+        self.port_hw[dpid] = hw
+        self.port_down[dpid] = down
+        self.mac_to_port[dpid] = {}
+        self.blocked[dpid] = set()
+        # Thu tu an toan: guard (quan tri + probe) TRUOC, roi xoa flow cu cua
+        # phien ban truoc (cookie 0 - nguon goc be tac), roi cay.
+        self._install_guards(dp)
+        self._delete_cookie(dp, 0)
+        self._delete_cookie(dp, CK_TREE)
+        self._delete_cookie(dp, CK_TEST)
+        now = time.time()
+        for lid in LINKS:
+            a, b = link_nodes(lid)
+            if dpid in (a, b):
+                self.probe_since[lid] = now
+        if first:
+            self._event('switch_up', '%s ket noi controller' % NODE_NAMES[dpid],
+                        dpid=dpid)
+        self._recompute('switch_up %s' % NODE_NAMES[dpid], t_detect=now, force=True)
+        if dpid in DIST:
+            self._delete_cookie(dp, CK_BOOT_DIST)
 
-        vlans = {}
-        for v in self.TRUNK_VLANS:
-            vlans[v] = set()
-        for pname in cfg.get('trunk', []):
-            pno = name2no.get(pname)
-            if pno is None:
+    @set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
+    def _state_change_handler(self, ev):
+        dp = ev.datapath
+        if ev.state != DEAD_DISPATCHER or dp.id is None:
+            return
+        if self.switches.get(dp.id) is not dp:
+            return      # ket noi cu da bi ket noi moi thay the
+        dpid = dp.id
+        del self.switches[dpid]
+        self.mac_to_port.pop(dpid, None)
+        now = time.time()
+        self._event('switch_down', '%s mat ket noi controller' % NODE_NAMES.get(dpid, dpid),
+                    dpid=dpid)
+        for lid in LINKS:
+            if dpid in link_nodes(lid):
+                self.probe_since.pop(lid, None)
+        self._recompute('switch_down %s' % NODE_NAMES.get(dpid, dpid), t_detect=now)
+
+    @set_ev_cls(ofp_event.EventOFPPortStatus, MAIN_DISPATCHER)
+    def _port_status_handler(self, ev):
+        msg = ev.msg
+        dp = msg.datapath
+        ofp = dp.ofproto
+        p = msg.desc
+        down = (p.state & ofp.OFPPS_LINK_DOWN) or (p.config & ofp.OFPPC_PORT_DOWN)
+        s = self.port_down.setdefault(dp.id, set())
+        was = p.port_no in s
+        if down:
+            s.add(p.port_no)
+        else:
+            s.discard(p.port_no)
+        if bool(down) != was:
+            name = p.name.decode('utf-8', 'replace') if isinstance(p.name, bytes) else p.name
+            lid = port_link(dp.id, name)
+            if lid:
+                self._set_link(lid, not down, time.time(),
+                               'PortStatus %s.%s %s' % (NODE_NAMES.get(dp.id), name,
+                                                        'down' if down else 'up'))
+
+    # ================================================================
+    #  Flow helper
+    # ================================================================
+    def _add_flow(self, dp, prio, match, actions, cookie=0, idle=0):
+        parser = dp.ofproto_parser
+        ofp = dp.ofproto
+        inst = [parser.OFPInstructionActions(ofp.OFPIT_APPLY_ACTIONS, actions)]
+        dp.send_msg(parser.OFPFlowMod(datapath=dp, priority=prio, match=match,
+                                      instructions=inst, cookie=cookie,
+                                      idle_timeout=idle, command=ofp.OFPFC_ADD))
+
+    def _del_strict(self, dp, prio, match):
+        parser = dp.ofproto_parser
+        ofp = dp.ofproto
+        dp.send_msg(parser.OFPFlowMod(datapath=dp, priority=prio, match=match,
+                                      command=ofp.OFPFC_DELETE_STRICT,
+                                      out_port=ofp.OFPP_ANY, out_group=ofp.OFPG_ANY))
+
+    def _delete_cookie(self, dp, cookie):
+        parser = dp.ofproto_parser
+        ofp = dp.ofproto
+        dp.send_msg(parser.OFPFlowMod(datapath=dp, cookie=cookie, cookie_mask=COOKIE_ALL,
+                                      command=ofp.OFPFC_DELETE, out_port=ofp.OFPP_ANY,
+                                      out_group=ofp.OFPG_ANY, match=parser.OFPMatch()))
+
+    def _install_guards(self, dp):
+        parser = dp.ofproto_parser
+        ofp = dp.ofproto
+        dpid = dp.id
+        n2n = self.port_no.get(dpid, {})
+        self._delete_cookie(dp, CK_GUARD)
+        to_ctl = [parser.OFPActionOutput(ofp.OFPP_CONTROLLER, ofp.OFPCML_NO_BUFFER)]
+        self._add_flow(dp, P_PROBE, parser.OFPMatch(eth_type=PROBE_ETHERTYPE), to_ctl,
+                       cookie=CK_GUARD)
+        self._add_flow(dp, P_PROBE, parser.OFPMatch(
+            eth_dst=(PROBE_MAC_BASE + '00', PROBE_MAC_MASK)), to_ctl, cookie=CK_GUARD)
+        if dpid not in DIST:
+            return      # Access: VLAN 99 do flow co dinh 0xba5f (nut la) dam nhiem
+        for src, dsts in MGMT_FLOWS[dpid].items():
+            if src not in n2n:
                 continue
-            for v in self.TRUNK_VLANS:
-                # L2_TREE_BLOCK: khong dung port nay cho VLAN data (giu 99)
-                if (dpid, pname) in self.L2_TREE_BLOCK and v != 99:
-                    continue
-                # VLAN99_TREE_BLOCK: loai tiep VLAN 99 khoi tap flood de pha
-                # vong L2 mgmt (full-mesh Dist/Access mang 99 -> storm).
-                if v == 99 and (dpid, pname) in self.VLAN99_TREE_BLOCK:
-                    continue
-                vlans[v].add(pno)
-        for pname in cfg.get('mgmt', []):
-            pno = name2no.get(pname)
-            if pno is None:
-                continue
-            vlans[99].add(pno)
-        access = {}
-        for pname, v in cfg.get('access', {}).items():
-            pno = name2no.get(pname)
-            if pno is None:
-                continue
-            vlans.setdefault(v, set()).add(pno)
-            access[pno] = v
+            outs = [parser.OFPActionOutput(n2n[d]) for d in dsts if d in n2n]
+            self._add_flow(dp, P_MGMT, parser.OFPMatch(
+                in_port=n2n[src], vlan_vid=OFPVID_PRESENT | MGMT_VLAN), outs,
+                cookie=CK_GUARD)
+        self.logger.info('GUARD %s: VLAN99 tinh co huong %s', NODE_NAMES[dpid],
+                         {k: v for k, v in MGMT_FLOWS[dpid].items() if v})
 
-        self.vlan_ports[dpid] = vlans
-        self.access_ports[dpid] = access
+    # ================================================================
+    #  Tham do lien ket
+    # ================================================================
+    def _probe_loop(self):
+        last_core = 0
+        while True:
+            hub.sleep(PROBE_INTERVAL)
+            now = time.time()
+            do_core = now - last_core >= CORE_PROBE_INTERVAL
+            if do_core:
+                last_core = now
+            for lid, l in LINKS.items():
+                try:
+                    if lid in CORE_PROBE:
+                        if do_core:
+                            self._send_core_probe(lid)
+                    else:
+                        self._send_probe(lid, l['a'])
+                        self._send_probe(lid, l['b'])
+                except Exception as e:      # khong de vong probe chet
+                    self.logger.debug('probe %s loi: %s', lid, e)
 
-        self.logger.info('Switch %s san sang: %s', dpid,
-                         {v: sorted(p) for v, p in vlans.items()})
-        self._install_block_rules(dp)
-        self._install_tree_block_drops(dp, name2no)
-        self._install_vlan99_flood(dp, name2no)
+    def _send_probe(self, lid, end):
+        dpid, pname = end
+        dp = self.switches.get(dpid)
+        pno = self.port_no.get(dpid, {}).get(pname)
+        if dp is None or pno is None:
+            return
+        payload = struct.pack('!HH', dpid, pno) + lid.encode('ascii').ljust(8, b'\0')
+        e = ethernet.ethernet(dst=PROBE_DST, src=PROBE_SRC, ethertype=PROBE_ETHERTYPE)
+        pkt = packet.Packet()
+        pkt.add_protocol(e)
+        pkt.add_protocol(payload)
+        pkt.serialize()
+        self._packet_out(dp, pno, pkt.data)
 
-        # FAILOVER: neu sw5 dang chay standby, ap lai cac dieu chinh
-        # (switch vua reconnect se mat state failover cua no).
-        if self._failover_active:
-            self._apply_failover_switch(dpid, dp, name2no)
-        elif dpid == 8 and name2no.get('ens8') is not None:
-            # Guard VLAN99 tren ens8 chi ton tai luc failover; flow DROP nay
-            # nam lai trong OVS khi Ryu restart -> phai xoa khi khong failover,
-            # neu khong cay mgmt chinh (sw5 <-> sw8.ens8) bi cat.
-            self._vlan99_guard(dp, name2no['ens8'], False)
-        # RECOVERY: khi sw5 trở ve, khoi phuc cay goc (chi khi dang failover)
-        if dpid == 5 and self._failover_pending:
-            self._failover_pending = False
-            if self._failover_active:
-                self._failover_deactivate()
-            else:
-                self.logger.info('Switch 5 ve (khong trong failover)')
+    def _send_core_probe(self, lid):
+        dpid, pname = LINKS[lid]['a']
+        dp = self.switches.get(dpid)
+        pno = self.port_no.get(dpid, {}).get(pname)
+        if dp is None or pno is None:
+            return
+        vid, dst_ip, src_ip = CORE_PROBE[lid]
+        mac = probe_mac(lid)
+        # Broadcast lan dau; khi da biet MAC Core thi ARP unicast (khong lam
+        # nhieu VLAN du lieu cua may tram moi giay).
+        dst = self.core_mac.get(lid, 'ff:ff:ff:ff:ff:ff')
+        pkt = packet.Packet()
+        pkt.add_protocol(ethernet.ethernet(dst=dst, src=mac, ethertype=0x8100))
+        pkt.add_protocol(vlan_pkt.vlan(vid=vid, ethertype=0x0806))
+        pkt.add_protocol(arp.arp(opcode=arp.ARP_REQUEST, src_mac=mac, src_ip=src_ip,
+                                 dst_mac='00:00:00:00:00:00', dst_ip=dst_ip))
+        pkt.serialize()
+        self._packet_out(dp, pno, pkt.data)
 
-        # Campus-OVS-restore.sh cai hai flow NORMAL priority 50000 de
-        # bootstrap control-plane truoc khi Ryu co the lap trinh switch.
-        # Sau PORT_DESC, cay VLAN 99 do controller quan ly da day du; neu
-        # giu NORMAL, no se vuot qua TREE-BLOCK priority 100/3 va tao lai
-        # broadcast loop tren topology dual-home. Xoa bootstrap SAU CUNG de
-        # khong lam dut ket noi trong luc cac flow thay the chua san sang.
-        self._remove_vlan99_bootstrap(dp, name2no)
+    def _packet_out(self, dp, pno, data):
+        parser = dp.ofproto_parser
+        ofp = dp.ofproto
+        dp.send_msg(parser.OFPPacketOut(datapath=dp, buffer_id=ofp.OFP_NO_BUFFER,
+                                        in_port=ofp.OFPP_CONTROLLER,
+                                        actions=[parser.OFPActionOutput(pno)], data=data))
 
-    # -----------------------------------------------------------------
-    # DROP frame den tu port bi khoa. L2_TREE_BLOCK ap dung VLAN data;
-    # VLAN99_TREE_BLOCK doc lap vi cay management phai theo STP live Core/Farm.
-    def _install_tree_block_drops(self, dp, name2no):
-        ofproto = dp.ofproto
+    def _probe_received(self, dpid, in_port, data, eth):
+        now = time.time()
+        if eth.ethertype == PROBE_ETHERTYPE:
+            body = data[14:]
+            if len(body) < 12:
+                return
+            sdpid, sport = struct.unpack('!HH', body[:4])
+            lid = body[4:12].rstrip(b'\0').decode('ascii', 'replace')
+            l = LINKS.get(lid)
+            if l is None:
+                return
+            # Nhan tai dau nao? (kiem tra dung cap cong - phat hien cam nham day)
+            for side, end in (('a', l['a']), ('b', l['b'])):
+                if end[0] == dpid and self.port_no.get(dpid, {}).get(end[1]) == in_port:
+                    self._mark_seen(lid, side, now)
+            return
+        # ARP reply tu Core
+        pkt = packet.Packet(data)
+        a = pkt.get_protocol(arp.arp)
+        if a is None or a.opcode != arp.ARP_REPLY:
+            return
+        for lid, (vid, ip, _src) in CORE_PROBE.items():
+            end = LINKS[lid]['a']
+            if (end[0] == dpid and a.src_ip == ip and a.dst_mac == probe_mac(lid)
+                    and self.port_no.get(dpid, {}).get(end[1]) == in_port):
+                self.core_mac[lid] = a.src_mac
+                self._mark_seen(lid, 'a', now)
+                self._mark_seen(lid, 'b', now)
+
+    def _mark_seen(self, lid, side, now):
+        timeout = CORE_TIMEOUT if lid in CORE_PROBE else LINK_TIMEOUT
+        if now - self.seen.get((lid, side), 0) > timeout:
+            self._first_seen[(lid, side)] = now     # bat dau chuoi probe lien tuc moi
+        self.seen[(lid, side)] = now
+
+    def _liveness_loop(self):
+        while True:
+            hub.sleep(0.1)
+            now = time.time()
+            for op_id in [k for k in self._ops if isinstance(k, tuple)]:
+                op = self._ops.get(op_id)
+                if op and now - op['started'] > OP_TIMEOUT:
+                    self._finish_if_done(op_id, force=True)
+            for lid in LINKS:
+                up = self._eval_link(lid, now)
+                if up is not None and up != self.link_state[lid]:
+                    last = max(self.seen.get((lid, 'a'), 0), self.seen.get((lid, 'b'), 0))
+                    self._set_link(lid, up, now,
+                                   'probe %s' % ('phuc hoi' if up else 'het han'),
+                                   t_trigger=None if up else (last or None))
+
+    def _eval_link(self, lid, now):
+        """True/False neu da du bang chung, None neu chua (giu trang thai cu)."""
+        l = LINKS[lid]
+        a, b = link_nodes(lid)
+        ends = [x for x in (a, b) if x in OVS_NODES]
+        if any(x not in self.switches for x in ends):
+            return None         # switch mat ket noi da duoc xu ly rieng
+        for end in (l['a'], l['b']):
+            if end[0] in OVS_NODES:
+                pno = self.port_no.get(end[0], {}).get(end[1])
+                if pno is None or pno in self.port_down.get(end[0], set()):
+                    return False
+        since = self.probe_since.get(lid)
+        if since is None:
+            return None
+        timeout = CORE_TIMEOUT if lid in CORE_PROBE else LINK_TIMEOUT
+        sides = ('a',) if lid in CORE_PROBE else ('a', 'b')
+        fresh = all(now - self.seen.get((lid, s), 0) <= timeout for s in sides)
+        if fresh:
+            if not self.link_state.get(lid):
+                first = min(self._first_seen.get((lid, s), now) for s in sides)
+                if now - first < UP_HOLD:
+                    return None
+            return True
+        if now - since <= timeout:
+            return None         # moi bat dau probe, chua du thoi gian ket luan
+        return False
+
+    def _set_link(self, lid, up, now, why, t_trigger=None):
+        if self.link_state.get(lid) == up:
+            return
+        self.link_state[lid] = up
+        self.link_changed[lid] = now
+        if lid in self.test_cut and up is False:
+            t_trigger = self.test_cut[lid].get('ts', t_trigger)
+        self._recompute('%s %s (%s)' % (lid, 'up' if up else 'down', why),
+                        t_detect=now, t_trigger=t_trigger,
+                        kind='link_up' if up else 'link_down', link=lid)
+
+    # ================================================================
+    #  Tinh lai + ap cay
+    # ================================================================
+    def _usable_links(self):
+        return {lid: bool(self.link_state.get(lid)) for lid in LINKS}
+
+    def _recompute(self, why, t_detect, t_trigger=None, force=False,
+                   kind='tree', link=None):
+        connected = set(self.switches)
+        root, tree, parent = compute_data_tree(connected, self._usable_links())
+        ports = tree_ports(tree)
+        changed = (tree != self.tree or root != self.root)
+        if not changed and not force:
+            if kind in ('link_up', 'link_down'):
+                self._event(kind, why + ' - cay khong doi', link=link,
+                            tree_version=self.tree_version, root=root)
+            return
+        old_tree = self.tree
+        self.root, self.tree, self.parent = root, tree, parent
+        if changed:
+            self.tree_version += 1
+        ev = self._event(kind if kind != 'tree' else 'tree_change', why, link=link,
+                         tree_version=self.tree_version, root=root,
+                         added=sorted(tree - old_tree), removed=sorted(old_tree - tree),
+                         trigger='inject' if (link in self.test_cut) else 'auto')
+        op_id = self._start_op(ev, t_detect, t_trigger)
+        for dpid, dp in list(self.switches.items()):
+            self._apply_switch(dp, ports.get(dpid, set()), op_id, flush=changed)
+        if changed:
+            ev['announced'] = self._announce_hosts(ports)
+            if _RyuApp is not object:
+                hub.spawn(self._announce_later, ports)
+        self._finish_if_done(op_id)
+
+    def _apply_switch(self, dp, active, op_id, flush):
         parser = dp.ofproto_parser
         dpid = dp.id
-        is_of13 = (ofproto.OFP_VERSION == ofproto_v1_3.OFP_VERSION)
-        blocked_ports = set(self.L2_TREE_BLOCK) | set(self.VLAN99_TREE_BLOCK)
-        for bdpid, pname in sorted(blocked_ports):
-            if bdpid != dpid:
-                continue
-            key = (bdpid, pname)
-            reason = (self.VLAN99_TREE_BLOCK.get(key)
-                      or self.L2_TREE_BLOCK.get(key))
-            pno = name2no.get(pname)
+        n2n = self.port_no.get(dpid, {})
+        want = set(p for p in TRUNK_PORTS.get(dpid, []) if p not in active)
+        have = self.blocked.get(dpid, set())
+        mods = 0
+        # Chan truoc, mo sau: khong bao gio co khoang thoi gian vong L2
+        for name in sorted(want - have):
+            pno = n2n.get(name)
             if pno is None:
-                self.logger.warning('TREE-BLOCK: khong tim thay port %s', pname)
                 continue
-            for v in self.TRUNK_VLANS:
-                if v == 99:
-                    if key not in self.VLAN99_TREE_BLOCK:
-                        continue
-                elif key not in self.L2_TREE_BLOCK:
-                    continue
-                if is_of13:
-                    match = parser.OFPMatch(in_port=pno, vlan_vid=OFPVID_PRESENT | v)
-                else:
-                    match = parser.OFPMatch(in_port=pno, dl_vlan=v)
-                instructions = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, [])]
-                mod = parser.OFPFlowMod(datapath=dp, priority=100,
-                                        match=match, instructions=instructions)
-                dp.send_msg(mod)
-            self.logger.info('TREE-BLOCK %s %s (port %s): %s',
-                             bdpid, pname, pno, reason)
-
-    # -----------------------------------------------------------------
-    def _install_block_rules(self, dp):
-        ofproto = dp.ofproto
-        parser = dp.ofproto_parser
-        name2no = self.port_name.get(dp.id, {})
-        for (dpid, pname), reason in self.BLOCK_PORTS.items():
-            if dpid != dp.id:
-                continue
-            pno = name2no.get(pname)
+            self._add_flow(dp, P_BLOCK, parser.OFPMatch(
+                in_port=pno, vlan_vid=(OFPVID_PRESENT, OFPVID_PRESENT)), [],
+                cookie=CK_TREE)
+            mods += 1
+        for name in sorted(have - want):
+            pno = n2n.get(name)
             if pno is None:
-                self.logger.warning('BLOCK: khong tim thay port %s', pname)
                 continue
-            match = parser.OFPMatch(in_port=pno)
-            instructions = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, [])]
-            mod = parser.OFPFlowMod(datapath=dp, priority=40000,
-                                    match=match, instructions=instructions)
-            dp.send_msg(mod)
-            self.logger.info('DA CHAN port %s (%s) tren switch %s: %s',
-                             pname, pno, dpid, reason)
+            self._del_strict(dp, P_BLOCK, parser.OFPMatch(
+                in_port=pno, vlan_vid=(OFPVID_PRESENT, OFPVID_PRESENT)))
+            mods += 1
+        if flush:
+            # Vi tri MAC thay doi tren MOI switch khi cay doi (vd sw5 van tro
+            # may cua Access-SW1 ve cong da chet) -> xoa flow unicast da hoc.
+            self._delete_cookie(dp, 0)
+            self.mac_to_port[dpid] = {}
+            mods += 1
+        self.blocked[dpid] = want
+        op = self._ops[op_id]
+        op['mods'] += mods
+        if mods:
+            self._barrier(dp, op_id)
 
-    # -----------------------------------------------------------------
-    # VLAN99 (mgmt/control): flood tich cuc tren CAC CANH CUA CAY VLAN 99 de
-    # dap in-band OVS <-> Ryu khong bi doc (learned unicast flow) con tro
-    # ve 1 uplink da chet. Neu sw5 (Dist-SW1) chet, OVS van gui control
-    # den Ryu qua duong standby ens5 -> sw8.ens10 -> Core-SW1.
-    # Cac canh trong VLAN99_TREE_BLOCK bi loai khoi vlan_ports; flow
-    # bootstrap NORMAL se duoc xoa sau khi cac flow nay cai xong.
-    def _install_vlan99_flood(self, dp, name2no):
-        ofproto = dp.ofproto
-        parser = dp.ofproto_parser
-        ports = self.vlan_ports.get(dp.id, {}).get(99, set())
-        if len(ports) < 2:
-            return
-        for p in sorted(ports):
-            others = sorted(ports - {p})
-            acts = [parser.OFPActionOutput(o) for o in others]
-            match = parser.OFPMatch(in_port=p, vlan_vid=OFPVID_PRESENT | 99)
-            instructions = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, acts)]
-            mod = parser.OFPFlowMod(datapath=dp, priority=3, match=match,
-                                    instructions=instructions)
-            dp.send_msg(mod)
-        # Frame control-plane sinh ra tu chinh OVS (in-band): vao tu OFPP_LOCAL,
-        # flood ra tat ca port VLAN99 de luon co duong den controller.
-        acts = [parser.OFPActionOutput(p) for p in sorted(ports)]
-        match = parser.OFPMatch(in_port=ofproto.OFPP_LOCAL,
-                                vlan_vid=OFPVID_PRESENT | 99)
-        instructions = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, acts)]
-        mod = parser.OFPFlowMod(datapath=dp, priority=3, match=match,
-                                instructions=instructions)
-        dp.send_msg(mod)
-        self.logger.info('VLAN99-FLOOD %s: moi port %s', dp.id, sorted(ports))
+    # ----------------------------------------------------------------
+    #  Thong bao vi tri MAC (RARP) sau khi cay doi
+    #  Core-SW1/2 la switch truyen thong: bang MAC cua no van tro host ve
+    #  nhanh cu -> goi tra ve host bi day vao canh da chet cho toi khi host tu
+    #  phat goi (do duoc ~11-12 s, 04/10/2026). Ky thuat chuan khi di chuyen
+    #  may ao: phat RARP voi MAC nguon = MAC host, di theo duong MOI len Core.
+    # ----------------------------------------------------------------
+    def _announce_hosts(self, ports):
+        sent = 0
+        now = time.time()
+        for (vlan, mac), (dpid, pno, ts) in list(self.hosts.items()):
+            if now - ts > HOST_TTL:
+                del self.hosts[(vlan, mac)]
+                continue
+            dp = self.switches.get(dpid)
+            if dp is None:
+                continue
+            n2n = self.port_no.get(dpid, {})
+            ups = [n2n[p] for p in ports.get(dpid, set()) if p in n2n]
+            if not ups:
+                continue
+            pkt = packet.Packet()
+            pkt.add_protocol(ethernet.ethernet(dst='ff:ff:ff:ff:ff:ff', src=mac,
+                                               ethertype=0x8100))
+            pkt.add_protocol(vlan_pkt.vlan(vid=vlan, ethertype=0x8035))
+            pkt.add_protocol(arp.arp(opcode=3, src_mac=mac, src_ip='0.0.0.0',
+                                     dst_mac=mac, dst_ip='0.0.0.0'))
+            pkt.serialize()
+            for up in ups:
+                self._packet_out(dp, up, pkt.data)
+                sent += 1
+        return sent
 
-    def _remove_vlan99_bootstrap(self, dp, name2no):
-        """Ban giao VLAN 99 tu bootstrap sang cay do Ryu quan ly.
-        Campus-OVS-restore.sh cai flow per-port (khong dung NORMAL):
-           priority=50000,dl_vlan=99,in_port=<tree_port>,actions=output:...
-        Phai xoa CA hai dang de cay mgmt do Ryu quan ly lau dai (failover
-        co the mo standby ens5/ens8/ens10 moi hoat dong)."""
-        ofproto = dp.ofproto
-        parser = dp.ofproto_parser
+    def _announce_later(self, ports):
+        hub.sleep(0.3)      # lap lai 1 lan: phong khi flow moi chua kip cai xong
+        self._announce_hosts(ports)
 
-        # Cach chinh: xoa THEO COOKIE 0xba5e (Campus-OVS-restore.sh gan cookie nay
-        # cho moi flow bootstrap, gom ca flow in_port=patch-mgmt khong match vlan).
-        # Flow cua Ryu dung cookie 0 nen khong bi anh huong.
-        dp.send_msg(parser.OFPFlowMod(
-            datapath=dp, cookie=0xba5e, cookie_mask=0xffffffffffffffff,
-            command=ofproto.OFPFC_DELETE,
-            out_port=ofproto.OFPP_ANY, out_group=ofproto.OFPG_ANY,
-            match=parser.OFPMatch()))
+    def _data_ports(self, dpid, vlan):
+        """Cong flood cho VLAN du lieu: trunk thuoc cay + access cua VLAN."""
+        n2n = self.port_no.get(dpid, {})
+        out = set()
+        for name in TRUNK_PORTS.get(dpid, []):
+            if name not in self.blocked.get(dpid, set()) and name in n2n:
+                out.add(n2n[name])
+        for name, v in self.access_cfg.get(dpid, {}).items():
+            if v == vlan and name in n2n:
+                out.add(n2n[name])
+        return out
 
-        # Dang cu (sau 09/2026 patched to per-port): NORMAL khong in_port.
-        mod = parser.OFPFlowMod(
-            datapath=dp,
-            command=ofproto.OFPFC_DELETE_STRICT,
-            priority=50000,
-            out_port=ofproto.OFPP_ANY,
-            out_group=ofproto.OFPG_ANY,
-            match=parser.OFPMatch(vlan_vid=OFPVID_PRESENT | 99))
-        dp.send_msg(mod)
-
-        # Dang moi: delete strict tung port cay (match day du in_port+vlan).
-        for pno in name2no.values():
-            if pno is not None:
-                mod = parser.OFPFlowMod(
-                    datapath=dp,
-                    command=ofproto.OFPFC_DELETE_STRICT,
-                    priority=50000,
-                    out_port=ofproto.OFPP_ANY,
-                    out_group=ofproto.OFPG_ANY,
-                    match=parser.OFPMatch(in_port=pno,
-                                          vlan_vid=OFPVID_PRESENT | 99))
-                dp.send_msg(mod)
-
-        self.logger.info('VLAN99-BOOTSTRAP removed on dpid %s', dp.id)
-
-    # -----------------------------------------------------------------
+    # ================================================================
+    #  Packet-in: probe + L2 theo VLAN
+    # ================================================================
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
         msg = ev.msg
         dp = msg.datapath
         dpid = dp.id
-        ofproto = dp.ofproto
         parser = dp.ofproto_parser
+        ofp = dp.ofproto
         in_port = msg.match['in_port']
-
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocol(ethernet.ethernet)
         if eth is None:
             return
-        src = eth.src
-        dst = eth.dst
-
-        # VLAN: OVS lab build khong dua vlan_vid/dl_vlan vao match dict cua
-        # packet-in ma GIU NGUYEN 802.1Q tag trong data. Doc cam 3 dang:
-        #  1) match vlan_vid/dl_vlan (neu co)
-        #  2) doc VID truc tiep tu data (0x8100 tag header)
-        #  3) fallback access_ports / PORT_CFG (port access, frame khong tag)
-        is_of13 = (dp.ofproto.OFP_VERSION == ofproto_v1_3.OFP_VERSION)
-        vlan_vid = msg.match.get('vlan_vid')     # OF1.3 (OXM)
-        dl_vlan = msg.match.get('dl_vlan')       # OF1.0/1.1
-        if vlan_vid is not None:
-            vlan = vlan_vid & 0x0fff
-        elif dl_vlan is not None:
-            vlan = int(dl_vlan)
+        if eth.ethertype == PROBE_ETHERTYPE or eth.dst.startswith(PROBE_MAC_BASE):
+            self._probe_received(dpid, in_port, msg.data, eth)
+            return
+        if dpid not in self.port_no:
+            return
+        n2n = self.port_no[dpid]
+        access = {n2n[p]: v for p, v in self.access_cfg.get(dpid, {}).items() if p in n2n}
+        trunk = set(n2n[p] for p in TRUNK_PORTS.get(dpid, []) if p in n2n)
+        vtag = pkt.get_protocol(vlan_pkt.vlan)
+        tagged = eth.ethertype == 0x8100 and vtag is not None
+        if tagged:
+            vlan = vtag.vid
         else:
-            vlan = 0
+            vlan = access.get(in_port, 0)
+        if vlan == 0 or vlan == MGMT_VLAN or vlan not in self.data_vlans:
+            return      # VLAN 99 do guard/bootstrap lo; VLAN la -> bo
+        if in_port in trunk:
+            name = next((k for k, v in n2n.items() if v == in_port), None)
+            if name in self.blocked.get(dpid, set()):
+                return  # canh ngoai cay (flow DROP chua kip cai)
+        src, dst = eth.src, eth.dst
+        table = self.mac_to_port.setdefault(dpid, {})
+        table[(vlan, src)] = in_port
+        if in_port in access:
+            self.hosts[(vlan, src)] = (dpid, in_port, time.time())
 
-        # Doc tag 802.1Q trong data (OVS build nay giu tag trong payload).
-        data_tagged = (eth.ethertype == 0x8100)
-        vlan_proto = pkt.get_protocol(vlan_pkt.vlan) if data_tagged else None
-        if vlan == 0 and vlan_proto is not None:
-            vlan = vlan_proto.vid
-
-        if vlan == 0:
-            vlan = self.access_ports.get(dpid, {}).get(in_port, 0)
-        if vlan == 0:
-            vlan = self._static_access_vlan(dpid, in_port)
-
-        if vlan == 0:
-            vlan_vid = 0            # khong tag
-        else:
-            vlan_vid = OFPVID_PRESENT | vlan
-
-        # Egress theo tung port: port TRUNK phai co tag, port ACCESS phai
-        # khong tag (giong OVS khi khong ho tro auto tag/pop tren data).
-        # xay dung day action cho list port, quan ly trang thai tag hien tai.
-        name2no = self.port_name.get(dpid, {})
-        cfg = self.PORT_CFG.get(dpid, {})
-        trunks = set(name2no.get(p) for p in cfg.get('trunk', []))
-        trunks = {p for p in trunks if p is not None}
-        access_map = {}
-        for pname, pv in cfg.get('access', {}).items():
-            pno = name2no.get(pname)
-            if pno is not None:
-                access_map[pno] = pv
-
-        def egress_actions(ports):
-            acts = []
-            tagged = data_tagged
+        def egress(ports):
+            acts, cur = [], tagged
             for p in ports:
-                if p in access_map:
-                    if tagged:
+                if p in access:
+                    if cur:
                         acts.append(parser.OFPActionPopVlan())
-                        tagged = False
+                        cur = False
                 else:
-                    if vlan != 0 and not tagged:
-                        acts.append(parser.OFPActionPushVlan(ethertype=0x8100))
-                        acts.append(parser.OFPActionSetField(vlan_vid=vlan_vid))
-                        tagged = True
+                    if not cur:
+                        acts.append(parser.OFPActionPushVlan(0x8100))
+                        acts.append(parser.OFPActionSetField(vlan_vid=OFPVID_PRESENT | vlan))
+                        cur = True
                 acts.append(parser.OFPActionOutput(p))
             return acts
 
-        table = self.mac_to_port.setdefault(dpid, {})
-        table[(vlan, src)] = in_port
+        out = table.get((vlan, dst))
+        if out is not None and out != in_port:
+            acts = egress([out])
+            m = {'in_port': in_port, 'eth_dst': dst}
+            if tagged:
+                m['vlan_vid'] = OFPVID_PRESENT | vlan
+            self._add_flow(dp, P_L2, parser.OFPMatch(**m), acts, cookie=0, idle=300)
+        else:
+            acts = egress(sorted(self._data_ports(dpid, vlan) - {in_port}))
+        if acts:
+            dp.send_msg(parser.OFPPacketOut(datapath=dp, buffer_id=ofp.OFP_NO_BUFFER,
+                                            in_port=in_port, actions=acts, data=msg.data))
 
-        out_port = table.get((vlan, dst))
-        if out_port is not None and out_port != in_port:
-            actions = egress_actions([out_port])
-            instructions = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
-            if is_of13:
-                m = {'in_port': in_port, 'eth_dst': dst}
-                if vlan:
-                    m['vlan_vid'] = OFPVID_PRESENT | vlan
+    # ================================================================
+    #  API cho campus_noc_monitor
+    # ================================================================
+    def api_topology(self):
+        now = time.time()
+        links = []
+        for lid, l in LINKS.items():
+            a, b = link_nodes(lid)
+            ages = [now - self.seen[(lid, s)] for s in ('a', 'b') if (lid, s) in self.seen]
+            links.append({
+                'id': lid, 'a': [a, l['a'][1]], 'b': [b, l['b'][1]],
+                'a_name': NODE_NAMES[a], 'b_name': NODE_NAMES[b], 'w': l['w'],
+                'up': bool(self.link_state.get(lid)), 'in_tree': lid in self.tree,
+                'probe_age': round(min(ages), 2) if ages else None,
+                'since': round(now - self.link_changed.get(lid, now), 1),
+                'test_cut': self.test_cut.get(lid, {}).get('mode'),
+                'kind': 'core' if lid in CORE_PROBE else 'ovs',
+            })
+        nodes = [{'id': n, 'name': NODE_NAMES[n],
+                  'role': 'Core' if n in ('C1', 'C2') else ('Distribution' if n in DIST else 'Access'),
+                  'connected': (n in self.switches) if n in OVS_NODES else None,
+                  'parent': NODE_NAMES.get(self.parent.get(n, (None,))[0]) if n in self.parent else None}
+                 for n in list(OVS_NODES) + ['C1', 'C2']]
+        return {'root': NODE_NAMES.get(self.root), 'tree_version': self.tree_version,
+                'nodes': nodes, 'links': links,
+                'blocked': {NODE_NAMES[d]: sorted(v) for d, v in self.blocked.items()},
+                'vlans': [{'vid': v, 'name': n} for v, n in sorted(self.data_vlans.items())],
+                'timers': {'probe_ms': PROBE_INTERVAL * 1000, 'link_timeout_ms': LINK_TIMEOUT * 1000,
+                           'core_probe_ms': CORE_PROBE_INTERVAL * 1000,
+                           'core_timeout_ms': CORE_TIMEOUT * 1000}}
+
+    def api_events(self, since_id=0, kinds=None):
+        return [e for e in list(self.event_log)
+                if e['id'] > since_id and (not kinds or e['kind'] in kinds)]
+
+    def api_link_test(self, lid, action, mode='silent'):
+        """Mo phong mat lien ket (danh gia muc tieu 2).
+        mode 'silent': DROP moi khung vao o CA HAI dau (giong dut cap, dau
+           kia khong thay link down) -> phat hien bang probe.
+        mode 'admin':  OFPPortMod PORT_DOWN o dau a (OVS bao PortStatus ngay).
+        action 'down' | 'up'."""
+        if lid not in LINKS:
+            raise ValueError('lien ket khong ton tai: %s' % lid)
+        l = LINKS[lid]
+        ends = [e for e in (l['a'], l['b']) if e[0] in OVS_NODES]
+        now = time.time()
+        if action == 'down':
+            self.test_cut[lid] = {'mode': mode, 'ts': now}
+            self._event('test_inject', 'Mo phong cat %s (%s)' % (lid, mode), link=lid)
+        elif action == 'up':
+            mode = self.test_cut.pop(lid, {}).get('mode', mode)
+            self._event('test_restore', 'Khoi phuc %s (%s)' % (lid, mode), link=lid)
+        else:
+            raise ValueError('action phai la down/up')
+        for dpid, pname in (ends if mode == 'silent' else ends[:1]):
+            dp = self.switches.get(dpid)
+            pno = self.port_no.get(dpid, {}).get(pname)
+            if dp is None or pno is None:
+                continue
+            parser = dp.ofproto_parser
+            ofp = dp.ofproto
+            if mode == 'silent':
+                m = parser.OFPMatch(in_port=pno)
+                if action == 'down':
+                    self._add_flow(dp, P_TEST_CUT, m, [], cookie=CK_TEST)
+                else:
+                    self._del_strict(dp, P_TEST_CUT, m)
             else:
-                m = {'in_port': in_port, 'eth_dst': dst, 'dl_vlan': vlan}
-            match = parser.OFPMatch(**m)
-            mod = parser.OFPFlowMod(datapath=dp, priority=1, match=match,
-                                    instructions=instructions, buffer_id=msg.buffer_id)
-            dp.send_msg(mod)
-            if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-                out = parser.OFPPacketOut(datapath=dp, buffer_id=ofproto.OFP_NO_BUFFER,
-                                          in_port=in_port, actions=actions,
-                                          data=msg.data)
-                dp.send_msg(out)
-            return
-
-        # Flood trong dung VLAN (chi dung cac port duoc phep trong "cay")
-        out_ports = self.vlan_ports.get(dpid, {}).get(vlan, set()) - {in_port}
-        actions = egress_actions(sorted(out_ports))
-        if not actions:
-            return
-        if msg.buffer_id == ofproto.OFP_NO_BUFFER:
-            out = parser.OFPPacketOut(datapath=dp, buffer_id=ofproto.OFP_NO_BUFFER,
-                                      in_port=in_port, actions=actions, data=msg.data)
-        else:
-            out = parser.OFPPacketOut(datapath=dp, buffer_id=msg.buffer_id,
-                                      in_port=in_port, actions=actions)
-        dp.send_msg(out)
-
-    # -----------------------------------------------------------------
-    # Fallback VLAN access: dich tu PORT_CFG tinh (khong phu thuoc state)
-    def _static_access_vlan(self, dpid, in_port):
-        cfg = self.PORT_CFG.get(dpid)
-        if not cfg:
-            return 0
-        name2no = self.port_name.get(dpid, {})
-        for pname, v in cfg.get('access', {}).items():
-            if name2no.get(pname) == in_port:
-                return v
-        return 0
-
-    # -----------------------------------------------------------------
-    @set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
-    def _state_change_handler(self, ev):
-        dpid = ev.datapath.id
-        if ev.state == DEAD_DISPATCHER:
-            # Chi xoa bang MAC hoc (dong). Giu 3 bang cau hinh tinh
-            # (vlan_ports/port_name/access_ports): port OVS khong doi so,
-            # giu lai de chong flap -> DHCP/Khong mat VLAN khi switch
-            # ngat ket noi roi ket noi lai. Se duoc ghi de khi co
-            # PORT_DESC moi.
-            dp = ev.datapath
-            dpid = dp.id
-            self.mac_to_port.pop(dpid, None)
-            self.logger.info('Switch %s ngat ket noi (giu cau hinh tinh)', dpid)
-            # FAILOVER: CHI kich hoat khi day dung la ket noi sw5 dang duoc
-            # dang ky (self.switches[5] is dp). Neu la connection CU da bi
-            # connection moi thay the (OVS reconnect -> DPSET multiple
-            # connections) thi bo qua -> khong kich hoat failover nham khi
-            # sw5 van ON (chong flap gia).
-            # Them: socket chet CHUA du bang chung sw5 chet (co the chi mat
-            # control-plane, data-plane van chuyen mach) -> kiem chung ping
-            # truoc khi mo duong standby.
-            if (dpid == 5 and not self._failover_active
-                    and self.switches.get(5) is dp):
-                hub.spawn(self._failover_if_confirmed, dp,
-                          'DEAD: socket sw5 dong')
-        elif ev.state == MAIN_DISPATCHER:
-            if dpid == 5:
-                # sw5 tro lai: cho PORT_DESC hoan tat roi khoi phuc cay goc
-                self._failover_pending = True
-                self.logger.info('Switch 5 tro lai (chuan bi khoi phuc cay goc)')
-
-    # -----------------------------------------------------------------
-    # FAILOVER: sw5 (Dist-SW1) down -> chuyen du lieu qua sw8 (Dist-SW2).
-    # Duong standby dự phong: VPC -> Access-SW -> sw8.ens4/5/6/7 -> sw8.ens9
-    # -> Core-SW2. Core-SW1<->Core-SW2 la L3 (Po10) nen khong co vong L2.
-    def _failover_activate(self):
-        self._failover_active = True
-        self.mac_to_port.clear()
-        self.logger.info('*** FAILOVER: sw5 down — mo duong standby qua sw8 ***')
-        for dpid in list(self.switches.keys()):
-            n2n = self.port_name.get(dpid, {})
-            dp = self.switches.get(dpid)  # luon lay dp LIVE tu dict
-            if dp is None or not dp.is_active:
-                continue
-            self._apply_failover_switch(dpid, dp, n2n)
-
-    def _failover_deactivate(self):
-        self._failover_active = False
-        self.mac_to_port.clear()
-        self.logger.info('*** RECOVERY: sw5 ve — khoi phuc cay goc ***')
-        for dpid in list(self.switches.keys()):
-            n2n = self.port_name.get(dpid, {})
-            dp = self.switches.get(dpid)  # luon lay dp LIVE tu dict
-            if not n2n or dp is None or not dp.is_active:
-                continue
-            self._install_tree_block_drops(dp, n2n)
-            self._rebuild_vlan_ports(dpid)
-            # Xoa flow unicast hoc duoc trong luc failover (con tro toi
-            # port standby) de buffer quay ve cay goc qua sw5.
-            if dpid == 68 and n2n.get('ens5') is not None:
-                self._flush_output_port(dp, n2n['ens5'])
-                self._install_vlan99_flood(dp, n2n)
-            if dpid == 8:
-                if n2n.get('ens8') is not None:
-                    self._vlan99_guard(dp, n2n['ens8'], False)
-                for pname in ['ens4', 'ens5', 'ens6', 'ens7', 'ens9', 'ens10']:
-                    pno = n2n.get(pname)
-                    if pno is not None:
-                        self._flush_output_port(dp, pno)
-                self._install_vlan99_flood(dp, n2n)
-
-    def _apply_failover_switch(self, dpid, dp, name2no):
-        """Ap cac thay doi standby cho switch khi dang trong trang thai failover.
-        - sw68 (Access-SW1): mo ens5 (->sw8), khoa ens4 (->sw5 da chet)
-        - sw8  (Dist-SW2):   mo ens4-ens7 (->Access) + ens9 (->Core-SW2)
-        Cac Access khac (66/70/69) da phi tree-block o phia ens5 nen khong doi.
-        """
-        if not name2no or not dp.is_active:
-            return
-        if dpid == 68:
-            p_to_sw8 = name2no.get('ens5')
-            p_to_sw5 = name2no.get('ens4')
-            if p_to_sw8 is not None:
-                self._remove_tree_block(dp, p_to_sw8, 'ens5')
-                vp = self.vlan_ports.setdefault(68, {})
-                for v in self.TRUNK_VLANS:
-                    vp.setdefault(v, set()).add(p_to_sw8)
-            if p_to_sw5 is not None:
-                for v in self.TRUNK_VLANS:
-                    self.vlan_ports.get(68, {}).get(v, set()).discard(p_to_sw5)
-                # Xoa cac flow unicast cũ con tro toi sw5 da chet
-                self._flush_output_port(dp, p_to_sw5)
-            self.logger.info('FAILOVER sw68: mo ens5(->sw8) port %s, khoa ens4(->sw5) port %s',
-                             p_to_sw8, p_to_sw5)
-            self._install_vlan99_flood(dp, name2no)
-        elif dpid == 8:
-            # Mo cac canh Access cho ca data + VLAN99. ens10->Core-SW1 da
-            # la uplink VLAN99 active trong cay management; ens9->Core-SW2
-            # chi mo VLAN data (10..90), khong dua 99 vao nhanh Core-SW2.
-            for pname in ['ens4', 'ens5', 'ens6', 'ens7']:
-                pno = name2no.get(pname)
-                if pno is None:
-                    continue
-                self._remove_tree_block(dp, pno, pname)
-                vp = self.vlan_ports.setdefault(8, {})
-                for v in self.TRUNK_VLANS:
-                    vp.setdefault(v, set()).add(pno)
-            core2_port = name2no.get('ens9')
-            if core2_port is not None:
-                self._remove_tree_block(
-                    dp, core2_port, 'ens9', include_vlan99=False)
-                vp = self.vlan_ports.setdefault(8, {})
-                for v in self.TRUNK_VLANS:
-                    if v != 99:
-                        vp.setdefault(v, set()).add(core2_port)
-            # KHONG chan VLAN99 o ens8: sw5 vua reboot can di qua sw8.ens8 de ve
-            # controller. Khong lo loop vi Access chi la NUT LA cua VLAN 99 (flow co
-            # dinh cookie 0xba5f chi di patch <-> uplink, khong noi cau 2 uplink).
-            # Go guard cu (neu con tu ban truoc) va tra ens8 ve tap flood VLAN99.
-            inter = name2no.get('ens8')
-            if inter is not None:
-                self._vlan99_guard(dp, inter, False)
-                self.vlan_ports.setdefault(8, {}).setdefault(99, set()).add(inter)
-            self.logger.info(
-                'FAILOVER sw8: mo ens4-7 (data+99), ens9 (chi data); '
-                'giu ens10 + ens8 cho VLAN99')
-            self._install_vlan99_flood(dp, name2no)
-
-    def _vlan99_guard(self, dp, pno, enable):
-        """Cai/go flow DROP VLAN99 (priority 100) tren in_port pno cua sw8."""
-        ofproto = dp.ofproto
-        parser = dp.ofproto_parser
-        match = parser.OFPMatch(in_port=pno, vlan_vid=OFPVID_PRESENT | 99)
-        if enable:
-            mod = parser.OFPFlowMod(
-                datapath=dp, priority=100, match=match,
-                instructions=[parser.OFPInstructionActions(
-                    ofproto.OFPIT_APPLY_ACTIONS, [])])
-        else:
-            mod = parser.OFPFlowMod(datapath=dp,
-                                    command=ofproto.OFPFC_DELETE_STRICT,
-                                    priority=100, match=match,
-                                    out_port=ofproto.OFPP_ANY,
-                                    out_group=ofproto.OFPG_ANY)
-        dp.send_msg(mod)
-
-    def _flush_output_port(self, dp, out_port):
-        """Xoa moi flow con tro OUTPUT ra 1 port (de loai flow unicast cu)."""
-        ofproto = dp.ofproto
-        parser = dp.ofproto_parser
-        # Chi xoa flow do Ryu tao (cookie 0). Flow bootstrap CO DINH cua Access
-        # (cookie 0xba5f, patch <-> uplink) cung co output ra port nay; xoa chung
-        # se lam Access mat duong ve controller (Access-SW1 tung roi khoi Ryu sau failover).
-        mod = parser.OFPFlowMod(datapath=dp, cookie=0,
-                                cookie_mask=0xffffffffffffffff,
-                                command=ofproto.OFPFC_DELETE,
-                                priority=0, out_port=out_port,
-                                out_group=ofproto.OFPG_ANY,
-                                match=parser.OFPMatch())
-        dp.send_msg(mod)
-        self.logger.info('FLUSH flows output port %s tren dpid %s', out_port, dp.id)
-
-    def _remove_tree_block(self, dp, pno, pname=None, include_vlan99=True):
-        """DELETE cac flow TREE-BLOCK (priority 100, in_port+vlan) cua 1 port.
-        include_vlan99=False dung cho uplink Core data-only khi failover."""
-        ofproto = dp.ofproto
-        parser = dp.ofproto_parser
-        for v in self.TRUNK_VLANS:
-            if v == 99 and not include_vlan99:
-                continue
-            m = parser.OFPMatch(in_port=pno, vlan_vid=OFPVID_PRESENT | v)
-            # DELETE_STRICT: OFPFC_DELETE (non-strict) KHONG xoa duoc flow tren
-            # ban OVS cua lab (log noi UNBLOCK nhung flow DROP van con -> failover
-            # khong bao gio mo duong). Strict = khop dung priority + match.
-            mod = parser.OFPFlowMod(datapath=dp,
-                                    command=ofproto.OFPFC_DELETE_STRICT,
-                                    priority=100, match=m,
-                                    out_port=ofproto.OFPP_ANY,
-                                    out_group=ofproto.OFPG_ANY)
-            dp.send_msg(mod)
-        self.logger.info('TREE-UNBLOCK port %s tren dpid %s (vlan99=%s)',
-                         pno, dp.id, include_vlan99)
-
-    def _rebuild_vlan_ports(self, dpid):
-        """Duong lai vlan_ports/access_ports tu PORT_CFG (cay goc, co tree-block)."""
-        cfg = self.PORT_CFG.get(dpid)
-        if cfg is None:
-            return
-        n2n = self.port_name.get(dpid, {})
-        vlans = {}
-        for v in self.TRUNK_VLANS:
-            vlans[v] = set()
-        for pname in cfg.get('trunk', []):
-            pno = n2n.get(pname)
-            if pno is None:
-                continue
-            for v in self.TRUNK_VLANS:
-                if (dpid, pname) in self.L2_TREE_BLOCK and v != 99:
-                    continue
-                if v == 99 and (dpid, pname) in self.VLAN99_TREE_BLOCK:
-                    continue
-                vlans[v].add(pno)
-        for pname in cfg.get('mgmt', []):
-            pno = n2n.get(pname)
-            if pno is None:
-                continue
-            vlans[99].add(pno)
-        access = {}
-        for pname, v in cfg.get('access', {}).items():
-            pno = n2n.get(pname)
-            if pno is None:
-                continue
-            vlans.setdefault(v, set()).add(pno)
-            access[pno] = v
-        self.vlan_ports[dpid] = vlans
-        self.access_ports[dpid] = access
-        self.logger.info('RECOVERY %s: khoi phuc vlan_ports %s', dpid,
-                         {v: sorted(p) for v, p in vlans.items()})
+                cfg = ofp.OFPPC_PORT_DOWN if action == 'down' else 0
+                dp.send_msg(parser.OFPPortMod(
+                    datapath=dp, port_no=pno, hw_addr=self.port_hw[dpid][pno],
+                    config=cfg, mask=ofp.OFPPC_PORT_DOWN, advertise=0))
+        return {'link': lid, 'action': action, 'mode': mode, 'ts': now}
