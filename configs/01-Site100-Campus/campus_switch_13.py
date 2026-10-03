@@ -295,6 +295,15 @@ class CampusSwitch13(_RyuApp):
     # ================================================================
     #  Luu / nap trang thai (VLAN dong - giai doan 2 dung tiep)
     # ================================================================
+    def _save_state(self):
+        st = {'vlans': {str(v): n for v, n in self.data_vlans.items() if v not in BASE_DATA_VLANS},
+              'access': {str(d): ports for d, ports in self.access_cfg.items()}}
+        path = os.path.join(STATE_DIR, 'vlans.json')
+        tmp = path + '.tmp'
+        with open(tmp, 'w') as f:
+            json.dump(st, f, indent=1, sort_keys=True)
+        os.replace(tmp, path)
+
     def _load_state(self):
         path = os.path.join(STATE_DIR, 'vlans.json')
         try:
@@ -909,6 +918,133 @@ class CampusSwitch13(_RyuApp):
     def api_events(self, since_id=0, kinds=None):
         return [e for e in list(self.event_log)
                 if e['id'] > since_id and (not kinds or e['kind'] in kinds)]
+
+    # ================================================================
+    #  VLAN dong (muc tieu 1: thoi gian them VLAN / khu vuc mang)
+    # ================================================================
+    def api_vlans(self):
+        out = []
+        for vid, name in sorted(self.data_vlans.items()):
+            ports = []
+            for dpid in ACCESS:
+                for pname, v in sorted(self.access_cfg.get(dpid, {}).items()):
+                    if v == vid:
+                        ports.append('%s.%s' % (NODE_NAMES[dpid], pname))
+            out.append({'vid': vid, 'name': name, 'base': vid in BASE_DATA_VLANS,
+                        'ports': ports, 'subnet': '10.1.%d.0/24' % vid})
+        free = {}
+        for dpid in ACCESS:
+            free[NODE_NAMES[dpid]] = sorted(
+                p for p in self.port_no.get(dpid, {})
+                if p not in TRUNK_PORTS.get(dpid, []) and p != MGMT_PORT)
+        return {'vlans': out, 'access_ports': free}
+
+    def _resolve_ports(self, ports):
+        """['Access-SW1.ens7', ...] -> {dpid: [ten cong]} (chi cong access cua Access)."""
+        by_name = {v: k for k, v in NODE_NAMES.items()}
+        res = collections.defaultdict(list)
+        for item in ports or []:
+            sw, _, pname = item.partition('.')
+            dpid = by_name.get(sw)
+            if dpid not in ACCESS:
+                raise ValueError('chi gan VLAN cho cong cua Access: %s' % item)
+            if pname in TRUNK_PORTS.get(dpid, []) or pname == MGMT_PORT or not pname:
+                raise ValueError('khong phai cong access: %s' % item)
+            res[dpid].append(pname)
+        return res
+
+    def api_vlan_apply(self, action, vid, name='', ports=None):
+        """action add|delete|ports. Tra ve su kien (thoi gian trien khai do bang
+        barrier tren cac switch bi anh huong) + doan cau hinh Core can lam tay."""
+        t0 = time.time()
+        vid = int(vid)
+        if not 2 <= vid <= 254 or vid == MGMT_VLAN:
+            raise ValueError('VLAN phai trong 2..254 va khac 99 (quy uoc IP 10.1.<VLAN>.0/24)')
+        if action == 'add' and vid in self.data_vlans:
+            raise ValueError('VLAN %d da ton tai' % vid)
+        if action in ('delete', 'ports') and vid not in self.data_vlans:
+            raise ValueError('VLAN %d chua ton tai' % vid)
+        if action == 'delete' and vid in BASE_DATA_VLANS:
+            raise ValueError('khong xoa VLAN goc %d' % vid)
+        if action not in ('add', 'delete', 'ports'):
+            raise ValueError('action phai la add/delete/ports')
+        target = self._resolve_ports(ports) if action != 'delete' else {}
+        affected = set()
+        if action == 'add':
+            self.data_vlans[vid] = name or ('VLAN%d' % vid)
+        if action in ('delete', 'ports'):
+            for dpid in ACCESS:          # tra cac cong dang thuoc VLAN nay ve VLAN goc
+                for pname in [q for q, v in self.access_cfg.get(dpid, {}).items() if v == vid]:
+                    if action == 'delete' or pname not in target.get(dpid, []):
+                        back = BASE_ACCESS_PORTS.get(dpid, {}).get(pname)
+                        if back:
+                            self.access_cfg[dpid][pname] = back
+                        else:
+                            self.access_cfg[dpid].pop(pname, None)
+                        affected.add(dpid)
+        for dpid, plist in target.items():
+            for pname in plist:
+                self.access_cfg.setdefault(dpid, {})[pname] = vid
+                affected.add(dpid)
+        label = self.data_vlans.get(vid, name)
+        if action == 'delete':
+            self.data_vlans.pop(vid, None)
+            self.hosts = {k: v for k, v in self.hosts.items() if k[0] != vid}
+        self._save_state()
+        ev = self._event('vlan_' + action, 'VLAN %d (%s) %s, cong: %s' % (
+            vid, label, action,
+            ', '.join('%s.%s' % (NODE_NAMES[d], q) for d, pl in sorted(target.items()) for q in pl) or '-'),
+            vid=vid, trigger='api')
+        op_id = self._start_op(ev, t0, t0)
+        for dpid in sorted(affected):
+            dp = self.switches.get(dpid)
+            if dp is None:
+                continue
+            # Doi VLAN cua cong access: xoa flow unicast da hoc (co the tro sai VLAN)
+            self._delete_cookie(dp, 0)
+            self.mac_to_port[dpid] = {}
+            self._ops[op_id]['mods'] += 1
+            self._barrier(dp, op_id)
+        self._finish_if_done(op_id)
+        ev['core_config'] = self.core_config(vid, label, delete=(action == 'delete'))
+        ev['core_commands'] = sum(len([l for l in c.splitlines() if l.strip()])
+                                  for c in ev['core_config'].values())
+        return ev
+
+    @staticmethod
+    def core_config(vid, name, delete=False):
+        """Doan IOS cho Core-SW1/2 (truyen thong, ngoai OpenFlow) - lam tay / script console."""
+        name = ''.join(c for c in (name or 'VLAN%d' % vid).upper() if c.isalnum() or c in '-_')[:30]
+        out = {}
+        for core, host, prio in (('Core-SW1', 2, 150), ('Core-SW2', 3, 100)):
+            if delete:
+                # Thu tu an toan cho IOL (04/10/2026: day 'no interface VlanX' khi
+                # Core dang la VRRP Master lam Core-SW1 IOL crash): go VRRP +
+                # shutdown SVI truoc, roi OSPF, trunk, SVI, VLAN.
+                lines = ['configure terminal',
+                         'interface Vlan%d' % vid, ' no vrrp %d' % vid, ' shutdown',
+                         'router ospf 1', ' no network 10.1.%d.0 0.0.0.255 area 0' % vid,
+                         'interface Ethernet0/2', ' switchport trunk allowed vlan remove %d' % vid,
+                         'interface Ethernet1/2', ' switchport trunk allowed vlan remove %d' % vid,
+                         'no interface Vlan%d' % vid,
+                         'no vlan %d' % vid,
+                         'end', 'write memory']
+            else:
+                lines = ['configure terminal',
+                         'vlan %d' % vid, ' name %s' % (name or 'VLAN%d' % vid),
+                         'interface Ethernet0/2', ' switchport trunk allowed vlan add %d' % vid,
+                         'interface Ethernet1/2', ' switchport trunk allowed vlan add %d' % vid,
+                         'interface Vlan%d' % vid,
+                         ' description %s - VRRP VIP 10.1.%d.1' % (name, vid),
+                         ' ip address 10.1.%d.%d 255.255.255.0' % (vid, host),
+                         ' vrrp %d ip 10.1.%d.1' % (vid, vid),
+                         ' vrrp %d priority %d' % (vid, prio),
+                         ' ip helper-address 10.1.90.10',
+                         ' no shutdown',
+                         'router ospf 1', ' network 10.1.%d.0 0.0.0.255 area 0' % vid,
+                         'end', 'write memory']
+            out[core] = chr(10).join(lines)
+        return out
 
     def api_link_test(self, lid, action, mode='silent'):
         """Mo phong mat lien ket (danh gia muc tieu 2).

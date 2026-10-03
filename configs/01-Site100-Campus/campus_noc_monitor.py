@@ -236,12 +236,14 @@ class CampusNocMonitor(app_manager.RyuApp):
                               ('/noc/summary', 'summary'), ('/noc/history', 'history'),
                               ('/campus/topology', 'c_topology'), ('/campus/events', 'c_events'),
                               ('/campus/pinger', 'c_pinger_get'),
+                              ('/campus/vlans', 'c_vlans'),
                               ('/campus/export/events.csv', 'c_export_events'),
                               ('/campus/export/pinger.csv', 'c_export_pinger'),
                               ('/', 'index')]:
                 mapper.connect('noc', path, action=act, **g)
             mapper.connect('noc', '/campus/linktest', action='c_linktest', **p)
             mapper.connect('noc', '/campus/pinger', action='c_pinger_post', **p)
+            mapper.connect('noc', '/campus/vlan', action='c_vlan_post', **p)
             self.logger.info('NOC: routes registered')
         except Exception as e:
             self.logger.warning('NOC: wsgi register fail: %s', e)
@@ -446,6 +448,19 @@ class NocController(ControllerBase):
         except Exception as e:
             return _err(str(e))
 
+    def c_vlans(self, req, **kw):
+        s = self.m.sw()
+        return _json(s.api_vlans() if s else {})
+
+    def c_vlan_post(self, req, **kw):
+        s = self.m.sw()
+        try:
+            b = json.loads(req.body.decode('utf-8') if req.body else '{}')
+            return _json(s.api_vlan_apply(b.get('action', 'add'), b.get('vid'),
+                                          b.get('name', ''), b.get('ports') or []))
+        except Exception as e:
+            return _err(str(e))
+
     def c_pinger_get(self, req, **kw):
         return _json([t.stats() for t in self.m.pinger.targets.values()])
 
@@ -581,7 +596,25 @@ svg text{fill:var(--text);font-size:12px}.legend span{margin-right:14px;font-siz
  <div class="card"><h2>Bang thong tung switch (Mbps)</h2><canvas id="c-sw" height="200"></canvas></div>
  <div class="card"><h2>Cong</h2><table id="tb-ports"></table></div>
 </section>
-<section class="tab" id="t-vlan"><div class="card"><h2>VLAN</h2><table id="tb-vlan"></table><p class="muted">Them/xoa VLAN dong va do thoi gian trien khai: giai doan 2.</p></div></section>
+<section class="tab" id="t-vlan">
+ <div class="grid g2">
+  <div class="card"><h2>Them VLAN / khu vuc mang (1 lenh API cho toan bo OVS)</h2>
+   <div class="row">VLAN <input id="v-vid" size="4" placeholder="50"/> Ten <input id="v-name" size="16" placeholder="Phong Lab"/></div>
+   <div class="muted" style="margin:8px 0 4px;font-size:12px">Cong access tren Access (VLAN hien tai trong ngoac):</div>
+   <div id="v-ports" class="row"></div>
+   <div class="row" style="margin-top:10px"><button class="act green" onclick="vlanDo('add')">Them VLAN</button>
+    <button class="act" onclick="vlanDo('ports')">Cap nhat cong cho VLAN</button></div>
+   <div id="v-result" style="margin-top:10px"></div></div>
+  <div class="card"><h2>Cau hinh Core-SW1/2 can lam (switch truyen thong, ngoai OpenFlow)</h2>
+   <div class="muted" style="font-size:12px">Controller tu sinh theo quy uoc 10.1.&lt;VLAN&gt;.0/24, VRRP .1, Core-SW1 .2 (150) / Core-SW2 .3, ip helper DHCP 10.1.90.10. Con can: scope DHCP tren DHCP-Server 72.</div>
+   <pre id="v-core" style="background:#0e1627;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;max-height:300px;overflow:auto">-</pre>
+   <button class="act" onclick="navigator.clipboard&&navigator.clipboard.writeText($('v-core').textContent);toast('Da sao chep')">Sao chep</button></div>
+ </div>
+ <div class="card"><h2>VLAN hien co</h2><table id="tb-vlan"></table></div>
+ <div class="card"><h2>Lich su trien khai VLAN - so sanh SDN va cau hinh truyen thong</h2>
+  <div class="muted" style="font-size:12px;margin-bottom:6px">SDN: thoi gian tu luc goi API toi khi moi OVS bi anh huong tra barrier. Truyen thong (uoc tinh cung thay doi): moi Access + 2 Dist + 2 Core cau hinh tay qua CLI (vlan, name, trunk allowed tren moi trunk, cong access).</div>
+  <table id="tb-vlanev"></table></div>
+</section>
 <section class="tab" id="t-policy"><div class="card"><h2>Chinh sach tap trung</h2><p class="muted">Giai doan 3.</p></div></section>
 <section class="tab" id="t-load"><div class="card"><h2>Tai Core / Distribution</h2><p class="muted">Giai doan 4 (OpenFlow + SNMP Core).</p></div></section>
 <section class="tab" id="t-perf"><div class="card"><h2>Hieu nang giua cac VLAN</h2><p class="muted">Giai doan 5.</p></div></section>
@@ -589,7 +622,7 @@ svg text{fill:var(--text);font-size:12px}.legend span{margin-right:14px;font-siz
 <script>
 const TABS=[['overview','Tong quan'],['topo','Topology'],['recovery','Khoi phuc'],['traffic','Luu luong'],
  ['vlan','VLAN'],['policy','Chinh sach'],['load','Tai thiet bi'],['perf','Hieu nang']];
-const SOON={vlan:'gd2',policy:'gd3',load:'gd4',perf:'gd5'};
+const SOON={policy:'gd3',load:'gd4',perf:'gd5'};
 let cur=localStorage.getItem('tab')||'overview';
 const nav=document.getElementById('nav');
 TABS.forEach(([id,l])=>{const b=document.createElement('button');b.id='nb-'+id;
@@ -649,6 +682,31 @@ function evRows(evs,full){let h='<tr><th>#</th><th>Gio</th><th>Loai</th><th>Mo t
  evs.slice().reverse().forEach(e=>{const k={link_down:'b-bad',link_up:'b-ok',switch_down:'b-bad',switch_up:'b-ok',tree_change:'b-acc',test_inject:'b-warn',test_restore:'b-warn'}[e.kind]||'b-idle';
   h+=`<tr><td>${e.id}</td><td>${tstr(e.ts)}</td><td><span class="b ${k}">${e.kind}</span></td><td>${e.detail}</td>`+
   (full?`<td class="num">${fmt(e.detect_ms)}</td><td class="num">${fmt(e.converge_ms)}</td><td class="num">${fmt(e.total_ms)}</td><td class="num">${e.switches==null?'-':e.switches}</td><td class="num">${e.flow_mods==null?'-':e.flow_mods}</td><td>v${e.tree_version==null?'-':e.tree_version}</td>`:`<td class="num">${fmt(e.converge_ms)}</td>`)+'</tr>'});return h}
+// ---- VLAN ----
+let VLANS=null;
+function vlanForm(v){const box=$('v-ports');if(box.dataset.ready)return;let h='';
+ Object.keys(v.access_ports).forEach(sw=>v.access_ports[sw].forEach(p=>{const id=sw+'.'+p;
+  const cur=(v.vlans.find(x=>x.ports.includes(id))||{}).vid;h+=`<label style="margin-right:10px;font-size:12px"><input type="checkbox" value="${id}" class="v-pc"/> ${id} <span class="muted">(${cur||'-'})</span></label>`}));
+ box.innerHTML=h;box.dataset.ready=1}
+async function vlanDo(action,vid){const body={action:action,vid:vid||+$('v-vid').value,name:$('v-name').value,
+  ports:[...document.querySelectorAll('.v-pc:checked')].map(x=>x.value)};
+ if(action==='delete'&&!confirm('Xoa VLAN '+body.vid+'? Cong se ve VLAN goc.'))return;
+ const r=await J('/campus/vlan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ if(r.error){toast('Loi: '+r.error);return}
+ $('v-core').textContent=Object.entries(r.core_config).map(([k,v])=>'! ===== '+k+' =====\n'+v).join('\n\n');
+ $('v-result').innerHTML='<span class="b b-ok">'+r.kind+'</span> '+r.detail+' &mdash; dang cho barrier...';
+ $('v-ports').dataset.ready='';setTimeout(refresh,800);toast(r.kind+' VLAN '+body.vid)}
+function vlanTables(v){let h='<tr><th>VLAN</th><th>Ten</th><th>Mang</th><th>Cong access (OVS)</th><th></th></tr>';
+ v.vlans.forEach(x=>{h+=`<tr><td><b>${x.vid}</b></td><td>${x.name}</td><td>${x.subnet}</td><td>${x.ports.join(', ')||'-'}</td><td>${x.base?'<span class="b b-idle">goc</span>':`<button class="act red" onclick="vlanDo('delete',${x.vid})">Xoa</button>`}</td></tr>`});
+ $('tb-vlan').innerHTML=h;
+ const ve=EV.filter(e=>e.kind&&e.kind.indexOf('vlan_')===0);
+ let g='<tr><th>Gio</th><th>Thao tac</th><th>Mo ta</th><th class="num">SDN (ms)</th><th class="num">OVS</th><th class="num">flow-mod</th><th class="num">Thiet bi CLI (truyen thong)</th><th class="num">Lenh CLI uoc tinh</th></tr>';
+ ve.slice().reverse().forEach(e=>{const nPorts=(e.detail.split('cong: ')[1]||'').split(',').filter(x=>x.trim()&&x.trim()!=='-').length;
+  const acc=new Set((e.detail.split('cong: ')[1]||'').split(',').map(x=>x.trim().split('.')[0]).filter(x=>x&&x!=='-')).size;
+  const devs=2+2+acc, cli=(e.core_commands||34)+2*(2+6)+acc*2+nPorts*2;
+  const last=[...ve].reverse().find(x=>x.id===e.id);
+  g+=`<tr><td>${tstr(e.ts)}</td><td><span class="b b-acc">${e.kind}</span></td><td>${e.detail}</td><td class="num">${fmt(e.converge_ms)}</td><td class="num">${e.switches==null?'-':e.switches}</td><td class="num">${e.flow_mods==null?'-':e.flow_mods}</td><td class="num">${devs}</td><td class="num">${cli}</td></tr>`});
+ $('tb-vlanev').innerHTML=g}
 // ---- refresh ----
 let EV=[];
 async function refresh(){try{
@@ -674,7 +732,7 @@ async function refresh(){try{
   let h='<tr><th>Switch</th><th>Cong</th><th class="num">Rx Mbps</th><th class="num">Tx Mbps</th><th class="num">Rx pps</th><th class="num">Tx pps</th><th class="num">Drop</th><th class="num">%</th><th>Muc</th></tr>';
   ports.forEach(p=>{h+=`<tr><td>${p.switch}</td><td>${p.name}</td><td class="num">${mbps(p.rx)}</td><td class="num">${mbps(p.tx)}</td><td class="num">${fmt(p.rxpkt,0)}</td><td class="num">${fmt(p.txpkt,0)}</td><td class="num">${fmt(p.rxdrop+p.txdrop,0)}</td><td class="num">${fmt(p.util,2)}</td><td><span class="b ${p.level==='OK'?'b-ok':p.level==='WARN'?'b-warn':'b-bad'}">${p.level}</span></td></tr>`});
   $('tb-ports').innerHTML=h}
- if(cur==='vlan'){let h='<tr><th>VLAN</th><th>Ten</th></tr>';topo.vlans.forEach(v=>h+=`<tr><td>${v.vid}</td><td>${v.name}</td></tr>`);$('tb-vlan').innerHTML=h}
+ if(cur==='vlan'){VLANS=await J('/campus/vlans');vlanForm(VLANS);vlanTables(VLANS)}
 }catch(e){console.log(e)}}
 show(cur);setInterval(refresh,2000);
 </script></body></html>"""

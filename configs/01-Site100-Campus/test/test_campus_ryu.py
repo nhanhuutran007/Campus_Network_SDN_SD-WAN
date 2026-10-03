@@ -337,6 +337,49 @@ class CampusRyuTest(unittest.TestCase):
         self.assertEqual(ev['unanswered'], ['Dist-SW1'])
         self.assertIsNotNone(ev['converge_ms'])
 
+    def test_vlan_add_move_delete(self):
+        for dp in self.dps.values():
+            dp.sent = []
+        ev = self.app.api_vlan_apply('add', 50, 'Phong Lab', ['Access-SW1.ens7'])
+        self.assertEqual(self.app.access_cfg[68]['ens7'], 50)
+        self.assertIn(50, self.app.data_vlans)
+        # chi Access-SW1 bi anh huong -> 1 barrier
+        self.assertEqual(len(self.dps[68].flows(parser.OFPBarrierRequest)), 1)
+        self.assertEqual(self.dps[66].flows(parser.OFPBarrierRequest), [])
+        self.assertIn('vlan 50', ev['core_config']['Core-SW1'])
+        self.assertIn('ip address 10.1.50.2 255.255.255.0', ev['core_config']['Core-SW1'])
+        self.assertIn('vrrp 50 priority 100', ev['core_config']['Core-SW2'])
+        self.assertGreater(ev['core_commands'], 20)
+        # khung khong tag tu ens7 -> VLAN 50: flood len uplink (tag 50), KHONG sang ens6 (VLAN 10)
+        dp68 = self.dps[68]
+        dp68.sent = []
+        p = packet.Packet()
+        p.add_protocol(ethernet.ethernet(dst='ff:ff:ff:ff:ff:ff', src='00:50:79:66:68:13',
+                                         ethertype=0x0806))
+        p.add_protocol(arp.arp(src_ip='10.1.50.100', dst_ip='10.1.50.1'))
+        p.serialize()
+        self.app._packet_in_handler(Ev(PacketIn(dp68, self.pno(68, 'ens7'), p.data)))
+        po = [m for m in dp68.sent if isinstance(m, parser.OFPPacketOut)][0]
+        outs = [a.port for a in po.actions if isinstance(a, parser.OFPActionOutput)]
+        self.assertEqual(outs, [self.pno(68, 'ens4')])
+        vids = [a.value for a in po.actions if isinstance(a, parser.OFPActionSetField)]
+        self.assertEqual(vids, [cs.OFPVID_PRESENT | 50])
+        # api_vlans hien thi
+        v = [x for x in self.app.api_vlans()['vlans'] if x['vid'] == 50][0]
+        self.assertEqual(v['ports'], ['Access-SW1.ens7'])
+        # xoa -> cong ve VLAN goc 10
+        ev2 = self.app.api_vlan_apply('delete', 50)
+        self.assertEqual(self.app.access_cfg[68]['ens7'], 10)
+        self.assertNotIn(50, self.app.data_vlans)
+        self.assertIn('no vlan 50', ev2['core_config']['Core-SW2'])
+        for bad in [('add', 99), ('add', 10), ('delete', 10), ('add', 300)]:
+            with self.assertRaises(ValueError):
+                self.app.api_vlan_apply(bad[0], bad[1], 'x', ['Access-SW1.ens6'])
+        with self.assertRaises(ValueError):
+            self.app.api_vlan_apply('add', 60, 'x', ['Dist-SW1.ens4'])
+        with self.assertRaises(ValueError):
+            self.app.api_vlan_apply('add', 60, 'x', ['Access-SW1.ens4'])
+
     def test_frame_from_blocked_port_ignored(self):
         dp8 = self.dps[8]
         dp8.sent = []

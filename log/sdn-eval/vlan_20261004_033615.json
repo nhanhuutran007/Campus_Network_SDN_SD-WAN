@@ -1,0 +1,31 @@
+{
+ "vid": 50,
+ "port": "Access-SW1.ens7",
+ "sdn": {
+  "converge_ms": 3.8,
+  "switches": 1,
+  "flow_mods": 1,
+  "core_commands": 36
+ },
+ "traditional": {
+  "Core-SW1": {
+   "seconds": 35.4,
+   "commands": 18,
+   "errors": []
+  },
+  "Core-SW2": {
+   "seconds": 36.3,
+   "commands": 18,
+   "errors": []
+  }
+ },
+ "end_to_end": {
+  "gateway_replies": 3,
+  "server_replies": 3
+ },
+ "sdn_delete_ms": 3.6,
+ "traditional_delete": {
+  "Core-SW1": 27.9,
+  "Core-SW2": 27.0
+ }
+}
