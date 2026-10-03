@@ -207,7 +207,6 @@ Bảng đầy đủ nằm trong [`campus_network_sdn_sdwan.md`](campus_network_s
 ├── BangTheoDoiTienDo.md              # Bảng theo dõi tiến độ
 ├── BAOCAO_DACNTT_LVT/                # Báo cáo đồ án (LaTeX)
 ├── Baocao27/                         # Báo cáo tiến độ
-├── SlideTrinhBayDA/                  # Slide thuyết trình (LaTeX Beamer)
 └── topology.png                      # Sơ đồ topology tổng thể
 ```
 

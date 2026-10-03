@@ -8,7 +8,7 @@
 |---|---|---|
 | Tài liệu thiết kế (nguồn sự thật cho báo cáo) | `campus_network_sdn_sdwan.md` | Mermaid topo 1.1–1.6, bảng IP 2.0–2.5, VLAN/DHCP 2.4, SDN 2.7 |
 | Báo cáo LaTeX | `BAOCAO_DACNTT_LVT/` (`main.tex`, `content/Chapter1–5.tex`, `config/preamble.tex`, `tailieuthamkhao.bib`, `appendix.tex`) | `pdflatex` + `babel[vietnamese]` (MiKTeX); Chương 3 (mô hình đề xuất) lớn nhất, Chương 4 triển khai/kiểm thử/đánh giá, Chương 5 kết luận |
-| Slide báo cáo tiến độ | `SlideTrinhBayDA/` (Beamer, `main.tex`, `Chapter/chapter1–5.tex`) | Chương 5 = "Kết luận báo cáo tiến độ" |
+| Slide báo cáo tiến độ | `Baocao27/` (`report.tex`/`report.pdf`, kịch bản `kich-ban-thuyet-trinh.md`) | `SlideTrinhBayDA/` cũ đã bị người dùng xoá 03/10/2026 — không tạo lại |
 | Bảng theo dõi tiến độ | `BangTheoDoiTienDo.md` (20 hạng mục, cập nhật tới 05/09/2026) + `Template_Timeline_Tong_quan_08-08_den_21-11-2026.xlsx` | Cột "nhóm tự điền" (4) **để trống có chủ đích** — không điền thay |
 | Giải thích tunnel SD-WAN | `HuongDan/Giai_thich_Tunnel_SD-WAN.md` | Tài liệu giải thích cho phần lý thuyết |
 | Hướng dẫn vận hành | `HuongDan/` | Ryu/OVS, ký/add vEdge, phục hồi vEdge S100, xem GUI vManager |
@@ -28,8 +28,8 @@ Mốc: bảo vệ giả định cuối 11/2026 (timeline 08/08 → 21/11/2026).
 ## Biên dịch và kiểm tra
 
 - Báo cáo: từ `BAOCAO_DACNTT_LVT/` chạy `pdflatex -halt-on-error main.tex` (2 lượt, thêm `bibtex main` khi đổi tài liệu tham khảo) — cần MiKTeX. Đọc `main.log` tìm `Overfull`, `undefined references`, `Citation … undefined`.
-- Slide: `pdflatex` từ `SlideTrinhBayDA/`. Render trang vừa sửa sang ảnh và **xem trực quan**; dọn ảnh preview tạm sau khi kiểm.
-- File sinh ra (`*.aux`, `*.log`, `main.pdf`…) đang được git theo dõi — chỉ commit PDF khi người dùng yêu cầu; tránh diff nhiễu.
+- Slide: `pdflatex` từ `Baocao27/`. Render trang vừa sửa sang ảnh và **xem trực quan**; dọn ảnh preview tạm sau khi kiểm.
+- File sinh ra (`*.aux`, `*.log`, `*.toc`…) nằm trong `.gitignore` (không track từ 03/10/2026); chỉ commit PDF khi người dùng yêu cầu.
 - Skill `design-slides` (cục bộ ở `.codex/skills/design-slides/`, không track) có checklist Beamer/`check_slides.py` để tham khảo khi làm slide.
 
 ## Việc thường gặp
