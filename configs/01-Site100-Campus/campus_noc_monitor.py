@@ -59,6 +59,7 @@ CONGEST_HIGH = 90.0
 SWITCH_APP = 'CampusSwitch13'
 # Cong OVS noi Core (dem luu luong qua Core khi Core la IOL khong OpenFlow)
 CORE_UPLINKS = {'Core-SW1': [(5, 'ens9'), (8, 'ens10')], 'Core-SW2': [(5, 'ens10'), (8, 'ens9')]}
+PERF_FILE = '/root/ryu-app/metrics/perf.json'   # ket qua do hieu nang VLAN (giu qua khoi dong)
 SNMP_CFG = '/root/ryu-app/state/snmp.json'   # {"community": "...", "targets": {"Core-SW1": "10.1.99.1", ...}}
 SNMP_CPU_OID = '1.3.6.1.4.1.9.9.109.1.1.1.1.6.1'   # cpmCPUTotal5secRev (Cisco)
 REPLY_TIMEOUT = 1.0         # ping: qua thoi gian nay coi la mat
@@ -320,6 +321,12 @@ class CampusNocMonitor(app_manager.RyuApp):
         self.load_hist = collections.deque(maxlen=HISTORY_LEN)
         self._load_prev = None
         self.snmp = {}              # 'Core-SW1' -> {'cpu':, 'ts':, 'error':}
+        self.perf_runs = []         # ket qua do ma tran VLAN (moi lan 1 phan tu)
+        try:
+            with open(PERF_FILE) as f:
+                self.perf_runs = json.load(f)[-30:]
+        except (IOError, OSError, ValueError):
+            pass
         wsgi = kwargs['wsgi']
         try:
             mapper = wsgi.mapper
@@ -334,6 +341,7 @@ class CampusNocMonitor(app_manager.RyuApp):
                               ('/campus/vlans', 'c_vlans'),
                               ('/campus/policies', 'c_policies'),
                               ('/campus/load', 'c_load'),
+                              ('/campus/perf', 'c_perf'),
                               ('/campus/export/events.csv', 'c_export_events'),
                               ('/campus/export/pinger.csv', 'c_export_pinger'),
                               ('/', 'index')]:
@@ -342,6 +350,7 @@ class CampusNocMonitor(app_manager.RyuApp):
             mapper.connect('noc', '/campus/pinger', action='c_pinger_post', **p)
             mapper.connect('noc', '/campus/vlan', action='c_vlan_post', **p)
             mapper.connect('noc', '/campus/policy', action='c_policy_post', **p)
+            mapper.connect('noc', '/campus/perf', action='c_perf_post', **p)
             self.logger.info('NOC: routes registered')
         except Exception as e:
             self.logger.warning('NOC: wsgi register fail: %s', e)
@@ -506,6 +515,31 @@ class CampusNocMonitor(app_manager.RyuApp):
             except Exception as e:
                 self.snmp[name] = {'cpu': None, 'ts': time.time(), 'error': str(e)[:60]}
 
+    def add_perf(self, run):
+        """Nhan ket qua do tu script lab (VPC <-> VPC). Tinh tom tat trong/khac VLAN."""
+        rows = run.get('rows') or []
+        for r in rows:
+            r['same_vlan'] = r.get('src_vlan') == r.get('dst_vlan')
+        def agg(sel):
+            ok = [r for r in sel if r.get('avg') is not None]
+            sent = sum(r.get('sent', 0) for r in sel)
+            recv = sum(r.get('recv', 0) for r in sel)
+            return {'pairs': len(sel),
+                    'rtt_avg': round(sum(r['avg'] for r in ok) / len(ok), 2) if ok else None,
+                    'jitter': round(sum(r.get('jitter') or 0 for r in ok) / len(ok), 2) if ok else None,
+                    'loss_pct': round(100.0 * (sent - recv) / sent, 2) if sent else None}
+        run['ts'] = run.get('ts') or time.time()
+        run['summary'] = {'intra_vlan': agg([r for r in rows if r['same_vlan']]),
+                          'inter_vlan': agg([r for r in rows if not r['same_vlan']])}
+        self.perf_runs.append(run)
+        self.perf_runs = self.perf_runs[-30:]
+        try:
+            with open(PERF_FILE, 'w') as f:
+                json.dump(self.perf_runs, f)
+        except (IOError, OSError):
+            pass
+        return run['summary']
+
     def get_load(self, n=120):
         h = list(self.load_hist)
         return {'latest': h[-1] if h else None, 'history': h[-n:],
@@ -665,6 +699,15 @@ class NocController(ControllerBase):
         except ValueError:
             n = 120
         return _json(self.m.get_load(n))
+
+    def c_perf(self, req, **kw):
+        return _json(self.m.perf_runs)
+
+    def c_perf_post(self, req, **kw):
+        try:
+            return _json(self.m.add_perf(json.loads(req.body.decode('utf-8'))))
+        except Exception as e:
+            return _err(str(e))
 
     def c_pinger_get(self, req, **kw):
         return _json([t.stats() for t in self.m.pinger.targets.values()])
@@ -851,12 +894,23 @@ svg text{fill:var(--text);font-size:12px}.legend span{margin-right:14px;font-siz
  </div>
  <div class="card"><h2>Chi tiet tung switch (mau 5 s gan nhat)</h2><table id="tb-ld"></table></div>
 </section>
-<section class="tab" id="t-perf"><div class="card"><h2>Hieu nang giua cac VLAN</h2><p class="muted">Giai doan 5.</p></div></section>
+<section class="tab" id="t-perf">
+ <div class="grid g4" id="pf-cards"></div>
+ <div class="card"><h2>Ma tran RTT trung binh (ms) giua cac VLAN - lan do gan nhat <span class="muted" id="pf-when"></span></h2>
+  <div class="muted" style="font-size:12px;margin-bottom:6px">Hang = VLAN nguon, cot = VLAN dich. Duong cheo = cung VLAN (chuyen mach L2 qua OVS); ngoai duong cheo = dinh tuyen qua Core-SW1 (SVI/VRRP). Ket qua do script lab (VPC &harr; VPC) day len /campus/perf.</div>
+  <table id="tb-pf-matrix"></table></div>
+ <div class="grid g2">
+  <div class="card"><h2>Chi tiet tung cap</h2><table id="tb-pf-pairs"></table></div>
+  <div class="card"><h2>Lich su: trong VLAN vs khac VLAN (ms)</h2><canvas id="c-pf-hist" height="200"></canvas>
+   <div class="row" style="margin-top:8px;font-size:12px">Ping lien tuc tu controller toi 1 may moi VLAN:
+    <button class="act" onclick="perfPing()">Bat cho cac VLAN</button> (xem tab Khoi phuc)</div></div>
+ </div>
+</section>
 </main><div id="toast"></div>
 <script>
 const TABS=[['overview','Tong quan'],['topo','Topology'],['recovery','Khoi phuc'],['traffic','Luu luong'],
  ['vlan','VLAN'],['policy','Chinh sach'],['load','Tai thiet bi'],['perf','Hieu nang']];
-const SOON={perf:'gd5'};
+const SOON={};
 let cur=localStorage.getItem('tab')||'overview';
 const nav=document.getElementById('nav');
 TABS.forEach(([id,l])=>{const b=document.createElement('button');b.id='nb-'+id;
@@ -972,6 +1026,28 @@ function loadView(L){const h=L.history||[],x=L.latest;if(!x){$('ld-cards').inner
  let t='<tr><th>Switch</th><th>Vai tro</th><th class="num">Mbps</th><th class="num">pps</th><th class="num">drop/s</th><th class="num">packet-in/s</th><th class="num">flow bang 0</th><th class="num">flow bang 1</th><th class="num">lookup/s</th></tr>';
  [5,8,68,66,70,69].forEach(d=>{const v=x.sw[d]||{};t+=`<tr><td>${v.name}${v.connected?'':' <span class="b b-bad">mat ket noi</span>'}</td><td>${v.role}</td><td class="num">${fmt(v.mbps,3)}</td><td class="num">${fmt(v.pps,0)}</td><td class="num">${fmt(v.drop_pps,2)}</td><td class="num">${fmt(v.pktin_ps,1)}</td><td class="num">${v.flows_t0}</td><td class="num">${v.flows_t1}</td><td class="num">${fmt(v.lookup_ps,0)}</td></tr>`});
  $('tb-ld').innerHTML=t}
+// ---- HIEU NANG ----
+function heat(v){if(v==null)return '';const t=Math.min(1,v/20);return `background:rgba(${Math.round(58+180*t)},${Math.round(160-100*t)},${Math.round(255-200*t)},.25)`}
+async function perfPing(){const runs=await J('/campus/perf');const last=runs[runs.length-1];if(!last){toast('Chua co lan do');return}
+ const seen={};last.rows.forEach(r=>{if(!seen[r.dst_vlan])seen[r.dst_vlan]=r.dst});
+ for(const v in seen){await J('/campus/pinger',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:seen[v],action:'start',interval:0.5})})}
+ toast('Da bat ping toi '+Object.values(seen).join(', '))}
+function perfView(runs){const last=runs[runs.length-1];
+ if(!last){$('pf-cards').innerHTML='<div class="card muted">Chua co ket qua - chay scripts/lab/sdn_perf_test.py</div>';return}
+ const S=last.summary,card=(t,v,s)=>`<div class="card kpi"><h2>${t}</h2><div class="v">${v}</div><div class="s">${s}</div></div>`;
+ $('pf-cards').innerHTML=card('Trong VLAN (L2)',fmt(S.intra_vlan.rtt_avg,2)+' ms','jitter '+fmt(S.intra_vlan.jitter,2)+' ms, mat '+fmt(S.intra_vlan.loss_pct,1)+'%, '+S.intra_vlan.pairs+' cap')+
+  card('Khac VLAN (qua Core)',fmt(S.inter_vlan.rtt_avg,2)+' ms','jitter '+fmt(S.inter_vlan.jitter,2)+' ms, mat '+fmt(S.inter_vlan.loss_pct,1)+'%, '+S.inter_vlan.pairs+' cap')+
+  card('So lan do',runs.length,'goi moi cap: '+(last.count||'-'))+card('Lan gan nhat',tstr(last.ts),new Date(last.ts*1000).toLocaleDateString('vi-VN'));
+ $('pf-when').textContent='('+new Date(last.ts*1000).toLocaleString('vi-VN')+')';
+ const vl=[...new Set(last.rows.map(r=>r.src_vlan).concat(last.rows.map(r=>r.dst_vlan)))].sort((a,b)=>a-b);
+ let h='<tr><th>nguon / dich</th>'+vl.map(v=>'<th class="num">VLAN '+v+'</th>').join('')+'</tr>';
+ vl.forEach(a=>{h+='<tr><td><b>VLAN '+a+'</b></td>'+vl.map(b=>{const c=last.rows.filter(r=>r.src_vlan===a&&r.dst_vlan===b&&r.avg!=null);
+  if(!c.length)return '<td class="num muted">-</td>';const m=c.reduce((x,r)=>x+r.avg,0)/c.length;return `<td class="num" style="${heat(m)}">${m.toFixed(2)}</td>`}).join('')+'</tr>'});
+ $('tb-pf-matrix').innerHTML=h;
+ let t='<tr><th>Nguon</th><th>Dich</th><th class="num">RTT tb</th><th class="num">min</th><th class="num">max</th><th class="num">jitter</th><th class="num">mat %</th></tr>';
+ last.rows.forEach(r=>{t+=`<tr><td>${r.src} (V${r.src_vlan})</td><td>${r.dst} (V${r.dst_vlan})</td><td class="num">${fmt(r.avg,2)}</td><td class="num">${fmt(r.min,2)}</td><td class="num">${fmt(r.max,2)}</td><td class="num">${fmt(r.jitter,2)}</td><td class="num">${r.sent?fmt(100*(r.sent-r.recv)/r.sent,1):'-'}</td></tr>`});
+ $('tb-pf-pairs').innerHTML=t;
+ chart($('c-pf-hist'),[{name:'trong VLAN',color:COLORS[1],pts:runs.map(r=>[r.ts,r.summary.intra_vlan.rtt_avg])},{name:'khac VLAN',color:COLORS[2],pts:runs.map(r=>[r.ts,r.summary.inter_vlan.rtt_avg])}],{timeAxis:1})}
 // ---- refresh ----
 let EV=[];
 async function refresh(){try{
@@ -1000,6 +1076,7 @@ async function refresh(){try{
  if(cur==='vlan'){VLANS=await J('/campus/vlans');vlanForm(VLANS);vlanTables(VLANS)}
  if(cur==='policy'){polTables(await J('/campus/policies'))}
  if(cur==='load'){loadView(await J('/campus/load'))}
+ if(cur==='perf'){perfView(await J('/campus/perf'))}
 }catch(e){console.log(e)}}
 show(cur);setInterval(refresh,2000);
 </script></body></html>"""

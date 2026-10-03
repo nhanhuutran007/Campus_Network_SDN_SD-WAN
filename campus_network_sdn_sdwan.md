@@ -1194,6 +1194,23 @@ interface GigabitEthernet0/4
    `curl -X POST -d '{"dpid": 66, "table_id": 0, "priority": 35000, "match": {"vlan_vid": 4116}, "instructions": [{"type": "APPLY_ACTIONS", "actions": []}]}' http://127.0.0.1:8080/stats/flowentry/add`
    (vlan_vid 4116 = `OFPVID_PRESENT | 20`; xóa bằng `flowentry/delete`).
 
+> Từ 10/2026 các demo 4–6 được thay bằng giao diện **Campus SDN Console** (mục 2.7.5) — VLAN và chính sách thêm/xoá qua API, không cần khởi động lại app hay sửa code.
+
+#### 2.7.5. Controller v2 và đánh giá theo mục tiêu đề bài (10/2026)
+
+Phạm vi SDN: **campus chính Site 100** (6 OVS); liên site do SD-WAN đảm nhiệm. Chi tiết, REST và cách đo: `configs/01-Site100-Campus/README_NOC.md`.
+
+- **Cây dữ liệu tính tập trung** trên đồ thị 13 liên kết (Dijkstra từ Core-SW1, dự phòng Core-SW2), **thăm dò liên kết chủ động** (probe `0x88B5` 0,5 s / ARP tới SVI Core 1 s), **VLAN 99 tĩnh có hướng** độc lập với cây, **RARP thay host** sau khi cây đổi để Core học lại MAC, pipeline OpenFlow 2 bảng (bảng 0 kiểm soát + chính sách, bảng 1 chuyển tiếp).
+- **Giao diện tập trung** `http://10.1.99.10:8080/`: Tổng quan, Topology (mô phỏng cắt liên kết), Khôi phục, Lưu lượng, VLAN, Chính sách, Tải thiết bị, Hiệu năng; xuất CSV.
+
+| Mục tiêu | Kết quả đo (host 1, 04/10/2026) |
+|---|---|
+| Thời gian thêm VLAN / khu vực mạng | SDN: **3,8 ms** (1 lệnh API, mọi OVS liên quan xác nhận); Core-SW1/2 (IOL truyền thống): 18 lệnh CLI/thiết bị ≈ 36 s/thiết bị; VPC trong VLAN mới ping gateway + DHCP-Server 3/3 |
+| Thời gian khôi phục khi mất liên kết | Hội tụ controller **< 16 ms**; gián đoạn dữ liệu: cổng báo down 0–0,3 s, đứt ngầm Access–Dist 1,8 s, Dist–Core 2,9–3,4 s, mất hẳn Dist-SW1 1,9 s; quay về 0–0,4 s |
+| Hiệu năng giữa các VLAN | Trong VLAN (L2 qua OVS) RTT **1,57 ms**, khác VLAN (qua Core) **2,91 ms**, jitter ~1,2 ms, mất gói 0 % (36 cặp VPC) |
+| Tải Core / Distribution | Tải điều khiển ổn định ~93 packet-in/s, Ryu ~5 % CPU, không phụ thuộc lưu lượng người dùng; Dist-SW2 gánh VLAN 99 (~2 450 pps nền) |
+| Quản lý chính sách tập trung | Luật chặn ICMP VLAN 10 ↔ 40 áp lên 4 Access trong **8,0 ms**, có bộ đếm gói; gỡ trong 5,2 ms; luồng khác không bị ảnh hưởng |
+
 ---
 
 ## 3. Chú thích Ký hiệu
