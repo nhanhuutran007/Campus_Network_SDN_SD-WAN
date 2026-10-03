@@ -14,7 +14,7 @@ configs/
 ├── 02-Site200-CanTho/         ← Brand-FW, vEdge1/2, SwitchBrand, SW55/56, VPC
 ├── 03-Site300-DaNang/         ← Brand-FW, vEdge1/2, SwitchBrand, SW58/59, VPC
 ├── 04-Site400-NhaTrang/       ← Brand-FW, vEdge1/2, SwitchBrand, SW60/57, VPC
-├── 05-Site900-Controller/     ← Switch32, Switch61, vEdge65
+├── 05-Site900-Controller/     ← Switch32, Switch61, vEdge65 (node 65 nay nối Site 500, xem mục 7)
 ├── 05-Site900-SDWAN-Controllers/ ← vManager-33, vSmart-34, vBond-35 (running-config thật 15/08/2026)
 └── 06-ServiceProvider/        ← Internet, MPLS
 ```
@@ -37,15 +37,17 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | SwitchDMZ | 7 | iol |
 | Dist-SW2 | 8 | linux (OVS script) |
 | SDN_CONTROLLER | 9 | linux (OVS script) |
+| SW-S500 (Site 500, chưa có thư mục config) | 10 | iol (config="0", đang mặc định) |
+| VPC11 / VPC12 (Site 500) | 11, 12 | vpcs (config="0") |
 | Mail-Server | 13 | win (cấu hình tay) |
-| VPC14 | 14 | vpcs |
-| VPC15 | 15 | vpcs |
-| VPC16 | 16 | vpcs |
-| VPC17 | 17 | vpcs |
+| PC-CNTT-S100-1 (thư mục VPC14, VLAN10) | 14 | vpcs |
+| PC-Luat-S100-1 (thư mục VPC15, VLAN30) | 15 | vpcs |
+| PC-Luat-S100-2 (thư mục VPC16, VLAN30) | 16 | vpcs |
+| PC-HanhChinh-S100-2 (thư mục VPC17, VLAN40) | 17 | vpcs |
 | PC-HanhChinh-S100 (cũ VPC18) | 18 | linux (Ubuntu 18.04 GNOME, config="0") |
-| VPC19 | 19 | vpcs |
-| VPC20 | 20 | vpcs |
-| VPC21 | 21 | vpcs |
+| PC-CNTT-S100-2 (thư mục VPC19, VLAN10) | 19 | vpcs |
+| PC-TTK-S100-1 (thư mục VPC20, VLAN20) | 20 | vpcs |
+| PC-TTK-S100-2 (thư mục VPC21, VLAN20) | 21 | vpcs |
 | Web-Server | 22 | linux (`linux-ubuntu-18.04-server`, cấu hình tay) |
 | DHCP-Server | 72 | winserver (cấu hình tay) |
 | SwitchServerFarm | 24 | iol |
@@ -67,14 +69,14 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | vEdge2-S300 | 40 | vtedge |
 | vEdge2-S400 | 41 | vtedge |
 | vEdge2-S200 | 42 | vtedge |
-| VPC43–VPC54 | 43,44,45,46,48,49,50,51,54 | vpcs |
+| VPC chi nhánh (thư mục VPC43…VPC54): 43=PC-NongNghiep-S200-1; 44=PC-NongNghiep-S200-2; 46=PC-YTe-S200-2; 48=PC-TaiChinh-S300-2; 50=PC-DuLich-S300-1; 54=PC-DuLich-S300-2; 45=PC-ThuySan-S400-2; 49=PC-LuHanh-S400-2; 51=PC-ThuySan-S400-1 | 43,44,45,46,48,49,50,51,54 | vpcs |
 | PC-YTe-S200 / PC-LuHanh-S400 / PC-TaiChinh-S300 (cũ VPC47/52/53) | 47, 52, 53 | linux (Ubuntu 18.04 GNOME, config="0") |
 | SW55, SW56, SW57, SW58, SW59, SW60 | 55,56,57,58,59,60 | iol |
 | Switch61 | 61 | iol |
 | SwitchBrand-S300 | 62 | iol |
 | SwitchBrand-S200 | 63 | iol |
 | SwitchBrand-S400 | 64 | iol |
-| vEdge65 | 65 | vtedge |
+| vEdge65 (Site 500 từ 03/10/2026) | 65 | vtedge |
 | Access-SW2 | 66 | linux (OVS script) |
 | Access-SW1 | 68 | linux (OVS script) |
 | Access-SW4 | 69 | linux (OVS script) |
@@ -188,16 +190,17 @@ Service OVS phục hồi bridge/port theo kiểu `--may-exist`, IP `br-mgmt`, DP
 | vEdge1-S200 / vEdge2-S200 | 10.200.200.1 / .2 | Internet 203.0.113.9 — MPLS 100.64.200.1 |
 | vEdge1-S300 / vEdge2-S300 | 10.200.30.1 / .2 | Internet 203.0.113.13 — MPLS 100.64.30.1 |
 | vEdge1-S400 / vEdge2-S400 | 10.200.40.1 / .2 | Internet 203.0.113.17 — MPLS 100.64.40.1 |
-| vEdge65 | 10.200.90.1 | Internet 203.0.113.245/30 |
+| vEdge65 (Site 500, đang triển khai) | config hiện tại 10.200.90.1 (dự kiến 10.200.50.1) | Internet 203.0.113.21 — MPLS 100.64.50.1 (phía SP đã cấu hình) |
 
 ### 7.1. BGP (Service Provider — thay OSPF underlay, 15/08/2026)
 
 | ASN | Thiết bị | Peering |
 |---|---|---|
-| 64511 | Internet (26) | eBGP backbone ↔ MPLS (100.64.254.2); CE-PE ↔ vEdge Internet TLOC (203.0.113.1/.5/.9/.13/.17) + `default-originate` |
-| 64512 | MPLS (27) | eBGP backbone ↔ Internet (100.64.254.1); CE-PE ↔ vEdge MPLS TLOC (100.64.100.1/.5, 100.64.200.1, 100.64.30.1, 100.64.40.1) + `default-originate` |
+| 64511 | Internet (26) | eBGP backbone ↔ MPLS (100.64.254.2); CE-PE ↔ vEdge Internet TLOC (203.0.113.1/.5/.9/.13/.17/.21) + `default-originate` |
+| 64512 | MPLS (27) | eBGP backbone ↔ Internet (100.64.254.1); CE-PE ↔ vEdge MPLS TLOC (100.64.100.1/.5, 100.64.200.1, 100.64.30.1, 100.64.40.1, 100.64.50.1) + `default-originate` |
 | 65000 / 65010 / 65020 / 65030 | vEdge S100 / S200 / S300 / S400 | eBGP với ISP transport tương ứng (thay static default) |
-| — | Switch32 / vEdge65 (site 900) | Static CE-PE theo phạm vi thiết kế; Switch32 hiện dùng IOL High Iron |
+| 65040 | vEdge65 (Site 500) | Neighbor đã khai trên Internet Gi0/8 và MPLS Gi0/7 (03/10/2026); vEdge chưa cấu hình → phiên `Active` |
+| — | Switch32 (site 900) | Static CE-PE theo phạm vi thiết kế; Switch32 hiện dùng IOL High Iron |
 
 - Mỗi ISP quảng bá transit /30 của mình qua backbone (`network … mask`); Internet Gi0/0 vẫn DHCP (cấm IP tĩnh).
 - vEdge config: `router bgp <ASN>` dưới `vpn 0` + `neighbor <SP-IP> remote-as <SP-ASN>`; bỏ `ip route 0.0.0.0/0` (học default qua BGP).

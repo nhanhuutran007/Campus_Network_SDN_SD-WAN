@@ -1,57 +1,648 @@
 <!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cổng thông tin nội bộ Campus</title>
-  <style>
-    body { margin: 0; font: 16px/1.6 "Segoe UI", Ubuntu, sans-serif; color: #1f2937; background: #f4f6fa; }
-    header { background: #0b3d91; color: #fff; padding: 20px 32px; }
-    header h1 { margin: 0; font-size: 24px; }
-    main { max-width: 900px; margin: 24px auto; padding: 0 20px; }
-    .card { background: #fff; border-radius: 8px; padding: 18px 22px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-    table { border-collapse: collapse; width: 100%; }
-    td, th { border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
-    code { color: #0b3d91; }
-    #ip { font-weight: 600; color: #b45309; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trường Đại học Campus — Cổng thông tin</title>
+<meta name="description" content="Cổng thông tin nội bộ Trường Đại học Campus (mô hình lab Campus Network SDN + SD-WAN)">
+<!--
+  Trang tự chứa hoàn toàn (không font/ảnh/thư viện ngoài) vì mạng lab không có Internet.
+  Đổi tên trường: sửa các chuỗi có class "u-name"/"u-name-en" và thẻ <title>.
+  Tên, số liệu, tin tức là dữ liệu minh hoạ cho đồ án — không phải của một trường có thật.
+-->
+<style>
+:root{
+  --navy:#0a2f6b; --navy-2:#0d3f8f; --navy-3:#123f7a; --blue:#1565c0;
+  --gold:#f2b705; --gold-2:#ffd34d; --ink:#1c2533; --muted:#5b6778;
+  --line:#e3e8f0; --bg:#f5f7fb; --white:#fff; --red:#c62828;
+  --radius:10px; --shadow:0 6px 24px rgba(10,47,107,.10);
+  --font:"Segoe UI",Ubuntu,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font:15px/1.6 var(--font);color:var(--ink);background:var(--white);overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img,svg{display:block;max-width:100%}
+.wrap{max-width:1200px;margin:0 auto;padding:0 20px}
+.sr{position:absolute;left:-9999px}
+
+/* ---------- Top utility bar ---------- */
+.topbar{background:var(--navy);color:#cfdcf2;font-size:13px}
+.topbar .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:38px;flex-wrap:wrap}
+.topbar a:hover{color:var(--gold-2)}
+.topbar .links{display:flex;gap:18px;flex-wrap:wrap}
+.topbar .contact{display:flex;gap:18px;align-items:center}
+.lang{display:flex;border:1px solid rgba(255,255,255,.25);border-radius:4px;overflow:hidden}
+.lang span{padding:1px 8px;cursor:pointer}
+.lang .on{background:var(--gold);color:var(--navy);font-weight:700}
+
+/* ---------- Header ---------- */
+.header{background:var(--white);border-bottom:1px solid var(--line)}
+.header .wrap{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-top:14px;padding-bottom:14px}
+.brand{display:flex;align-items:center;gap:14px}
+.brand svg{width:64px;height:64px;flex:none}
+.brand .t1{font-size:12px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.brand .t2{font-size:24px;font-weight:800;color:var(--navy);line-height:1.15;letter-spacing:.01em}
+.brand .t3{font-size:12.5px;color:var(--blue);font-weight:600;letter-spacing:.2em}
+.search{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;min-width:260px;background:var(--bg)}
+.search input{border:0;background:transparent;padding:9px 16px;font:inherit;flex:1;outline:none}
+.search button{border:0;background:var(--navy);color:#fff;padding:0 16px;cursor:pointer}
+.hotline{display:flex;flex-direction:column;align-items:flex-end;font-size:12.5px;color:var(--muted)}
+.hotline b{color:var(--red);font-size:17px}
+
+/* ---------- Main nav ---------- */
+.nav{background:linear-gradient(90deg,var(--navy-2),var(--blue));position:sticky;top:0;z-index:50;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.nav .wrap{display:flex;align-items:stretch}
+.nav ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap}
+.nav>.wrap>ul>li{position:relative}
+.nav>.wrap>ul>li>a{display:flex;align-items:center;gap:6px;padding:14px 16px;color:#fff;font-weight:600;font-size:14.5px;text-transform:uppercase;letter-spacing:.02em}
+.nav>.wrap>ul>li>a:hover,.nav>.wrap>ul>li:focus-within>a{background:rgba(255,255,255,.12);box-shadow:inset 0 -3px 0 var(--gold)}
+.nav .home{padding:14px 18px;background:rgba(0,0,0,.15)}
+.nav .caret{width:0;height:0;border:4px solid transparent;border-top-color:currentColor;margin-top:4px}
+.drop{position:absolute;left:0;top:100%;min-width:250px;background:#fff;box-shadow:var(--shadow);border-top:3px solid var(--gold);border-radius:0 0 8px 8px;opacity:0;visibility:hidden;transform:translateY(8px);transition:.18s;padding:6px 0}
+.nav li:hover>.drop,.nav li:focus-within>.drop{opacity:1;visibility:visible;transform:none}
+.drop a{display:block;padding:9px 18px;color:var(--ink);font-size:14px}
+.drop a:hover{background:var(--bg);color:var(--blue);padding-left:22px}
+.menu-btn{display:none;margin-left:auto;background:none;border:0;color:#fff;font-size:24px;padding:10px 14px;cursor:pointer}
+
+/* ---------- Hero slider ---------- */
+.hero{position:relative;height:460px;overflow:hidden;background:var(--navy)}
+.slide{position:absolute;inset:0;opacity:0;transition:opacity .8s ease;display:flex;align-items:center}
+.slide.on{opacity:1;z-index:1}
+.slide svg.bg{position:absolute;inset:0;width:100%;height:100%}
+.slide .cap{position:relative;z-index:2;color:#fff;max-width:620px}
+.slide .tag{display:inline-block;background:var(--gold);color:var(--navy);font-weight:800;font-size:12.5px;letter-spacing:.12em;padding:4px 12px;border-radius:3px;text-transform:uppercase}
+.slide h2{font-size:42px;line-height:1.15;margin:14px 0 12px;text-shadow:0 2px 12px rgba(0,0,0,.25)}
+.slide p{font-size:17px;opacity:.92;margin:0 0 22px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:999px;font-weight:700;font-size:14.5px;transition:.15s;cursor:pointer;border:0}
+.btn-gold{background:var(--gold);color:var(--navy)}
+.btn-gold:hover{background:var(--gold-2);transform:translateY(-1px)}
+.btn-ghost{border:2px solid rgba(255,255,255,.7);color:#fff;margin-left:10px}
+.btn-ghost:hover{background:#fff;color:var(--navy)}
+.hero .ctrl{position:absolute;z-index:5;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;font-size:22px;cursor:pointer}
+.hero .ctrl:hover{background:rgba(255,255,255,.35)}
+.hero .prev{left:18px}.hero .next{right:18px}
+.dots{position:absolute;z-index:5;bottom:22px;left:0;right:0;display:flex;justify-content:center;gap:10px}
+.dots button{width:12px;height:12px;border-radius:50%;border:2px solid #fff;background:transparent;cursor:pointer;padding:0}
+.dots button.on{background:var(--gold);border-color:var(--gold);width:30px;border-radius:6px}
+
+/* ---------- Quick access ---------- */
+.quick{position:relative;z-index:6;margin-top:-54px}
+.quick .grid{display:grid;grid-template-columns:repeat(6,1fr);background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.quick a{display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 10px;text-align:center;font-weight:600;font-size:14px;color:var(--navy);border-right:1px solid var(--line);transition:.15s}
+.quick a:last-child{border-right:0}
+.quick a:hover{background:var(--navy);color:#fff}
+.quick a:hover .ic{background:var(--gold);color:var(--navy)}
+.ic{width:52px;height:52px;border-radius:50%;background:#e8f0fc;color:var(--blue);display:grid;place-items:center;transition:.15s}
+.ic svg{width:26px;height:26px}
+
+/* ---------- Sections ---------- */
+section{padding:64px 0}
+.sec-alt{background:var(--bg)}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:28px;flex-wrap:wrap}
+.sec-head h2{margin:0;font-size:28px;color:var(--navy);text-transform:uppercase;letter-spacing:.02em;position:relative;padding-bottom:12px}
+.sec-head h2::after{content:"";position:absolute;left:0;bottom:0;width:64px;height:4px;background:var(--gold);border-radius:2px}
+.sec-head .more{color:var(--blue);font-weight:600;font-size:14px}
+.sec-head .more:hover{text-decoration:underline}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:#fff;color:var(--muted);padding:7px 14px;border-radius:999px;font:600 13.5px var(--font);cursor:pointer}
+.tabs button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+
+/* News */
+.news{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:26px}
+.news>*,.two>*,.intra>*,.camp>*,.fac>*{min-width:0}
+.card{background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid var(--line);transition:.18s}
+.card:hover{box-shadow:var(--shadow);transform:translateY(-3px)}
+.thumb{position:relative;aspect-ratio:16/9;overflow:hidden}
+.thumb svg{width:100%;height:100%}
+.thumb .cat{position:absolute;left:14px;top:14px;background:var(--gold);color:var(--navy);font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:3px;text-transform:uppercase;letter-spacing:.06em}
+.feat .body{padding:20px 22px 24px}
+.feat h3{font-size:22px;margin:6px 0 10px;color:var(--navy);line-height:1.3}
+.meta{font-size:12.5px;color:var(--muted);display:flex;gap:14px}
+.list{display:flex;flex-direction:column;gap:14px}
+.item{display:grid;grid-template-columns:150px 1fr;gap:14px;background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;transition:.18s}
+.item:hover{box-shadow:var(--shadow)}
+.item .thumb{aspect-ratio:auto;height:100%;min-height:96px}
+.item .body{padding:10px 12px 10px 0}
+.item h4{margin:2px 0 6px;font-size:15px;line-height:1.35;color:var(--ink)}
+.item:hover h4{color:var(--blue)}
+.news-hidden{display:none}
+
+/* Events + notices */
+.two{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:30px}
+.event{display:flex;gap:16px;padding:16px 0;border-bottom:1px dashed var(--line)}
+.event:last-child{border-bottom:0}
+.date{flex:none;width:68px;text-align:center;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.date .m{background:var(--navy);color:#fff;font-size:12px;font-weight:700;padding:3px 0;text-transform:uppercase}
+.date .d{background:#fff;color:var(--navy);font-size:28px;font-weight:800;line-height:1.3}
+.event h4{margin:0 0 4px;font-size:16px;color:var(--ink)}
+.event p{margin:0;font-size:13px;color:var(--muted)}
+.notice{background:#fff;border-radius:var(--radius);border:1px solid var(--line);padding:6px 20px}
+.notice a{display:flex;gap:10px;padding:13px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.notice a:last-child{border-bottom:0}
+.notice a:hover{color:var(--blue)}
+.notice .new{flex:none;background:var(--red);color:#fff;font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:3px;height:fit-content;margin-top:3px}
+.notice .dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-top:8px}
+
+/* Stats */
+.stats{background:linear-gradient(120deg,rgba(10,47,107,.96),rgba(21,101,192,.94)),var(--navy);color:#fff;position:relative;overflow:hidden}
+.stats::before{content:"";position:absolute;right:-120px;top:-120px;width:420px;height:420px;border-radius:50%;border:60px solid rgba(255,255,255,.05)}
+.stats .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;position:relative}
+.stat{text-align:center;padding:10px}
+.stat .n{font-size:46px;font-weight:800;color:var(--gold-2);line-height:1.1}
+.stat .l{font-size:15px;opacity:.9;margin-top:6px}
+.stats h2{color:#fff}
+.stats .sec-head h2::after{background:var(--gold)}
+
+/* Faculties */
+.fac{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.fac a{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px 18px;display:flex;flex-direction:column;gap:10px;transition:.18s;border-top:4px solid var(--blue)}
+.fac a:nth-child(2n){border-top-color:var(--gold)}
+.fac a:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.fac .ic{width:46px;height:46px}
+.fac h4{margin:0;font-size:16px;color:var(--navy)}
+.fac p{margin:0;font-size:13px;color:var(--muted)}
+
+/* Campuses */
+.camp{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.camp .card .body{padding:16px 18px 20px}
+.camp h4{margin:0 0 4px;font-size:17px;color:var(--navy)}
+.camp p{margin:0 0 10px;font-size:13.5px;color:var(--muted)}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px;background:#e8f0fc;color:var(--blue);font-family:Consolas,"Ubuntu Mono",monospace}
+.site-no{position:absolute;right:12px;top:12px;background:rgba(0,0,0,.35);color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
+
+/* Intranet box */
+.intra{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:26px;align-items:stretch}
+.tbl{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.you{background:linear-gradient(135deg,var(--navy),var(--navy-3));color:#fff;border-radius:var(--radius);padding:26px;position:relative;overflow:hidden}
+.you::after{content:"";position:absolute;right:-40px;bottom:-40px;width:180px;height:180px;border-radius:50%;background:rgba(242,183,5,.18)}
+.you h3{margin:0 0 6px;font-size:18px}
+.you .ip{font:800 30px Consolas,"Ubuntu Mono",monospace;color:var(--gold-2);margin:10px 0 6px;word-break:break-all}
+.you .where{display:inline-block;background:rgba(255,255,255,.14);padding:4px 12px;border-radius:999px;font-size:13.5px;font-weight:600}
+.you p{font-size:13.5px;opacity:.85;margin:14px 0 0;position:relative;z-index:1}
+table.svc{width:100%;border-collapse:collapse;background:#fff;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line)}
+.svc th{background:var(--navy);color:#fff;text-align:left;font-size:13.5px;padding:11px 14px}
+.svc td{padding:11px 14px;border-top:1px solid var(--line);font-size:14px}
+.svc tr:nth-child(even) td{background:#fafbfd}
+.svc code{font-family:Consolas,"Ubuntu Mono",monospace;color:var(--blue);font-size:13.5px}
+.ok{display:inline-flex;align-items:center;gap:6px;color:#1b7f3b;font-weight:600;font-size:13px}
+.ok::before{content:"";width:8px;height:8px;border-radius:50%;background:#22a34a;box-shadow:0 0 0 3px rgba(34,163,74,.18)}
+
+/* Partners strip */
+.partners{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+.partners div{height:70px;border:1px solid var(--line);border-radius:8px;display:grid;place-items:center;color:#8a96a8;font-weight:800;letter-spacing:.08em;font-size:13px;background:#fff;filter:grayscale(1);transition:.15s}
+.partners div:hover{filter:none;color:var(--navy);border-color:var(--blue)}
+
+/* Footer */
+footer{background:#071f48;color:#b8c6de;font-size:14px}
+footer .top{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:30px;padding:54px 0 36px}
+footer h5{color:#fff;font-size:15px;text-transform:uppercase;letter-spacing:.06em;margin:0 0 16px;position:relative;padding-bottom:10px}
+footer h5::after{content:"";position:absolute;left:0;bottom:0;width:36px;height:3px;background:var(--gold)}
+footer ul{list-style:none;margin:0;padding:0}
+footer li{margin:0 0 9px}
+footer a:hover{color:var(--gold-2)}
+footer .brand .t2{color:#fff;font-size:20px}
+footer .brand .t3{color:var(--gold-2)}
+footer .addr{margin-top:16px;line-height:1.8}
+footer .bottom{border-top:1px solid rgba(255,255,255,.1);padding:16px 0;font-size:13px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.social{display:flex;gap:10px;margin-top:16px}
+.social span{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff}
+.social span:hover{background:var(--gold);color:var(--navy)}
+.totop{position:fixed;right:20px;bottom:20px;width:44px;height:44px;border-radius:50%;background:var(--gold);color:var(--navy);border:0;font-size:20px;font-weight:900;cursor:pointer;box-shadow:var(--shadow);opacity:0;visibility:hidden;transition:.2s;z-index:60}
+.totop.show{opacity:1;visibility:visible}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1024px){
+  .quick .grid{grid-template-columns:repeat(3,1fr)}
+  .quick a:nth-child(3){border-right:0}
+  .fac,.camp{grid-template-columns:repeat(2,1fr)}
+  .partners{grid-template-columns:repeat(3,1fr)}
+  footer .top{grid-template-columns:1fr 1fr}
+  .hotline{display:none}
+}
+@media (max-width:860px){
+  .news,.two,.intra{grid-template-columns:minmax(0,1fr)}
+  .hero .ctrl{display:none}
+  .tabs{overflow-x:auto;flex-wrap:nowrap;max-width:100%}
+  .tabs button{flex:none}
+  .stats .grid{grid-template-columns:repeat(2,1fr)}
+  .search{display:none}
+  .menu-btn{display:block}
+  .nav>.wrap{flex-wrap:wrap}
+  .nav>.wrap>ul{display:none;width:100%;flex-direction:column}
+  .nav.open>.wrap>ul{display:flex}
+  .drop{position:static;opacity:1;visibility:visible;transform:none;display:none;box-shadow:none;border-radius:0}
+  .nav li:focus-within>.drop,.nav li:hover>.drop{display:block}
+  .hero{height:400px}
+  .slide h2{font-size:30px}
+  .topbar .links{display:none}
+}
+@media (max-width:560px){
+  .brand .t2{font-size:18px}.brand svg{width:48px;height:48px}
+  .quick .grid{grid-template-columns:repeat(2,1fr)}
+  .quick a{border-bottom:1px solid var(--line)}
+  .fac,.camp,.partners{grid-template-columns:1fr 1fr}
+  .item{grid-template-columns:110px 1fr}
+  footer .top{grid-template-columns:1fr}
+  .slide p{font-size:15px}
+  .btn-ghost{margin:10px 0 0}
+}
+</style>
 </head>
 <body>
-  <header>
-    <h1>Cổng thông tin nội bộ — Campus Network SDN + SD-WAN</h1>
-    <div>www.campus.internal · Web-Server DMZ 10.1.1.10</div>
-  </header>
-  <main>
-    <div class="card">
-      <h2>Kết nối của bạn</h2>
-      <p>Địa chỉ IP bạn đang dùng: <span id="ip">đang kiểm tra…</span></p>
-      <p>Người dùng ở chi nhánh truy cập trang này qua overlay SD-WAN (service VPN 1). Máy chủ thấy IP thật của máy bạn vì không có NAT giữa các site.</p>
+
+<!-- Dùng lại một huy hiệu SVG cho header/footer -->
+<svg class="sr" aria-hidden="true">
+  <defs>
+    <symbol id="crest" viewBox="0 0 64 64">
+      <path d="M32 3 L57 11 V30 C57 45 46 56 32 61 C18 56 7 45 7 30 V11 Z" fill="#0a2f6b" stroke="#f2b705" stroke-width="3"/>
+      <path d="M32 10 L51 16 V30 C51 41 43 50 32 54 C21 50 13 41 13 30 V16 Z" fill="#1565c0"/>
+      <path d="M20 26 L32 20 L44 26 L32 32 Z" fill="#f2b705"/>
+      <path d="M24 29 V36 C24 39 40 39 40 36 V29 L32 33 Z" fill="#fff"/>
+      <path d="M44 26 V35" stroke="#f2b705" stroke-width="2"/><circle cx="44" cy="36" r="1.8" fill="#f2b705"/>
+      <text x="32" y="49" text-anchor="middle" font-family="Georgia,serif" font-size="8" font-weight="700" fill="#fff" letter-spacing="1">UC</text>
+    </symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 5h18v14H3zM3 6l9 7 9-7"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M4 4h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z"/></symbol>
+    <symbol id="i-screen" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 4h18v12H3zM8 20h8M12 16v4M10 8l4 2-4 2z"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 5h18v16H3zM3 10h18M8 3v4M16 3v4M7 14h3M14 14h3M7 17h3"/></symbol>
+    <symbol id="i-cap" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M2 9l10-5 10 5-10 5zM6 11v5c0 2 12 2 12 0v-5M22 9v6"/></symbol>
+    <symbol id="i-chip" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 3v18M5 21h14M4 7h16M7 7l-3 7c0 2 6 2 6 0zM17 7l-3 7c0 2 6 2 6 0z"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11zM9 11h2V9h2v2h2v2h-2v2h-2v-2H9z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M5 19C5 9 11 4 20 4c0 9-5 15-15 15zM5 19l8-8"/></symbol>
+    <symbol id="i-brush" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M14 4l6 6-8 8-6-6zM6 12l-3 7 7-3"/></symbol>
+    <symbol id="i-bld" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-5h6v5M9 11h.01M15 11h.01"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============ TOP BAR ============ -->
+<div class="topbar">
+  <div class="wrap">
+    <div class="contact">
+      <span>✆ (028) 3700 0100</span>
+      <span>✉ info@campus.internal</span>
     </div>
-    <div class="card">
-      <h2>Dịch vụ nội bộ</h2>
-      <table>
-        <tr><th>Dịch vụ</th><th>Địa chỉ</th><th>Ghi chú</th></tr>
-        <tr><td>Cổng thông tin</td><td><code>https://www.campus.internal</code></td><td>Nginx, HTTPS</td></tr>
-        <tr><td>Thư điện tử</td><td><code>mail.campus.internal</code></td><td>SMTP 25/587, IMAP 143</td></tr>
-        <tr><td>DNS nội bộ</td><td><code>10.1.90.10</code></td><td>Zone <code>campus.internal</code></td></tr>
-      </table>
+    <div class="links">
+      <a href="#">Sinh viên</a><a href="#">Giảng viên</a><a href="#">Cựu sinh viên</a>
+      <a href="#">Doanh nghiệp</a><a href="#tuyen-sinh">Tuyển sinh</a><a href="#noi-bo">Hệ thống nội bộ</a>
     </div>
-    <div class="card">
-      <h2>Các cơ sở</h2>
-      <table>
-        <tr><th>Site</th><th>Cơ sở</th><th>Mạng</th></tr>
-        <tr><td>100</td><td>Campus chính</td><td>10.1.0.0/16</td></tr>
-        <tr><td>200</td><td>Chi nhánh Cần Thơ</td><td>10.2.0.0/16</td></tr>
-        <tr><td>300</td><td>Chi nhánh Đà Nẵng</td><td>10.3.0.0/16</td></tr>
-        <tr><td>400</td><td>Chi nhánh Nha Trang</td><td>10.4.0.0/16</td></tr>
-      </table>
+    <div class="lang" title="Ngôn ngữ"><span class="on">VI</span><span>EN</span></div>
+  </div>
+</div>
+
+<!-- ============ HEADER ============ -->
+<header class="header">
+  <div class="wrap">
+    <a class="brand" href="#">
+      <svg><use href="#crest"/></svg>
+      <div>
+        <div class="t1">Bộ Giáo dục và Đào tạo</div>
+        <div class="t2 u-name">TRƯỜNG ĐẠI HỌC CAMPUS</div>
+        <div class="t3 u-name-en">CAMPUS UNIVERSITY</div>
+      </div>
+    </a>
+    <form class="search" onsubmit="return false" role="search">
+      <label class="sr" for="q">Tìm kiếm</label>
+      <input id="q" type="search" placeholder="Tìm kiếm thông tin, ngành học…">
+      <button aria-label="Tìm">⌕</button>
+    </form>
+    <div class="hotline">Hotline tuyển sinh<b>1900 0100</b></div>
+  </div>
+</header>
+
+<!-- ============ NAV ============ -->
+<nav class="nav" id="nav">
+  <div class="wrap">
+    <a class="home" href="#" aria-label="Trang chủ" style="color:#fff">⌂</a>
+    <button class="menu-btn" aria-label="Menu" onclick="document.getElementById('nav').classList.toggle('open')">☰</button>
+    <ul>
+      <li><a href="#">Giới thiệu <i class="caret"></i></a>
+        <div class="drop"><a href="#">Tổng quan</a><a href="#">Tầm nhìn – Sứ mệnh</a><a href="#">Lịch sử phát triển</a><a href="#">Cơ cấu tổ chức</a><a href="#co-so">Hệ thống cơ sở</a></div></li>
+      <li><a href="#tuyen-sinh">Tuyển sinh <i class="caret"></i></a>
+        <div class="drop"><a href="#">Đại học chính quy</a><a href="#">Chương trình chất lượng cao</a><a href="#">Sau đại học</a><a href="#">Liên thông – Văn bằng 2</a></div></li>
+      <li><a href="#khoa">Đào tạo <i class="caret"></i></a>
+        <div class="drop"><a href="#khoa">Khoa – Viện</a><a href="#">Chương trình đào tạo</a><a href="#">Lịch học – Lịch thi</a><a href="#">Học vụ</a></div></li>
+      <li><a href="#">Nghiên cứu <i class="caret"></i></a>
+        <div class="drop"><a href="#">Khoa học công nghệ</a><a href="#">Phòng thí nghiệm</a><a href="#">Công bố khoa học</a></div></li>
+      <li><a href="#">Hợp tác</a></li>
+      <li><a href="#">Sinh viên <i class="caret"></i></a>
+        <div class="drop"><a href="#">Cổng sinh viên</a><a href="#">Học bổng</a><a href="#">Câu lạc bộ</a><a href="#">Ký túc xá</a></div></li>
+      <li><a href="#tin-tuc">Tin tức</a></li>
+      <li><a href="#lien-he">Liên hệ</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ============ HERO SLIDER ============ -->
+<div class="hero" id="hero">
+  <div class="slide on">
+    <svg class="bg" viewBox="0 0 1600 460" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a2f6b"/><stop offset="1" stop-color="#1565c0"/></linearGradient></defs>
+      <rect width="1600" height="460" fill="url(#g1)"/>
+      <g fill="#fff" opacity=".08"><circle cx="1350" cy="80" r="180"/><circle cx="1500" cy="380" r="120"/></g>
+      <g transform="translate(1040 150) scale(.8)" fill="#fff" opacity=".9">
+        <rect x="120" y="120" width="460" height="220" fill="#0c3a82"/>
+        <rect x="270" y="30" width="160" height="310" fill="#0f4aa0"/>
+        <path d="M250 30 L350 -20 L450 30 Z" fill="#f2b705"/>
+        <g fill="#bcd4f6" opacity=".85">
+          <rect x="140" y="140" width="36" height="46"/><rect x="190" y="140" width="36" height="46"/><rect x="474" y="140" width="36" height="46"/><rect x="524" y="140" width="36" height="46"/>
+          <rect x="140" y="205" width="36" height="46"/><rect x="190" y="205" width="36" height="46"/><rect x="474" y="205" width="36" height="46"/><rect x="524" y="205" width="36" height="46"/>
+          <rect x="295" y="60" width="40" height="50"/><rect x="365" y="60" width="40" height="50"/><rect x="295" y="130" width="40" height="50"/><rect x="365" y="130" width="40" height="50"/>
+        </g>
+        <rect x="320" y="240" width="60" height="100" fill="#f2b705"/>
+        <rect x="60" y="340" width="600" height="14" fill="#07224f"/>
+      </g>
+    </svg>
+    <div class="wrap"><div class="cap">
+      <span class="tag">Tuyển sinh 2027</span>
+      <h2>Kiến tạo tương lai<br>cùng Trường Đại học Campus</h2>
+      <p>Hơn 40 chương trình đào tạo chuẩn quốc tế tại 4 cơ sở: Campus chính, Cần Thơ, Đà Nẵng và Nha Trang.</p>
+      <a class="btn btn-gold" href="#tuyen-sinh">Xét tuyển ngay →</a><a class="btn btn-ghost" href="#khoa">Khám phá ngành học</a>
+    </div></div>
+  </div>
+  <div class="slide">
+    <svg class="bg" viewBox="0 0 1600 460" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs><linearGradient id="g2" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#071f48"/><stop offset="1" stop-color="#0d5c8f"/></linearGradient></defs>
+      <rect width="1600" height="460" fill="url(#g2)"/>
+      <g stroke="#5fb3ff" stroke-width="2" opacity=".55" fill="none">
+        <path d="M980 110 L1160 200 L1360 120 L1480 260 L1250 360 L1060 300 Z"/>
+        <path d="M980 110 L1060 300 M1160 200 L1250 360 M1160 200 L1480 260 M1360 120 L1250 360"/>
+      </g>
+      <g fill="#f2b705"><circle cx="980" cy="110" r="12"/><circle cx="1160" cy="200" r="16"/><circle cx="1360" cy="120" r="12"/><circle cx="1480" cy="260" r="12"/><circle cx="1250" cy="360" r="12"/><circle cx="1060" cy="300" r="12"/></g>
+      <g fill="#fff" opacity=".07"><rect x="1100" y="40" width="320" height="30" rx="15"/><rect x="1180" y="400" width="260" height="24" rx="12"/></g>
+    </svg>
+    <div class="wrap"><div class="cap">
+      <span class="tag">Hạ tầng số</span>
+      <h2>Mạng khuôn viên thông minh<br>SDN &amp; SD-WAN</h2>
+      <p>Bốn cơ sở kết nối qua SD-WAN trên hai đường truyền Internet và MPLS; mạng nội bộ campus chính điều khiển tập trung bằng SDN.</p>
+      <a class="btn btn-gold" href="#noi-bo">Xem hệ thống nội bộ →</a>
+    </div></div>
+  </div>
+  <div class="slide">
+    <svg class="bg" viewBox="0 0 1600 460" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs><linearGradient id="g3" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0a2f6b"/><stop offset="1" stop-color="#5a3fa0"/></linearGradient></defs>
+      <rect width="1600" height="460" fill="url(#g3)"/>
+      <g transform="translate(1080 90)">
+        <circle cx="200" cy="140" r="130" fill="#fff" opacity=".08"/>
+        <path d="M110 150 L200 105 L290 150 L200 195 Z" fill="#f2b705"/>
+        <path d="M140 168 V215 C140 240 260 240 260 215 V168 L200 198 Z" fill="#fff"/>
+        <path d="M290 150 V210" stroke="#f2b705" stroke-width="5"/><circle cx="290" cy="216" r="8" fill="#f2b705"/>
+      </g>
+    </svg>
+    <div class="wrap"><div class="cap">
+      <span class="tag">Sự kiện</span>
+      <h2>Lễ tốt nghiệp &amp; trao bằng<br>năm học 2025–2026</h2>
+      <p>Chúc mừng các tân cử nhân, kỹ sư. Buổi lễ diễn ra tại Hội trường A, Campus chính, ngày 18/10/2026.</p>
+      <a class="btn btn-gold" href="#su-kien">Xem lịch sự kiện →</a>
+    </div></div>
+  </div>
+  <button class="ctrl prev" aria-label="Trước">‹</button>
+  <button class="ctrl next" aria-label="Sau">›</button>
+  <div class="dots"></div>
+</div>
+
+<!-- ============ QUICK ACCESS ============ -->
+<div class="quick"><div class="wrap"><div class="grid">
+  <a href="#"><span class="ic"><svg><use href="#i-user"/></svg></span>Cổng sinh viên</a>
+  <a href="#noi-bo"><span class="ic"><svg><use href="#i-mail"/></svg></span>Email nội bộ</a>
+  <a href="#"><span class="ic"><svg><use href="#i-book"/></svg></span>Thư viện số</a>
+  <a href="#"><span class="ic"><svg><use href="#i-screen"/></svg></span>E-Learning</a>
+  <a href="#su-kien"><span class="ic"><svg><use href="#i-cal"/></svg></span>Lịch sự kiện</a>
+  <a href="#tuyen-sinh"><span class="ic"><svg><use href="#i-cap"/></svg></span>Tuyển sinh</a>
+</div></div></div>
+
+<!-- ============ NEWS ============ -->
+<section id="tin-tuc">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Tin tức nổi bật</h2>
+      <div class="tabs" id="newsTabs">
+        <button class="on" data-f="all">Tất cả</button><button data-f="dt">Đào tạo</button>
+        <button data-f="nc">Nghiên cứu</button><button data-f="sv">Sinh viên</button><button data-f="hs">Hợp tác</button>
+      </div>
     </div>
-  </main>
-  <script>
-    fetch('/whoami').then(r => r.text()).then(t => {
-      const m = t.match(/client=(\S+)/);
-      document.getElementById('ip').textContent = m ? m[1] : t;
-    }).catch(() => { document.getElementById('ip').textContent = 'không xác định'; });
-  </script>
+    <div class="news">
+      <a class="card feat" href="#" data-c="nc">
+        <div class="thumb">
+          <svg viewBox="0 0 640 360" preserveAspectRatio="xMidYMid slice"><rect width="640" height="360" fill="#0d3f8f"/>
+            <g stroke="#6fb4ff" stroke-width="3" fill="none" opacity=".7"><path d="M80 260 L220 150 L360 220 L520 90"/><path d="M220 150 L300 60 L520 90"/></g>
+            <g fill="#f2b705"><circle cx="80" cy="260" r="10"/><circle cx="220" cy="150" r="14"/><circle cx="360" cy="220" r="10"/><circle cx="520" cy="90" r="14"/><circle cx="300" cy="60" r="10"/></g>
+            <rect x="60" y="290" width="520" height="40" rx="6" fill="#fff" opacity=".1"/></svg>
+          <span class="cat">Nghiên cứu</span>
+        </div>
+        <div class="body">
+          <div class="meta"><span>📅 25/09/2026</span><span>👁 1.284 lượt xem</span></div>
+          <h3>Khánh thành hệ thống mạng SD-WAN kết nối 4 cơ sở trên hai đường truyền Internet và MPLS</h3>
+          <p style="margin:0;color:var(--muted)">Hệ thống mới cho phép sinh viên và cán bộ tại Cần Thơ, Đà Nẵng, Nha Trang truy cập dịch vụ của campus chính như trong cùng một mạng, tự động chuyển đường khi một liên kết gặp sự cố.</p>
+        </div>
+      </a>
+      <div class="list">
+        <a class="item" href="#" data-c="dt"><div class="thumb"><svg viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice"><rect width="200" height="130" fill="#1565c0"/><path d="M60 70 L100 50 L140 70 L100 90Z" fill="#f2b705"/><path d="M75 78 V96 C75 104 125 104 125 96 V78 L100 90Z" fill="#fff"/></svg></div>
+          <div class="body"><div class="meta"><span>22/09/2026</span></div><h4>Công bố 6 chương trình đào tạo mới năm 2027, trong đó có An ninh mạng và Kỹ thuật dữ liệu</h4></div></a>
+        <a class="item" href="#" data-c="sv"><div class="thumb"><svg viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice"><rect width="200" height="130" fill="#0a2f6b"/><circle cx="70" cy="60" r="18" fill="#f2b705"/><circle cx="130" cy="60" r="18" fill="#6fb4ff"/><rect x="45" y="84" width="50" height="30" rx="14" fill="#f2b705"/><rect x="105" y="84" width="50" height="30" rx="14" fill="#6fb4ff"/></svg></div>
+          <div class="body"><div class="meta"><span>20/09/2026</span></div><h4>Sinh viên Khoa CNTT đạt giải Nhất cuộc thi thiết kế mạng doanh nghiệp toàn quốc</h4></div></a>
+        <a class="item" href="#" data-c="hs"><div class="thumb"><svg viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice"><rect width="200" height="130" fill="#123f7a"/><circle cx="100" cy="65" r="38" fill="none" stroke="#6fb4ff" stroke-width="4"/><path d="M62 65 H138 M100 27 C85 45 85 85 100 103 M100 27 C115 45 115 85 100 103" stroke="#6fb4ff" stroke-width="3" fill="none"/><circle cx="148" cy="30" r="10" fill="#f2b705"/></svg></div>
+          <div class="body"><div class="meta"><span>17/09/2026</span></div><h4>Ký kết hợp tác đào tạo và thực tập với 12 doanh nghiệp công nghệ trong và ngoài nước</h4></div></a>
+        <a class="item" href="#" data-c="dt"><div class="thumb"><svg viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice"><rect width="200" height="130" fill="#0d5c8f"/><rect x="40" y="30" width="120" height="74" rx="6" fill="#fff" opacity=".9"/><rect x="52" y="44" width="60" height="8" fill="#0d5c8f"/><rect x="52" y="60" width="96" height="6" fill="#9fb8d6"/><rect x="52" y="72" width="80" height="6" fill="#9fb8d6"/><rect x="52" y="84" width="40" height="10" rx="5" fill="#f2b705"/></svg></div>
+          <div class="body"><div class="meta"><span>15/09/2026</span></div><h4>Thông báo lịch đăng ký học phần học kỳ 1 năm học 2026–2027</h4></div></a>
+        <a class="item news-hidden" href="#" data-c="nc"><div class="thumb"><svg viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice"><rect width="200" height="130" fill="#071f48"/><path d="M40 100 V60 M80 100 V40 M120 100 V70 M160 100 V30" stroke="#f2b705" stroke-width="14"/></svg></div>
+          <div class="body"><div class="meta"><span>10/09/2026</span></div><h4>Nhóm nghiên cứu công bố 8 bài báo quốc tế về mạng định nghĩa bằng phần mềm</h4></div></a>
+        <a class="item news-hidden" href="#" data-c="sv"><div class="thumb"><svg viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice"><rect width="200" height="130" fill="#5a3fa0"/><path d="M100 30 L112 60 H145 L118 78 L128 108 L100 90 L72 108 L82 78 L55 60 H88Z" fill="#f2b705"/></svg></div>
+          <div class="body"><div class="meta"><span>08/09/2026</span></div><h4>Trao 520 suất học bổng khuyến khích học tập cho sinh viên xuất sắc</h4></div></a>
+        <a class="item news-hidden" href="#" data-c="hs"><div class="thumb"><svg viewBox="0 0 200 130" preserveAspectRatio="xMidYMid slice"><rect width="200" height="130" fill="#0a2f6b"/><path d="M50 80 L85 60 L100 75 L115 60 L150 80 L100 100Z" fill="#6fb4ff"/><circle cx="100" cy="45" r="14" fill="#f2b705"/></svg></div>
+          <div class="body"><div class="meta"><span>05/09/2026</span></div><h4>Chương trình trao đổi sinh viên với 5 trường đại học châu Á mở đợt đăng ký</h4></div></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EVENTS + NOTICES ============ -->
+<section class="sec-alt" id="su-kien">
+  <div class="wrap two">
+    <div>
+      <div class="sec-head"><h2>Sự kiện sắp diễn ra</h2><a class="more" href="#">Tất cả sự kiện →</a></div>
+      <div class="event"><div class="date"><div class="m">Th10</div><div class="d">05</div></div>
+        <div><h4>Hội thảo "Mạng thế hệ mới: SDN, SD-WAN và bảo mật"</h4><p>08:00 · Hội trường B, Campus chính · Trực tuyến qua mạng nội bộ 4 cơ sở</p></div></div>
+      <div class="event"><div class="date"><div class="m">Th10</div><div class="d">12</div></div>
+        <div><h4>Ngày hội việc làm và kết nối doanh nghiệp 2026</h4><p>07:30 · Sân trung tâm, Cơ sở Đà Nẵng</p></div></div>
+      <div class="event"><div class="date"><div class="m">Th10</div><div class="d">18</div></div>
+        <div><h4>Lễ tốt nghiệp và trao bằng năm học 2025–2026</h4><p>08:00 · Hội trường A, Campus chính</p></div></div>
+      <div class="event"><div class="date"><div class="m">Th11</div><div class="d">02</div></div>
+        <div><h4>Cuộc thi "Hackathon Campus" dành cho sinh viên 4 cơ sở</h4><p>Cả ngày · Cơ sở Nha Trang &amp; trực tuyến</p></div></div>
+    </div>
+    <div>
+      <div class="sec-head"><h2>Thông báo</h2><a class="more" href="#">Xem thêm →</a></div>
+      <div class="notice">
+        <a href="#"><span class="new">MỚI</span>Lịch thi giữa kỳ học kỳ 1 năm học 2026–2027</a>
+        <a href="#"><span class="new">MỚI</span>Hướng dẫn cấu hình email nội bộ @campus.internal trên Thunderbird</a>
+        <a href="#"><span class="dot"></span>Thông báo nộp học phí học kỳ 1 (hạn chót 15/10/2026)</a>
+        <a href="#"><span class="dot"></span>Kế hoạch bảo trì hệ thống mạng cuối tuần 03–04/10/2026</a>
+        <a href="#"><span class="dot"></span>Danh sách sinh viên nhận học bổng khuyến khích đợt 1</a>
+        <a href="#"><span class="dot"></span>Đăng ký ký túc xá tại cơ sở Cần Thơ và Nha Trang</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STATS ============ -->
+<section class="stats" id="tuyen-sinh">
+  <div class="wrap">
+    <div class="sec-head"><h2>Trường Đại học Campus qua những con số</h2></div>
+    <div class="grid">
+      <div class="stat"><div class="n" data-to="28500">0</div><div class="l">Sinh viên đang theo học</div></div>
+      <div class="stat"><div class="n" data-to="1150">0</div><div class="l">Giảng viên, nhà khoa học</div></div>
+      <div class="stat"><div class="n" data-to="42">0</div><div class="l">Chương trình đào tạo</div></div>
+      <div class="stat"><div class="n" data-to="4">0</div><div class="l">Cơ sở trên toàn quốc</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FACULTIES ============ -->
+<section id="khoa">
+  <div class="wrap">
+    <div class="sec-head"><h2>Khoa – Viện đào tạo</h2><a class="more" href="#">Tất cả chương trình →</a></div>
+    <div class="fac">
+      <a href="#"><span class="ic"><svg><use href="#i-chip"/></svg></span><h4>Công nghệ Thông tin</h4><p>Mạng máy tính, An ninh mạng, Khoa học dữ liệu, Kỹ thuật phần mềm</p></a>
+      <a href="#"><span class="ic"><svg><use href="#i-chart"/></svg></span><h4>Quản trị Kinh doanh</h4><p>Marketing, Kinh doanh quốc tế, Quản trị nhân lực</p></a>
+      <a href="#"><span class="ic"><svg><use href="#i-scale"/></svg></span><h4>Luật</h4><p>Luật kinh tế, Luật quốc tế, Luật dân sự</p></a>
+      <a href="#"><span class="ic"><svg><use href="#i-heart"/></svg></span><h4>Y tế – Dược</h4><p>Điều dưỡng, Dược học, Kỹ thuật xét nghiệm</p></a>
+      <a href="#"><span class="ic"><svg><use href="#i-globe"/></svg></span><h4>Ngoại ngữ</h4><p>Ngôn ngữ Anh, Ngôn ngữ Trung, Ngôn ngữ Nhật</p></a>
+      <a href="#"><span class="ic"><svg><use href="#i-leaf"/></svg></span><h4>Môi trường &amp; Nông nghiệp</h4><p>Công nghệ sinh học, Quản lý tài nguyên (Cơ sở Cần Thơ)</p></a>
+      <a href="#"><span class="ic"><svg><use href="#i-brush"/></svg></span><h4>Du lịch – Khách sạn</h4><p>Quản trị lữ hành, Quản trị nhà hàng (Cơ sở Nha Trang)</p></a>
+      <a href="#"><span class="ic"><svg><use href="#i-bld"/></svg></span><h4>Tài chính – Ngân hàng</h4><p>Tài chính doanh nghiệp, Kế toán, Fintech (Cơ sở Đà Nẵng)</p></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CAMPUSES ============ -->
+<section class="sec-alt" id="co-so">
+  <div class="wrap">
+    <div class="sec-head"><h2>Hệ thống cơ sở</h2><span style="color:var(--muted);font-size:14px">4 cơ sở kết nối qua mạng SD-WAN</span></div>
+    <div class="camp">
+      <div class="card">
+        <div class="thumb"><svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice"><rect width="320" height="180" fill="#0a2f6b"/><rect x="60" y="60" width="200" height="100" fill="#1565c0"/><rect x="130" y="25" width="60" height="135" fill="#0d3f8f"/><path d="M122 25 L160 5 L198 25Z" fill="#f2b705"/><g fill="#bcd4f6"><rect x="75" y="75" width="18" height="22"/><rect x="100" y="75" width="18" height="22"/><rect x="202" y="75" width="18" height="22"/><rect x="227" y="75" width="18" height="22"/><rect x="145" y="40" width="12" height="16"/><rect x="163" y="40" width="12" height="16"/></g><rect x="148" y="120" width="24" height="40" fill="#f2b705"/></svg><span class="site-no">Site 100</span></div>
+        <div class="body"><h4>Campus chính</h4><p>Trụ sở, Khoa CNTT, trung tâm dữ liệu và các hệ thống dùng chung.</p><span class="pill">10.1.0.0/16</span></div>
+      </div>
+      <div class="card">
+        <div class="thumb"><svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice"><rect width="320" height="180" fill="#0d5c8f"/><path d="M0 140 C60 120 120 160 180 140 S300 120 320 140 V180 H0Z" fill="#6fb4ff" opacity=".6"/><rect x="90" y="60" width="140" height="70" fill="#0a2f6b"/><path d="M80 60 L160 25 L240 60Z" fill="#f2b705"/><g fill="#bcd4f6"><rect x="105" y="75" width="20" height="24"/><rect x="150" y="75" width="20" height="24"/><rect x="195" y="75" width="20" height="24"/></g></svg><span class="site-no">Site 200</span></div>
+        <div class="body"><h4>Cơ sở Cần Thơ</h4><p>Đào tạo Y tế, Môi trường &amp; Nông nghiệp vùng Đồng bằng sông Cửu Long.</p><span class="pill">10.2.0.0/16</span></div>
+      </div>
+      <div class="card">
+        <div class="thumb"><svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice"><rect width="320" height="180" fill="#123f7a"/><path d="M0 150 L80 70 L140 120 L210 50 L320 150Z" fill="#0a2f6b"/><rect x="170" y="80" width="90" height="70" fill="#1565c0"/><path d="M160 80 L215 50 L270 80Z" fill="#f2b705"/><g fill="#bcd4f6"><rect x="182" y="95" width="16" height="20"/><rect x="206" y="95" width="16" height="20"/><rect x="230" y="95" width="16" height="20"/></g></svg><span class="site-no">Site 300</span></div>
+        <div class="body"><h4>Cơ sở Đà Nẵng</h4><p>Đào tạo Tài chính – Ngân hàng, Kinh tế và Công nghệ khu vực miền Trung.</p><span class="pill">10.3.0.0/16</span></div>
+      </div>
+      <div class="card">
+        <div class="thumb"><svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice"><rect width="320" height="180" fill="#0d6f9f"/><circle cx="260" cy="40" r="22" fill="#f2b705"/><path d="M0 130 C50 115 100 145 160 130 S270 115 320 130 V180 H0Z" fill="#6fd0ff" opacity=".7"/><rect x="60" y="70" width="110" height="60" fill="#0a2f6b"/><path d="M52 70 L115 40 L178 70Z" fill="#f2b705"/><g fill="#bcd4f6"><rect x="75" y="85" width="18" height="22"/><rect x="105" y="85" width="18" height="22"/><rect x="135" y="85" width="18" height="22"/></g></svg><span class="site-no">Site 400</span></div>
+        <div class="body"><h4>Cơ sở Nha Trang</h4><p>Đào tạo Du lịch – Khách sạn, Ngoại ngữ và Nuôi trồng thủy sản.</p><span class="pill">10.4.0.0/16</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INTRANET ============ -->
+<section id="noi-bo">
+  <div class="wrap">
+    <div class="sec-head"><h2>Hệ thống nội bộ</h2><span style="color:var(--muted);font-size:14px">www.campus.internal · Web-Server DMZ 10.1.1.10</span></div>
+    <div class="intra">
+      <div class="you">
+        <h3>Kết nối của bạn</h3>
+        <div style="font-size:13.5px;opacity:.85">Địa chỉ IP máy bạn đang dùng</div>
+        <div class="ip" id="ip">đang kiểm tra…</div>
+        <span class="where" id="where">Đang xác định cơ sở…</span>
+        <p>Người dùng ở các chi nhánh truy cập trang này qua overlay SD-WAN (service VPN 1). Máy chủ thấy IP thật của máy bạn vì không có NAT giữa các cơ sở.</p>
+      </div>
+      <div class="tbl"><table class="svc">
+        <tr><th>Dịch vụ</th><th>Địa chỉ</th><th>Thông tin</th><th>Trạng thái</th></tr>
+        <tr><td>Cổng thông tin</td><td><code>https://www.campus.internal</code></td><td>Nginx, HTTPS</td><td><span class="ok">Hoạt động</span></td></tr>
+        <tr><td>Thư điện tử</td><td><code>mail.campus.internal</code></td><td>IMAP 143 · SMTP 25/587</td><td><span class="ok" id="st-mail">Hoạt động</span></td></tr>
+        <tr><td>DNS nội bộ</td><td><code>10.1.90.10</code></td><td>Zone <code>campus.internal</code></td><td><span class="ok">Hoạt động</span></td></tr>
+        <tr><td>Nhật ký hệ thống</td><td><code>10.1.90.11</code></td><td>Syslog UDP 514</td><td><span class="ok">Hoạt động</span></td></tr>
+        <tr><td>Kho bộ cài</td><td><code>http://10.1.1.10/setup/</code></td><td>Script, phần mềm nội bộ</td><td><span class="ok">Hoạt động</span></td></tr>
+      </table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PARTNERS ============ -->
+<section class="sec-alt" style="padding:44px 0">
+  <div class="wrap">
+    <div class="sec-head" style="margin-bottom:20px"><h2>Đối tác</h2></div>
+    <div class="partners"><div>NETLAB</div><div>CLOUDVN</div><div>DATATECH</div><div>SECURENET</div><div>EDUGLOBAL</div><div>SMARTCITY</div></div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer id="lien-he">
+  <div class="wrap top">
+    <div>
+      <div class="brand"><svg style="width:54px;height:54px"><use href="#crest"/></svg>
+        <div><div class="t2 u-name">TRƯỜNG ĐẠI HỌC CAMPUS</div><div class="t3 u-name-en">CAMPUS UNIVERSITY</div></div></div>
+      <div class="addr">
+        Campus chính: Số 1 Đường Đại Học, Khu Công nghệ<br>
+        Điện thoại: (028) 3700 0100 · Hotline: 1900 0100<br>
+        Email: info@campus.internal
+      </div>
+      <div class="social"><span>f</span><span>▶</span><span>in</span><span>@</span></div>
+    </div>
+    <div><h5>Cơ sở</h5><ul><li><a href="#co-so">Campus chính</a></li><li><a href="#co-so">Cơ sở Cần Thơ</a></li><li><a href="#co-so">Cơ sở Đà Nẵng</a></li><li><a href="#co-so">Cơ sở Nha Trang</a></li></ul></div>
+    <div><h5>Liên kết nhanh</h5><ul><li><a href="#tuyen-sinh">Tuyển sinh</a></li><li><a href="#khoa">Chương trình đào tạo</a></li><li><a href="#su-kien">Sự kiện</a></li><li><a href="#tin-tuc">Tin tức</a></li></ul></div>
+    <div><h5>Hệ thống</h5><ul><li><a href="#noi-bo">Email nội bộ</a></li><li><a href="#noi-bo">DNS nội bộ</a></li><li><a href="/setup/">Kho bộ cài</a></li><li><a href="#noi-bo">Trạng thái dịch vụ</a></li></ul></div>
+  </div>
+  <div class="wrap bottom">
+    <span>© 2026 <span class="u-name">Trường Đại học Campus</span> — Mô hình lab đồ án Campus Network SDN &amp; SD-WAN.</span>
+    <span>Web-Server 10.1.1.10 · DMZ</span>
+  </div>
+</footer>
+
+<button class="totop" id="totop" aria-label="Lên đầu trang" onclick="scrollTo(0,0)">↑</button>
+
+<script>
+(function(){
+  // --- Hero slider ---
+  var slides=[].slice.call(document.querySelectorAll('.slide')), dots=document.querySelector('.dots'), cur=0, timer;
+  slides.forEach(function(_,i){var b=document.createElement('button');b.setAttribute('aria-label','Slide '+(i+1));b.onclick=function(){go(i,true)};dots.appendChild(b)});
+  function go(i,user){slides[cur].classList.remove('on');dots.children[cur].classList.remove('on');cur=(i+slides.length)%slides.length;slides[cur].classList.add('on');dots.children[cur].classList.add('on');if(user)restart()}
+  function restart(){clearInterval(timer);timer=setInterval(function(){go(cur+1)},6000)}
+  document.querySelector('.hero .prev').onclick=function(){go(cur-1,true)};
+  document.querySelector('.hero .next').onclick=function(){go(cur+1,true)};
+  dots.children[0].classList.add('on');restart();
+
+  // --- News tabs ---
+  var tabs=document.querySelectorAll('#newsTabs button'), items=document.querySelectorAll('#tin-tuc [data-c]');
+  [].forEach.call(tabs,function(t){t.onclick=function(){
+    [].forEach.call(tabs,function(x){x.classList.remove('on')});t.classList.add('on');
+    var f=t.getAttribute('data-f'), shown=0;
+    [].forEach.call(items,function(it){
+      var ok=f==='all'?!it.classList.contains('news-hidden')||false:it.getAttribute('data-c')===f;
+      if(f==='all'){it.style.display=it.classList.contains('news-hidden')?'none':''}
+      else{it.style.display=ok?'':'none'}
+    });
+  }});
+
+  // --- Counters ---
+  var nums=document.querySelectorAll('.stat .n'), done=false;
+  function count(){if(done)return;var r=document.querySelector('.stats').getBoundingClientRect();if(r.top>innerHeight-80)return;done=true;
+    [].forEach.call(nums,function(n){var to=+n.getAttribute('data-to'),t0=null;
+      function step(ts){if(!t0)t0=ts;var p=Math.min((ts-t0)/1400,1);n.textContent=Math.round(to*(1-Math.pow(1-p,3))).toLocaleString('vi-VN')+(to>=100?'+':'');if(p<1)requestAnimationFrame(step)}
+      requestAnimationFrame(step)})}
+  addEventListener('scroll',count);count();
+
+  // --- Back to top ---
+  var tt=document.getElementById('totop');addEventListener('scroll',function(){tt.classList.toggle('show',scrollY>500)});
+
+  // --- Kết nối của bạn (Nginx /whoami) ---
+  var sites={'10.1.':'Campus chính (Site 100)','10.2.':'Cơ sở Cần Thơ (Site 200)','10.3.':'Cơ sở Đà Nẵng (Site 300)','10.4.':'Cơ sở Nha Trang (Site 400)','10.9.':'Site 900 (Controller)'};
+  fetch('/whoami').then(function(r){return r.text()}).then(function(t){
+    var m=t.match(/client=(\S+)/), ip=m?m[1]:t.trim();
+    document.getElementById('ip').textContent=ip;
+    var w='Ngoài hệ thống cơ sở';for(var k in sites){if(ip.indexOf(k)===0){w=sites[k];break}}
+    document.getElementById('where').textContent='📍 '+w;
+  }).catch(function(){document.getElementById('ip').textContent='không xác định';document.getElementById('where').textContent='Mở trang qua https://www.campus.internal để xem'});
+})();
+</script>
 </body>
 </html>

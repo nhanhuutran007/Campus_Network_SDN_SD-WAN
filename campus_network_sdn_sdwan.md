@@ -10,6 +10,7 @@ Dự án xây dựng Campus Network kết hợp **SD-WAN (Software-Defined Wide 
 - **Chi nhánh Cần Thơ (Site ID 200, AS 65010)**: Có Branch Firewall, chia VLAN theo phòng ban (VLAN 60: Nông nghiệp, VLAN 70: Y Tế).
 - **Chi nhánh Đà Nẵng (Site ID 300, AS 65020)**: Có Branch Firewall, chia VLAN theo phòng ban (VLAN 80: Du lịch, VLAN 90: Tài chính).
 - **Chi nhánh Nha Trang (Site ID 400, AS 65030)**: Có Branch Firewall, chia VLAN theo phòng ban (VLAN 50: Thủy sản, VLAN 60: Lữ hành).
+- **Site 500 (AS 65040, đang triển khai 03/10/2026)**: vEdge65 + SW-S500 + VPC11/12, WAN Internet + MPLS.
 - **SD-WAN Controller Cluster (Site 900)**: vManage, vSmart, vBond (đặt tại Data Center hoặc Cloud).
 - **Hạ tầng WAN**: Internet + MPLS qua Service Provider, IPsec SD-WAN Overlay.
 - **SDN (OpenFlow)**: SDN_CONTROLLER (Ryu) quản lý toàn bộ L2 campus qua OpenFlow 1.3: **Dist-SW1/2 + Access-SW1–4** (data plane campus). Control plane chạy **trên VLAN 99 MANAGEMENT** (dải 10.1.99.0/24, controller 10.1.99.10) qua các link uplink sẵn có — không có link riêng. App `campus_switch_13.py`: học MAC theo VLAN + ACL proactive (chặn port qua controller) + REST northbound (`ofctl_rest`, port 8080). *(Node test cũ AccessTest + VPC11/12 đã xóa 04/08/2026.)*
@@ -653,9 +654,9 @@ graph TB
 
 | Mạng con | Vai trò |
 |---|---|
-| 10.9.0.0/24 | Controller LAN (Switch32): vManager/vSmart/vBond/Win/vEdge65 |
+| 10.9.0.0/24 | Controller LAN (Switch32): vManager/vSmart/vBond/Win |
 | 10.9.1.0/24 | Controller uplink Cloud (Switch61) |
-| 203.0.113.244/30 | vEdge65 WAN ↔ Switch32 |
+| 203.0.113.244/30 | (cũ) vEdge65 WAN ↔ Switch32 — gỡ 03/10/2026 khi vEdge65 chuyển sang Site 500 |
 | 203.0.113.248/30 | Switch32 ↔ Internet |
 | 100.64.255.248/30 | Switch32 ↔ MPLS |
 
@@ -664,12 +665,13 @@ graph TB
 | Mạng con | Vai trò |
 |---|---|
 | 203.0.113.0/24 | Public cloud (Internet Gi0/0 = **DHCP** từ EVE host, cấm IP tĩnh; vBond NAT 1:1 → 203.0.113.100) |
-| 203.0.113.0/30, .4/30, .8/30, .12/30, .16/30 | Transit Internet ↔ vEdge (mỗi site 1 link) |
+| 203.0.113.0/30, .4/30, .8/30, .12/30, .16/30, .20/30 | Transit Internet ↔ vEdge (mỗi site 1 link; .20/30 = Site 500) |
 | 100.64.254.0/30 | Internet ↔ MPLS (backbone SP) |
 | 100.64.100.0/30, 100.64.100.4/30 | MPLS ↔ vEdge Site 100 |
 | 100.64.200.0/30 | MPLS ↔ vEdge Site 200 |
 | 100.64.30.0/30 | MPLS ↔ vEdge Site 300 |
 | 100.64.40.0/30 | MPLS ↔ vEdge Site 400 |
+| 100.64.50.0/30 | MPLS ↔ vEdge Site 500 |
 
 ##### BGP ASN & Peering (Service Provider)
 
@@ -681,11 +683,12 @@ graph TB
 | **65010** | vEdge1/2-S200 | Site 200 (Cần Thơ) |
 | **65020** | vEdge1/2-S300 | Site 300 (Đà Nẵng) |
 | **65030** | vEdge1/2-S400 | Site 400 (Nha Trang) |
+| **65040** | vEdge65 (Site 500) | Site 500 — neighbor đã khai phía SP (03/10/2026), vEdge chưa cấu hình |
 | — | Switch32 (site 900) | **Static CE-PE** theo phạm vi thiết kế của vùng controller |
 
 - Backbone SP: eBGP `64511 ↔ 64512` trên 100.64.254.0/30; mỗi ISP quảng bá **transit /30 của mình** cho ISP kia.
 - CE-PE: mỗi vEdge eBGP với ISP của transport (Internet TLOC ↔ AS 64511, MPLS TLOC ↔ AS 64512); ISP gửi `default-originate` cho khách hàng.
-- Site 900 (Switch32 + vEdge65): giữ static routing theo phạm vi thiết kế; Switch32 hiện dùng IOL High Iron và thực hiện các SVI VLAN 10/250/251/252.
+- Site 900 (Switch32): giữ static routing theo phạm vi thiết kế; Switch32 hiện dùng IOL High Iron và thực hiện các SVI VLAN 10/250/251/252.
 
 ### 2.2. Bảng kết nối cổng chi tiết (thiết bị — cổng — IP)
 
@@ -811,8 +814,7 @@ graph TB
 | 2 | vSmart — eth0 = 10.9.0.11/24 | Switch32 — Gi0/1 = — | 10.9.0.0/24 | Controller LAN |
 | 3 | vBond — ge0/0 = 10.9.0.12/24 | Switch32 — Gi0/0 = — | 10.9.0.0/24 | Controller LAN |
 | 4 | Win (Quản trị) — e0 = 10.9.0.20/24 (gw 10.9.0.2) | Switch32 — Gi0/3 = — | 10.9.0.0/24 | Máy quản trị truy cập vManager |
-| 5 | vEdge65 — ge0/1 = 10.9.0.100/24 | Switch32 — Gi1/3 = — | 10.9.0.0/24 | LAN vEdge65 (VPN 512) |
-| 6 | vEdge65 — ge0/0 = 203.0.113.245/30 | Switch32 — Gi1/2 = 203.0.113.246/30 | 203.0.113.244/30 | WAN vEdge65 (TLOC) |
+| 5–6 | *(đã gỡ 03/10/2026)* vEdge65 ge0/1, ge0/0 | Switch32 Gi1/3, Gi1/2 | — | vEdge65 chuyển sang Site 500 (mục 2.2.9) |
 | 7 | Internet — Gi0/2 = 203.0.113.250/30 | Switch32 — Gi1/0 = 203.0.113.249/30 | 203.0.113.248/30 | Uplink Internet của Controller |
 | 8 | MPLS — Gi0/1 = 100.64.255.250/30 | Switch32 — Gi1/1 = 100.64.255.249/30 | 100.64.255.248/30 | Uplink MPLS của Controller |
 | 9 | Switch32 — SVI VLAN 10 = 10.9.0.2/24 | — | 10.9.0.0/24 | Gateway Controller LAN |
@@ -840,6 +842,20 @@ graph TB
 | 10 | MPLS — Gi0/4 = 100.64.200.2/30 | vEdge1-S200 — ge0/2 = 100.64.200.1/30 | 100.64.200.0/30 | WAN MPLS vEdge1-S200 |
 | 11 | MPLS — Gi0/5 = 100.64.30.2/30 | vEdge1-S300 — ge0/0 = 100.64.30.1/30 | 100.64.30.0/30 | WAN MPLS vEdge1-S300 |
 | 12 | MPLS — Gi0/6 = 100.64.40.2/30 | vEdge1-S400 — ge0/0 = 100.64.40.1/30 | 100.64.40.0/30 | WAN MPLS vEdge1-S400 |
+| 13 | Internet — Gi0/8 = 203.0.113.22/30 | vEdge65 (S500) — ge0/0 = 203.0.113.21/30 | 203.0.113.20/30 | WAN Internet Site 500 |
+| 14 | MPLS — Gi0/7 = 100.64.50.2/30 | vEdge65 (S500) — ge0/1 = 100.64.50.1/30 | 100.64.50.0/30 | WAN MPLS Site 500 |
+
+#### 2.2.9. Site 500 — chi nhánh mới (đang triển khai, 03/10/2026)
+
+Thêm trên host 1 bằng GUI EVE: vEdge65 (node 65, chuyển từ Site 900) + SW-S500 (IOL L2, node 10) + VPC11/VPC12 (node 11/12). Phía SP đã cấu hình (Internet Gi0/8, MPLS Gi0/7, BGP neighbor AS 65040); vEdge65, SW-S500, VPC chưa cấu hình cho Site 500 — giá trị phía vEdge/LAN dưới đây là **dự kiến** theo quy ước octet 2 = site.
+
+| # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
+|---|---|---|---|---|
+| 1 | vEdge65 — ge0/0 = 203.0.113.21/30 | Internet — Gi0/8 = 203.0.113.22/30 | 203.0.113.20/30 | TLOC `biz-internet`, eBGP 65040 ↔ 64511 |
+| 2 | vEdge65 — ge0/1 = 100.64.50.1/30 | MPLS — Gi0/7 = 100.64.50.2/30 | 100.64.50.0/30 | TLOC `mpls`, eBGP 65040 ↔ 64512 |
+| 3 | vEdge65 — ge0/2 = (dự kiến 10.5.x.1/24) | SW-S500 — e0/0 = — | 10.5.x.0/24 | LAN Site 500 (VPN 1) |
+| 4 | SW-S500 — e0/1 = — | VPC11 — eth0 = (dự kiến DHCP .100–.199) | 10.5.x.0/24 | Hiện access VLAN 1 (mặc định) |
+| 5 | SW-S500 — e0/2 = — | VPC12 — eth0 = (dự kiến DHCP .100–.199) | 10.5.x.0/24 | Hiện access VLAN 1 (mặc định) |
 
 ### 2.3. Bảng IP theo từng thiết bị (tham khảo nhanh khi cấu hình)
 
@@ -848,13 +864,11 @@ graph TB
 | Thiết bị | Interface | IP Address | Subnet | Vai trò |
 |---|---|---|---|---|
 | **Switch61 (tầng trên)** | SVI | 10.9.1.1 | /24 | Gateway mạng cloud, nối vManager/vSmart/vBond |
-| **Switch32 (tầng dưới)** | SVI VLAN 10 | 10.9.0.2 | /24 | Gateway Controller LAN, nối SP + Win + vEdge65 |
+| **Switch32 (tầng dưới)** | SVI VLAN 10 | 10.9.0.2 | /24 | Gateway Controller LAN, nối SP + Win |
 | **vManager** | eth0 / eth1 | 10.9.0.10 / 10.9.1.10 | /24 | Quản lý & cấu hình tập trung |
 | **vSmart** | eth0 / eth1 | 10.9.0.11 / 10.9.1.11 | /24 | Điều khiển định tuyến overlay (OMP) |
 | **vBond** | ge0/0 / eth0 | 10.9.0.12 / 10.9.1.12 | /24 | Xác thực & onboard Edge (NAT 1:1 → 203.0.113.100) |
 | **Win (Quản trị)** | e0 | 10.9.0.20 | /24 | Máy quản trị truy cập vManager |
-| **vEdge65** | ge0/1 | 10.9.0.100 | /24 | LAN vEdge Site 900 (VPN 512) |
-| **vEdge65** | ge0/0 | 203.0.113.245 | /30 | WAN vEdge Site 900 (TLOC) |
 
 #### 2.3.2. Network Services — Campus chính
 
@@ -1072,7 +1086,7 @@ Có 2 phương án định tuyến tại chi nhánh: **(A) Brand-FW (ASAv) làm 
 | Đà Nẵng (300) | vEdge2 | 10.200.30.2 | 203.0.113.13/30 (ge0/0) | — | 1 |
 | Nha Trang (400) | vEdge1 | 10.200.40.1 | — | 100.64.40.1/30 (ge0/0) | 1 |
 | Nha Trang (400) | vEdge2 | 10.200.40.2 | 203.0.113.17/30 (ge0/0) | — | 1 |
-| Controller (900) | vEdge65 | 10.200.90.1 | 203.0.113.245/30 (ge0/0) | — | 1 |
+| Site 500 (dự kiến) | vEdge65 | 10.200.50.1 (config hiện tại còn 10.200.90.1) | 203.0.113.21/30 (ge0/0) | 100.64.50.1/30 (ge0/1) | 2 |
 
 > **Lưu ý màu TLOC (`tunnel-interface color`) — bài học 30/08/2026:** `color` phải khớp transport thực tế: WAN **Internet** (203.0.113.x) → **`biz-internet`**; WAN **MPLS** (100.64.x) → **`mpls`**. Trước đây vEdge2-S200/S300/S400 khai nhầm `color mpls` trên WAN Internet → fabric không có TLOC `biz-internet` cho chi nhánh → mọi tunnel **biz-internet ↔ MPLS** Down, GUI Health đỏ/QoE thấp. Đã sửa live (30/08/2026) + đồng bộ payload nhúng `.unl` (id 40/41/42). Kiểm tra: `show omp tlocs` thấy TLOC đúng màu, `show bfd sessions` cross-color lên.
 

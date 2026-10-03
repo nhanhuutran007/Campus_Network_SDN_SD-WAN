@@ -5,9 +5,10 @@
 ## Kiểm tra cục bộ đã làm (20/09, đáng tin nhất)
 
 - `.unl`: 67 node, 100 network, **47** `config="1"` = 47 config nhúng (23/09: VPC 18/47/52/53 → PC Linux); `unl_tool.py validate` **ĐẠT**.
+- **03/10/2026 — `.unl` kéo từ host 1 (md5 `5c37b95d…`, sửa bằng GUI 17:17)**: **70 node / 103 network**, vẫn 47 `config="1"`, config nhúng không đổi. Mới: cụm Site 500 — `SW-S500` (IOL L2, node **10**, `config="0"`) + `VPC11`/`VPC12` (11/12), net 93/97/98; vEdge65 chuyển từ Switch32 (e1/2, e1/3 bị gỡ) sang ge0/0→Internet Gi0/8 (net 53), ge0/1→MPLS Gi0/7 (net 92), ge0/2→SW-S500 (net 93). Node 9 bỏ `-serial telnet`. Còn lại chỉ dời vị trí. Đã cập nhật chuẩn 70/103 (`unl_tool.py`), bảng node-id, thiết kế, config SP; còn phải cấu hình vEdge65 thành Site 500 (system-ip/site-id/WAN/BGP 65040), SW-S500 và VPC, rồi `embed` lại config 65 — chi tiết ở `topology-and-conventions.md` mục Site 500.
 - `unl_tool.py drift`: **12/51** config nhúng lệch file `configs/` — Brand-FW 37/38/39, SW55–60, SwitchBrand 62/63/64 (lệch nội dung); Core-SW1/2, vEdge1-S400 (31), Switch61 (khác EOL/khoảng trắng). Chưa quyết định bản nào chuẩn.
 - Working tree có thay đổi **chưa commit**: `Campus-OVS-restore.sh` (bootstrap VLAN 99 theo cây), 6 file `systemd/ovs-nodes/*.env`, `campus_switch_13.py` (~650 dòng đổi), `campus-ovs-restore.service`, `Core-SW1/2 config.cfg` (chỉ newline), `Web-Server/setup.sh`. Chưa xác định đã deploy lên node nào.
-- File chưa track: `HuongDan/PhucHoiKetNoi_2_vEdge_Site100.txt` (đáng commit), `inspect_dist_console.py`, `n68_tagc.png` (ảnh chụp màn hình, chưa rõ còn cần), `.opencode/skills/campus-network-lab/summaries/`.
+- File chưa track: `HuongDan/PhucHoiKetNoi_2_vEdge_Site100.txt` (đáng commit), `.opencode/skills/campus-network-lab/summaries/`.
 
 ## Đã hoàn tất (theo ghi nhận, kiểm live khi cần)
 
@@ -22,7 +23,7 @@
 - **6/6 OVS kết nối Ryu, ổn định, 11 link Dist UP.** Đã kiểm chứng: restart Ryu (6/6 lên trong ~15 s); reboot từng Access 68/66/70/69 (~2,5 phút); reboot Dist-SW2 với 4 link Access cắm (~105 s); **dừng hẳn Dist-SW1**: 5 switch còn lại giữ kết nối, bật lại thì tự phục hồi 6/6 (~2 phút). pps cao nhất mọi tap trong bài thử cuối: 365.
 - **Nguyên nhân gốc (đã chứng minh):** OVS **in-band control** tự cài flow ẨN action `NORMAL` cho ARP khi chưa kết nối controller (log `in_band|WARN|br0: cannot find route for controller`) → flood ARP broadcast của controller ra mọi cổng → storm ~200.000 gói/s mỗi khi một OVS boot. Đã tắt: `other_config:disable-in-band=true` trong script restore của cả 6 node. Chi tiết + cách nhận biết: `sdn-ryu-ovs.md`.
 - **Các nguyên nhân phụ đã sửa:** flow NORMAL bootstrap; `tag=99` của patch chỉ có tác dụng với NORMAL (Access dùng flow cố định cookie `0xba5f` priority 45000 gán/bóc tag; Dist dùng `br-mgmt.99` nên giữ nguyên); `OFPFC_DELETE` không xóa được TREE-BLOCK (đổi `DELETE_STRICT`); `_flush_output_port` xóa nhầm flow cố định của Access (giới hạn cookie 0); guard VLAN 99 ở ens8 chặn sw5 về controller (đã gỡ — Access là nút lá nên không có vòng).
-- **App Ryu (node 9, md5 `8d4b2e53…`, khớp repo):** `TCP_USER_TIMEOUT` 15 s; failover chỉ khi ping sw5 thất bại 3 lần **và sw8 đang kết nối**; xóa bootstrap theo cookie `0xba5e`. Script đang chạy trên 6 OVS: `configs/01-Site100-Campus/ovs-deployed/` (md5 Access `8eeb6adb…`, Dist `a84768d6…`); bản Access cũ ở `backup.md`.
+- **App Ryu (node 9, md5 `8d4b2e53…`, khớp repo):** `TCP_USER_TIMEOUT` 15 s; failover chỉ khi ping sw5 thất bại 3 lần **và sw8 đang kết nối**; xóa bootstrap theo cookie `0xba5e`. Script đang chạy trên 6 OVS: `configs/01-Site100-Campus/ovs-deployed/` (md5 Access `8eeb6adb…`, Dist `a84768d6…`); bản Access cũ ở `configs/01-Site100-Campus/ovs-deployed/backup-restore-cu.md`.
 - **Còn mở:** (1) ~~Core-SW1/2 + Farm~~ ĐÃ đồng bộ live → `configs/` (20/09: prune VLAN 99 nhánh phụ, `spanning-tree vlan 99` priority 8192/12288); `.unl` trong repo CHƯA embed lại (`.unl` chỉ đồng bộ một chiều host 1 → repo) nên `unl_tool.py drift` sẽ báo lệch 3 node này. (2) 12/51 config nhúng lệch `configs/` (chi nhánh). (3) Mật khẩu OVS (VNC) chưa biết — thao tác bằng ghi đĩa offline. (4) Repo chưa commit. (5) Nên thử reboot **cả host EVE** (cold start toàn lab) để chắc thứ tự khởi động.
 
 ## Cập nhật tối 20/09/2026 — DHCP + failover data-plane (để tiếp tục 21/09)
@@ -42,7 +43,7 @@
 **Việc tiếp theo (thứ tự đề xuất):**
 1. Sửa failover data-plane (ens10 sw8) + thêm log RECOVERY; deploy app (`deploy_app`: gz+b64 qua serial node 9 → md5 → `cp` → `systemctl restart campus-ryu`); cần quyền chạy lệnh restart/ghi đĩa như đã được cho.
 2. Thử lại có kiểm soát: dừng node 5 → đo DHCP + xem VRRP/ARP trên 2 Core → bật node 5 → xác nhận failback 6/6 (làm khi VPC đang chạy để lặp đúng điều kiện lỗi).
-3. Thử cold-start cả lab (host EVE) để kiểm thứ tự boot; commit repo (đang có nhiều thay đổi chưa commit: app, `ovs-deployed/`, `backup.md`, Core/Farm config, skill `.claude/`).
+3. Thử cold-start cả lab (host EVE) để kiểm thứ tự boot; commit repo (đang có nhiều thay đổi chưa commit: app, `ovs-deployed/`, Core/Farm config, skill `.claude/`).
 4. Nếu còn thời gian: embed lại config Core-SW1/2 + Farm vào `.unl` (theo quy tắc host 1 → repo), 12/51 config nhúng lệch chi nhánh, báo cáo Chương 4/5 (thêm nguyên nhân storm in-band + kết quả kiểm thử).
 
 **Lưu ý vận hành đã học hôm nay:** (a) khi dừng sw8 hoặc sw5, đường quản trị đứt tạm — Ryu chỉ failover nếu sw8 đang kết nối; (b) đọc đĩa node đang chạy bằng guestfish có thể ra dữ liệu cũ — dừng node rồi đọc; (c) `vpcs`: `ip dhcp -r` rồi `ip dhcp`; console VPC = `33536+id`; (d) lệnh dài qua `paramiko exec` cần bọc bằng nháy đơn để tránh lỗi quoting; (e) script tạm nằm ở scratchpad phiên (`eve_ssh.py`, `console9.py`, `ios.py`, `deploy_app.py`, `node_patch.sh`…) có thể mất — dựng lại theo `console-automation.md` và `sdn-ryu-ovs.md`.
@@ -116,3 +117,15 @@ Ghi: ngày, việc đã làm + **bằng chứng** (lệnh + kết quả), việc
 - **PC 18 hỏng filesystem** (hậu quả sửa offline `nsswitch.conf` ngày 23/09): dừng ở `(initramfs)`. Đã backup đĩa `/root/unl-backups/pc18-before-fsck-20260924-1934.qcow2`, chạy `fsck -y` (người dùng cho phép), boot OK; `/etc/nsswitch.conf` bị mất → tạo lại nội dung mặc định Ubuntu 18.04 (bản cũ nằm ở `/lost+found/#145036`). **Bài học:** không sửa đĩa guest Linux bằng guestfish khi chưa tắt sạch VM.
 - **VẤN ĐỀ MỞ:** PC 18 (VLAN 40, DHCP `10.1.40.102`, gateway `10.1.40.1`) phân giải DNS được (`mail`/`www.campus.internal`) nhưng **TCP 587/143 tới Mail 10.1.1.11 timeout** (ping chưa có kết quả rõ). Chi nhánh → DMZ thì bình thường, node 72 (VLAN 90) → Web cũng được. Chưa kịp capture trên FW vì lab đã tắt. Việc cần làm khi bật lại: `show route 10.1.40.0` trên FW, `capture` inside/dmz cho host 10.1.40.102, kiểm Core (VRRP VLAN 40, OSPF quảng bá 10.1.40.0/24) và flow Ryu cho VLAN 40.
 - **Test mail "mỗi máy một tài khoản"** (47 yte@, 53 taichinh@, 52 luhanh@, 18 hanhchinh@): hướng dẫn đã gửi người dùng; chưa thực hiện.
+
+## Đồng bộ host 2 (27/09/2026, host 2 = 10.0.227.112, tenant 0)
+
+- `.unl` host 2 = repo = host 1 (md5 `f2d471f4…`); bản cũ host 2 ở `/root/unl-backup/h2-before-sync-20260927.unl`. Trước đó host 2 **chưa từng start node nào**.
+- **Đã đồng bộ và so live với host 1** (start → dán → `write memory` → so `show run` → stop, từng node): IOL 32, 55–63, 61, Core 3/4 (theo repo — host 1 đang tắt, nvram 19/09 cũ hơn repo 20/09); vIOS 26/27 (thêm `no shutdown`, route `10.9.0.0/16`; Internet Gi0/0 để `dhcp` vì LAN khác); ASAv 1+2 (HA đồng bộ, Standby Ready), Brand-FW 37/38/39 (theo running-config host 1: SLA 10 + track 1). Còn lệch chỉ về hiển thị (thứ tự `inspect`, `no login` vty Switch32).
+- **Không làm được**: node 64 (IOL id=0 ở tenant 0, xem `eve-ng-ops.md`).
+- **Đã copy đĩa (27/09 chiều, md5 hai đầu + `qemu-img check` sạch)**: base `linux-ubuntu-ovs-16p` + image `linux-ubuntu-18.04-server` (thay/thêm trên host 2), overlay Access OVS 66/68/69/70, vEdge65, PC Linux 18/52/53, Win 36/73 (các node này đang TẮT trên host 1).
+- **Cập nhật thêm**: Core 3/4 khớp host 1 100% (timezone + vty login); Switch61 khớp (bật tạm trên host 1 để đọc rồi tắt); FW 1+2 HA có ACL `INSIDE_OUT`. Standby host 1 đang `Failed` nên thiếu ACL này — host 2 đúng hơn.
+- **Đã copy thêm (27/09 tối, tắt tạm từng node trên host 1 → copy → bật lại)**: PC 47, vSmart 34, vBond 35, 8 vEdge, Mail 13, Web 22, DHCP/DNS 72, controller 9, Dist-SW 5/8; Syslog 25 (đang tắt). Sau đó host 1: 8/8 vEdge OMP up, whitelist vSmart/vBond giữ đủ 8, Ryu [5, 8] + ONOS active. Tất cả đĩa trên host 2 `qemu-img check` sạch; vEdge1-S200 boot + login OK trên host 2. DMZ 7/Farm 24 khớp host 1.
+- **Không đồng bộ**: vManage 33 (32 GB RAM, đĩa ~50 GB), vEdge65 (người dùng bỏ qua), SwitchBrand-S400 64 (tenant 0).
+- Ngoài phạm vi (agent khác): DMZ + Server Farm Site 100 (7, 13, 22, 24, 25, 72).
+- Repo `configs/` đã sửa theo host 1 (chưa commit): Internet/MPLS route /16, SW57/SW60 e0/0, Switch32 timezone, Brand-FW SLA/track, FW-ASAv bỏ 2 lệnh `failover … management` không hợp lệ, SwitchServerFarm `trunk encapsulation dot1q`.

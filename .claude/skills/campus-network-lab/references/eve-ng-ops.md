@@ -71,9 +71,13 @@ Wrapper trả 0 nhưng node không chạy: nguyên nhân thường là `.lock` 0
 ## Host 2 dự phòng (EVE 6.7.5, USB boot trong VMware)
 
 - IP đổi theo mạng nơi đặt laptop (đã thấy 192.168.2.18 → 10.0.239.137 → 10.0.227.112): không kết nối được ≠ host chết, hỏi IP mới.
-- Host 1 không với tới host 2 trực tiếp → đồng bộ qua PC trung gian (SFTP get từ host 1 → put lên host 2): tải `.unl` + thư mục node config → kiểm tra bản local (67 node / 47 `config="1"` / 47 config nhúng / 100 network) → upload → `chown -R root:root`, dir 755, file 644 → kiểm tra lại trên host 2 → **xoá thư mục tạm trên PC**.
-- Khi start CLI trên host 2 dùng `-T 0` (GUI 6.7.5 quản lý ở tenant 0). Dùng `-T 6` sẽ tạo qemu song song và xung đột port.
-- Image của host 2 đã đủ (asav, vios, viosl2, IOL + iourc, vtedge/vtmgmt/vtsmart/vtbond 20.10.1, win7, `linux-ubuntu-ovs-16p`, `winserver-S2012-R2-x64`…).
+- Host 1 không với tới host 2 trực tiếp → đồng bộ qua PC trung gian (SFTP get từ host 1 → put lên host 2): tải `.unl` + thư mục node config → kiểm tra bản local (70 node / 47 `config="1"` / 47 config nhúng / 103 network, từ 03/10/2026) → upload → `chown -R root:root`, dir 755, file 644 → kiểm tra lại trên host 2 → **xoá thư mục tạm trên PC**.
+- Khi start CLI trên host 2 dùng `-T 0` (GUI 6.7.5 quản lý ở tenant 0; `dpkg` báo eve-ng 6.2.0-4). Dùng `-T 6` sẽ tạo qemu song song và xung đột port. Console tenant 0 = `32768 + id`.
+- Tài nguyên: 8 vCPU, **8 GB RAM** → bật từng node rồi tắt; vManage (`ram=32768` trong `.unl`) không chạy nổi trên host 2.
+- **IOL device-id = (node-id×16 + tenant) mod 1024** → ở tenant 0, **node 64 (SwitchBrand-S400) ra id 0 = không hợp lệ**, `iol_wrapper` báo `Cannot open AF_UNIX sockets` và chết. Host 1 (tenant 6) chạy bình thường. Chỉ khắc phục được bằng đổi tenant hoặc node-id — chưa làm.
+- **Base image khác host 1** (27/09/2026): `linux-ubuntu-ovs-16p` (cùng kích thước, khác nội dung) và `asav-9-20-2-2` (host 1 lớn hơn). Overlay qcow2 copy từ host 1 chỉ dùng được khi base giống hệt ⇒ đã thay base ASAv bằng bản host 1 (backup bản cũ ở `/root/base-backup-20260927/`); base OVS chưa thay. Các base còn lại (vtedge/vtsmart/vtbond/vtmgmt, vios, win7, winserver) đã so md5 toàn file: giống nhau. Thiếu image `linux-ubuntu-18.04-server` (node 18/22/47/52/53).
+- Relay host 1 → PC → host 2 chỉ ~1,5 MB/s; nén `gzip -1` phía host 1 nhanh ~4×. Copy overlay của node **đang chạy** trên host 1 không nhất quán — phải tắt node đó trước.
+- Kiểm chứng đồng bộ tốt nhất: so `show running-config` live host 1 (console `33536+id`, chỉ đọc) với host 2. Sau khi dump xong phải để console host 1 sạch (không kẹt `--More--`: IOS dùng `terminal length 0`, ASA `terminal pager 0`; dán config ASA có `pager lines 24` sẽ bật lại pager).
 
 ## Truy cập vManage GUI từ xa
 

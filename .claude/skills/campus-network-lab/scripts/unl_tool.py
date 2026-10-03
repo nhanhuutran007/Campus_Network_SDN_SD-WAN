@@ -168,7 +168,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
         warnings.append("File .unl có CRLF — bản chuẩn trong repo dùng LF; kiểm tra công cụ đã ghi lại file")
 
     print(f"File: {path}")
-    print(f"  node={len(nodes)} (chuẩn 67)  network={len(networks)} (chuẩn 100)  "
+    print(f"  node={len(nodes)} (chuẩn 70)  network={len(networks)} (chuẩn 103)  "
           f'config="1"={len(flagged)} (chuẩn 47)  config nhúng={len(embedded)}')
     for w in warnings:
         print(f"CẢNH BÁO: {w}")

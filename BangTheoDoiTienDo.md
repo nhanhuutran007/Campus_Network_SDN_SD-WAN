@@ -32,7 +32,7 @@
 
 | # | Hạng mục | Tình trạng | Bằng chứng / ghi chú |
 |---|---|---|---|
-| 1–3 | Khảo sát, lý thuyết SDN/SD-WAN | ✅ Xong | Lý thuyết + ghi chú lỗi thực tế (`Giai_thich_Tunnel_SD-WAN.md`) |
+| 1–3 | Khảo sát, lý thuyết SDN/SD-WAN | ✅ Xong | Lý thuyết + ghi chú lỗi thực tế (`HuongDan/Giai_thich_Tunnel_SD-WAN.md`) |
 | 4–6 | Thiết kế tổng thể, IP/VLAN/ASN, quy hoạch node | ✅ Xong | `campus_network_sdn_sdwan.md`, `configs/README.md`; `.unl` 67 node / 47 config nhúng, `unl_tool.py validate` ĐẠT |
 | 7 | Core/Dist/Access, VRRP, OSPF | ✅ Xong | OSPF FW↔Core đủ route 10.1.x (kiểm `show route` trên FW 23/09) |
 | 8 | ASAv HA + ASDM | ✅ Xong | `show failover`: Primary Active / Secondary Standby Ready; luật mới tự đồng bộ sang Standby |

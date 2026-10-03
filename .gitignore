@@ -22,3 +22,11 @@ tools/*.exe
 
 # File khoa tam cua Word/Office khi dang mo tai lieu
 ~$*
+*.lof
+*.lot
+*.blg
+*.synctex.gz
+
+# Python cache
+__pycache__/
+*.pyc

@@ -49,7 +49,7 @@ def send(ch, line, wait=0.4):
 
 Đăng nhập Viptela/Linux: drain tới `login:` → gửi user → drain tới `Password:` → gửi mật khẩu → drain tới prompt. Nhận `Login incorrect` thường do gửi sai trình tự, đừng vội kết luận sai mật khẩu (login sai nhiều lần → khoá tài khoản ~15 phút).
 
-Ví dụ hoàn chỉnh: `inspect_dist_console.py` ở gốc repo (telnet + marker + đăng nhập `eve@ovs`; file chưa track).
+Ví dụ hoàn chỉnh: `scripts/inspect_dist_console.py` trong skill (telnet + marker + đăng nhập `eve@ovs`; mật khẩu lấy từ biến môi trường `OVS_PASSWORD`).
 
 ## Hành vi theo nền tảng
 
@@ -58,7 +58,7 @@ Ví dụ hoàn chỉnh: `inspect_dist_console.py` ở gốc repo (telnet + marke
 | IOL IOS | Enter → `enable` → `terminal length 0` | `write memory`; `show vlan brief`, `show interfaces trunk` | `switchport trunk encapsulation dot1q` **trước** `switchport mode trunk`; `vtp mode off` **trước** khối `vlan`; config nén khi lưu (running ≈1276 B → nvram ≈813 B) |
 | ASAv | chờ prompt → `enable` | `write memory`; `show failover`, `show dhcpd state` ("Configured for DHCP SERVER") | Lần đầu "enable password is not set" → gửi mật khẩu 2 lần (chờ console idle ~1,2 s giữa hai lần). HA: config tự replicate, đừng cấu hình như hai máy độc lập |
 | vIOS (Internet/MPLS) | Enter để thoát màn hình ANSI; `terminal length 0` | `write memory` | Phải `terminal length 0` (phím `!` chỉ thoát pager trên Viptela). `ip address dhcp` kẹt ("DHCP is already running") → không gỡ; phải wipe+start đúng node. `default-originate` trong address-family |
-| vEdge/Viptela | chờ `login:` (console hay chỉ hiện ANSI title → gửi Enter) | `commit`; `show control connections`, `show running-config` | `screen-length 0`. Lấy config dài: pager `--More--` gửi `!` (không dùng space/Ctrl-L). Không để config dở chưa commit. Chi tiết: `sdwan-viptela.md` |
+| vEdge/Viptela | chờ `login:` rồi **chờ thêm ~3 phút sau boot** (login: hiện trước khi confd/AAA sẵn sàng ⇒ `Login incorrect` dù mật khẩu đúng; đã gặp 27/09 — không thử lại liên tục, dễ khoá 15 phút); chờ đúng `Password:` trước khi gửi; (console hay chỉ hiện ANSI title → gửi Enter) | `commit`; `show control connections`, `show running-config` | `screen-length 0`. Lấy config dài: pager `--More--` gửi `!` (không dùng space/Ctrl-L). Không để config dở chưa commit. Chi tiết: `sdwan-viptela.md` |
 | VPCS | chờ `VPCS>` | `ip dhcp` rồi `ip` | `ip dhcp` in menu help = đã có IP; chỉ `ip` mới là kết quả quyết định. DHCP server phải boot xong |
 | Linux/OVS, controller | serial telnet (node 9) hoặc VNC | `ovs-vsctl show`, `ovs-ofctl -O OpenFlow13 dump-flows br0` | Không mở SSH (probe :22 CLOSED) — mọi thao tác qua console |
 | Windows | VNC/GUI | kiểm tra IP, service, firewall | Node `config="0"`; GUI do người dùng làm |

@@ -10,7 +10,7 @@
 | Báo cáo LaTeX | `BAOCAO_DACNTT_LVT/` (`main.tex`, `content/Chapter1–5.tex`, `config/preamble.tex`, `tailieuthamkhao.bib`, `appendix.tex`) | `pdflatex` + `babel[vietnamese]` (MiKTeX); Chương 3 (mô hình đề xuất) lớn nhất, Chương 4 triển khai/kiểm thử/đánh giá, Chương 5 kết luận |
 | Slide báo cáo tiến độ | `SlideTrinhBayDA/` (Beamer, `main.tex`, `Chapter/chapter1–5.tex`) | Chương 5 = "Kết luận báo cáo tiến độ" |
 | Bảng theo dõi tiến độ | `BangTheoDoiTienDo.md` (20 hạng mục, cập nhật tới 05/09/2026) + `Template_Timeline_Tong_quan_08-08_den_21-11-2026.xlsx` | Cột "nhóm tự điền" (4) **để trống có chủ đích** — không điền thay |
-| Giải thích tunnel SD-WAN | `Giai_thich_Tunnel_SD-WAN.md` | Tài liệu giải thích cho phần lý thuyết |
+| Giải thích tunnel SD-WAN | `HuongDan/Giai_thich_Tunnel_SD-WAN.md` | Tài liệu giải thích cho phần lý thuyết |
 | Hướng dẫn vận hành | `HuongDan/` | Ryu/OVS, ký/add vEdge, phục hồi vEdge S100, xem GUI vManager |
 | README/đề tài | `README.md`, `detai.md` | Tổng quan đề tài, người thực hiện |
 

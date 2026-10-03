@@ -1,6 +1,6 @@
 # SD-WAN Viptela 20.10.1: controller, PKI, onboarding, sự cố
 
-Nguồn: `HuongDan/cách ký và add vedge.md`, `HuongDan/PhucHoiKetNoi_2_vEdge_Site100.txt` (xác minh 19/09/2026), `1. Tạo CSR trên thiết bị vEdge.txt`, `configs/05-Site900-*`. Không có mật khẩu ở đây — xem `console-automation.md` mục tài khoản.
+Nguồn: `HuongDan/cách ký và add vedge.md`, `HuongDan/PhucHoiKetNoi_2_vEdge_Site100.txt` (xác minh 19/09/2026), `HuongDan/1. Tạo CSR trên thiết bị vEdge.txt`, `configs/05-Site900-*`. Không có mật khẩu ở đây — xem `console-automation.md` mục tài khoản.
 
 ## Mục lục
 - Fabric và địa chỉ
