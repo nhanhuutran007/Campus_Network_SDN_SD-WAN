@@ -28,7 +28,8 @@ ryu-manager --ofp-tcp-listen-port 6653 campus_switch_13.py campus_noc_monitor.py
 | Khôi phục | Ping liên tục từ controller (chu kỳ 0,1–1 s), RTT + vùng mất gói, bảng sự kiện `detect/converge/total`, xuất CSV | 2 |
 | Lưu lượng | Mbps từng switch theo thời gian, bảng cổng (Mbps, pps, drop, %) | 4 |
 | VLAN | Thêm/xoá VLAN, gán cổng access trên Access (1 lệnh API), lịch sử thời gian triển khai, **đoạn IOS cho Core-SW1/2 do controller sinh**, bảng so sánh với cấu hình truyền thống | 1 |
-| Chính sách / Tải thiết bị / Hiệu năng | các giai đoạn 3–5 | 5, 4, 3 |
+| Chính sách | Thêm luật deny/allow (VLAN `vlan:N`, CIDR, IP; ip/icmp/tcp/udp; cổng; hai chiều; ưu tiên), bật/tắt/xoá, **bộ đếm gói khớp từng luật**, lịch sử thời gian áp toàn campus, mẫu dựng sẵn | 5 |
+| Tải thiết bị / Hiệu năng | các giai đoạn 4–5 | 4, 3 |
 
 ## REST
 
@@ -41,6 +42,8 @@ ryu-manager --ofp-tcp-listen-port 6653 campus_switch_13.py campus_noc_monitor.py
 | `POST /campus/linktest` | `{"link":"A1-D1","action":"down|up","mode":"silent|admin"}` |
 | `GET /campus/vlans` | VLAN, cổng access, cổng trống trên Access |
 | `POST /campus/vlan` | `{"action":"add|ports|delete","vid":50,"name":"Phong Lab","ports":["Access-SW1.ens7"]}` → sự kiện `vlan_*` (thời gian tới barrier) + `core_config` (IOS cho Core-SW1/2) |
+| `GET /campus/policies` | Luật + `packets`/`bytes` khớp (FlowStats theo cookie, 5 s) |
+| `POST /campus/policy` | `{"action":"add","rule":{"action":"deny","src":"vlan:10","dst":"vlan:40","proto":"icmp","bidir":true,"prio":100}}`; `{"action":"delete|enable|disable","id":1}` |
 | `GET/POST /campus/pinger` | `{"target":"10.1.40.102","action":"start|stop|reset|remove","interval":0.1}` |
 | `GET /campus/export/events.csv`, `/campus/export/pinger.csv?target=IP` | Xuất CSV cho báo cáo |
 
@@ -82,6 +85,32 @@ Kịch bản: thêm VLAN 50 "Phong Lab" (10.1.50.0/24) cho cổng `Access-SW1.en
 Nếu toàn bộ campus là switch truyền thống: thêm 2 Dist + các Access (VLAN, trunk allowed trên mọi trunk, cổng access) – SDN gói phần này vào 1 lệnh API, giữ lại phần L3 trên Core. Còn tay: scope DHCP trên DHCP-Server 72.
 
 **Lưu ý IOL:** xoá VLAN khi Core đang là VRRP Master bằng `no interface VlanX` gửi dồn đã làm Core-SW1 IOL crash (04/10/2026, tự lên lại sau khi start node 3; cây SDN tự phục hồi). Đoạn xoá do controller sinh nay theo thứ tự an toàn: `no vrrp` → `shutdown` → OSPF → trunk → `no interface` → `no vlan`.
+
+## Pipeline OpenFlow (từ giai đoạn 3)
+
+| Bảng | Ưu tiên | Nội dung |
+|---|---|---|
+| 0 | 65500 / 65000 | mô phỏng cắt liên kết / probe + ARP probe → controller |
+| 0 | 60000 | VLAN 99 tĩnh có hướng (Dist) |
+| 0 | 45000 | flow cố định quản trị của Access (`0xba5f`, script restore) |
+| 0 | 40000 | chặn cạnh ngoài cây (VLAN có tag) |
+| 0 | 20001–20999 | **chính sách**: deny → drop, allow → goto bảng 1 (chỉ trên 4 Access) |
+| 0 | 0 | goto bảng 1 |
+| 1 | 1 | unicast đã học (idle 300 s) |
+| 1 | 0 | table-miss → controller (L2 reactive) |
+
+## Kết quả đo mục tiêu 5 – chính sách tập trung (04/10/2026)
+
+Kịch bản `scripts/lab/sdn_policy_test.py`: luật deny ICMP hai chiều VLAN 10 ↔ VLAN 40, kiểm bằng VPC19 (10.1.10.100) → PC-HanhChinh-S100 (10.1.40.102).
+
+| Bước | Kết quả |
+|---|---|
+| Áp luật (1 lệnh API) | **8,0 ms** tới barrier của 4 Access (12 flow-mod) |
+| Khi luật đang áp | 10.1.40.102 **0/3**; gateway 10.1.10.1 và DHCP-Server 10.1.90.10 vẫn 3/3 |
+| Bộ đếm luật | 3 gói khớp |
+| Xoá luật | **5,2 ms**, thông lại 3/3 |
+
+Truyền thống tương đương: ACL trên SVI 2 Core (hoặc VACL từng switch) – mỗi luật × mỗi thiết bị nhiều lệnh CLI, không có bộ đếm tập trung.
 
 ## Bảo mật
 

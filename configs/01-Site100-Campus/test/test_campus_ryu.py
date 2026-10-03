@@ -54,7 +54,8 @@ ryu.lib.hub = hubmod
 ctl = types.ModuleType('ryu.controller')
 evm = types.ModuleType('ryu.controller.ofp_event')
 for n in ('EventOFPSwitchFeatures', 'EventOFPPortDescStatsReply', 'EventOFPPacketIn',
-          'EventOFPStateChange', 'EventOFPPortStatus', 'EventOFPBarrierReply'):
+          'EventOFPStateChange', 'EventOFPPortStatus', 'EventOFPBarrierReply',
+          'EventOFPFlowStatsReply'):
     setattr(evm, n, n)
 hdl = types.ModuleType('ryu.controller.handler')
 hdl.MAIN_DISPATCHER, hdl.DEAD_DISPATCHER, hdl.CONFIG_DISPATCHER = 'main', 'dead', 'config'
@@ -379,6 +380,74 @@ class CampusRyuTest(unittest.TestCase):
             self.app.api_vlan_apply('add', 60, 'x', ['Dist-SW1.ens4'])
         with self.assertRaises(ValueError):
             self.app.api_vlan_apply('add', 60, 'x', ['Access-SW1.ens4'])
+
+    def test_pipeline_two_tables(self):
+        f = self.dps[68].flows()
+        t0_miss = [m for m in f if m.table_id == 0 and m.priority == 0 and m.cookie == cs.CK_MISS]
+        t1_miss = [m for m in f if m.table_id == 1 and m.priority == 0 and m.cookie == cs.CK_MISS]
+        self.assertTrue(t0_miss and isinstance(t0_miss[0].instructions[0], parser.OFPInstructionGotoTable))
+        self.assertTrue(t1_miss)
+        dels = [m for m in f if m.command == ofp.OFPFC_DELETE]
+        self.assertTrue(all(m.table_id == ofp.OFPTT_ALL for m in dels))
+        # chan cay o bang 0 voi uu tien < 45000 (flow co dinh quan tri cua Access)
+        blk = [m for m in f if m.priority == cs.P_BLOCK and m.command == ofp.OFPFC_ADD]
+        self.assertTrue(blk and all(m.table_id == 0 for m in blk))
+        self.assertLess(cs.P_BLOCK, 45000)
+
+    def test_policy_add_stats_delete(self):
+        for dp in self.dps.values():
+            dp.sent = []
+        ev = self.app.api_policy_apply('add', {'name': 'Cach ly CNTT-HanhChinh', 'action': 'deny',
+                                               'src': 'vlan:10', 'dst': 'vlan:40', 'proto': 'icmp',
+                                               'bidir': True, 'prio': 100})
+        pid = ev['policy']
+        for d in cs.ACCESS:
+            adds = [m for m in self.dps[d].flows() if m.command == ofp.OFPFC_ADD
+                    and m.cookie == cs.CK_POLICY | pid]
+            self.assertEqual(len(adds), 2)                  # hai chieu
+            self.assertEqual(adds[0].priority, cs.P_POLICY + 100)
+            self.assertEqual(adds[0].instructions, [])      # deny -> drop
+            m = dict(adds[0].match.items())
+            self.assertEqual(m['ipv4_src'], ('10.1.10.0', '255.255.255.0'))
+            self.assertEqual(m['ip_proto'], 1)
+        for d in cs.DIST:
+            self.assertEqual([m for m in self.dps[d].flows() if m.cookie & cs.CK_POLICY_MASK == cs.CK_POLICY], [])
+        # allow -> goto bang 1; tcp dport
+        ev2 = self.app.api_policy_apply('add', {'action': 'allow', 'src': 'vlan:10',
+                                                'dst': '10.1.90.10', 'proto': 'tcp', 'dport': 443,
+                                                'prio': 200})
+        a = [m for m in self.dps[68].flows() if m.cookie == cs.CK_POLICY | ev2['policy']
+             and m.command == ofp.OFPFC_ADD][0]
+        self.assertIsInstance(a.instructions[0], parser.OFPInstructionGotoTable)
+        self.assertEqual(dict(a.match.items())['tcp_dst'], 443)
+        # bo dem goi: gom tu reply cua cac Access
+        for d in cs.ACCESS:
+            rep = parser.OFPFlowStatsReply(self.dps[d])
+            rep.flags = 0
+            rep.body = [parser.OFPFlowStats(table_id=0, duration_sec=1, duration_nsec=0, priority=20100,
+                                            idle_timeout=0, hard_timeout=0, flags=0,
+                                            cookie=cs.CK_POLICY | pid, packet_count=5, byte_count=500,
+                                            match=parser.OFPMatch(), instructions=[])]
+            self.app._flow_stats_handler(Ev(rep))
+        st = [r for r in self.app.api_policies() if r['id'] == pid][0]
+        self.assertEqual(st['packets'], 20)
+        # tat / xoa
+        self.app.api_policy_apply('disable', pid=pid)
+        self.assertFalse(self.app.policies[pid]['enabled'])
+        self.app.api_policy_apply('delete', pid=pid)
+        self.assertNotIn(pid, self.app.policies)
+        for bad in [{'action': 'x'}, {'proto': 'gre'}, {'proto': 'icmp', 'dport': 22},
+                    {'src': '10.1.300.0/24'}, {'prio': 5000}]:
+            with self.assertRaises(ValueError):
+                self.app.api_policy_apply('add', bad)
+        # chinh sach duoc cai lai khi Access ket noi lai
+        self.app.api_policy_apply('add', {'action': 'deny', 'src': 'vlan:20', 'dst': 'vlan:30'})
+        dp70 = self.dps[70]
+        dp70.sent = []
+        self.app.switches.pop(70)
+        self.app._port_desc_handler(portdesc(dp70))
+        self.assertTrue([m for m in dp70.flows() if m.cookie & cs.CK_POLICY_MASK == cs.CK_POLICY
+                         and m.command == ofp.OFPFC_ADD])
 
     def test_frame_from_blocked_port_ignored(self):
         dp8 = self.dps[8]

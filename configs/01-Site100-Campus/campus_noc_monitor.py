@@ -237,6 +237,7 @@ class CampusNocMonitor(app_manager.RyuApp):
                               ('/campus/topology', 'c_topology'), ('/campus/events', 'c_events'),
                               ('/campus/pinger', 'c_pinger_get'),
                               ('/campus/vlans', 'c_vlans'),
+                              ('/campus/policies', 'c_policies'),
                               ('/campus/export/events.csv', 'c_export_events'),
                               ('/campus/export/pinger.csv', 'c_export_pinger'),
                               ('/', 'index')]:
@@ -244,6 +245,7 @@ class CampusNocMonitor(app_manager.RyuApp):
             mapper.connect('noc', '/campus/linktest', action='c_linktest', **p)
             mapper.connect('noc', '/campus/pinger', action='c_pinger_post', **p)
             mapper.connect('noc', '/campus/vlan', action='c_vlan_post', **p)
+            mapper.connect('noc', '/campus/policy', action='c_policy_post', **p)
             self.logger.info('NOC: routes registered')
         except Exception as e:
             self.logger.warning('NOC: wsgi register fail: %s', e)
@@ -461,6 +463,18 @@ class NocController(ControllerBase):
         except Exception as e:
             return _err(str(e))
 
+    def c_policies(self, req, **kw):
+        s = self.m.sw()
+        return _json(s.api_policies() if s else [])
+
+    def c_policy_post(self, req, **kw):
+        s = self.m.sw()
+        try:
+            b = json.loads(req.body.decode('utf-8') if req.body else '{}')
+            return _json(s.api_policy_apply(b.get('action', 'add'), b.get('rule'), b.get('id')))
+        except Exception as e:
+            return _err(str(e))
+
     def c_pinger_get(self, req, **kw):
         return _json([t.stats() for t in self.m.pinger.targets.values()])
 
@@ -615,14 +629,34 @@ svg text{fill:var(--text);font-size:12px}.legend span{margin-right:14px;font-siz
   <div class="muted" style="font-size:12px;margin-bottom:6px">SDN: thoi gian tu luc goi API toi khi moi OVS bi anh huong tra barrier. Truyen thong (uoc tinh cung thay doi): moi Access + 2 Dist + 2 Core cau hinh tay qua CLI (vlan, name, trunk allowed tren moi trunk, cong access).</div>
   <table id="tb-vlanev"></table></div>
 </section>
-<section class="tab" id="t-policy"><div class="card"><h2>Chinh sach tap trung</h2><p class="muted">Giai doan 3.</p></div></section>
+<section class="tab" id="t-policy">
+ <div class="card"><h2>Them luat (ap dong thoi len 4 Access, bang 0 OpenFlow)</h2>
+  <div class="row" style="font-size:12px">Mau nhanh:
+   <button class="act" onclick="preset('deny','vlan:10','vlan:40','icmp','',1,'Cach ly CNTT - Hanh chinh (ICMP)')">Cach ly VLAN10-40 (ICMP)</button>
+   <button class="act" onclick="preset('deny','vlan:20','vlan:30','ip','',1,'Cach ly Toan-TK - Luat')">Cach ly VLAN20-30</button>
+   <button class="act" onclick="preset('deny','any','10.1.90.0/24','tcp','22',0,'Chan SSH vao Server Farm')">Chan SSH -> Server Farm</button>
+   <button class="act" onclick="preset('deny','vlan:40','any','tcp','23',0,'Chan Telnet tu Hanh chinh')">Chan Telnet tu VLAN40</button></div>
+  <div class="row" style="margin-top:8px">
+   <select id="p-act"><option value="deny">deny</option><option value="allow">allow</option></select>
+   nguon <input id="p-src" size="14" value="vlan:10"/> dich <input id="p-dst" size="14" value="vlan:40"/>
+   <select id="p-proto"><option>ip</option><option selected>icmp</option><option>tcp</option><option>udp</option></select>
+   cong <input id="p-dport" size="5"/> uu tien <input id="p-prio" size="4" value="100"/>
+   <label><input type="checkbox" id="p-bidir" checked/> hai chieu</label>
+   ten <input id="p-name" size="22"/>
+   <button class="act green" onclick="polAdd()">Ap dung</button></div>
+  <div class="muted" style="font-size:12px;margin-top:6px">Dia chi: any | vlan:N (= 10.1.N.0/24) | CIDR | IP. Uu tien lon hon thang (allow uu tien cao lam ngoai le cho deny). Luat khop IP tren Access: moi luong cua host deu di qua Access.</div></div>
+ <div class="card"><h2>Luat dang ap</h2><table id="tb-pol"></table></div>
+ <div class="card"><h2>Lich su ap chinh sach - thoi gian trien khai toan campus</h2>
+  <div class="muted" style="font-size:12px;margin-bottom:6px">SDN: 1 lenh API -> 4 Access xac nhan (barrier). Truyen thong (uoc tinh): ACL dat tren SVI cua 2 Core (L3) hoac VACL tren tung switch: moi luat x moi thiet bi = nhieu lenh CLI.</div>
+  <table id="tb-polev"></table></div>
+</section>
 <section class="tab" id="t-load"><div class="card"><h2>Tai Core / Distribution</h2><p class="muted">Giai doan 4 (OpenFlow + SNMP Core).</p></div></section>
 <section class="tab" id="t-perf"><div class="card"><h2>Hieu nang giua cac VLAN</h2><p class="muted">Giai doan 5.</p></div></section>
 </main><div id="toast"></div>
 <script>
 const TABS=[['overview','Tong quan'],['topo','Topology'],['recovery','Khoi phuc'],['traffic','Luu luong'],
  ['vlan','VLAN'],['policy','Chinh sach'],['load','Tai thiet bi'],['perf','Hieu nang']];
-const SOON={policy:'gd3',load:'gd4',perf:'gd5'};
+const SOON={load:'gd4',perf:'gd5'};
 let cur=localStorage.getItem('tab')||'overview';
 const nav=document.getElementById('nav');
 TABS.forEach(([id,l])=>{const b=document.createElement('button');b.id='nb-'+id;
@@ -707,6 +741,21 @@ function vlanTables(v){let h='<tr><th>VLAN</th><th>Ten</th><th>Mang</th><th>Cong
   const last=[...ve].reverse().find(x=>x.id===e.id);
   g+=`<tr><td>${tstr(e.ts)}</td><td><span class="b b-acc">${e.kind}</span></td><td>${e.detail}</td><td class="num">${fmt(e.converge_ms)}</td><td class="num">${e.switches==null?'-':e.switches}</td><td class="num">${e.flow_mods==null?'-':e.flow_mods}</td><td class="num">${devs}</td><td class="num">${cli}</td></tr>`});
  $('tb-vlanev').innerHTML=g}
+// ---- CHINH SACH ----
+function preset(a,s,d,pr,po,bi,n){$('p-act').value=a;$('p-src').value=s;$('p-dst').value=d;$('p-proto').value=pr;$('p-dport').value=po;$('p-bidir').checked=!!bi;$('p-name').value=n}
+async function polPost(body){const r=await J('/campus/policy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ if(r.error)toast('Loi: '+r.error);else toast(r.kind+' '+r.detail);setTimeout(refresh,700)}
+function polAdd(){polPost({action:'add',rule:{action:$('p-act').value,src:$('p-src').value,dst:$('p-dst').value,proto:$('p-proto').value,
+ dport:$('p-dport').value||null,prio:+$('p-prio').value||100,bidir:$('p-bidir').checked,name:$('p-name').value}})}
+function polTables(P){let h='<tr><th>#</th><th>Ten</th><th>Hanh dong</th><th>Nguon</th><th>Dich</th><th>Proto</th><th>Cong</th><th>2 chieu</th><th class="num">Uu tien</th><th class="num">Goi khop</th><th>Trang thai</th><th></th></tr>';
+ P.forEach(r=>{h+=`<tr><td>${r.id}</td><td>${r.name}</td><td><span class="b ${r.action==='deny'?'b-bad':'b-ok'}">${r.action}</span></td><td>${r.src}</td><td>${r.dst}</td><td>${r.proto}</td><td>${r.dport||'-'}</td><td>${r.bidir?'co':'-'}</td><td class="num">${r.prio}</td><td class="num">${r.packets||0}</td>
+  <td>${r.enabled?'<span class="b b-ok">bat</span>':'<span class="b b-idle">tat</span>'}</td>
+  <td><button class="act" onclick="polPost({action:'${r.enabled?'disable':'enable'}',id:${r.id}})">${r.enabled?'Tat':'Bat'}</button> <button class="act red" onclick="if(confirm('Xoa luat #${r.id}?'))polPost({action:'delete',id:${r.id}})">Xoa</button></td></tr>`});
+ if(!P.length)h+='<tr><td colspan="12" class="muted">Chua co luat</td></tr>';$('tb-pol').innerHTML=h;
+ const pe=EV.filter(e=>e.kind&&e.kind.indexOf('policy_')===0);
+ let g='<tr><th>Gio</th><th>Thao tac</th><th>Luat</th><th class="num">SDN (ms)</th><th class="num">Switch</th><th class="num">flow-mod</th><th class="num">Thiet bi CLI (truyen thong)</th></tr>';
+ pe.slice().reverse().forEach(e=>{g+=`<tr><td>${tstr(e.ts)}</td><td><span class="b b-acc">${e.kind}</span></td><td>${e.detail}</td><td class="num">${fmt(e.converge_ms)}</td><td class="num">${e.switches==null?'-':e.switches}</td><td class="num">${e.flow_mods==null?'-':e.flow_mods}</td><td class="num">2 Core + 6 switch</td></tr>`});
+ $('tb-polev').innerHTML=g}
 // ---- refresh ----
 let EV=[];
 async function refresh(){try{
@@ -733,6 +782,7 @@ async function refresh(){try{
   ports.forEach(p=>{h+=`<tr><td>${p.switch}</td><td>${p.name}</td><td class="num">${mbps(p.rx)}</td><td class="num">${mbps(p.tx)}</td><td class="num">${fmt(p.rxpkt,0)}</td><td class="num">${fmt(p.txpkt,0)}</td><td class="num">${fmt(p.rxdrop+p.txdrop,0)}</td><td class="num">${fmt(p.util,2)}</td><td><span class="b ${p.level==='OK'?'b-ok':p.level==='WARN'?'b-warn':'b-bad'}">${p.level}</span></td></tr>`});
   $('tb-ports').innerHTML=h}
  if(cur==='vlan'){VLANS=await J('/campus/vlans');vlanForm(VLANS);vlanTables(VLANS)}
+ if(cur==='policy'){polTables(await J('/campus/policies'))}
 }catch(e){console.log(e)}}
 show(cur);setInterval(refresh,2000);
 </script></body></html>"""

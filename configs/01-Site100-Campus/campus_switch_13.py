@@ -63,7 +63,7 @@ except ImportError:  # pragma: no cover
     class ofp_event(object):
         EventOFPSwitchFeatures = EventOFPPortDescStatsReply = None
         EventOFPPacketIn = EventOFPStateChange = EventOFPPortStatus = None
-        EventOFPBarrierReply = None
+        EventOFPBarrierReply = EventOFPFlowStatsReply = None
 
 APP_DIR = '/root/ryu-app'
 STATE_DIR = os.path.join(APP_DIR, 'state')
@@ -165,12 +165,18 @@ CORE_TIMEOUT = 3.5          # OVS<->Core: ~3 ARP that bai -> chet
 P_PROBE = 65000
 P_TEST_CUT = 65500          # mo phong cat lien ket "im lang"
 P_MGMT = 60000
-P_BLOCK = 100
-P_L2 = 1
+P_BLOCK = 40000             # chan canh ngoai cay (bang 0). Duoi 45000 = flow co dinh
+                            # VLAN 99 cua Access (0xba5f) -> khong cat duong quan tri
+P_POLICY = 20000            # + uu tien luat (1..999), bang 0
+P_L2 = 1                    # flow unicast hoc duoc (bang 1)
+T_CTRL = 0                  # bang 0: probe, quan tri, cay, CHINH SACH
+T_FWD = 1                   # bang 1: chuyen tiep L2 (hoc MAC, table-miss -> controller)
 CK_GUARD = 0x5d01
 CK_TREE = 0x5d02
 CK_TEST = 0x5d03
 CK_MISS = 0x5d00
+CK_POLICY = 0x5d100000      # | id luat (bo dem goi theo tung luat)
+CK_POLICY_MASK = 0xfffffffffff00000
 CK_BOOT_DIST = 0xba5e       # bootstrap Campus-OVS-restore.sh (Dist)
 COOKIE_ALL = 0xffffffffffffffff
 
@@ -243,6 +249,10 @@ def probe_mac(lid):
     return PROBE_MAC_BASE + '%02x' % list(LINKS).index(lid)
 
 
+def dpid_is_access(dpid):
+    return dpid in ACCESS
+
+
 def port_link(dpid, pname):
     for lid, l in LINKS.items():
         if l['a'] == (dpid, pname) or l['b'] == (dpid, pname):
@@ -277,6 +287,11 @@ class CampusSwitch13(_RyuApp):
         self.test_cut = {}          # lid -> mode dang mo phong
         self.core_mac = {}          # lid -> MAC SVI Core (hoc tu ARP reply)
         self.hosts = {}             # (vlan, mac) -> (dpid, cong access, ts)
+        self.policies = collections.OrderedDict()   # id -> luat
+        self.policy_stats = {}      # id -> {'packets':, 'bytes':, 'ts':}
+        self._stats_acc = {}        # dpid -> {pid: [pk, by]} (dang gom reply nhieu phan)
+        self._stats_by_dp = {}
+        self._policy_seq = 0
         self.root = None
         self.tree = set()
         self.parent = {}
@@ -288,9 +303,11 @@ class CampusSwitch13(_RyuApp):
         self._seq = 0
         self._pending_reason = None
         self._load_state()
+        self._load_policies()
         if _RyuApp is not object:
             hub.spawn(self._probe_loop)
             hub.spawn(self._liveness_loop)
+            hub.spawn(self._policy_stats_loop)
 
     # ================================================================
     #  Luu / nap trang thai (VLAN dong - giai doan 2 dung tiep)
@@ -407,9 +424,12 @@ class CampusSwitch13(_RyuApp):
         parser = dp.ofproto_parser
         ofp = dp.ofproto
         self.logger.info('Switch %s (%s) connect', dp.id, NODE_NAMES.get(dp.id))
+        # Pipeline: bang 0 (kiem soat) mac dinh -> bang 1 (chuyen tiep);
+        # bang 1 table-miss -> controller (L2 reactive).
+        self._add_flow(dp, 0, parser.OFPMatch(), [], cookie=CK_MISS, table=T_CTRL, goto=T_FWD)
         self._add_flow(dp, 0, parser.OFPMatch(),
                        [parser.OFPActionOutput(ofp.OFPP_CONTROLLER, ofp.OFPCML_NO_BUFFER)],
-                       cookie=CK_MISS)
+                       cookie=CK_MISS, table=T_FWD)
         dp.send_msg(parser.OFPPortDescStatsRequest(datapath=dp, flags=0))
 
     @set_ev_cls(ofp_event.EventOFPPortDescStatsReply, MAIN_DISPATCHER)
@@ -446,6 +466,8 @@ class CampusSwitch13(_RyuApp):
         self._delete_cookie(dp, 0)
         self._delete_cookie(dp, CK_TREE)
         self._delete_cookie(dp, CK_TEST)
+        self._delete_cookie(dp, CK_POLICY, CK_POLICY_MASK)
+        self._install_policies(dp)
         now = time.time()
         for lid in LINKS:
             a, b = link_nodes(lid)
@@ -500,27 +522,34 @@ class CampusSwitch13(_RyuApp):
     # ================================================================
     #  Flow helper
     # ================================================================
-    def _add_flow(self, dp, prio, match, actions, cookie=0, idle=0):
+    def _add_flow(self, dp, prio, match, actions, cookie=0, idle=0, table=T_CTRL,
+                  goto=None):
         parser = dp.ofproto_parser
         ofp = dp.ofproto
-        inst = [parser.OFPInstructionActions(ofp.OFPIT_APPLY_ACTIONS, actions)]
-        dp.send_msg(parser.OFPFlowMod(datapath=dp, priority=prio, match=match,
+        inst = []
+        if actions:
+            inst.append(parser.OFPInstructionActions(ofp.OFPIT_APPLY_ACTIONS, actions))
+        if goto is not None:
+            inst.append(parser.OFPInstructionGotoTable(goto))
+        dp.send_msg(parser.OFPFlowMod(datapath=dp, table_id=table, priority=prio, match=match,
                                       instructions=inst, cookie=cookie,
                                       idle_timeout=idle, command=ofp.OFPFC_ADD))
 
-    def _del_strict(self, dp, prio, match):
+    def _del_strict(self, dp, prio, match, table=T_CTRL):
         parser = dp.ofproto_parser
         ofp = dp.ofproto
-        dp.send_msg(parser.OFPFlowMod(datapath=dp, priority=prio, match=match,
+        dp.send_msg(parser.OFPFlowMod(datapath=dp, table_id=table, priority=prio, match=match,
                                       command=ofp.OFPFC_DELETE_STRICT,
                                       out_port=ofp.OFPP_ANY, out_group=ofp.OFPG_ANY))
 
-    def _delete_cookie(self, dp, cookie):
+    def _delete_cookie(self, dp, cookie, mask=COOKIE_ALL):
+        """Xoa theo cookie tren MOI bang (mac dinh Ryu dung table_id=0)."""
         parser = dp.ofproto_parser
         ofp = dp.ofproto
-        dp.send_msg(parser.OFPFlowMod(datapath=dp, cookie=cookie, cookie_mask=COOKIE_ALL,
-                                      command=ofp.OFPFC_DELETE, out_port=ofp.OFPP_ANY,
-                                      out_group=ofp.OFPG_ANY, match=parser.OFPMatch()))
+        dp.send_msg(parser.OFPFlowMod(datapath=dp, table_id=ofp.OFPTT_ALL, cookie=cookie,
+                                      cookie_mask=mask, command=ofp.OFPFC_DELETE,
+                                      out_port=ofp.OFPP_ANY, out_group=ofp.OFPG_ANY,
+                                      match=parser.OFPMatch()))
 
     def _install_guards(self, dp):
         parser = dp.ofproto_parser
@@ -877,7 +906,8 @@ class CampusSwitch13(_RyuApp):
             m = {'in_port': in_port, 'eth_dst': dst}
             if tagged:
                 m['vlan_vid'] = OFPVID_PRESENT | vlan
-            self._add_flow(dp, P_L2, parser.OFPMatch(**m), acts, cookie=0, idle=300)
+            self._add_flow(dp, P_L2, parser.OFPMatch(**m), acts, cookie=0, idle=300,
+                           table=T_FWD)
         else:
             acts = egress(sorted(self._data_ports(dpid, vlan) - {in_port}))
         if acts:
@@ -1045,6 +1075,200 @@ class CampusSwitch13(_RyuApp):
                          'end', 'write memory']
             out[core] = chr(10).join(lines)
         return out
+
+    # ================================================================
+    #  CHINH SACH TAP TRUNG (muc tieu 5)
+    #  Luat: {id, name, action: deny|allow, src, dst ('any' | 'vlan:10' |
+    #  CIDR 10.1.90.0/24 | IP), proto: ip|icmp|tcp|udp, dport, bidir, prio (1-999),
+    #  enabled}. Cai o bang 0 cua 4 Access (moi luong host di qua Access), khop
+    #  IP: deny -> drop, allow -> goto bang 1. Cookie rieng -> bo dem goi.
+    # ================================================================
+    PROTO = {'ip': None, 'icmp': 1, 'tcp': 6, 'udp': 17}
+
+    @staticmethod
+    def _addr(spec):
+        spec = (spec or 'any').strip().lower()
+        if spec in ('any', '*', ''):
+            return None
+        if spec.startswith('vlan:'):
+            v = int(spec.split(':', 1)[1])
+            return ('10.1.%d.0' % v, '255.255.255.0')
+        ip, _, plen = spec.partition('/')
+        parts = [int(x) for x in ip.split('.')]
+        if len(parts) != 4 or any(not 0 <= x <= 255 for x in parts):
+            raise ValueError('dia chi sai: %s' % spec)
+        plen = int(plen or 32)
+        if not 0 <= plen <= 32:
+            raise ValueError('prefix sai: %s' % spec)
+        mask = (0xffffffff << (32 - plen)) & 0xffffffff
+        return (ip, '.'.join(str((mask >> s) & 0xff) for s in (24, 16, 8, 0)))
+
+    def _policy_matches(self, parser, r):
+        """Tra ve danh sach OFPMatch (2 neu bidir)."""
+        proto = self.PROTO[r['proto']]
+        out = []
+        dirs = [(r['src'], r['dst'])]
+        if r.get('bidir'):
+            dirs.append((r['dst'], r['src']))
+        for src, dst in dirs:
+            m = {'eth_type': 0x0800}
+            a, b = self._addr(src), self._addr(dst)
+            if a:
+                m['ipv4_src'] = a
+            if b:
+                m['ipv4_dst'] = b
+            if proto:
+                m['ip_proto'] = proto
+            if r.get('dport') and r['proto'] in ('tcp', 'udp'):
+                m['%s_dst' % r['proto']] = int(r['dport'])
+            out.append(parser.OFPMatch(**m))
+        return out
+
+    def _install_policy_rule(self, dp, r):
+        if dpid_is_access(dp.id) and r.get('enabled', True):
+            parser = dp.ofproto_parser
+            for m in self._policy_matches(parser, r):
+                if r['action'] == 'deny':
+                    self._add_flow(dp, P_POLICY + int(r['prio']), m, [],
+                                   cookie=CK_POLICY | r['id'], table=T_CTRL)
+                else:
+                    self._add_flow(dp, P_POLICY + int(r['prio']), m, [],
+                                   cookie=CK_POLICY | r['id'], table=T_CTRL, goto=T_FWD)
+            return len(self._policy_matches(parser, r))
+        return 0
+
+    def _install_policies(self, dp):
+        for r in self.policies.values():
+            self._install_policy_rule(dp, r)
+
+    def _validate_rule(self, r):
+        r = dict(r)
+        r['action'] = (r.get('action') or 'deny').lower()
+        if r['action'] not in ('deny', 'allow'):
+            raise ValueError('action phai la deny/allow')
+        r['proto'] = (r.get('proto') or 'ip').lower()
+        if r['proto'] not in self.PROTO:
+            raise ValueError('proto phai la ip/icmp/tcp/udp')
+        r['src'] = r.get('src') or 'any'
+        r['dst'] = r.get('dst') or 'any'
+        self._addr(r['src'])
+        self._addr(r['dst'])
+        if r.get('dport'):
+            r['dport'] = int(r['dport'])
+            if not 1 <= r['dport'] <= 65535 or r['proto'] not in ('tcp', 'udp'):
+                raise ValueError('dport chi dung voi tcp/udp, 1..65535')
+        r['prio'] = int(r.get('prio') or 100)
+        if not 1 <= r['prio'] <= 999:
+            raise ValueError('prio 1..999 (lon hon = uu tien hon)')
+        r['bidir'] = bool(r.get('bidir', False))
+        r['enabled'] = bool(r.get('enabled', True))
+        r['name'] = (r.get('name') or '%s %s->%s %s' % (r['action'], r['src'], r['dst'], r['proto']))[:60]
+        return r
+
+    def _save_policies(self):
+        path = os.path.join(STATE_DIR, 'policies.json')
+        tmp = path + '.tmp'
+        with open(tmp, 'w') as f:
+            json.dump({'seq': self._policy_seq, 'rules': list(self.policies.values())}, f, indent=1)
+        os.replace(tmp, path)
+
+    def _load_policies(self):
+        try:
+            with open(os.path.join(STATE_DIR, 'policies.json')) as f:
+                st = json.load(f)
+            self._policy_seq = int(st.get('seq', 0))
+            for r in st.get('rules', []):
+                self.policies[int(r['id'])] = r
+        except (IOError, OSError, ValueError):
+            pass
+
+    def api_policies(self):
+        out = []
+        for pid, r in self.policies.items():
+            d = dict(r)
+            d.update(self.policy_stats.get(pid, {'packets': 0, 'bytes': 0}))
+            out.append(d)
+        return out
+
+    def api_policy_apply(self, action, rule=None, pid=None):
+        """action add|delete|enable|disable. Ap len 4 Access, thoi gian toi barrier."""
+        t0 = time.time()
+        if action == 'add':
+            r = self._validate_rule(rule or {})
+            self._policy_seq += 1
+            r['id'] = self._policy_seq
+            r['created'] = t0
+            self.policies[r['id']] = r
+        else:
+            pid = int(pid)
+            if pid not in self.policies:
+                raise ValueError('khong co luat %s' % pid)
+            r = self.policies[pid]
+            if action in ('enable', 'disable'):
+                r['enabled'] = (action == 'enable')
+            elif action != 'delete':
+                raise ValueError('action phai la add/delete/enable/disable')
+        self._save_policies()
+        ev = self._event('policy_' + action, '#%d %s (%s %s -> %s %s%s%s)' % (
+            r['id'], r['name'], r['action'], r['src'], r['dst'], r['proto'],
+            (' :%s' % r['dport']) if r.get('dport') else '', ' hai chieu' if r.get('bidir') else ''),
+            policy=r['id'], trigger='api')
+        op_id = self._start_op(ev, t0, t0)
+        for dpid, dp in sorted(self.switches.items()):
+            if not dpid_is_access(dpid):
+                continue
+            self._delete_cookie(dp, CK_POLICY | r['id'])
+            n = 1
+            if action != 'delete' and r.get('enabled', True):
+                n += self._install_policy_rule(dp, r)
+            self._ops[op_id]['mods'] += n
+            self._barrier(dp, op_id)
+        if action == 'delete':
+            del self.policies[r['id']]
+            self.policy_stats.pop(r['id'], None)
+            self._save_policies()
+        self._finish_if_done(op_id)
+        return ev
+
+    def _policy_stats_loop(self):
+        while True:
+            hub.sleep(5)
+            if not self.policies:
+                continue
+            for dpid, dp in list(self.switches.items()):
+                if not dpid_is_access(dpid):
+                    continue
+                try:
+                    parser = dp.ofproto_parser
+                    dp.send_msg(parser.OFPFlowStatsRequest(
+                        dp, 0, T_CTRL, dp.ofproto.OFPP_ANY, dp.ofproto.OFPG_ANY,
+                        CK_POLICY, CK_POLICY_MASK, parser.OFPMatch()))
+                except Exception:
+                    pass
+
+    @set_ev_cls(ofp_event.EventOFPFlowStatsReply, MAIN_DISPATCHER)
+    def _flow_stats_handler(self, ev):
+        now = time.time()
+        acc = self._stats_acc.setdefault(ev.msg.datapath.id, {})
+        for st in ev.msg.body:
+            if st.cookie & CK_POLICY_MASK != CK_POLICY:
+                continue
+            pid = st.cookie & ~CK_POLICY_MASK & 0xfffff
+            a = acc.setdefault(pid, [0, 0])
+            a[0] += st.packet_count
+            a[1] += st.byte_count
+        if ev.msg.flags & 0x1:          # OFPMPF_REPLY_MORE
+            return
+        self._stats_by_dp[ev.msg.datapath.id] = acc
+        self._stats_acc[ev.msg.datapath.id] = {}
+        tot = {}
+        for d in self._stats_by_dp.values():
+            for pid, (pk, by) in d.items():
+                t = tot.setdefault(pid, [0, 0])
+                t[0] += pk
+                t[1] += by
+        self.policy_stats = {pid: {'packets': v[0], 'bytes': v[1], 'ts': now}
+                             for pid, v in tot.items()}
 
     def api_link_test(self, lid, action, mode='silent'):
         """Mo phong mat lien ket (danh gia muc tieu 2).
