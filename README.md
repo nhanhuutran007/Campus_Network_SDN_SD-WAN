@@ -72,7 +72,7 @@ Hạ tầng mạng của trường đại học phải phục vụ đồng thờ
 
 ## Kiến trúc hệ thống
 
-![Topology](topology.png)
+![Topology tổng thể](topo_tongthe.jpg)
 
 ```mermaid
 flowchart TB
@@ -207,7 +207,7 @@ Bảng đầy đủ nằm trong [`campus_network_sdn_sdwan.md`](campus_network_s
 ├── BangTheoDoiTienDo.md              # Bảng theo dõi tiến độ
 ├── BAOCAO_DACNTT_LVT/                # Báo cáo đồ án (LaTeX)
 ├── Baocao27/                         # Báo cáo tiến độ
-└── topology.png                      # Sơ đồ topology tổng thể
+└── topo_tongthe.jpg                  # Sơ đồ topology tổng thể
 ```
 
 ---
