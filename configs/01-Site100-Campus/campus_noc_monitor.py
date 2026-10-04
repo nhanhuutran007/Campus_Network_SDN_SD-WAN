@@ -61,7 +61,11 @@ SWITCH_APP = 'CampusSwitch13'
 CORE_UPLINKS = {'Core-SW1': [(5, 'ens9'), (8, 'ens10')], 'Core-SW2': [(5, 'ens10'), (8, 'ens9')]}
 PERF_FILE = '/root/ryu-app/metrics/perf.json'   # ket qua do hieu nang VLAN (giu qua khoi dong)
 SNMP_CFG = '/root/ryu-app/state/snmp.json'   # {"community": "...", "targets": {"Core-SW1": "10.1.99.1", ...}}
-SNMP_CPU_OID = '1.3.6.1.4.1.9.9.109.1.1.1.1.6.1'   # cpmCPUTotal5secRev (Cisco)
+# CPU Cisco: thu lan luot (IOL co the khong co mot so OID / chi so khac 1)
+SNMP_CPU_COLS = ['1.3.6.1.4.1.9.9.109.1.1.1.1.6',     # cpmCPUTotal5secRev
+                 '1.3.6.1.4.1.9.9.109.1.1.1.1.3']     # cpmCPUTotal5sec
+SNMP_CPU_SCALARS = ['1.3.6.1.4.1.9.2.1.56.0',         # busyPer (OLD-CISCO-CPU-MIB)
+                    '1.3.6.1.4.1.9.2.1.57.0']         # avgBusy1
 REPLY_TIMEOUT = 1.0         # ping: qua thoi gian nay coi la mat
 
 
@@ -255,11 +259,23 @@ def _ber_parse(data, i=0):
     return t, data[i:i + l], i + l
 
 
-def snmp_get(host, community, oids, timeout=1.5):
-    """SNMPv2c GET -> {oid: int|bytes|None}. Chi doc (RO)."""
+def _oid_str(b):
+    parts = [b[0] // 40, b[0] % 40]
+    v = 0
+    for x in b[1:]:
+        v = (v << 7) | (x & 0x7f)
+        if not x & 0x80:
+            parts.append(v)
+            v = 0
+    return '.'.join(str(p) for p in parts)
+
+
+def snmp_get(host, community, oids, timeout=1.5, getnext=False):
+    """SNMPv2c GET (hoac GETNEXT) -> {oid_yeu_cau: gia_tri}; voi getnext
+    gia tri la (oid_tra_ve, gia_tri). Chi doc (RO)."""
     rid = random.randint(1, 0x7fffffff)
     vbl = b''.join(_tlv(0x30, _ber_oid(o) + b'\x05\x00') for o in oids)
-    pdu = _tlv(0xa0, _ber_int(rid) + _ber_int(0) + _ber_int(0) + _tlv(0x30, vbl))
+    pdu = _tlv(0xa1 if getnext else 0xa0, _ber_int(rid) + _ber_int(0) + _ber_int(0) + _tlv(0x30, vbl))
     msg = _tlv(0x30, _ber_int(1) + _tlv(0x04, community.encode()) + pdu)
     sk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sk.settimeout(timeout)
@@ -279,11 +295,25 @@ def snmp_get(host, community, oids, timeout=1.5):
     out, k = {}, 0
     for o in oids:
         _, vb, k = _ber_parse(vbl, k)
-        _, _, m = _ber_parse(vb)
+        _, roid, m = _ber_parse(vb)
         t, val, _ = _ber_parse(vb, m)
-        out[o] = int.from_bytes(val, 'big') if t in (0x02, 0x41, 0x42, 0x43, 0x46) else (
+        v = int.from_bytes(val, 'big') if t in (0x02, 0x41, 0x42, 0x43, 0x46) else (
             None if t in (0x80, 0x81, 0x82) else val)
+        out[o] = (_oid_str(roid), v) if getnext else v
     return out
+
+
+def snmp_cpu(host, community):
+    """CPU % cua Core Cisco: GETNEXT tren cot cpmCPUTotal (tim dung chi so), roi OID cu."""
+    for col in SNMP_CPU_COLS:
+        roid, v = snmp_get(host, community, [col], getnext=True)[col]
+        if roid.startswith(col + '.') and isinstance(v, int):
+            return v, roid
+    r = snmp_get(host, community, SNMP_CPU_SCALARS)
+    for o in SNMP_CPU_SCALARS:
+        if isinstance(r.get(o), int):
+            return r[o], o
+    return None, None
 
 
 def _read_proc():
@@ -510,8 +540,9 @@ class CampusNocMonitor(app_manager.RyuApp):
             return          # SNMP chua cau hinh -> chi dung luu luong uplink
         for name, host in cfg.get('targets', {}).items():
             try:
-                v = snmp_get(host, cfg['community'], [SNMP_CPU_OID])
-                self.snmp[name] = {'cpu': v.get(SNMP_CPU_OID), 'ts': time.time(), 'error': None}
+                v, oid = snmp_cpu(host, cfg['community'])
+                self.snmp[name] = {'cpu': v, 'oid': oid, 'ts': time.time(),
+                                   'error': None if v is not None else 'khong co OID CPU'}
             except Exception as e:
                 self.snmp[name] = {'cpu': None, 'ts': time.time(), 'error': str(e)[:60]}
 
@@ -664,7 +695,7 @@ class NocController(ControllerBase):
         try:
             body = json.loads(req.body.decode('utf-8') if req.body else '{}')
             return _json(s.api_link_test(body.get('link'), body.get('action'),
-                                         body.get('mode', 'silent')))
+                                         body.get('mode', 'silent'), body.get('max_s', 60)))
         except Exception as e:
             return _err(str(e))
 

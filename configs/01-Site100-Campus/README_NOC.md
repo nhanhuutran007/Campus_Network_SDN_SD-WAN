@@ -40,7 +40,7 @@ ryu-manager --ofp-tcp-listen-port 6653 campus_switch_13.py campus_noc_monitor.py
 | `GET /noc/switches`, `/noc/ports`, `/noc/congestion`, `/noc/history` | như phiên bản 1 (PortStats nay được poll định kỳ 5 s) |
 | `GET /campus/topology` | Đồ thị: nút, liên kết (`up`, `in_tree`, tuổi probe), cổng bị chặn, VLAN, tham số thăm dò |
 | `GET /campus/events?since=N` | Sự kiện: `link_down/up`, `switch_down/up`, `tree_change`, `test_inject/restore` kèm `detect_ms`, `converge_ms`, `total_ms`, `switches`, `flow_mods`, `announced`, `unanswered` |
-| `POST /campus/linktest` | `{"link":"A1-D1","action":"down|up","mode":"silent|admin"}` |
+| `POST /campus/linktest` | `{"link":"A1-D1","action":"down|up","mode":"silent|admin","max_s":60}` – silent tự hết hạn trên OVS sau `max_s` (5–600 s, `hard_timeout`); admin bị từ chối trên cổng thuộc đường VLAN 99 |
 | `GET /campus/vlans` | VLAN, cổng access, cổng trống trên Access |
 | `POST /campus/vlan` | `{"action":"add|ports|delete","vid":50,"name":"Phong Lab","ports":["Access-SW1.ens7"]}` → sự kiện `vlan_*` (thời gian tới barrier) + `core_config` (IOS cho Core-SW1/2) |
 | `GET /campus/policies` | Luật + `packets`/`bytes` khớp (FlowStats theo cookie, 5 s) |
@@ -129,7 +129,19 @@ Truyền thống tương đương: ACL trên SVI 2 Core (hoặc VACL từng swit
 
 - Tải điều khiển ổn định, **không phụ thuộc lưu lượng người dùng** (luồng đã học đi thẳng bằng flow, không qua controller). Packet-in nền chủ yếu: probe liên kết (~40/s), LLDP/BDDP của ONOS (chạy song song cổng 6654), ARP/broadcast.
 - Dist-SW2 tải cao nhất vì gánh toàn bộ VLAN 99 (Access ↔ controller đi qua nó).
-- Hạn chế: VPCS chỉ sinh vài trăm kbit/s nên chưa thử được tải cao; CPU Core cần bật SNMP (chưa bật – cần community string, quyết định bảo mật).
+- Hạn chế: VPCS chỉ sinh vài trăm kbit/s nên chưa thử được tải cao.
+- CPU Core qua SNMP v2c RO (ACL 98 chỉ cho 10.1.99.10; community trong `state/snmp.json` 0600, không commit). NOC dò lần lượt `cpmCPUTotal5secRev`/`cpmCPUTotal5sec` (GETNEXT) rồi `busyPer`/`avgBusy1`. **Core-SW1 đọc được; Core-SW2 timeout** vì Vlan99 của nó là “ốc đảo” (chỉ có Et1/2 → Dist-SW1 ens10, OVS chặn VLAN 99 ở đó) nên gói trả lời không về được controller – xem mục SPOF bên dưới.
+
+## Đường quản trị VLAN 99 là điểm lỗi đơn (SPOF)
+
+Controller → Core-SW1 → **D2-C1** → Dist-SW2 → (inter-dist, 4 Access). Cắt D2-C1 thì Dist-SW2, 4 Access mất controller sau ~9 s (Dist-SW1 vẫn còn) – **đúng theo thiết kế hiện tại**, dữ liệu vẫn chạy bằng flow đã cài (`fail_mode=secure`). Đã sửa các lỗi khiến lab kẹt (04/10/2026):
+
+- Cắt thử silent có `hard_timeout` → OVS tự gỡ dù controller không tới được (trước đây flow drop nằm vĩnh viễn, phải gỡ tay qua VNC).
+- Nhiều OVS cùng im lặng (> 1 s) = mất kênh điều khiển, **không** kết luận link chết → không chặn cổng Access trên Dist-SW1 (trước đây đánh dấu 11/13 link down sau 1,6 s). Một switch im lặng (switch chết) vẫn chuyển mạch nhanh như cũ.
+- `mode=admin` (PortMod) trên cổng thuộc đường VLAN 99 bị từ chối vì không thể bật lại từ xa.
+
+Kiểm chứng: cắt D2-C1 30 s → 0 link_down giả, OVS tự gỡ flow ở giây 30, 6/6 switch nối lại ở giây 32, 13/13 link sau ~34 s; hồi quy A1-D1 1,8 s / D1-C1 3,0 s như trước.
+Muốn bỏ SPOF cần đường VLAN 99 thứ hai (vd cho VLAN 99 qua Core-SW1 Et0/2 hoặc Core-SW2 Et1/2 → Dist-SW1) – thay đổi topology, chưa làm.
 
 ## Kết quả đo mục tiêu 3 – hiệu năng giữa các VLAN (04/10/2026)
 
@@ -142,4 +154,4 @@ Truyền thống tương đương: ACL trên SVI 2 Core (hoặc VACL từng swit
 
 ## Bảo mật
 
-REST 8080 (kể cả `ofctl_rest` sửa được flow) và ONOS 8181 đang nghe trên `ens6` (LAN thật) **không xác thực** – nên chặn bằng firewall node 9, chỉ mở cho host 1/PC quản trị.
+REST 8080 (kể cả `ofctl_rest` sửa được flow) và ONOS 8181/8101 **không xác thực**. Trên `ens6` (LAN thật) đã chặn bằng chain iptables `CAMPUS_ENS6` trong `SDN_CONTROLLER-autostart.sh`: chỉ host EVE (`CAMPUS_ADMIN_SRC`, mặc định 10.215.28.26), DHCP và ping được vào. `ens3` (VLAN 99: OVS, PC-Management) không bị ảnh hưởng.

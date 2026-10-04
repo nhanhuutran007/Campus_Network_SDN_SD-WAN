@@ -13,6 +13,20 @@ if ip link show ens6 >/dev/null 2>&1; then
     ip link set ens6 up
 fi
 
+# Firewall ens6 (LAN that, 10/2026): REST/GUI Ryu 8080 (ofctl_rest sua duoc flow)
+# va ONOS 8181/8101 KHONG xac thuc -> chi host EVE (CAMPUS_ADMIN_SRC) duoc vao.
+# ens3 (VLAN 99: OVS, PC-Management) khong bi anh huong. Idempotent.
+CAMPUS_ADMIN_SRC="${CAMPUS_ADMIN_SRC:-10.215.28.26}"
+if command -v iptables >/dev/null 2>&1; then
+    iptables -N CAMPUS_ENS6 2>/dev/null || iptables -F CAMPUS_ENS6
+    iptables -A CAMPUS_ENS6 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+    iptables -A CAMPUS_ENS6 -s "$CAMPUS_ADMIN_SRC" -j ACCEPT
+    iptables -A CAMPUS_ENS6 -p udp --sport 67 --dport 68 -j ACCEPT   # DHCP Cloud-NAT
+    iptables -A CAMPUS_ENS6 -p icmp --icmp-type echo-request -j ACCEPT
+    iptables -A CAMPUS_ENS6 -j DROP
+    iptables -C INPUT -i ens6 -j CAMPUS_ENS6 2>/dev/null || iptables -I INPUT -i ens6 -j CAMPUS_ENS6
+fi
+
 ryu_bin="$(command -v ryu-manager || true)"
 if [[ -z "$ryu_bin" ]]; then
     echo "[campus-ryu] ryu-manager is not installed" >&2

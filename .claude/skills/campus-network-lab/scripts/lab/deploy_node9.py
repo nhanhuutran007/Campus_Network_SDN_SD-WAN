@@ -1,4 +1,4 @@
-"""deploy_node9.py <local_file>=<path_in_vm> [...] [--backup] [--no-restart]
+"""deploy_node9.py <local_file>=<path_in_vm>[@0600] [...] [--backup] [--no-restart]
 
 Nap file vao dia SDN_CONTROLLER (node 9, host 1) khi KHONG co SSH vao VM:
   1) SFTP file len host 1 (/tmp/campus-deploy/), so md5
@@ -39,17 +39,20 @@ def main():
     pairs = []
     for a in args:
         src, dst = a.split("=", 1)
+        mode = None
+        if "@" in dst:                      # dich@0600 -> chmod sau khi upload
+            dst, mode = dst.rsplit("@", 1)
         if not dst.startswith("/") or ":" in dst or " " in dst:
             # Git Bash doi '=/root/..' thanh 'C:/Program Files/Git/root/..' -> chay voi MSYS_NO_PATHCONV=1
             sys.exit("duong dan dich sai (%s) - Git Bash: dat MSYS_NO_PATHCONV=1" % dst)
         md5 = hashlib.md5(open(src, "rb").read()).hexdigest()
-        pairs.append((src, dst, md5))
+        pairs.append((src, dst, md5, mode))
     if not pairs:
         sys.exit(__doc__)
     c = client("h1")
     sftp = c.open_sftp()
     run(c, "mkdir -p %s" % STAGE)
-    for src, dst, md5 in pairs:
+    for src, dst, md5, mode in pairs:
         staged = "%s/%s" % (STAGE, os.path.basename(dst))
         sftp.put(src, staged)
         rmd5 = run(c, "md5sum '%s'" % staged).split()[0]
@@ -67,17 +70,20 @@ def main():
         sys.exit("qemu node 9 khong thoat - dung lai, khong ghi dia")
     stamp = time.strftime("%Y%m%d-%H%M")
     gf = []
-    for src, dst, md5 in pairs:
+    for src, dst, md5, mode in pairs:
         if backup:
             gf.append("-cp %s %s.bak-%s" % (dst, dst, stamp))     # '-' : bo qua loi neu chua co file
         gf.append("upload %s/%s %s" % (STAGE, os.path.basename(dst), dst))
-    for src, dst, md5 in pairs:
+        if mode:
+            gf.append("chmod %s %s" % (mode, dst))
+    for src, dst, md5, mode in pairs:
         gf.append("checksum md5 %s" % dst)
     out = run(c, "LIBGUESTFS_BACKEND=direct timeout 180 guestfish -a %s/virtioa.qcow2 -i <<'GF'\n%s\nGF\necho gf_rc=$?"
               % (NODE_DIR, "\n".join(gf)))
     sums = [l.strip() for l in out.splitlines() if len(l.strip()) == 32]
-    ok = sums == [m for _, _, m in pairs]
+    ok = sums == [p[2] for p in pairs]
     print("guestfish:", "md5 khop" if ok else "LOI\n" + out)
+    run(c, "rm -f " + " ".join("'%s/%s'" % (STAGE, os.path.basename(p[1])) for p in pairs))
     if restart:
         print(run(c, "timeout 80 %s -a start -T 6 -F '%s' -D 9 </dev/null >/dev/null 2>&1; sleep 2; "
                      "ss -tln | grep -q ':33545 ' && echo 'node 9 LISTEN' || echo 'node 9 NOT LISTEN'" % (WRAP, LAB)).strip())

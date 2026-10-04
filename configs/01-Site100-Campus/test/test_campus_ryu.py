@@ -249,6 +249,35 @@ class CampusRyuTest(unittest.TestCase):
         self.assertIsNotNone(ev.get('converge_ms'))
         self.assertIsNotNone(ev.get('total_ms'))   # moc kich hoat = luc bam mo phong
 
+    def test_control_loss_not_link_down(self):
+        """Cat D2-C1 lam mat VLAN 99 toi moi OVS: khong duoc ket luan lien ket chet."""
+        self.deliver_probes()
+        self.deliver_core_replies()
+        self.app.api_link_test('D2-C1', 'down', 'silent')
+        cut = [m for m in self.dps[8].flows() if m.priority == cs.P_TEST_CUT]
+        self.assertEqual(cut[0].hard_timeout, cs.CUT_MAX)       # tu het han tren switch
+        now = time.time()
+        for k in list(self.app.seen):
+            self.app.seen[k] = now - 10
+        for lid in cs.LINKS:
+            self.app.probe_since[lid] = now - 10
+        for d in self.app.last_rx:
+            self.app.last_rx[d] = now - 10                      # moi OVS im lang
+        for lid in cs.LINKS:
+            self.assertIsNone(self.app._eval_link(lid, now), lid)
+        self.app.last_rx[5] = now                               # sw5 con lien lac, Access im lang
+        self.assertIs(self.app._eval_link('D1-C1', now), False)
+        self.assertIsNone(self.app._eval_link('A1-D1', now))    # khong chan cong Access tren sw5
+        for d in self.app.last_rx:
+            self.app.last_rx[d] = now
+        self.app.last_rx[5] = now - 10                          # chi Dist-SW1 chet -> ket luan ngay
+        self.assertIs(self.app._eval_link('A1-D1', now), False)
+        # admin PortMod tren duong quan tri bi tu choi
+        with self.assertRaises(ValueError):
+            self.app.api_link_test('D2-C1', 'down', 'admin')
+        with self.assertRaises(ValueError):
+            self.app.api_link_test('A1-D2', 'down', 'admin')
+
     def test_admin_mode_portmod(self):
         self.app.api_link_test('D1-C1', 'down', 'admin')
         pm = [m for m in self.dps[5].sent if isinstance(m, parser.OFPPortMod)]
