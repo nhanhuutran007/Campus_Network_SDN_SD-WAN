@@ -194,11 +194,12 @@ class CampusRyuTest(unittest.TestCase):
                     out[name[m.match['in_port']]] = sorted(ports)
             return out
         g5, g8 = mg(5), mg(8)
-        self.assertEqual(g5['ens8'], ['patch-mgmt'])
+        self.assertEqual(g5['ens8'], ['ens9', 'patch-mgmt'])   # du phong qua Core-SW1 Et0/2
+        self.assertEqual(g5['ens10'], [])                # Core-SW2 ngoai VLAN 99 (2 router + flood = bao)
         self.assertEqual(g5['ens4'], [])                 # ban sao tu Access bi bo
-        self.assertEqual(g8['ens4'], ['ens10', 'patch-mgmt'])  # Access -> controller
-        self.assertNotIn('ens8', g8['ens4'])            # khong phan xa ve Access qua sw5
-        self.assertEqual(g8['ens8'], ['ens10', 'patch-mgmt'])
+        self.assertEqual(g8['ens4'], ['ens10', 'ens8', 'patch-mgmt'])  # Access -> controller
+        self.assertFalse(any(p in v for v in g5.values() for p in ('ens4', 'ens5', 'ens6', 'ens7')))
+        self.assertEqual(g8['ens8'], ['ens10', 'ens4', 'ens5', 'ens6', 'ens7', 'patch-mgmt'])
         self.assertIn('ens4', g8['ens10'])              # controller -> Access
         g68 = [m for m in self.dps[68].flows() if m.priority == cs.P_MGMT]
         self.assertEqual(g68, [])           # Access khong co guard 99 (flow co dinh 0xba5f)
@@ -249,13 +250,49 @@ class CampusRyuTest(unittest.TestCase):
         self.assertIsNotNone(ev.get('converge_ms'))
         self.assertIsNotNone(ev.get('total_ms'))   # moc kich hoat = luc bam mo phong
 
+    def test_mgmt_vlan99_loop_free(self):
+        """Mo phong khung VLAN 99 di qua MGMT_FLOWS + lien ket OVS<->OVS: khong vong,
+        khong quay ve Access nguon; den duoc 2 cong Core-SW1 (Et1/2, Et0/2), khong toi Core-SW2."""
+        peer = {}
+        for l in cs.LINKS.values():
+            if l['b'][0] in cs.OVS_NODES:
+                peer[l['a']] = l['b']
+                peer[l['b']] = l['a']
+        # Access: patch-mgmt -> ca 2 uplink (flow co dinh 0xba5f)
+        acc = {n: {cs.MGMT_PORT: ['ens4', 'ens5']} for n in (68, 66, 70, 69)}
+        flows = dict(cs.MGMT_FLOWS)
+        flows.update(acc)
+        for src in (68, 5, 8):
+            seen, core, stack = set(), set(), [(src, p) for p in flows[src][cs.MGMT_PORT]]
+            while stack:
+                n, port = stack.pop()
+                self.assertNotIn((n, port), seen, 'vong tai %s %s' % (n, port))
+                seen.add((n, port))
+                nxt = peer.get((n, port))
+                if nxt is None:
+                    core.add((n, port))
+                    continue
+                if nxt[0] == src:
+                    self.fail('phan xa ve nguon %s qua %s' % (src, nxt))
+                for q in flows.get(nxt[0], {}).get(nxt[1], []):
+                    if q != cs.MGMT_PORT:
+                        stack.append((nxt[0], q))
+            self.assertTrue({(8, 'ens10'), (5, 'ens9')} <= core and (5, 'ens10') not in core, (src, core))
+
     def test_control_loss_not_link_down(self):
         """Cat D2-C1 lam mat VLAN 99 toi moi OVS: khong duoc ket luan lien ket chet."""
         self.deliver_probes()
         self.deliver_core_replies()
         self.app.api_link_test('D2-C1', 'down', 'silent')
+        pm = [m for m in self.dps[8].sent if isinstance(m, parser.OFPPortMod)]
+        self.assertEqual(pm[-1].config, ofp.OFPPC_NO_RECV | ofp.OFPPC_NO_FWD)  # chan 2 chieu
+        self.app.api_link_test('D1-D2', 'down', 'silent')
         cut = [m for m in self.dps[8].flows() if m.priority == cs.P_TEST_CUT]
-        self.assertEqual(cut[0].hard_timeout, cs.CUT_MAX)       # tu het han tren switch
+        self.assertEqual(cut[0].hard_timeout, cs.CUT_MAX)       # OVS-OVS: tu het han tren switch
+        self.app.test_cut['D2-C1']['expires'] = 0               # het han -> controller bat lai cong
+        self.app.api_link_test('D2-C1', 'up', 'silent')
+        pm = [m for m in self.dps[8].sent if isinstance(m, parser.OFPPortMod)]
+        self.assertEqual(pm[-1].config, 0)
         now = time.time()
         for k in list(self.app.seen):
             self.app.seen[k] = now - 10
@@ -273,8 +310,6 @@ class CampusRyuTest(unittest.TestCase):
         self.app.last_rx[5] = now - 10                          # chi Dist-SW1 chet -> ket luan ngay
         self.assertIs(self.app._eval_link('A1-D1', now), False)
         # admin PortMod tren duong quan tri bi tu choi
-        with self.assertRaises(ValueError):
-            self.app.api_link_test('D2-C1', 'down', 'admin')
         with self.assertRaises(ValueError):
             self.app.api_link_test('A1-D2', 'down', 'admin')
 

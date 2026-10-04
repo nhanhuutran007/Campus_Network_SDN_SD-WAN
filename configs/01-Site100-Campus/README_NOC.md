@@ -130,18 +130,23 @@ Truyền thống tương đương: ACL trên SVI 2 Core (hoặc VACL từng swit
 - Tải điều khiển ổn định, **không phụ thuộc lưu lượng người dùng** (luồng đã học đi thẳng bằng flow, không qua controller). Packet-in nền chủ yếu: probe liên kết (~40/s), LLDP/BDDP của ONOS (chạy song song cổng 6654), ARP/broadcast.
 - Dist-SW2 tải cao nhất vì gánh toàn bộ VLAN 99 (Access ↔ controller đi qua nó).
 - Hạn chế: VPCS chỉ sinh vài trăm kbit/s nên chưa thử được tải cao.
-- CPU Core qua SNMP v2c RO (ACL 98 chỉ cho 10.1.99.10; community trong `state/snmp.json` 0600, không commit). NOC dò lần lượt `cpmCPUTotal5secRev`/`cpmCPUTotal5sec` (GETNEXT) rồi `busyPer`/`avgBusy1`. **Core-SW1 đọc được; Core-SW2 timeout** vì Vlan99 của nó là “ốc đảo” (chỉ có Et1/2 → Dist-SW1 ens10, OVS chặn VLAN 99 ở đó) nên gói trả lời không về được controller – xem mục SPOF bên dưới.
+- CPU Core qua SNMP v2c RO (ACL 98 chỉ cho 10.1.99.10; community trong `state/snmp.json` 0600, không commit). NOC dò lần lượt `cpmCPUTotal5secRev`/`cpmCPUTotal5sec` (GETNEXT) rồi `busyPer`/`avgBusy1`. Đích: Core-SW1 `10.1.99.1`, Core-SW2 `10.1.90.3` (Vlan99 của Core-SW2 đã tắt, về 10.1.99.0/24 bằng static route qua Po10) – **cả hai đọc được** (04/10/2026).
 
-## Đường quản trị VLAN 99 là điểm lỗi đơn (SPOF)
+## Đường quản trị VLAN 99 có dự phòng (04/10/2026)
 
-Controller → Core-SW1 → **D2-C1** → Dist-SW2 → (inter-dist, 4 Access). Cắt D2-C1 thì Dist-SW2, 4 Access mất controller sau ~9 s (Dist-SW1 vẫn còn) – **đúng theo thiết kế hiện tại**, dữ liệu vẫn chạy bằng flow đã cài (`fail_mode=secure`). Đã sửa các lỗi khiến lab kẹt (04/10/2026):
+Trước đây: Controller → Core-SW1 Et1/2 → **D2-C1** → Dist-SW2 → (inter-dist, 4 Access) là đường duy nhất (SPOF): cắt D2-C1 thì Dist-SW2 + 4 Access mất controller, kèm 3 lỗi khiến lab kẹt (cắt thử không tự gỡ, mất kênh điều khiển bị coi là link chết, admin-cut không bật lại được).
 
-- Cắt thử silent có `hard_timeout` → OVS tự gỡ dù controller không tới được (trước đây flow drop nằm vĩnh viễn, phải gỡ tay qua VNC).
-- Nhiều OVS cùng im lặng (> 1 s) = mất kênh điều khiển, **không** kết luận link chết → không chặn cổng Access trên Dist-SW1 (trước đây đánh dấu 11/13 link down sau 1,6 s). Một switch im lặng (switch chết) vẫn chuyển mạch nhanh như cũ.
-- `mode=admin` (PortMod) trên cổng thuộc đường VLAN 99 bị từ chối vì không thể bật lại từ xa.
+Bây giờ:
 
-Kiểm chứng: cắt D2-C1 30 s → 0 link_down giả, OVS tự gỡ flow ở giây 30, 6/6 switch nối lại ở giây 32, 13/13 link sau ~34 s; hồi quy A1-D1 1,8 s / D1-C1 3,0 s như trước.
-Muốn bỏ SPOF cần đường VLAN 99 thứ hai (vd cho VLAN 99 qua Core-SW1 Et0/2 hoặc Core-SW2 Et1/2 → Dist-SW1) – thay đổi topology, chưa làm.
+| Thành phần | Thay đổi |
+|---|---|
+| Core-SW1 | Et0/2 (→ Dist-SW1 ens9) mang thêm VLAN 99; `spanning-tree vlan 99 hello-time 1 / forward-time 4 / max-age 6`. Vòng duy nhất Et1/2 ↔ OVS ↔ Et0/2 do rapid-PVST chặn: Et0/2 = **Back BLK** (BPDU đi xuyên OVS) |
+| OVS (`MGMT_FLOWS`) | Dist-SW1 bắc cầu ens8 ↔ ens9 ↔ patch-mgmt; Dist-SW2 nối inter-dist ↔ Access. Bên trong OVS vẫn là cây (unit test `test_mgmt_vlan99_loop_free`), Access vẫn chỉ gắn qua Dist-SW2 (không phản xạ) |
+| Core-SW2 | **Không** vào VLAN 99: OVS flood tĩnh (không học MAC) + 2 router cùng VLAN ⇒ mỗi router định tuyến ngược unicast của router kia ⇒ bão ~40 000 pps (đã gặp khi thử, gỡ ngay). Vlan99 tắt, static route `10.1.99.0/24 → 10.1.0.5` |
+| App | Cắt thử: OVS↔OVS = flow drop `hard_timeout`; OVS↔Core = PortMod `NO_RECV|NO_FWD` (chặn 2 chiều – drop 1 chiều làm Et0/2 mở trong khi Et1/2 vẫn nhận ⇒ vòng). Hết `max_s` controller tự bật lại cổng. Nhiều OVS cùng im lặng > 1 s = mất kênh điều khiển, không kết luận link chết. Admin-cut chỉ còn bị từ chối trên cổng Access ↔ Dist-SW2 |
+| Ryu | Gửi bản tin chờ tối đa 0,5 s (`SEND_WAIT`) thay vì treo vô hạn khi kết nối chết làm đầy hàng đợi 16 bản tin (lỗi Ryu 4.34 làm vòng probe đứng hẳn); echo 2 s × 3 (`CONF.set_override`, `ryu-manager` trên node 9 không nhận cờ dòng lệnh) |
+
+Kiểm chứng (`sdn_recovery_test.py --links D2-C1 --modes silent,admin --hold 40`): OVS mất controller ~2,5 s (giây 9,3 → 11,9, lúc STP mở Et0/2) rồi tự nối lại qua Dist-SW1; 13/13 link; ping PC-HanhChinh mất 4 gói (0,4 s) mỗi lần cắt. Hạn chế còn lại: khi khôi phục sau cắt `silent`, kênh điều khiển gián đoạn thêm ~10 s (rapid-PVST đàm phán lại Et1/2; dữ liệu mất 6 gói). Access vẫn phụ thuộc link A*-D2 cho quản trị.
 
 ## Kết quả đo mục tiêu 3 – hiệu năng giữa các VLAN (04/10/2026)
 

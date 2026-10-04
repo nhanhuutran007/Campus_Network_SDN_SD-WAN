@@ -528,7 +528,9 @@ class CampusNocMonitor(app_manager.RyuApp):
                if dtot else 0,
                'mem_used_pct': round(100.0 * (1 - p1['mem_avail_kb'] / float(p1['mem_total_kb'] or 1)), 1),
                'ryu_rss_mb': round(p1['proc_rss_kb'] / 1024.0, 1),
-               'pktin_ps_total': round(sum(v['pktin_ps'] for v in sw.values()), 1)}
+               'pktin_ps_total': round(sum(v['pktin_ps'] for v in sw.values()), 1),
+               'echo': cnt.get('echo'),                   # cau hinh echo timeout cua Ryu
+               'send_dropped': cnt.get('send_dropped', {})}   # ban tin bo do hang doi day
         self.load_hist.append({'ts': now, 'sw': sw, 'core': core, 'ctl': ctl})
         self._snmp_poll()
 

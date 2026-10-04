@@ -52,6 +52,15 @@ try:  # cho phep kiem thu logic cay ngoai Ryu (test/test_campus_tree.py)
     from ryu.lib import hub
     _RyuApp = app_manager.RyuApp
     OFPVID_PRESENT = ofproto_v1_3.OFPVID_PRESENT
+    # Echo 2 s, 3 lan khong tra loi -> Ryu dong ket noi chet (mac dinh 0 = khong
+    # bao gio dong; ryu-manager 4.34 tren node 9 khong nhan 2 co nay o dong lenh).
+    try:
+        from ryu import cfg as _ryu_cfg
+        _ryu_cfg.CONF.set_override('echo_request_interval', 2)
+        _ryu_cfg.CONF.set_override('maximum_unreplied_echo_requests', 3)
+        ECHO_CFG = 'echo 2s x3'
+    except Exception as e:  # pragma: no cover - option chua dang ky
+        ECHO_CFG = 'khong dat duoc: %r' % e
 except ImportError:  # pragma: no cover
     _RyuApp = object
     OFPVID_PRESENT = 0x1000
@@ -104,21 +113,28 @@ TRUNK_PORTS = {
 #  controller gui ve bi drop ~20s (da gap 03/10/2026). Vi vay:
 #   - Access <-> controller di THANG qua Dist-SW2 (Access ens5 -> sw8 -> ens10
 #     -> Core-SW1); ban sao di vao Dist-SW1 bi bo.
-#   - Dist-SW1 <-> controller qua inter-dist (sw5 ens8 <-> sw8 ens8).
-#   - sw5.ens10 (->Core-SW2) va ens9 (Core Et0/2 khong mang 99): drop.
+#   - Dist-SW1 noi inter-dist (ens8) + Core-SW1 Et0/2 (ens9). Ben trong OVS la
+#     CAY (khong vong); vong duy nhat la Core-SW1 Et1/2 <-> OVS <-> Core-SW1
+#     Et0/2 -> rapid-PVST cua Core-SW1 chan Et0/2 (backup, BPDU di xuyen OVS).
+#     Mat D2-C1 hoac D1-D2 -> Et0/2 mo -> controller van toi duoc moi OVS
+#     (het SPOF D2-C1, 04/10/2026).
+#   - sw5.ens10 (Core-SW2): DROP. VLAN 99 tren OVS la flood tinh (khong hoc MAC)
+#     -> neu co 2 router (Core-SW1 + Core-SW2) thi moi router nhan unicast cua
+#     router kia va dinh tuyen nguoc vao VLAN 99 -> bao ~40k pps (da gap 04/10).
 #  Loi ich: Dist-SW1 chet -> Access van noi controller -> Ryu chuyen du lieu
 #  sang Dist-SW2 ngay (khong can co che failover rieng nhu phien ban 1).
 _ACC = ['ens4', 'ens5', 'ens6', 'ens7']
 MGMT_FLOWS = {
     8: {'ens10': _ACC + ['ens8', MGMT_PORT],
-        'ens8': ['ens10', MGMT_PORT],
+        'ens8': ['ens10', MGMT_PORT] + _ACC,
         MGMT_PORT: ['ens10', 'ens8'] + _ACC,
-        'ens4': ['ens10', MGMT_PORT], 'ens5': ['ens10', MGMT_PORT],
-        'ens6': ['ens10', MGMT_PORT], 'ens7': ['ens10', MGMT_PORT],
+        'ens4': ['ens10', MGMT_PORT, 'ens8'], 'ens5': ['ens10', MGMT_PORT, 'ens8'],
+        'ens6': ['ens10', MGMT_PORT, 'ens8'], 'ens7': ['ens10', MGMT_PORT, 'ens8'],
         'ens9': []},
-    5: {'ens8': [MGMT_PORT],
-        MGMT_PORT: ['ens8'],
-        'ens4': [], 'ens5': [], 'ens6': [], 'ens7': [], 'ens9': [], 'ens10': []},
+    5: {'ens8': [MGMT_PORT, 'ens9'],
+        MGMT_PORT: ['ens8', 'ens9'],
+        'ens9': [MGMT_PORT, 'ens8'],
+        'ens4': [], 'ens5': [], 'ens6': [], 'ens7': [], 'ens10': []},
 }
 
 # Lien ket: id -> a=(dpid, port), b=(dpid|'C1'|'C2', port), w=trong so
@@ -161,10 +177,11 @@ HOST_TTL = 900              # quen host khong thay goi sau 15 phut
 CONTROL_SILENT = 1.0        # switch nhan probe moi 0.5s -> im lang > 1s = mat kenh dieu khien
                             # (phai < LINK_TIMEOUT - PROBE_INTERVAL de phat hien truoc khi link het han)
 CUT_MAX = 60                # cat thu silent tu het han tren switch (hard_timeout) du controller mat ket noi
-# Cong nam tren duong quan tri VLAN 99 (MGMT_FLOWS): PortMod down o day khong the
-# go tu xa (controller mat duong toi switch) -> che do 'admin' bi tu choi.
-MGMT_CRITICAL = {(8, 'ens10'), (8, 'ens8'), (5, 'ens8'), (8, 'ens4'), (8, 'ens5'), (8, 'ens6'),
-                 (8, 'ens7'), (68, 'ens5'), (66, 'ens5'), (70, 'ens5'), (69, 'ens5')}
+# Cong VLAN 99 KHONG co du phong (Access chi gan qua Dist-SW2): PortMod down o day
+# cat controller khoi Access va khong go tu xa duoc -> che do 'admin' bi tu choi.
+# D2-C1 / D1-D2 / D1-C1 da co duong du phong (STP Core-SW1) nen duoc phep.
+MGMT_CRITICAL = {(8, 'ens4'), (8, 'ens5'), (8, 'ens6'), (8, 'ens7'),
+                 (68, 'ens5'), (66, 'ens5'), (70, 'ens5'), (69, 'ens5')}
 UP_HOLD = 1.0               # lien ket vua chet phai thay probe lien tuc >= 1s moi coi la song (chong dao dong)
 CORE_TIMEOUT = 3.5          # OVS<->Core: ~3 ARP that bai -> chet
 
@@ -194,6 +211,32 @@ COOKIE_ALL = 0xffffffffffffffff
 def link_nodes(lid):
     l = LINKS[lid]
     return l['a'][0], l['b'][0]
+
+
+SEND_WAIT = 0.5             # giay cho hang doi gui cua 1 switch
+
+
+def _nonblocking_send(dp):
+    """Ryu 4.34 Datapath.send() CHO VO HAN khi hang doi 16 ban tin day (ket noi
+    chet nhung socket chua dong) -> treo greenlet goi (probe/liveness): lien ket
+    khong bao gio duoc danh gia lai (da gap 04/10/2026 khi sw5 mat het flow).
+    Thay bang ban CHO CO HAN: ket noi khoe rut hang doi trong vai ms (cho la nhuong
+    cho greenlet gui -> loat flow luc ket noi khong bi mat); ket noi chet -> sau
+    SEND_WAIT bo ban tin, greenlet goi chay tiep (echo se dong ket noi sau ~6 s)."""
+    if getattr(dp, '_campus_nb', False) or not hasattr(dp, '_send_q_sem'):
+        return
+
+    def send(buf, close_socket=False):
+        if not dp._send_q_sem.acquire(True, SEND_WAIT):
+            dp.campus_dropped = getattr(dp, 'campus_dropped', 0) + 1
+            return False
+        if dp.send_q:
+            dp.send_q.put((buf, close_socket))
+            return True
+        dp._send_q_sem.release()
+        return False
+    dp.send = send
+    dp._campus_nb = True
 
 
 def compute_data_tree(connected, link_up):
@@ -466,6 +509,7 @@ class CampusSwitch13(_RyuApp):
             return
         first = dpid not in self.switches
         self.switches[dpid] = dp
+        _nonblocking_send(dp)
         self.last_rx[dpid] = time.time()
         self.port_no[dpid] = n2n
         self.port_hw[dpid] = hw
@@ -688,8 +732,12 @@ class CampusSwitch13(_RyuApp):
             hub.sleep(0.1)
             now = time.time()
             for lid in [k for k, v in self.test_cut.items() if v.get('expires') and now > v['expires']]:
-                self.test_cut.pop(lid, None)
-                self._event('test_restore', 'Cat thu %s tu het han tren switch' % lid, link=lid)
+                c = self.test_cut[lid]
+                if c['mode'] == 'admin' or LINKS[lid]['b'][0] not in OVS_NODES:
+                    self.api_link_test(lid, 'up', c['mode'])    # PortMod bat lai
+                else:
+                    self.test_cut.pop(lid, None)
+                    self._event('test_restore', 'Cat thu %s tu het han tren switch' % lid, link=lid)
             for op_id in [k for k in self._ops if isinstance(k, tuple)]:
                 op = self._ops.get(op_id)
                 if op and now - op['started'] > OP_TIMEOUT:
@@ -975,7 +1023,9 @@ class CampusSwitch13(_RyuApp):
 
     def api_counters(self):
         return {'pktin': dict(self.pktin), 'pktin_kind': dict(self.pktin_kind),
-                'hosts': len(self.hosts), 'policies': len(self.policies)}
+                'hosts': len(self.hosts), 'policies': len(self.policies),
+                'echo': globals().get('ECHO_CFG'),
+                'send_dropped': {d: getattr(dp, 'campus_dropped', 0) for d, dp in self.switches.items()}}
 
     def api_events(self, since_id=0, kinds=None):
         return [e for e in list(self.event_log)
@@ -1304,8 +1354,11 @@ class CampusSwitch13(_RyuApp):
 
     def api_link_test(self, lid, action, mode='silent', max_s=CUT_MAX):
         """Mo phong mat lien ket (danh gia muc tieu 2).
-        mode 'silent': DROP moi khung vao o CA HAI dau (giong dut cap, dau
-           kia khong thay link down) -> phat hien bang probe.
+        mode 'silent': giong dut cap ma dau kia khong thay link down -> phat hien
+           bang probe. OVS<->OVS: flow DROP khung vao o CA HAI dau (hard_timeout).
+           OVS<->Core: PortMod NO_RECV|NO_FWD o dau OVS (chan CA HAI chieu, cong van
+           up). Flow drop chi chan chieu vao -> Core van nhan khung tu OVS -> Et0/2
+           Core-SW1 mo (mat BPDU) trong khi Et1/2 van nhan -> vong VLAN 99.
         mode 'admin':  OFPPortMod PORT_DOWN o dau a (OVS bao PortStatus ngay).
         action 'down' | 'up'."""
         if lid not in LINKS:
@@ -1318,13 +1371,15 @@ class CampusSwitch13(_RyuApp):
         now = time.time()
         max_s = max(5, min(int(max_s or CUT_MAX), 600))
         if action == 'down':
-            self.test_cut[lid] = {'mode': mode, 'ts': now, 'expires': now + max_s if mode == 'silent' else None}
+            # silent: OVS tu go (hard_timeout); admin: controller tu bat lai cong khi het han
+            self.test_cut[lid] = {'mode': mode, 'ts': now, 'expires': now + max_s}
             self._event('test_inject', 'Mo phong cat %s (%s)' % (lid, mode), link=lid)
         elif action == 'up':
             mode = self.test_cut.pop(lid, {}).get('mode', mode)
             self._event('test_restore', 'Khoi phuc %s (%s)' % (lid, mode), link=lid)
         else:
             raise ValueError('action phai la down/up')
+        to_core = l['b'][0] not in OVS_NODES
         for dpid, pname in (ends if mode == 'silent' else ends[:1]):
             dp = self.switches.get(dpid)
             pno = self.port_no.get(dpid, {}).get(pname)
@@ -1332,7 +1387,12 @@ class CampusSwitch13(_RyuApp):
                 continue
             parser = dp.ofproto_parser
             ofp = dp.ofproto
-            if mode == 'silent':
+            if mode == 'silent' and to_core:
+                cut = ofp.OFPPC_NO_RECV | ofp.OFPPC_NO_FWD
+                dp.send_msg(parser.OFPPortMod(
+                    datapath=dp, port_no=pno, hw_addr=self.port_hw[dpid][pno],
+                    config=cut if action == 'down' else 0, mask=cut, advertise=0))
+            elif mode == 'silent':
                 m = parser.OFPMatch(in_port=pno)
                 if action == 'down':
                     # hard_timeout: switch tu go du controller mat duong toi no

@@ -3,6 +3,7 @@ Chay:  python configs/01-Site100-Campus/test/test_campus_tree.py
 """
 import os
 import sys
+import time
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
@@ -91,3 +92,25 @@ class TreeTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
+
+class NonBlockingSendTest(unittest.TestCase):
+    def test_full_queue_drops_instead_of_blocking(self):
+        import queue
+        import threading
+
+        class DP(object):
+            pass
+        dp = DP()
+        dp.send_q = queue.Queue(2)
+        dp._send_q_sem = threading.BoundedSemaphore(2)   # cung API voi eventlet
+        cs._nonblocking_send(dp)
+        self.assertTrue(dp.send(b'a'))
+        self.assertTrue(dp.send(b'b'))
+        t0 = time.time()
+        self.assertFalse(dp.send(b'c'))          # ban goc se treo o day
+        self.assertLess(time.time() - t0, cs.SEND_WAIT + 0.5)
+        self.assertEqual(dp.campus_dropped, 1)
+        dp.send_q = None
+        dp._send_q_sem.release()
+        self.assertFalse(dp.send(b'd'))          # dang dong ket noi

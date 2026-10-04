@@ -45,5 +45,7 @@ else
     NOC_ARGS=()
 fi
 
+# Echo timeout dat trong campus_switch_13.py (CONF.set_override): ryu-manager tren
+# node 9 bao 'unrecognized arguments' voi --echo-request-interval (04/10/2026).
 exec "$ryu_bin" --ofp-tcp-listen-port 6653 \
     "$ryu_app" "${NOC_ARGS[@]}" ryu.app.ofctl_rest >> /root/ryu.log 2>&1
