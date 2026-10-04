@@ -85,6 +85,7 @@ Switch61 (node 61, IOL L2): `e0/0` = routed port (`no switchport` + `ip address 
 1. Host 1 cần route: `ip route add 10.9.1.0/24 via <IP e0/0 Switch61> dev pnet0` (mất khi host reboot; IP DHCP của Switch61 có thể đổi → xem `show ip interface brief` trên console 33597).
 2. Người dùng mở tunnel: `ssh -L 8443:10.9.1.10:443 root@<host1>` rồi vào `https://localhost:8443`. Cách này luôn chạy; route trực tiếp trên laptop qua VPN đã có lần không chạy — đừng đào sâu.
 3. Kiểm tra nhanh vManage sống: `curl -sk https://10.9.1.10/dataservice/device` (200).
+4. Chụp GUI tự động (04/10/2026, Switch61 e0/0 = `10.215.28.72`): forward cổng qua paramiko `direct-tcpip` tới `10.9.1.10:443`, đăng nhập `POST /j_security_check` bằng Python (mật khẩu đọc từ file credentials), rồi đưa cookie `JSESSIONID` vào một context Playwright riêng có `ignoreHTTPSErrors` (chứng chỉ tự ký → `ERR_CERT_AUTHORITY_INVALID`). Trang: `#/app/monitor2/overview`, `/devices`, `/tunnels`.
 
 Xem thêm `HuongDan/Xem GUI Manger trên Lap.txt`.
 
