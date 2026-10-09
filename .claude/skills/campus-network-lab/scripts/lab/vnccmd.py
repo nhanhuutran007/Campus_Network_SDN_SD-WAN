@@ -1,6 +1,7 @@
 """vnccmd.py <node> <out.png> [login] "cmd" ...: type into a host1 node's VNC console via SSH tunnel, then capture the screen.
 'login' first -> type eve + OVS password. Literal args: SUDOPASS types the OVS password (sudo prompts);
-INV inverts letter case (Caps Lock flips on every VNC connect); CTRLC sends Ctrl+C."""
+INV inverts letter case (Caps Lock flips on every VNC connect); CTRLC sends Ctrl+C;
+PASS:<tag> types the password of the credentials-file row containing <tag> (eg PASS:node 9)."""
 import os, sys, socket, threading, select, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "host2-sync"))
 from eve import client, password
@@ -72,6 +73,9 @@ for c in args:
         continue
     if c == "INV":
         INV[0] = True
+        continue
+    if c.startswith("PASS:"):
+        typ(password(c[5:])); time.sleep(4)
         continue
     if c == "SUDOPASS":
         typ(password("OVS node 5, 8")); time.sleep(3)

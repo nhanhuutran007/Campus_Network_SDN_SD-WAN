@@ -79,6 +79,20 @@ class TreeTest(unittest.TestCase):
         self.assertIsNone(root)
         self.assertEqual(tree, set())
 
+    def test_frozen_access_stays_leaf(self):
+        # Dist-SW2 chet keo theo 4 Access mat controller: Access van la la duoi Dist-SW1
+        frozen = {68: 'A1-D1', 66: 'A2-D1', 70: 'A3-D1', 69: 'A4-D1'}
+        root, tree, parent = cs.compute_data_tree({5}, links(), frozen)
+        self.assertEqual(tree, {'D1-C1', 'A1-D1', 'A2-D1', 'A3-D1', 'A4-D1'})
+        self.assertEqual(parent[69], (5, 'A4-D1'))
+        # khong co frozen -> hanh vi cu: chi con D1-C1
+        self.assertEqual(cs.compute_data_tree({5}, links())[1], {'D1-C1'})
+        # lien ket cha da chet hoac Dist dau kia mat ket noi -> khong giu
+        self.assertNotIn('A4-D1', cs.compute_data_tree({5}, links(down={'A4-D1'}), frozen)[1])
+        self.assertEqual(cs.compute_data_tree({8}, links(), frozen)[1], {'D2-C1'})
+        # chi giu dung lien ket cha cu, khong mo them uplink thu hai
+        self.assertNotIn('A1-D2', cs.compute_data_tree({5, 8}, links(), frozen)[1])
+
     def test_deterministic(self):
         r = [cs.compute_data_tree(ALL, links(down={'D1-C1'})) for _ in range(20)]
         self.assertTrue(all(x[1] == r[0][1] for x in r))

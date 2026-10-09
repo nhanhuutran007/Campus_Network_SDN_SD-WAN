@@ -10,6 +10,9 @@
 #     Khoi phuc    : thoi gian hoi tu (controller) + mat goi (ping lien tuc)
 #     Luu luong    : bang thong/% su dung tung cong (PortStats)
 #     VLAN, Chinh sach, Tai thiet bi, Hieu nang: cac giai doan tiep theo
+#     Suc khoe     : kenh dieu khien tung switch, duong quan tri VLAN 99, khung controller,
+#                    STP VLAN 99 Core-SW1 (SNMP) + canh bao RSTP dispute
+#     Kich ban     : chay tu dong chuoi cat/khoi phuc + ping 4 VLAN -> bao cao DAT/KHONG DAT
 #
 #  Khong dung CDN (VLAN 99 khong ra Internet): bieu do ve bang canvas.
 #  Du lieu dieu khien lay truc tiep tu app CampusSwitch13 (cung tien trinh).
@@ -23,6 +26,10 @@
 #     GET  /campus/pinger              thong ke ping lien tuc
 #     POST /campus/pinger              {"target":"10.1.40.102","action":"start|stop|reset","interval":0.2}
 #     GET  /campus/export/events.csv   |  /campus/export/pinger.csv?target=IP
+#     GET  /campus/health              suc khoe kenh dieu khien: tung switch, khung controller, STP VLAN 99
+#     GET  /campus/scenario            danh sach kich ban + trang thai dang chay + ket qua
+#     POST /campus/scenario            {"action":"run","ids":["S1"],"hold":15,"gap":15,"targets":[...]} | {"action":"stop"}
+#     POST /campus/scenario/result     ket qua cat THAT (ha tap tren host) tu scripts/lab/sdn_realcut_test.py
 # =====================================================================
 
 import json
@@ -67,6 +74,33 @@ SNMP_CPU_COLS = ['1.3.6.1.4.1.9.9.109.1.1.1.1.6',     # cpmCPUTotal5secRev
 SNMP_CPU_SCALARS = ['1.3.6.1.4.1.9.2.1.56.0',         # busyPer (OLD-CISCO-CPU-MIB)
                     '1.3.6.1.4.1.9.2.1.57.0']         # avgBusy1
 REPLY_TIMEOUT = 1.0         # ping: qua thoi gian nay coi la mat
+# Role STP VLAN 99 tren Core-SW1. IOL khong co SNMP context (community@99 bi bao
+# "Unknown community", 10/10/2026) -> dung CISCO-STP-EXTENSIONS-MIB stpxRSTPPortRoleValue,
+# chi so (cong dot1dBasePort, instance = VLAN) voi community thuong.
+STP_TARGET = 'Core-SW1'
+STP_VLAN = 99
+OID_RSTP_ROLE = '1.3.6.1.4.1.9.9.82.1.12.2.1.3'
+OID_BASE_IFINDEX = '1.3.6.1.2.1.17.1.4.1.2'    # dot1dBasePortIfIndex
+OID_IFNAME = '1.3.6.1.2.1.31.1.1.1.1'          # ifName
+STP_ROLES = {1: 'disabled', 2: 'root', 3: 'designated', 4: 'alternate', 5: 'backup', 6: 'boundary', 7: 'master'}
+# Role mong doi (10/10: OVS khong con noi 2 cong Core-SW1 trong VLAN 99 -> Core khong
+# nghe BPDU cua chinh no -> ca 2 designated/FWD). 'backup' = co vong -> STP luoi an toan dang chan.
+STP_EXPECT = {'Et1/2': 'designated', 'Et0/2': 'designated'}
+# Cong Core-SW1 noi OVS mang VLAN 99: Et1/2 = duong chinh (Dist-SW2), Et0/2 = du phong (Dist-SW1)
+STP_PORTS = {'Et1/2': 'D2-C1', 'Et0/2': 'D1-C1'}
+SCEN_FILE = '/root/ryu-app/metrics/scenarios.json'
+# Kich ban mo phong (che do silent: giong dut cap, phat hien bang probe)
+SCENARIOS = [
+    {'id': 'S1', 'name': 'Mat uplink goc Dist-SW1 - Core-SW1', 'links': ['D1-C1']},
+    {'id': 'S2', 'name': 'Mat Access-SW4 - Dist-SW1', 'links': ['A4-D1']},
+    {'id': 'S3', 'name': 'Mat lien ket Dist-SW1 - Dist-SW2', 'links': ['D1-D2']},
+    {'id': 'S4', 'name': 'Mat uplink quan tri Dist-SW2 - Core-SW1', 'links': ['D2-C1']},
+    {'id': 'S5', 'name': 'Hong kep: A4-D1 + D2-C1', 'links': ['A4-D1', 'D2-C1']},
+    {'id': 'S6', 'name': 'Mat ca 2 uplink Core cua Dist-SW1', 'links': ['D1-C1', 'D1-C2']},
+]
+SCEN_TARGETS = ['10.1.10.100', '10.1.20.100', '10.1.30.100', '10.1.40.102']
+SCEN_LIMIT_CUT_MS = 5000      # dat: gian doan dai nhat khi cat <= 5 s
+SCEN_LIMIT_RESTORE_MS = 3000  # dat: gian doan khi khoi phuc <= 3 s
 
 
 # =====================================================================
@@ -316,6 +350,38 @@ def snmp_cpu(host, community):
     return None, None
 
 
+def snmp_walk(host, community, base, limit=64):
+    """GETNEXT lien tiep trong cay base -> {chi_so_cuoi: gia_tri}."""
+    out, cur = {}, base
+    for _ in range(limit):
+        roid, v = snmp_get(host, community, [cur], getnext=True)[cur]
+        if not roid.startswith(base + '.'):
+            break
+        out[roid[len(base) + 1:]] = v
+        cur = roid
+    return out
+
+
+def window_stats(samples, t0, t1, interval):
+    """Mau ping (ts, rtt|None) trong [t0, t1): so gui, mat, gian doan lien tuc dai nhat (ms).
+    Chuoi n goi mat lien tiep = n chu ky gian doan."""
+    sent = lost = 0
+    worst = 0.0
+    run_start = None
+    for ts, rtt in samples:
+        if ts < t0 or ts >= t1:
+            continue
+        sent += 1
+        if rtt is None:
+            lost += 1
+            if run_start is None:
+                run_start = ts
+            worst = max(worst, (ts - run_start + interval) * 1000.0)
+        else:
+            run_start = None
+    return {'sent': sent, 'lost': lost, 'outage_ms': round(worst, 1) if lost else 0.0}
+
+
 def _read_proc():
     """CPU % toan node + RSS/CPU tien trinh Ryu (doc /proc, khong can psutil)."""
     with open('/proc/stat') as f:
@@ -357,6 +423,16 @@ class CampusNocMonitor(app_manager.RyuApp):
                 self.perf_runs = json.load(f)[-30:]
         except (IOError, OSError, ValueError):
             pass
+        self.stp = {'ports': [], 'error': 'chua do', 'ts': None}   # STP VLAN 99 tren Core-SW1
+        self._ifname = {}
+        self._ifname_ts = 0
+        self.scen = None            # kich ban dang chay: {'ids','step','log',...}
+        self.scen_results = []
+        try:
+            with open(SCEN_FILE) as f:
+                self.scen_results = json.load(f)[-50:]
+        except (IOError, OSError, ValueError):
+            pass
         wsgi = kwargs['wsgi']
         try:
             mapper = wsgi.mapper
@@ -372,6 +448,8 @@ class CampusNocMonitor(app_manager.RyuApp):
                               ('/campus/policies', 'c_policies'),
                               ('/campus/load', 'c_load'),
                               ('/campus/perf', 'c_perf'),
+                              ('/campus/health', 'c_health'),
+                              ('/campus/scenario', 'c_scen_get'),
                               ('/campus/export/events.csv', 'c_export_events'),
                               ('/campus/export/pinger.csv', 'c_export_pinger'),
                               ('/', 'index')]:
@@ -381,6 +459,8 @@ class CampusNocMonitor(app_manager.RyuApp):
             mapper.connect('noc', '/campus/vlan', action='c_vlan_post', **p)
             mapper.connect('noc', '/campus/policy', action='c_policy_post', **p)
             mapper.connect('noc', '/campus/perf', action='c_perf_post', **p)
+            mapper.connect('noc', '/campus/scenario', action='c_scen_post', **p)
+            mapper.connect('noc', '/campus/scenario/result', action='c_scen_result', **p)
             self.logger.info('NOC: routes registered')
         except Exception as e:
             self.logger.warning('NOC: wsgi register fail: %s', e)
@@ -547,6 +627,48 @@ class CampusNocMonitor(app_manager.RyuApp):
                                    'error': None if v is not None else 'khong co OID CPU'}
             except Exception as e:
                 self.snmp[name] = {'cpu': None, 'ts': time.time(), 'error': str(e)[:60]}
+        host = cfg.get('targets', {}).get(STP_TARGET)
+        if host:
+            self._stp_poll(host, cfg['community'])
+
+    def _stp_poll(self, host, community):
+        """Role STP VLAN 99 tung cong Core-SW1 (stpxRSTPPortRoleValue).
+        Luu y: role khong cho thay 'dispute' (Desg BLK) - chi thay role bat thuong."""
+        try:
+            raw = snmp_walk(host, community, OID_RSTP_ROLE, limit=256)
+            roles = {}
+            for idx, v in raw.items():
+                a, b = (int(x) for x in idx.split('.')[-2:])
+                if b == STP_VLAN and a != STP_VLAN:
+                    roles[str(a)] = v
+                elif a == STP_VLAN and b != STP_VLAN:
+                    roles[str(b)] = v
+            if not roles:
+                raise ValueError('khong co stpxRSTPPortRoleValue cho VLAN %d' % STP_VLAN)
+            now = time.time()
+            if now - self._ifname_ts > 300 or set(roles) - set(self._ifname):
+                base = snmp_walk(host, community, OID_BASE_IFINDEX)
+                # IOL: dot1dBasePortIfIndex rong (VLAN 1 khong tren trunk) -> base port N = ifIndex N
+                for bp in roles:
+                    base.setdefault(bp, int(bp))
+                names = {}
+                for bp, ifi in base.items():
+                    oid = '%s.%s' % (OID_IFNAME, ifi)
+                    v = snmp_get(host, community, [oid]).get(oid)
+                    names[bp] = v.decode('ascii', 'replace') if isinstance(v, bytes) else str(ifi)
+                self._ifname, self._ifname_ts = names, now
+            prev = {x['port']: x for x in self.stp.get('ports', [])}
+            ports = []
+            for bp in sorted(roles, key=int):
+                name = self._ifname.get(bp, 'port %s' % bp)
+                st = STP_ROLES.get(roles[bp], str(roles[bp]))
+                p0 = prev.get(name, {})
+                ports.append({'port': name, 'role': st, 'link': STP_PORTS.get(name),
+                              'expect': STP_EXPECT.get(name),
+                              'since': p0.get('since', now) if p0.get('role') == st else now})
+            self.stp = {'ports': ports, 'error': None, 'ts': now}
+        except Exception as e:
+            self.stp = {'ports': self.stp.get('ports', []), 'error': str(e)[:80], 'ts': time.time()}
 
     def add_perf(self, run):
         """Nhan ket qua do tu script lab (VPC <-> VPC). Tinh tom tat trong/khac VLAN."""
@@ -577,6 +699,241 @@ class CampusNocMonitor(app_manager.RyuApp):
         h = list(self.load_hist)
         return {'latest': h[-1] if h else None, 'history': h[-n:],
                 'snmp_configured': os.path.exists(SNMP_CFG)}
+
+    # -----------------------------------------------------------------
+    #  Suc khoe kenh dieu khien (tab "Suc khoe")
+    # -----------------------------------------------------------------
+    def get_health(self):
+        s = self.sw()
+        if s is None:
+            return {'error': 'app CampusSwitch13 chua chay'}
+        now = time.time()
+        topo = s.api_topology()
+        cnt = s.api_counters()
+        up = {l['id']: l['up'] for l in topo['links']}
+        nodes = {n['id']: n for n in topo['nodes']}
+        conn = {d: bool(nodes[d]['connected']) for d in SWITCH_INFO}
+        evs = s.api_events()
+        # Duong quan tri VLAN 99 (MGMT_RULES 10/10): moi Dist len cong Core-SW1 cua no
+        # va qua Dist kia (VLAN chuyen tiep tren inter-dist); Access len ca 2 Dist.
+        # Dist chet / mat ket noi thi van chuyen tiep theo flow da cai (fail_mode secure)
+        # -> chi xet lien ket song.
+        core = {5: ('D1-C1', 'Et0/2'), 8: ('D2-C1', 'Et1/2')}
+
+        def dist_paths(dd, label):
+            other = 8 if dd == 5 else 5
+            out = []
+            if up.get(core[dd][0]):
+                out.append('%s%s' % (label, core[dd][1]))
+            if up.get('D1-D2') and up.get(core[other][0]):
+                out.append('%s%s -> %s' % (label, SWITCH_INFO[other]['name'], core[other][1]))
+            return out
+        rows = []
+        for i, d in enumerate([5, 8, 68, 66, 70, 69]):
+            n = nodes.get(d, {})
+            if d in (5, 8):
+                paths = dist_paths(d, '')
+            else:
+                paths = []
+                for dd, lid in ((5, 'A%d-D1' % (i - 1)), (8, 'A%d-D2' % (i - 1))):
+                    if up.get(lid):
+                        paths += dist_paths(dd, SWITCH_INFO[dd]['name'] + ' -> ')
+            path = ' | '.join(paths) if paths else 'KHONG CON DUONG'
+            name = SWITCH_INFO[d]['name']
+            rec = [e for e in evs if e['kind'] == 'switch_up' and e['detail'].startswith(name + ' ')
+                   and now - e['ts'] <= 3600]
+            rows.append({'dpid': d, 'name': name, 'role': SWITCH_INFO[d]['role'],
+                         'connected': conn[d], 'control_ok': n.get('control_ok'),
+                         'last_rx_ms': n.get('last_rx_ms'), 'parent': n.get('parent'),
+                         'frozen': n.get('frozen'), 'mgmt_path': path, 'mgmt_paths': len(paths),
+                         'uptime': round(now - self.up_time[d], 1) if d in self.up_time else None,
+                         'send_dropped': cnt.get('send_dropped', {}).get(d, 0),
+                         'reconnects_1h': len(rec)})
+        stalls = [x for x in cnt.get('stall_log', []) if now - x[0] <= 3600]
+        last = self.load_hist[-1]['ctl'] if self.load_hist else {}
+        issues = []
+        for r in rows:
+            if r['mgmt_paths'] == 0:
+                issues.append(('bad', '%s khong con duong quan tri VLAN 99' % r['name']))
+            elif r['mgmt_paths'] == 1:
+                issues.append(('warn', '%s chi con 1 duong quan tri: %s' % (r['name'], r['mgmt_path'])))
+            if not r['connected']:
+                issues.append(('bad', '%s mat ket noi controller%s' % (
+                    r['name'], ' - dang giu duong cu (dong bang)' if r['frozen'] else '')))
+            elif r['control_ok'] is False:
+                issues.append(('warn', '%s im lang %s ms' % (r['name'], r['last_rx_ms'])))
+        for lid, ok in up.items():
+            if not ok:
+                issues.append(('bad', 'Lien ket %s chet' % lid))
+        recent = [x for x in stalls if now - x[0] <= 600]
+        if recent:
+            issues.append(('warn', 'Controller khung %d lan trong 10 phut (lau nhat %.1f s)'
+                           % (len(recent), max(x[1] for x in recent) / 1000.0)))
+        stp = dict(self.stp)
+        if up.get('D2-C1') and up.get('D1-C1'):
+            for p in stp.get('ports', []):
+                if p.get('expect') and p['role'] != p['expect']:
+                    issues.append(('warn', 'STP VLAN 99 Core-SW1 %s la %s (mong doi %s) tu %d s - duong '
+                                           'quan tri dang khac binh thuong' % (p['port'], p['role'], p['expect'],
+                                                                              now - p['since'])))
+        return {'ts': now, 'switches': rows, 'issues': issues,
+                'controller': {'stalls_total': cnt.get('controller_stalls', 0),
+                               'stalls_1h': len(stalls),
+                               'stall_max_ms_1h': max([x[1] for x in stalls] or [0]),
+                               'stall_last': stalls[-1][0] if stalls else None,
+                               'stall_active': cnt.get('stall_active'),
+                               'stall_log': stalls,
+                               'cpu_pct': last.get('cpu_pct'), 'ryu_cpu_pct': last.get('ryu_cpu_pct'),
+                               'echo': cnt.get('echo')},
+                'cpu_hist': [[h['ts'], h['ctl']['cpu_pct'], h['ctl']['ryu_cpu_pct']] for h in self.load_hist],
+                'stp': stp, 'links_up': sum(1 for v in up.values() if v), 'links_total': len(up)}
+
+    # -----------------------------------------------------------------
+    #  Kich ban kiem thu tu dong (tab "Kich ban")
+    # -----------------------------------------------------------------
+    def scen_start(self, ids, hold=15, gap=15, targets=None):
+        if self.scen and self.scen.get('running'):
+            raise ValueError('dang chay kich ban %s' % self.scen.get('current'))
+        defs = {x['id']: x for x in SCENARIOS}
+        ids = [i for i in (ids or []) if i in defs]
+        if not ids:
+            raise ValueError('chua chon kich ban')
+        targets = [t.strip() for t in (targets or SCEN_TARGETS) if t.strip()]
+        for t in targets:
+            socket.inet_aton(t)
+        hold = max(5.0, min(float(hold), 120.0))
+        gap = max(8.0, min(float(gap), 120.0))
+        self.scen = {'running': True, 'stop': False, 'ids': ids, 'current': None, 'step': 'chuan bi',
+                     'log': [], 'started': time.time(), 'hold': hold, 'gap': gap, 'targets': targets}
+        hub.spawn(self._scen_run, [defs[i] for i in ids], hold, gap, targets)
+        return {'ok': True, 'ids': ids}
+
+    def _scen_log(self, msg):
+        self.scen['log'].append([round(time.time(), 2), msg])
+        self.logger.info('SCENARIO %s', msg)
+
+    def _healthy(self):
+        s = self.sw()
+        t = s.api_topology()
+        return (all(n['connected'] for n in t['nodes'] if n['connected'] is not None)
+                and all(l['up'] for l in t['links']) and not s.test_cut)
+
+    def _scen_run(self, scens, hold, gap, targets):
+        st = self.scen
+        s = self.sw()
+        started = []
+        try:
+            for t in targets:
+                if t not in self.pinger.targets or not self.pinger.targets[t].running:
+                    started.append(t)
+                self.pinger.start(t, 0.1)
+            hub.sleep(3)
+            for sc in scens:
+                if st['stop']:
+                    self._scen_log('dung theo yeu cau')
+                    break
+                st['current'] = sc['id']
+                st['step'] = 'kiem tra truoc'
+                for _ in range(30):
+                    if self._healthy():
+                        break
+                    hub.sleep(1)
+                else:
+                    self._scen_log('%s: mang chua on dinh (switch/lien ket chua du) - bo qua' % sc['id'])
+                    continue
+                e0 = max([e['id'] for e in s.api_events()] or [0])
+                t0 = time.time()
+                st['step'] = 'cat %s' % '+'.join(sc['links'])
+                self._scen_log('%s: cat %s (silent, giu %d s)' % (sc['id'], '+'.join(sc['links']), hold))
+                for lid in sc['links']:
+                    s.api_link_test(lid, 'down', 'silent', max_s=hold + 30)
+                hub.sleep(hold)
+                topo_cut = s.api_topology()
+                t1 = time.time()
+                st['step'] = 'khoi phuc'
+                for lid in reversed(sc['links']):
+                    try:
+                        s.api_link_test(lid, 'up', 'silent')
+                    except Exception as e:
+                        self._scen_log('%s: khoi phuc %s loi: %s' % (sc['id'], lid, e))
+                t_ok = None
+                while time.time() - t1 < gap + 60:
+                    hub.sleep(0.5)
+                    if t_ok is None and self._healthy():
+                        t_ok = time.time()
+                    if time.time() - t1 >= gap and t_ok is not None:
+                        break
+                res = self._scen_result(sc, 'mo phong', t0, t1, time.time(), t_ok, e0, targets, topo_cut)
+                self._scen_log('%s: %s %s' % (sc['id'], res['verdict'], '; '.join(res['fails'])))
+        except Exception as e:
+            self._scen_log('loi: %s' % e)
+            for lid in list(s.test_cut):
+                try:
+                    s.api_link_test(lid, 'up', 'silent')
+                except Exception:
+                    pass
+        finally:
+            for t in started:
+                self.pinger.stop(t)
+            st['running'] = False
+            st['step'] = 'xong'
+            st['current'] = None
+
+    def _scen_result(self, sc, kind, t0, t1, t2, t_ok, e0, targets, topo_cut):
+        s = self.sw()
+        ping = {}
+        for t in targets:
+            pt = self.pinger.targets.get(t)
+            smp = list(pt.samples) if pt else []
+            iv = pt.interval if pt else 0.1
+            ping[t] = {'cut': window_stats(smp, t0, t1, iv), 'restore': window_stats(smp, t1, t2, iv)}
+        evs = [e for e in s.api_events(e0)
+               if e['kind'] in ('link_down', 'link_up', 'switch_down', 'switch_up', 'controller_stall',
+                                'tree_change')]
+        down = [e for e in evs if e['kind'] == 'link_down' and e.get('link') in sc['links']]
+        worst_cut = max([v['cut']['outage_ms'] for v in ping.values()] or [0])
+        worst_rst = max([v['restore']['outage_ms'] for v in ping.values()] or [0])
+        no_reply = [t for t, v in ping.items() if v['cut']['sent'] and v['cut']['lost'] == v['cut']['sent']]
+        fails = []
+        if t_ok is None:
+            fails.append('khong tro ve 13/13 lien ket + 6/6 switch')
+        if worst_cut > SCEN_LIMIT_CUT_MS:
+            fails.append('gian doan khi cat %.1f s > %d s' % (worst_cut / 1000.0, SCEN_LIMIT_CUT_MS // 1000))
+        if worst_rst > SCEN_LIMIT_RESTORE_MS:
+            fails.append('gian doan khi khoi phuc %.1f s > %d s' % (worst_rst / 1000.0,
+                                                                   SCEN_LIMIT_RESTORE_MS // 1000))
+        if no_reply:
+            fails.append('khong ping duoc %s suot luc cat' % ', '.join(no_reply))
+        res = {'ts': t0, 'id': sc['id'], 'name': sc['name'], 'links': sc['links'], 'kind': kind,
+               'hold_s': round(t1 - t0, 1), 'verdict': 'DAT' if not fails else 'KHONG DAT', 'fails': fails,
+               'stalls': len([e for e in evs if e['kind'] == 'controller_stall']),
+               'detect_ms': [e.get('detect_ms') for e in down],
+               'converge_ms': [e.get('converge_ms') for e in down],
+               'restore_ms': round((t_ok - t1) * 1000) if t_ok else None,
+               'worst_cut_ms': worst_cut, 'worst_restore_ms': worst_rst, 'ping': ping,
+               'tree_during': sorted(l['id'] for l in topo_cut['links'] if l['in_tree']),
+               'frozen_during': [n['name'] for n in topo_cut['nodes'] if n.get('frozen')],
+               'events': [[round(e['ts'] - t0, 2), e['kind'], e['detail']] for e in evs]}
+        self._scen_save(res)
+        return res
+
+    def _scen_save(self, res):
+        self.scen_results.append(res)
+        self.scen_results = self.scen_results[-50:]
+        try:
+            with open(SCEN_FILE, 'w') as f:
+                json.dump(self.scen_results, f)
+        except (IOError, OSError):
+            pass
+
+    def scen_add_external(self, res):
+        """Ket qua cat THAT tu script lab (ha tap tren host 1) - cung dinh dang."""
+        if not isinstance(res, dict) or not res.get('id'):
+            raise ValueError('thieu id')
+        res.setdefault('ts', time.time())
+        res.setdefault('kind', 'cat that')
+        self._scen_save(res)
+        return {'ok': True}
 
     def _history_loop(self):
         while True:
@@ -742,6 +1099,41 @@ class NocController(ControllerBase):
         except Exception as e:
             return _err(str(e))
 
+    def c_health(self, req, **kw):
+        return _json(self.m.get_health())
+
+    def c_scen_get(self, req, **kw):
+        st = self.m.scen
+        return _json({'defs': SCENARIOS, 'targets': SCEN_TARGETS,
+                      'limits': {'cut_ms': SCEN_LIMIT_CUT_MS, 'restore_ms': SCEN_LIMIT_RESTORE_MS},
+                      'state': {k: v for k, v in st.items() if k != 'stop'} if st else None,
+                      'results': self.m.scen_results})
+
+    def c_scen_post(self, req, **kw):
+        try:
+            b = json.loads(req.body.decode('utf-8') if req.body else '{}')
+            if b.get('action') == 'stop':
+                if self.m.scen:
+                    self.m.scen['stop'] = True
+                return _json({'ok': True})
+            if b.get('action') == 'clear':
+                self.m.scen_results = []
+                try:
+                    os.remove(SCEN_FILE)
+                except OSError:
+                    pass
+                return _json({'ok': True})
+            return _json(self.m.scen_start(b.get('ids'), b.get('hold', 15), b.get('gap', 15),
+                                           b.get('targets')))
+        except Exception as e:
+            return _err(str(e))
+
+    def c_scen_result(self, req, **kw):
+        try:
+            return _json(self.m.scen_add_external(json.loads(req.body.decode('utf-8'))))
+        except Exception as e:
+            return _err(str(e))
+
     def c_pinger_get(self, req, **kw):
         return _json([t.stats() for t in self.m.pinger.targets.values()])
 
@@ -853,7 +1245,7 @@ svg text{fill:var(--text);font-size:12px}.legend span{margin-right:14px;font-siz
 </section>
 <section class="tab" id="t-topo">
  <div class="card"><h2>Do thi lien ket &amp; cay du lieu</h2>
-  <div class="legend"><span><i style="background:var(--ok)"></i>thuoc cay</span><span><i style="background:var(--idle)"></i>du phong (song)</span><span><i style="background:var(--bad)"></i>chet</span><span><i style="background:var(--warn)"></i>dang mo phong cat</span></div>
+  <div class="legend"><span><i style="background:var(--ok)"></i>thuoc cay</span><span><i style="background:var(--idle)"></i>du phong (song)</span><span><i style="background:var(--bad)"></i>chet</span><span><i style="background:var(--warn)"></i>dang mo phong cat</span><span>* switch mat controller, giu duong cu (dong bang)</span></div>
   <svg id="svg-topo" viewBox="0 0 900 360" style="width:100%;max-height:420px"></svg></div>
  <div class="card"><h2>Lien ket</h2><div class="row muted" style="margin-bottom:8px">Che do mo phong:
    <select id="sel-mode"><option value="silent">silent - drop 2 dau (giong dut cap)</option><option value="admin">admin - PortMod down 1 dau</option></select></div>
@@ -939,10 +1331,35 @@ svg text{fill:var(--text);font-size:12px}.legend span{margin-right:14px;font-siz
     <button class="act" onclick="perfPing()">Bat cho cac VLAN</button> (xem tab Khoi phuc)</div></div>
  </div>
 </section>
+<section class="tab" id="t-health">
+ <div class="grid g4" id="h-cards"></div>
+ <div class="card"><h2>Canh bao hien tai</h2><div id="h-issues"></div></div>
+ <div class="card"><h2>Kenh dieu khien tung switch</h2>
+  <div class="muted" style="font-size:12px;margin-bottom:6px">Im lang = thoi gian tu ban tin OpenFlow cuoi (probe moi 0,5 s, &gt; 1 s la mat kenh). Duong quan tri VLAN 99 (10/10): moi OVS dung DONG THOI moi duong con song toi Core-SW1 (Et1/2 qua Dist-SW2, Et0/2 qua Dist-SW1, hoac qua inter-dist) - khong cho STP, khong can controller chuyen mach.</div>
+  <table id="tb-health"></table></div>
+ <div class="grid g2">
+  <div class="card"><h2>Controller khung (ms) - 1 gio gan nhat</h2><canvas id="c-stall" height="190"></canvas>
+   <div class="muted" style="font-size:12px;margin-top:6px">Vong kiem tra 0,1 s bi tre &gt; 0,5 s. Trong luc khung controller tam ngung ket luan lien ket chet (an han 3,5 s) de tranh dao cay gia.</div></div>
+  <div class="card"><h2>Role STP VLAN 99 tren Core-SW1 (SNMP)</h2><table id="tb-stp"></table><div class="muted" id="h-stp-note" style="font-size:12px;margin-top:6px"></div></div>
+ </div>
+ <div class="card"><h2>CPU node 9 (%)</h2><canvas id="c-hcpu" height="170"></canvas></div>
+</section>
+<section class="tab" id="t-scen">
+ <div class="grid g2">
+  <div class="card"><h2>Chay kich ban kiem thu tu dong</h2>
+   <div class="muted" style="font-size:12px;margin-bottom:6px">Moi kich ban: kiem tra mang on dinh &rarr; cat (silent, giong dut cap) &rarr; giu &rarr; khoi phuc &rarr; cho 13/13 lien ket + 6/6 switch. Ping 0,1 s toi 1 may moi VLAN. Dat khi: gian doan khi cat &le; <b id="sc-lc">5</b> s, khi khoi phuc &le; <b id="sc-lr">3</b> s va mang tro ve day du.</div>
+   <div id="sc-list"></div>
+   <div class="row" style="margin-top:8px">giu <input id="sc-hold" size="3" value="15"/> s, nghi <input id="sc-gap" size="3" value="15"/> s, may dich <input id="sc-tg" size="44"/></div>
+   <div class="row" style="margin-top:10px"><button class="act green" onclick="scRun()">Chay cac kich ban da chon</button><button class="act red" onclick="scPost({action:'stop'})">Dung</button>
+    <a href="/campus/scenario" target="_blank"><button class="act">JSON</button></a><button class="act" onclick="if(confirm('Xoa toan bo ket qua?'))scPost({action:'clear'})">Xoa ket qua</button></div></div>
+  <div class="card"><h2>Tien trinh</h2><div id="sc-state" class="muted">-</div><pre id="sc-log" style="background:#0e1627;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;max-height:260px;overflow:auto;white-space:pre-wrap"></pre></div>
+ </div>
+ <div class="card"><h2>Ket qua (moi nhat truoc) - <span class="muted" style="text-transform:none">"cat that" = ha tap tren host EVE bang scripts/lab/sdn_realcut_test.py</span></h2><table id="tb-scen"></table></div>
+</section>
 </main><div id="toast"></div>
 <script>
 const TABS=[['overview','Tong quan'],['topo','Topology'],['recovery','Khoi phuc'],['traffic','Luu luong'],
- ['vlan','VLAN'],['policy','Chinh sach'],['load','Tai thiet bi'],['perf','Hieu nang']];
+ ['vlan','VLAN'],['policy','Chinh sach'],['load','Tai thiet bi'],['perf','Hieu nang'],['health','Suc khoe'],['scen','Kich ban']];
 const SOON={};
 let cur=localStorage.getItem('tab')||'overview';
 const nav=document.getElementById('nav');
@@ -985,9 +1402,9 @@ function drawTopo(t){const s=$('svg-topo');let h='';
   h+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}"><title>${l.id}: ${l.a_name}.${l.a[1]} - ${l.b_name}.${l.b[1]}</title></line>`;
   const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;h+=`<text x="${mx+4}" y="${my-4}" style="font-size:10px;fill:#7f8db0">${l.id}</text>`});
  t.nodes.forEach(n=>{const key=n.id==='C1'||n.id==='C2'?n.id:n.name,p=POS[key];if(!p)return;
-  const core=n.role==='Core',col=core?'#3aa0ff':(n.connected?'#22c55e':'#ef4444');
-  h+=`<rect x="${p[0]-62}" y="${p[1]-17}" width="124" height="34" rx="7" fill="#111a2e" stroke="${col}" stroke-width="2"/>`;
-  h+=`<text x="${p[0]}" y="${p[1]+4}" text-anchor="middle">${n.name}${core&&t.root===n.name?' (goc)':''}</text>`});
+  const core=n.role==='Core',col=core?'#3aa0ff':(n.connected?'#22c55e':(n.frozen?'#f59e0b':'#ef4444'));
+  h+=`<rect x="${p[0]-62}" y="${p[1]-17}" width="124" height="34" rx="7" fill="#111a2e" stroke="${col}" stroke-width="2" stroke-dasharray="${n.frozen?'5 4':''}"><title>${n.frozen?'Mat controller - giu nguyen duong cu (dong bang)':(n.connected||core?'':'Mat ket noi controller')}</title></rect>`;
+  h+=`<text x="${p[0]}" y="${p[1]+4}" text-anchor="middle">${n.name}${core&&t.root===n.name?' (goc)':''}${n.frozen?' *':''}</text>`});
  s.innerHTML=h}
 function linkRows(t){let h='<tr><th>Lien ket</th><th>Dau A</th><th>Dau B</th><th>Trang thai</th><th>Cay</th><th class="num">Probe gan nhat (s)</th><th class="num">On dinh (s)</th><th>Mo phong</th></tr>';
  t.links.forEach(l=>{const st=l.test_cut?'<span class="b b-warn">cat ('+l.test_cut+')</span>':(l.up?'<span class="b b-ok">song</span>':'<span class="b b-bad">chet</span>');
@@ -1000,7 +1417,7 @@ async function cut(id,action){const r=await J('/campus/linktest',{method:'POST',
 async function ping(action){const ip=$('in-target').value.trim();const r=await J('/campus/pinger',{method:'POST',headers:{'Content-Type':'application/json'},
  body:JSON.stringify({target:ip,action:action,interval:+$('in-int').value})});if(r.error)toast('Loi: '+r.error);refresh()}
 function evRows(evs,full){let h='<tr><th>#</th><th>Gio</th><th>Loai</th><th>Mo ta</th>'+(full?'<th class="num">detect</th><th class="num">converge</th><th class="num">total</th><th class="num">switch</th><th class="num">flow-mod</th><th>cay</th>':'<th class="num">converge (ms)</th>')+'</tr>';
- evs.slice().reverse().forEach(e=>{const k={link_down:'b-bad',link_up:'b-ok',switch_down:'b-bad',switch_up:'b-ok',tree_change:'b-acc',test_inject:'b-warn',test_restore:'b-warn'}[e.kind]||'b-idle';
+ evs.slice().reverse().forEach(e=>{const k={link_down:'b-bad',link_up:'b-ok',switch_down:'b-bad',switch_up:'b-ok',tree_change:'b-acc',test_inject:'b-warn',test_restore:'b-warn',controller_stall:'b-warn'}[e.kind]||'b-idle';
   h+=`<tr><td>${e.id}</td><td>${tstr(e.ts)}</td><td><span class="b ${k}">${e.kind}</span></td><td>${e.detail}</td>`+
   (full?`<td class="num">${fmt(e.detect_ms)}</td><td class="num">${fmt(e.converge_ms)}</td><td class="num">${fmt(e.total_ms)}</td><td class="num">${e.switches==null?'-':e.switches}</td><td class="num">${e.flow_mods==null?'-':e.flow_mods}</td><td>v${e.tree_version==null?'-':e.tree_version}</td>`:`<td class="num">${fmt(e.converge_ms)}</td>`)+'</tr>'});return h}
 // ---- VLAN ----
@@ -1081,6 +1498,47 @@ function perfView(runs){const last=runs[runs.length-1];
  last.rows.forEach(r=>{t+=`<tr><td>${r.src} (V${r.src_vlan})</td><td>${r.dst} (V${r.dst_vlan})</td><td class="num">${fmt(r.avg,2)}</td><td class="num">${fmt(r.min,2)}</td><td class="num">${fmt(r.max,2)}</td><td class="num">${fmt(r.jitter,2)}</td><td class="num">${r.sent?fmt(100*(r.sent-r.recv)/r.sent,1):'-'}</td></tr>`});
  $('tb-pf-pairs').innerHTML=t;
  chart($('c-pf-hist'),[{name:'trong VLAN',color:COLORS[1],pts:runs.map(r=>[r.ts,r.summary.intra_vlan.rtt_avg])},{name:'khac VLAN',color:COLORS[2],pts:runs.map(r=>[r.ts,r.summary.inter_vlan.rtt_avg])}],{timeAxis:1})}
+// ---- SUC KHOE ----
+function age(s){if(s==null)return '-';s=Math.round(s);return s<120?s+' s':s<7200?Math.round(s/60)+' ph':Math.round(s/3600)+' h'}
+function healthView(H){if(H.error){$('h-cards').innerHTML='<div class="card">'+H.error+'</div>';return}
+ const C=H.controller,sw=H.switches,okc=sw.filter(x=>x.connected).length,fz=sw.filter(x=>x.frozen).length;
+ const e12=(H.stp.ports||[]).find(p=>p.port==='Et1/2'),e02=(H.stp.ports||[]).find(p=>p.port==='Et0/2');
+ const stpOk=e12&&e02&&e12.role===e12.expect&&e02.role===e02.expect;
+ const card=(t,v,s,cls)=>`<div class="card kpi"><h2>${t}</h2><div class="v" style="color:var(--${cls||'text'})">${v}</div><div class="s">${s}</div></div>`;
+ $('h-cards').innerHTML=card('Kenh dieu khien',okc+' / '+sw.length,fz?fz+' switch dong bang (giu duong cu)':'switch nhan/gui OpenFlow',okc===sw.length?'ok':'bad')+
+  card('Lien ket',H.links_up+' / '+H.links_total,'tham do 0,5 s (OVS) / 1 s (Core)',H.links_up===H.links_total?'ok':'bad')+
+  card('Controller khung (1 h)',C.stalls_1h,'lau nhat '+fmt(C.stall_max_ms_1h/1000,1)+' s'+(C.stall_last?' &middot; gan nhat '+age(H.ts-C.stall_last)+' truoc':'')+(C.stall_active?' &middot; <b>dang an han</b>':''),C.stalls_1h?'warn':'ok')+
+  card('STP VLAN 99 Core-SW1',(e12?e12.role.slice(0,4):'-')+' / '+(e02?e02.role.slice(0,4):'-'),'role Et1/2 / Et0/2 (ca 2 designated)',stpOk?'ok':'warn');
+ $('h-issues').innerHTML=H.issues.length?H.issues.map(i=>`<div style="margin:4px 0"><span class="b b-${i[0]}">${i[0]==='bad'?'LOI':'CANH BAO'}</span> ${i[1]}</div>`).join(''):'<span class="b b-ok">OK</span> Khong co canh bao: 6/6 switch, 13/13 lien ket, controller khong khung trong 10 phut.';
+ let h='<tr><th>Switch</th><th>Vai tro</th><th>Ket noi</th><th class="num">Im lang (ms)</th><th>Cha (cay du lieu)</th><th>Duong quan tri VLAN 99 (dang song)</th><th class="num">Thoi gian ket noi</th><th class="num">Ket noi lai (1 h)</th><th class="num">Ban tin bo do</th></tr>';
+ sw.forEach(r=>{const st=r.connected?(r.control_ok?'<span class="b b-ok">OK</span>':'<span class="b b-warn">im lang</span>'):(r.frozen?'<span class="b b-warn">dong bang</span>':'<span class="b b-bad">mat</span>');
+  h+=`<tr><td><b>${r.name}</b></td><td>${r.role}</td><td>${st}</td><td class="num">${r.last_rx_ms==null?'-':r.last_rx_ms}</td><td>${r.parent||'-'}</td><td><span class="b ${r.mgmt_paths>1?'b-ok':r.mgmt_paths?'b-warn':'b-bad'}">${r.mgmt_paths} duong</span> <span style="font-size:12px">${r.mgmt_path}</span></td><td class="num">${age(r.uptime)}</td><td class="num">${r.reconnects_1h}</td><td class="num">${r.send_dropped}</td></tr>`});
+ $('tb-health').innerHTML=h;
+ chart($('c-stall'),[{name:'khung',color:COLORS[2],bar:1,pts:C.stall_log.map(x=>[x[0],x[1]])}],{timeAxis:1,ymin:1000});
+ chart($('c-hcpu'),[{name:'node 9',color:COLORS[0],pts:H.cpu_hist.map(x=>[x[0],x[1]])},{name:'Ryu',color:COLORS[2],pts:H.cpu_hist.map(x=>[x[0],x[2]])}],{timeAxis:1,ymin:100});
+ let t='<tr><th>Cong</th><th>Lien ket</th><th>Role</th><th>Mong doi</th><th class="num">Tu luc</th></tr>';
+ (H.stp.ports||[]).forEach(p=>{const c=p.expect?(p.role===p.expect?'b-ok':'b-warn'):(p.role==='designated'||p.role==='root'?'b-acc':'b-idle');
+  t+=`<tr><td><b>${p.port}</b></td><td>${p.link||'-'}</td><td><span class="b ${c}">${p.role}</span></td><td>${p.expect||'-'}</td><td class="num">${age(H.ts-p.since)}</td></tr>`});
+ $('tb-stp').innerHTML=t;$('h-stp-note').textContent=H.stp.error?('SNMP: '+H.stp.error):'Binh thuong (10/10): Et1/2 va Et0/2 deu designated (forwarding) - OVS khong noi 2 cong nay nen Core khong nghe BPDU cua chinh no. Et0/2 hoac Et1/2 thanh backup = co vong VLAN 99 qua OVS, STP dang chan (luoi an toan).'}
+// ---- KICH BAN ----
+let SC=null;
+async function scPost(b){const r=await J('/campus/scenario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+ toast(r.error?'Loi: '+r.error:'OK');setTimeout(refresh,500)}
+function scRun(){const ids=[...document.querySelectorAll('.sc-c:checked')].map(x=>x.value);if(!ids.length){toast('Chon it nhat 1 kich ban');return}
+ if(!confirm('Chay '+ids.join(', ')+'? Lien ket se bi cat that su (mo phong silent) trong luc chay.'))return;
+ scPost({action:'run',ids:ids,hold:+$('sc-hold').value,gap:+$('sc-gap').value,targets:$('sc-tg').value.split(',')})}
+function scView(D){SC=D;$('sc-lc').textContent=D.limits.cut_ms/1000;$('sc-lr').textContent=D.limits.restore_ms/1000;
+ const box=$('sc-list');if(!box.dataset.ready){box.innerHTML=D.defs.map(d=>`<label style="display:block;font-size:13px;margin:3px 0"><input type="checkbox" class="sc-c" value="${d.id}"/> <b>${d.id}</b> ${d.name} <span class="muted">(${d.links.join(' + ')})</span></label>`).join('');
+  $('sc-tg').value=D.targets.join(',');box.dataset.ready=1}
+ const st=D.state;$('sc-state').innerHTML=st?(st.running?'<span class="b b-warn">dang chay</span> '+(st.current||'')+' &middot; '+st.step:'<span class="b b-idle">san sang</span>'):'<span class="b b-idle">san sang</span>';
+ $('sc-log').textContent=st?st.log.map(x=>tstr(x[0])+'  '+x[1]).join('\n'):'';
+ let h='<tr><th>Gio</th><th>Kich ban</th><th>Loai</th><th class="num">Phat hien (ms)</th><th class="num">Hoi tu (ms)</th><th class="num">Gian doan cat (ms)</th><th class="num">Gian doan khoi phuc (ms)</th><th class="num">Ve day du (ms)</th><th class="num">Khung</th><th>Ket qua</th></tr>';
+ D.results.slice().reverse().forEach((r,i)=>{const pr=Object.entries(r.ping||{}).map(([t,v])=>`${t}: cat ${v.cut.lost}/${v.cut.sent} (${v.cut.outage_ms} ms), khoi phuc ${v.restore.lost}/${v.restore.sent} (${v.restore.outage_ms} ms)`).join('<br>');
+  h+=`<tr><td>${new Date(r.ts*1000).toLocaleString('vi-VN')}</td><td><b>${r.id}</b> ${r.name||''}<div class="muted" style="font-size:11px">${(r.links||[]).join(' + ')}</div></td><td><span class="b ${r.kind==='cat that'?'b-acc':'b-idle'}">${r.kind}</span></td>
+  <td class="num">${(r.detect_ms||[]).map(x=>fmt(x,0)).join(' / ')||'-'}</td><td class="num">${(r.converge_ms||[]).map(x=>fmt(x,0)).join(' / ')||'-'}</td><td class="num">${fmt(r.worst_cut_ms,0)}</td><td class="num">${fmt(r.worst_restore_ms,0)}</td><td class="num">${r.restore_ms==null?'-':r.restore_ms}</td><td class="num">${r.stalls||0}</td>
+  <td><span class="b ${r.verdict==='DAT'?'b-ok':'b-bad'}">${r.verdict}</span>${(r.fails||[]).length?'<div class="muted" style="font-size:11px">'+r.fails.join('; ')+'</div>':''}
+  <details style="font-size:11px"><summary class="muted">chi tiet</summary>${pr}<br>cay luc cat: ${(r.tree_during||[]).join(', ')}${(r.frozen_during||[]).length?'<br>dong bang: '+r.frozen_during.join(', '):''}<br>${(r.events||[]).map(e=>'+'+e[0]+'s '+e[1]+' '+e[2]).join('<br>')}</details></td></tr>`});
+ if(!D.results.length)h+='<tr><td colspan="10" class="muted">Chua co ket qua</td></tr>';$('tb-scen').innerHTML=h}
 // ---- refresh ----
 let EV=[];
 async function refresh(){try{
@@ -1110,6 +1568,8 @@ async function refresh(){try{
  if(cur==='policy'){polTables(await J('/campus/policies'))}
  if(cur==='load'){loadView(await J('/campus/load'))}
  if(cur==='perf'){perfView(await J('/campus/perf'))}
+ if(cur==='health'){healthView(await J('/campus/health'))}
+ if(cur==='scen'){scView(await J('/campus/scenario'))}
 }catch(e){console.log(e)}}
 show(cur);setInterval(refresh,2000);
 </script></body></html>"""

@@ -19,7 +19,7 @@
 #      lien ket OVS<->Core. Trong EVE, mat lien ket/node KHONG lam cong
 #      ben kia doi trang thai -> khong the chi dua vao PortStatus.
 #   4) VLAN 99 (quan tri/control) KHONG phu thuoc cay: flow "guard" tinh,
-#      co huong, priority 60000 tren Dist (xem MGMT_FLOWS) -> flow cu KHONG
+#      co huong, priority 60000 tren Dist (xem MGMT_RULES) -> flow cu KHONG
 #      BAO GIO cat duong ve controller (sua be tac FAILOVER/RECOVERY cua
 #      phien ban 1) va khong phan xa khung quan tri ve chinh Access.
 #   5) Nhat ky su kien + do thoi gian hoi tu: moc phat hien -> barrier
@@ -106,36 +106,59 @@ TRUNK_PORTS = {
     68: ['ens4', 'ens5'], 66: ['ens4', 'ens5'], 70: ['ens4', 'ens5'],
     69: ['ens4', 'ens5'],
 }
-# VLAN 99 tren Dist: luong TINH, CO HUONG, KHONG PHAN XA (khong phu thuoc cay).
-#  Access gui khung quan tri len CA HAI uplink (flow co dinh 0xba5f). Neu Dist
-#  flood tu do, khung cua Access-SW1 di sw5 -> ens8 -> sw8 -> quay ve chinh
-#  Access-SW1 qua uplink thu hai -> br-mgmt hoc sai MAC cua chinh no -> goi
-#  controller gui ve bi drop ~20s (da gap 03/10/2026). Vi vay:
-#   - Access <-> controller di THANG qua Dist-SW2 (Access ens5 -> sw8 -> ens10
-#     -> Core-SW1); ban sao di vao Dist-SW1 bi bo.
-#   - Dist-SW1 noi inter-dist (ens8) + Core-SW1 Et0/2 (ens9). Ben trong OVS la
-#     CAY (khong vong); vong duy nhat la Core-SW1 Et1/2 <-> OVS <-> Core-SW1
-#     Et0/2 -> rapid-PVST cua Core-SW1 chan Et0/2 (backup, BPDU di xuyen OVS).
-#     Mat D2-C1 hoac D1-D2 -> Et0/2 mo -> controller van toi duoc moi OVS
-#     (het SPOF D2-C1, 04/10/2026).
-#   - sw5.ens10 (Core-SW2): DROP. VLAN 99 tren OVS la flood tinh (khong hoc MAC)
-#     -> neu co 2 router (Core-SW1 + Core-SW2) thi moi router nhan unicast cua
-#     router kia va dinh tuyen nguoc vao VLAN 99 -> bao ~40k pps (da gap 04/10).
-#  Loi ich: Dist-SW1 chet -> Access van noi controller -> Ryu chuyen du lieu
-#  sang Dist-SW2 ngay (khong can co che failover rieng nhu phien ban 1).
+# VLAN 99 tren Dist: luong TINH, CO HUONG, HAI DUONG LEN CORE, KHONG VONG QUA CORE
+#  (thiet ke 10/10/2026, thay ban 04/10 dua vao rapid-PVST cua Core-SW1).
+#  Ban cu: OVS noi Core-SW1 Et1/2 -> sw8 -> inter-dist -> sw5 -> Et0/2 nen Core
+#  nghe chinh BPDU cua no: Et0/2 thanh Backup BLK, mat D2-C1 thi phai cho STP mo
+#  Et0/2 (~10 s), khoi phuc thi Et1/2 bi "Dispute" ~8 s (khong co ban bat tay
+#  proposal/agreement voi chinh minh) -> 6 OVS mat controller, kich ban S4/S5 truot.
+#  Ban moi: KHONG co duong nao trong OVS dua khung tu cong Core nay sang cong Core
+#  kia -> Core khong thay BPDU cua chinh no, Et1/2 va Et0/2 deu designated/FWD,
+#  STP chi con la luoi an toan (vong xuat hien -> Core tu chan).
+#   - Access gui len CA HAI uplink (flow co dinh 0xba5f). Khung tu patch / cong
+#     Access cua Dist -> cong Core CUA NO + inter-dist "di len" (Dist kia chi dua
+#     ra cong Core cua no). Khung tu Core -> Access + patch + inter-dist "di
+#     xuong" (Dist kia chi dua vao patch + Access). Khung vao tu Core KHONG BAO
+#     GIO ra cong Core. Moi OVS co toi 4 duong; hong kep A4-D1 + D2-C1 Access-SW4
+#     van toi controller qua ens5 -> sw8 -> inter-dist -> sw5 -> Et0/2.
+#   - Ma VLAN tren inter-dist BAT DOI XUNG (MGMT_INTERDIST) de tuong thich bootstrap
+#     0xba5e va flow ban cu (deu chi biet VLAN 99): sw5 -> sw8 VLAN 99 = di len,
+#     sw8 -> sw5 VLAN 99 = di xuong (dung nhu ban 04/10). Chieu moi: sw8 nho sw5
+#     di len = 3999, sw5 gui xuong sw8 = 3998. Dist vua khoi dong lai (chi co
+#     bootstrap) van gui/nhan qua Dist kia -> noi lai controller. (Ban dau 10/10
+#     dung 1 nghia doi xung -> Dist-SW1 ket, co test bootstrap_compatible.)
+#   - Core flood khung cua 1 OVS (ARP...) ra cong Core con lai -> khung quay ve
+#     chinh OVS do -> br-mgmt hoc sai MAC cua no (da gap 03/10: mat controller
+#     ~20 s). Chan bang flow "reflect" priority 60500 tren cong Core cua Dist:
+#     eth_src = MAC quan tri cua mot OVS -> drop (MAC lay tu bang ARP cua node 9).
+#   - Core-SW2 ngoai VLAN 99 (sw5.ens10, sw8.ens9 -> drop): 2 router + flood = bao
+#     ~40k pps (da gap 04/10).
 _ACC = ['ens4', 'ens5', 'ens6', 'ens7']
-MGMT_FLOWS = {
-    8: {'ens10': _ACC + ['ens8', MGMT_PORT],
-        'ens8': ['ens10', MGMT_PORT] + _ACC,
-        MGMT_PORT: ['ens10', 'ens8'] + _ACC,
-        'ens4': ['ens10', MGMT_PORT, 'ens8'], 'ens5': ['ens10', MGMT_PORT, 'ens8'],
-        'ens6': ['ens10', MGMT_PORT, 'ens8'], 'ens7': ['ens10', MGMT_PORT, 'ens8'],
-        'ens9': []},
-    5: {'ens8': [MGMT_PORT, 'ens9'],
-        MGMT_PORT: ['ens8', 'ens9'],
-        'ens9': [MGMT_PORT, 'ens8'],
-        'ens4': [], 'ens5': [], 'ens6': [], 'ens7': [], 'ens10': []},
-}
+# VLAN tren inter-dist cho khung do Dist d GUI: 'up' = nho Dist kia dua len Core,
+# 'down' = khung tu Core cua d chuyen cho Dist kia (xem chu thich tren).
+MGMT_INTERDIST = {5: {'up': 99, 'down': 3998}, 8: {'up': 3999, 'down': 99}}
+DIST_CORE = {8: 'ens10', 5: 'ens9'}     # cong Core-SW1 cua tung Dist
+DIST_CORE2 = {8: 'ens9', 5: 'ens10'}    # cong Core-SW2 (khong mang VLAN 99)
+INTER_DIST = 'ens8'
+
+
+def mgmt_rules(dpid):
+    """[(cong vao, VLAN vao, [(cong ra, VLAN ra)])] cho Dist dpid."""
+    core, v = DIST_CORE[dpid], MGMT_VLAN
+    me = MGMT_INTERDIST[dpid]
+    other = MGMT_INTERDIST[8 if dpid == 5 else 5]
+    rules = [
+        (core, v, [(p, v) for p in _ACC] + [(MGMT_PORT, v), (INTER_DIST, me['down'])]),
+        (MGMT_PORT, v, [(core, v), (INTER_DIST, me['up'])]),
+        (INTER_DIST, other['up'], [(core, v)]),
+        (INTER_DIST, other['down'], [(p, v) for p in _ACC] + [(MGMT_PORT, v)]),
+        (DIST_CORE2[dpid], v, []),
+    ]
+    rules += [(p, v, [(core, v), (INTER_DIST, me['up'])]) for p in _ACC]
+    return rules
+
+
+MGMT_RULES = {d: mgmt_rules(d) for d in (5, 8)}
 
 # Lien ket: id -> a=(dpid, port), b=(dpid|'C1'|'C2', port), w=trong so
 #  Trong so chon cay binh thuong: Core-SW1 -> sw5 (ens9) va sw8 (ens10);
@@ -177,18 +200,19 @@ HOST_TTL = 900              # quen host khong thay goi sau 15 phut
 CONTROL_SILENT = 1.0        # switch nhan probe moi 0.5s -> im lang > 1s = mat kenh dieu khien
                             # (phai < LINK_TIMEOUT - PROBE_INTERVAL de phat hien truoc khi link het han)
 CUT_MAX = 60                # cat thu silent tu het han tren switch (hard_timeout) du controller mat ket noi
-# Cong VLAN 99 KHONG co du phong (Access chi gan qua Dist-SW2): PortMod down o day
-# cat controller khoi Access va khong go tu xa duoc -> che do 'admin' bi tu choi.
-# D2-C1 / D1-D2 / D1-C1 da co duong du phong (STP Core-SW1) nen duoc phep.
-MGMT_CRITICAL = {(8, 'ens4'), (8, 'ens5'), (8, 'ens6'), (8, 'ens7'),
-                 (68, 'ens5'), (66, 'ens5'), (70, 'ens5'), (69, 'ens5')}
+# Tu 10/10 moi OVS co 2 duong quan tri doc lap -> PortMod down tren 1 cong khong
+# cat controller; van giu rong de them cong neu thiet ke doi.
+MGMT_CRITICAL = set()
 UP_HOLD = 1.0               # lien ket vua chet phai thay probe lien tuc >= 1s moi coi la song (chong dao dong)
 CORE_TIMEOUT = 3.5          # OVS<->Core: ~3 ARP that bai -> chet
+STALL_LAG = 0.5             # vong liveness (0.1s) tre hon muc nay = chinh controller bi khung
+                            # -> an han CORE_TIMEOUT: khong ket luan lien ket chet tu moc probe cu
 
 # Priority / cookie
 P_PROBE = 65000
 P_TEST_CUT = 65500          # mo phong cat lien ket "im lang"
 P_MGMT = 60000
+P_REFLECT = 60500           # drop khung quan tri cua OVS bi Core phan xa ve (truoc P_MGMT)
 P_BLOCK = 40000             # chan canh ngoai cay (bang 0). Duoi 45000 = flow co dinh
                             # VLAN 99 cua Access (0xba5f) -> khong cat duong quan tri
 P_POLICY = 20000            # + uu tien luat (1..999), bang 0
@@ -198,6 +222,8 @@ T_FWD = 1                   # bang 1: chuyen tiep L2 (hoc MAC, table-miss -> con
 CK_GUARD = 0x5d01
 CK_TREE = 0x5d02
 CK_TEST = 0x5d03
+CK_REFLECT = 0x5d04
+ARP_FILE = '/proc/net/arp'
 CK_MISS = 0x5d00
 CK_POLICY = 0x5d100000      # | id luat (bo dem goi theo tung luat)
 CK_POLICY_MASK = 0xfffffffffff00000
@@ -239,19 +265,27 @@ def _nonblocking_send(dp):
     dp._campus_nb = True
 
 
-def compute_data_tree(connected, link_up):
+def compute_data_tree(connected, link_up, frozen=None):
     """Tinh cay du lieu.
     connected: tap dpid OVS dang noi controller.
     link_up:   dict lid -> bool (lien ket dung duoc).
+    frozen:    dict Access dpid -> lid: Access MAT KET NOI controller nhung co the
+               van song (OVS secure giu nguyen flow cay cu) -> giu no la LA tren
+               dung lien ket cha cu, mien la Dist dau kia con ket noi. Neu bo no
+               khoi cay, Dist se chan cong xuong Access dang chay tot (09/10/2026:
+               Dist-SW2 chet -> 4 VLAN mat 100% ~3,5 phut).
     Tra ve (root, tap lid thuoc cay, parent{node: (cha, lid)}).
     Goc = Core-SW1 neu con it nhat 1 lien ket song toi no, nguoc lai Core-SW2.
     Core khong noi L2 voi nhau -> chi dung lien ket cua goc duoc chon."""
+    frozen = frozen or {}
     usable = {}
     for lid, l in LINKS.items():
         if not link_up.get(lid, False):
             continue
         a, b = link_nodes(lid)
-        if a not in connected or (b not in ('C1', 'C2') and b not in connected):
+        if a not in connected and not (frozen.get(a) == lid and b in connected):
+            continue
+        if b not in ('C1', 'C2') and b not in connected:
             continue
         usable[lid] = l
     for root in DATA_ROOTS:
@@ -336,6 +370,11 @@ class CampusSwitch13(_RyuApp):
         self.link_changed = {lid: time.time() for lid in LINKS}
         self.test_cut = {}          # lid -> mode dang mo phong
         self.last_rx = {}           # dpid -> ts ban tin gan nhat tu switch (song ve dieu khien)
+        self.stall_until = 0.0      # an han sau khi chinh controller bi khung
+        self.stall_count = 0
+        self.stall_log = collections.deque(maxlen=300)  # (ts, lag_ms) cho tab Suc khoe
+        self.mgmt_mac = {}          # dpid -> MAC br-mgmt (tu bang ARP node 9)
+        self._reflect_done = {}     # dpid Dist -> set(MAC) da cai flow reflect
         self.core_mac = {}          # lid -> MAC SVI Core (hoc tu ARP reply)
         self.hosts = {}             # (vlan, mac) -> (dpid, cong access, ts)
         self.pktin = collections.Counter()      # dpid -> tong packet-in (tai len controller)
@@ -361,6 +400,7 @@ class CampusSwitch13(_RyuApp):
             hub.spawn(self._probe_loop)
             hub.spawn(self._liveness_loop)
             hub.spawn(self._policy_stats_loop)
+            hub.spawn(self._mgmt_mac_loop)
 
     # ================================================================
     #  Luu / nap trang thai (VLAN dong - giai doan 2 dung tiep)
@@ -516,6 +556,7 @@ class CampusSwitch13(_RyuApp):
         self.port_down[dpid] = down
         self.mac_to_port[dpid] = {}
         self.blocked[dpid] = set()
+        self._reflect_done.pop(dpid, None)     # ket noi moi: cai lai flow chong phan xa
         # Thu tu an toan: guard (quan tri + probe) TRUOC, roi xoa flow cu cua
         # phien ban truoc (cookie 0 - nguon goc be tac), roi cay.
         self._install_guards(dp)
@@ -529,11 +570,17 @@ class CampusSwitch13(_RyuApp):
             a, b = link_nodes(lid)
             if dpid in (a, b):
                 self.probe_since[lid] = now
+        if dpid not in DIST and self._refresh_mgmt_macs():
+            for d in DIST:
+                if d in self.switches:
+                    self._install_reflect(self.switches[d])
         if first:
             self._event('switch_up', '%s ket noi controller' % NODE_NAMES[dpid],
                         dpid=dpid)
         self._recompute('switch_up %s' % NODE_NAMES[dpid], t_detect=now, force=True)
-        if dpid in DIST:
+        if dpid in DIST and getattr(dp, 'campus_dropped', 0) == 0:
+            # Chi bo bootstrap VLAN 99 (0xba5e) khi chac guard da gui het: neu co ban
+            # tin bi rot (hang doi day) thi giu lai lam duong du phong cho lan noi sau.
             self._delete_cookie(dp, CK_BOOT_DIST)
 
     @set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
@@ -612,7 +659,10 @@ class CampusSwitch13(_RyuApp):
         ofp = dp.ofproto
         dpid = dp.id
         n2n = self.port_no.get(dpid, {})
-        self._delete_cookie(dp, CK_GUARD)
+        # KHONG xoa guard cu truoc: OFPFC_ADD cung match + priority tu GHI DE. Xoa roi
+        # cai lai ma ket noi dut giua chung (flow-mod sau bi rot) thi switch mat duong
+        # VLAN 99 -> khong bao gio noi lai de duoc cai lai (09/10/2026: Dist-SW2 ket
+        # sau khi khoi phuc D2-C1, chi con flow probe).
         to_ctl = [parser.OFPActionOutput(ofp.OFPP_CONTROLLER, ofp.OFPCML_NO_BUFFER)]
         self._add_flow(dp, P_PROBE, parser.OFPMatch(eth_type=PROBE_ETHERTYPE), to_ctl,
                        cookie=CK_GUARD)
@@ -620,15 +670,79 @@ class CampusSwitch13(_RyuApp):
             eth_dst=(PROBE_MAC_BASE + '00', PROBE_MAC_MASK)), to_ctl, cookie=CK_GUARD)
         if dpid not in DIST:
             return      # Access: VLAN 99 do flow co dinh 0xba5f (nut la) dam nhiem
-        for src, dsts in MGMT_FLOWS[dpid].items():
+        # Chong phan xa TRUOC khi mo 2 duong len Core
+        self._refresh_mgmt_macs()
+        self._install_reflect(dp)
+        for src, vid, outs in MGMT_RULES[dpid]:
             if src not in n2n:
                 continue
-            outs = [parser.OFPActionOutput(n2n[d]) for d in dsts if d in n2n]
+            acts, cur = [], vid
+            # ra cong giu VLAN vao truoc, doi VLAN sau (moi lan doi chi 1 set_field)
+            for port, ovid in sorted(outs, key=lambda o: o[1] != vid):
+                if port not in n2n:
+                    continue
+                if ovid != cur:
+                    acts.append(parser.OFPActionSetField(vlan_vid=OFPVID_PRESENT | ovid))
+                    cur = ovid
+                acts.append(parser.OFPActionOutput(n2n[port]))
             self._add_flow(dp, P_MGMT, parser.OFPMatch(
-                in_port=n2n[src], vlan_vid=OFPVID_PRESENT | MGMT_VLAN), outs,
-                cookie=CK_GUARD)
-        self.logger.info('GUARD %s: VLAN99 tinh co huong %s', NODE_NAMES[dpid],
-                         {k: v for k, v in MGMT_FLOWS[dpid].items() if v})
+                in_port=n2n[src], vlan_vid=OFPVID_PRESENT | vid), acts, cookie=CK_GUARD)
+        # Guard thua tren inter-dist (VLAN 3998/3999 khong con trong bo luat, vd ban thu
+        # truoc): xoa dung match do - khong dung toi guard dang dung.
+        used = {vid for src, vid, _ in MGMT_RULES[dpid] if src == INTER_DIST}
+        if INTER_DIST in n2n:
+            for vid in {MGMT_VLAN, 3998, 3999} - used:
+                self._del_strict(dp, P_MGMT, parser.OFPMatch(
+                    in_port=n2n[INTER_DIST], vlan_vid=OFPVID_PRESENT | vid))
+        self.logger.info('GUARD %s: VLAN99 len Core-SW1 qua %s + inter-dist %s',
+                         NODE_NAMES[dpid], DIST_CORE[dpid], MGMT_INTERDIST[dpid])
+
+    # ---- chong phan xa khung quan tri (Core flood ra cong Core con lai) ----
+    def _refresh_mgmt_macs(self, text=None):
+        """Doc bang ARP cua node 9: IP quan tri OVS -> MAC br-mgmt. Tra ve True neu doi."""
+        try:
+            if text is None:
+                with open(ARP_FILE) as f:
+                    text = f.read()
+        except (IOError, OSError):
+            return False
+        ip2d = {ip: d for d, ip in MGMT_IP.items()}
+        changed = False
+        for line in text.splitlines()[1:]:
+            f = line.split()
+            if len(f) < 4 or f[0] not in ip2d or f[2] == '0x0' or f[3] == '00:00:00:00:00:00':
+                continue
+            d, mac = ip2d[f[0]], f[3].lower()
+            if self.mgmt_mac.get(d) != mac:
+                self.mgmt_mac[d] = mac
+                changed = True
+        return changed
+
+    def _install_reflect(self, dp):
+        """Tren cong Core-SW1 cua Dist: khung VLAN 99 co eth_src = MAC quan tri cua
+        mot OVS chi co the la khung Core phan xa ve -> drop. Chi them (ADD idempotent)."""
+        dpid = dp.id
+        pno = self.port_no.get(dpid, {}).get(DIST_CORE.get(dpid))
+        if pno is None:
+            return
+        parser = dp.ofproto_parser
+        done = self._reflect_done.setdefault(dpid, set())
+        for mac in sorted(set(self.mgmt_mac.values()) - done):
+            self._add_flow(dp, P_REFLECT, parser.OFPMatch(
+                in_port=pno, vlan_vid=OFPVID_PRESENT | MGMT_VLAN, eth_src=mac), [],
+                cookie=CK_REFLECT)
+            done.add(mac)
+
+    def _mgmt_mac_loop(self):
+        while True:
+            hub.sleep(2)
+            try:
+                self._refresh_mgmt_macs()
+                for d in DIST:
+                    if d in self.switches:
+                        self._install_reflect(self.switches[d])
+            except Exception as e:
+                self.logger.debug('mgmt mac loop: %s', e)
 
     # ================================================================
     #  Tham do lien ket
@@ -728,27 +842,48 @@ class CampusSwitch13(_RyuApp):
         self.seen[(lid, side)] = now
 
     def _liveness_loop(self):
+        prev_tick = time.time()
         while True:
             hub.sleep(0.1)
             now = time.time()
-            for lid in [k for k, v in self.test_cut.items() if v.get('expires') and now > v['expires']]:
-                c = self.test_cut[lid]
-                if c['mode'] == 'admin' or LINKS[lid]['b'][0] not in OVS_NODES:
-                    self.api_link_test(lid, 'up', c['mode'])    # PortMod bat lai
-                else:
-                    self.test_cut.pop(lid, None)
-                    self._event('test_restore', 'Cat thu %s tu het han tren switch' % lid, link=lid)
-            for op_id in [k for k in self._ops if isinstance(k, tuple)]:
-                op = self._ops.get(op_id)
-                if op and now - op['started'] > OP_TIMEOUT:
-                    self._finish_if_done(op_id, force=True)
-            for lid in LINKS:
-                up = self._eval_link(lid, now)
-                if up is not None and up != self.link_state[lid]:
-                    last = max(self.seen.get((lid, 'a'), 0), self.seen.get((lid, 'b'), 0))
-                    self._set_link(lid, up, now,
-                                   'probe %s' % ('phuc hoi' if up else 'het han'),
-                                   t_trigger=None if up else (last or None))
+            # tre = thoi gian ngoai 0.1s ngu, GOM ca vong truoc (luc do probe cung khong duoc xu ly)
+            self._check_stall(now - prev_tick - 0.1, now)
+            prev_tick = now
+            self._liveness_tick(now)
+
+    def _liveness_tick(self, now):
+        for lid in [k for k, v in self.test_cut.items() if v.get('expires') and now > v['expires']]:
+            c = self.test_cut[lid]
+            if c['mode'] == 'admin' or LINKS[lid]['b'][0] not in OVS_NODES:
+                self.api_link_test(lid, 'up', c['mode'])    # PortMod bat lai
+            else:
+                self.test_cut.pop(lid, None)
+                self._event('test_restore', 'Cat thu %s tu het han tren switch' % lid, link=lid)
+        for op_id in [k for k in self._ops if isinstance(k, tuple)]:
+            op = self._ops.get(op_id)
+            if op and now - op['started'] > OP_TIMEOUT:
+                self._finish_if_done(op_id, force=True)
+        for lid in LINKS:
+            up = self._eval_link(lid, now)
+            if up is not None and up != self.link_state[lid]:
+                last = max(self.seen.get((lid, 'a'), 0), self.seen.get((lid, 'b'), 0))
+                self._set_link(lid, up, now,
+                               'probe %s' % ('phuc hoi' if up else 'het han'),
+                               t_trigger=None if up else (last or None))
+
+    def _check_stall(self, lag, now):
+        """Controller bi khung (greenlet bi chan, VM node 9 thieu CPU...) thi moc
+        probe cu khong noi gi ve lien ket: sau khi chay lai, switch nao gui goi
+        truoc se het 'im lang' trong khi probe moi chua kip ve -> lien ket Core
+        cua no bi ket luan chet gia (09/10/2026: 4 lien ket Core chet cung 1 giay
+        luc cold-start). An han CORE_TIMEOUT de probe moi kip ve."""
+        if lag <= STALL_LAG:
+            return
+        self.stall_until = max(self.stall_until, now + CORE_TIMEOUT)
+        self.stall_count += 1
+        self.stall_log.append((round(now, 2), round(lag * 1000, 1)))
+        self._event('controller_stall', 'Controller khung %.0f ms - tam ngung ket luan lien ket chet'
+                    % (lag * 1000), lag_ms=round(lag * 1000, 1))
 
     def _eval_link(self, lid, now):
         """True/False neu da du bang chung, None neu chua (giu trang thai cu)."""
@@ -784,6 +919,8 @@ class CampusSwitch13(_RyuApp):
             return True
         if now - since <= timeout:
             return None         # moi bat dau probe, chua du thoi gian ket luan
+        if now < self.stall_until:
+            return None         # vua khung: moc probe cu khong dang tin
         return False
 
     def _set_link(self, lid, up, now, why, t_trigger=None):
@@ -806,7 +943,9 @@ class CampusSwitch13(_RyuApp):
     def _recompute(self, why, t_detect, t_trigger=None, force=False,
                    kind='tree', link=None):
         connected = set(self.switches)
-        root, tree, parent = compute_data_tree(connected, self._usable_links())
+        frozen = {d: self.parent[d][1] for d in ACCESS
+                  if d not in connected and d in self.parent}
+        root, tree, parent = compute_data_tree(connected, self._usable_links(), frozen)
         ports = tree_ports(tree)
         changed = (tree != self.tree or root != self.root)
         if not changed and not force:
@@ -1011,7 +1150,9 @@ class CampusSwitch13(_RyuApp):
                   'role': 'Core' if n in ('C1', 'C2') else ('Distribution' if n in DIST else 'Access'),
                   'connected': (n in self.switches) if n in OVS_NODES else None,
                   'control_ok': (now - self.last_rx.get(n, 0) <= CONTROL_SILENT) if n in OVS_NODES else None,
-                  'parent': NODE_NAMES.get(self.parent.get(n, (None,))[0]) if n in self.parent else None}
+                  'last_rx_ms': round((now - self.last_rx[n]) * 1000) if n in self.last_rx else None,
+                  'parent': NODE_NAMES.get(self.parent.get(n, (None,))[0]) if n in self.parent else None,
+                  'frozen': n in ACCESS and n not in self.switches and n in self.parent}
                  for n in list(OVS_NODES) + ['C1', 'C2']]
         return {'root': NODE_NAMES.get(self.root), 'tree_version': self.tree_version,
                 'nodes': nodes, 'links': links,
@@ -1024,6 +1165,9 @@ class CampusSwitch13(_RyuApp):
     def api_counters(self):
         return {'pktin': dict(self.pktin), 'pktin_kind': dict(self.pktin_kind),
                 'hosts': len(self.hosts), 'policies': len(self.policies),
+                'controller_stalls': self.stall_count,
+                'stall_active': time.time() < self.stall_until,
+                'stall_log': list(self.stall_log),
                 'echo': globals().get('ECHO_CFG'),
                 'send_dropped': {d: getattr(dp, 'campus_dropped', 0) for d, dp in self.switches.items()}}
 
