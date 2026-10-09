@@ -1,0 +1,55 @@
+\documentclass{article}
+\input{config/preamble} % Dùng chung preamble với báo cáo chính
+
+\begin{document}
+
+	% --- PHẦN BÌA (KHÔNG ĐÁNH SỐ) ---
+	\hypersetup{pageanchor=false}
+	\pagenumbering{gobble}
+
+	\input{Template/TrangBia}      % Trang bìa 1
+	\input{Template/TrangPhuBia}   % Trang bìa 2
+
+	% --- PHẦN ĐẦU CỦA BÁO CÁO ---
+	\cleardoublepage
+	\hypersetup{pageanchor=true}
+	\pagenumbering{roman}
+	\setcounter{page}{3}
+
+	\input{Template/TomTat}
+
+	\tableofcontents
+	\newpage
+
+	\listoffigures
+	\newpage
+
+	\listoftables
+	\newpage
+
+	\input{Template/DanhMucVietTat}
+
+	% --- PHẦN THÂN CỦA BÁO CÁO ---
+	\newpage
+	\pagenumbering{arabic}
+
+	\include{content/Chapter1}
+	\newpage
+
+	\include{content/Chapter2}
+	\newpage
+
+	\include{content/Chapter3}
+	\newpage
+
+	\include{content/Chapter4}
+	\newpage
+
+	\include{content/Chapter5}
+	\newpage
+
+	% --- PHẦN CUỐI CỦA BÁO CÁO ---
+	\nocite{*}
+	\bibliography{tailieuthamkhao}
+
+\end{document}

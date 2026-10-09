@@ -94,10 +94,10 @@ SITES = {
     'Site 100 - Campus Chinh': {
         'site_id': 100, 'color': CYAN,
         'vlans': {
-            'VLAN 10 - CNTT':       {'subnet':'10.1.10.0/24','gateway':'10.1.10.1','hosts':{'VPC14':'10.1.10.100','VPC19':'10.1.10.101'}},
-            'VLAN 20 - TTK':        {'subnet':'10.1.20.0/24','gateway':'10.1.20.1','hosts':{'VPC20':'10.1.20.100','VPC21':'10.1.20.101'}},
-            'VLAN 30 - LUAT':       {'subnet':'10.1.30.0/24','gateway':'10.1.30.1','hosts':{'VPC15':'10.1.30.100','VPC16':'10.1.30.101'}},
-            'VLAN 40 - HanhChinh':  {'subnet':'10.1.40.0/24','gateway':'10.1.40.1','hosts':{'VPC17':'10.1.40.100','VPC18':'10.1.40.101'}},
+            'VLAN 10 - CNTT':       {'subnet':'10.1.10.0/24','gateway':'10.1.10.1','hosts':{'PC-CNTT-S100-1':'10.1.10.100','PC-CNTT-S100-2':'10.1.10.101'}},
+            'VLAN 20 - TTK':        {'subnet':'10.1.20.0/24','gateway':'10.1.20.1','hosts':{'PC-TTK-S100-1':'10.1.20.100','PC-TTK-S100-2':'10.1.20.101'}},
+            'VLAN 30 - LUAT':       {'subnet':'10.1.30.0/24','gateway':'10.1.30.1','hosts':{'PC-Luat-S100-1':'10.1.30.100','PC-Luat-S100-2':'10.1.30.101'}},
+            'VLAN 40 - HanhChinh':  {'subnet':'10.1.40.0/24','gateway':'10.1.40.1','hosts':{'PC-HanhChinh-S100-2':'10.1.40.100','PC-HanhChinh-S100':'10.1.40.101'}},
             'DMZ':                  {'subnet':'10.1.1.0/28', 'gateway':'10.1.1.1', 'hosts':{'WebServer':'10.1.1.10','MailServer':'10.1.1.11'}},
             'ServerFarm-VLAN90':    {'subnet':'10.1.90.0/24','gateway':'10.1.90.1','hosts':{'DHCP-Server':'10.1.90.10','Syslog-Server':'10.1.90.11','SDN-Controller':'10.1.99.10'}},
         },
@@ -105,24 +105,24 @@ SITES = {
     'Site 200 - Can Tho': {
         'site_id': 200, 'color': GREEN,
         'vlans': {
-            'VLAN 60 - NongNghiep': {'subnet':'10.2.60.0/24','gateway':'10.2.60.1','hosts':{'VPC43':'10.2.60.100','VPC44':'10.2.60.101'}},
-            'VLAN 70 - YTe':        {'subnet':'10.2.70.0/24','gateway':'10.2.70.1','hosts':{'VPC46':'10.2.70.100','VPC47':'10.2.70.101'}},
+            'VLAN 60 - NongNghiep': {'subnet':'10.2.60.0/24','gateway':'10.2.60.1','hosts':{'PC-NongNghiep-S200-1':'10.2.60.100','PC-NongNghiep-S200-2':'10.2.60.101'}},
+            'VLAN 70 - YTe':        {'subnet':'10.2.70.0/24','gateway':'10.2.70.1','hosts':{'PC-YTe-S200-2':'10.2.70.100','PC-YTe-S200':'10.2.70.101'}},
             'Brand-FW-CT':          {'subnet':'10.2.1.0/30', 'gateway':'10.2.1.1', 'hosts':{'BrandFW-CT':'10.2.1.1'}},
         },
     },
     'Site 300 - Da Nang': {
         'site_id': 300, 'color': YELLOW,
         'vlans': {
-            'VLAN 80 - DuLich':  {'subnet':'10.3.80.0/24','gateway':'10.3.80.1','hosts':{'VPC50':'10.3.80.100','VPC54':'10.3.80.101'}},
-            'VLAN 90 - KyThuat': {'subnet':'10.3.90.0/24','gateway':'10.3.90.1','hosts':{'VPC53':'10.3.90.100','VPC48':'10.3.90.101'}},
+            'VLAN 80 - DuLich':  {'subnet':'10.3.80.0/24','gateway':'10.3.80.1','hosts':{'PC-DuLich-S300-1':'10.3.80.100','PC-DuLich-S300-2':'10.3.80.101'}},
+            'VLAN 90 - KyThuat': {'subnet':'10.3.90.0/24','gateway':'10.3.90.1','hosts':{'PC-TaiChinh-S300':'10.3.90.100','PC-TaiChinh-S300-2':'10.3.90.101'}},
             'Brand-FW-DN':       {'subnet':'10.3.1.0/30', 'gateway':'10.3.1.1', 'hosts':{'BrandFW-DN':'10.3.1.1'}},
         },
     },
     'Site 400 - Nha Trang': {
         'site_id': 400, 'color': ORANGE,
         'vlans': {
-            'VLAN 50 - ThuySan': {'subnet':'10.4.50.0/24','gateway':'10.4.50.1','hosts':{'VPC51':'10.4.50.100','VPC45':'10.4.50.101'}},
-            'VLAN 60 - LuHanh':  {'subnet':'10.4.60.0/24','gateway':'10.4.60.1','hosts':{'VPC49':'10.4.60.100','VPC52':'10.4.60.101'}},
+            'VLAN 50 - ThuySan': {'subnet':'10.4.50.0/24','gateway':'10.4.50.1','hosts':{'PC-ThuySan-S400-1':'10.4.50.100','PC-ThuySan-S400-2':'10.4.50.101'}},
+            'VLAN 60 - LuHanh':  {'subnet':'10.4.60.0/24','gateway':'10.4.60.1','hosts':{'PC-LuHanh-S400-2':'10.4.60.100','PC-LuHanh-S400':'10.4.60.101'}},
             'Brand-FW-NT':       {'subnet':'10.4.1.0/30', 'gateway':'10.4.1.1', 'hosts':{'BrandFW-NT':'10.4.1.1'}},
         },
     },
@@ -144,14 +144,18 @@ ALL_HOSTS = sorted(HOST_IP.keys())
 #  VPC NODE IDs  –  console port = 33536 + node_id (EVE-NG)
 # =========================================================
 VPC_NODE_IDS = {
-    # Site 100 – Campus Chinh
-    'VPC14': 14, 'VPC15': 15, 'VPC16': 16, 'VPC17': 17,
-    'VPC18': 18, 'VPC19': 19, 'VPC20': 20, 'VPC21': 21,
+    # Site 100 – Campus Chinh (ten dung nhu tren EVE)
+    'PC-CNTT-S100-1': 14, 'PC-Luat-S100-1': 15, 'PC-Luat-S100-2': 16, 'PC-HanhChinh-S100-2': 17,
+    'PC-CNTT-S100-2': 19, 'PC-TTK-S100-1': 20, 'PC-TTK-S100-2': 21,
     # Site 200 / 300 / 400
-    'VPC43': 43, 'VPC44': 44, 'VPC45': 45, 'VPC46': 46,
-    'VPC47': 47, 'VPC48': 48, 'VPC49': 49, 'VPC50': 50,
-    'VPC51': 51, 'VPC52': 52, 'VPC53': 53, 'VPC54': 54,
-    # VPC-DN aliases (removed – using actual node names)
+    'PC-NongNghiep-S200-1': 43, 'PC-NongNghiep-S200-2': 44, 'PC-ThuySan-S400-2': 45, 'PC-YTe-S200-2': 46,
+    'PC-TaiChinh-S300-2': 48, 'PC-LuHanh-S400-2': 49, 'PC-DuLich-S300-1': 50, 'PC-ThuySan-S400-1': 51, 'PC-DuLich-S300-2': 54,
+}
+# PC Linux (Ubuntu 18.04, DHCP) - ten dung nhu tren EVE. Console la Linux can
+# dang nhap, KHONG phai VPCS -> khong dung lam nguon ping VPCS / Failover /
+# Policy; chi la host dich (ping tu host EVE hoac tu VPC khac).
+LINUX_PC_NODE_IDS = {
+    'PC-HanhChinh-S100': 18, 'PC-YTe-S200': 47, 'PC-TaiChinh-S300': 53, 'PC-LuHanh-S400': 52,
 }
 EVE_CONSOLE_BASE = 33536
 
@@ -406,7 +410,7 @@ def discover_vpc_ip(host_name, ssh_client, timeout=6):
         shell.send('\x1d'); time.sleep(0.3)
         shell.send('quit\n'); time.sleep(0.3)
         shell.close()
-        # Parse: "NAME  : VPC43[1]"  "IP    : 10.2.60.101/24"
+        # Parse: "NAME  : PC-NongNghiep-S200-1[1]"  "IP    : 10.2.60.101/24"
         m = re.search(r'IP\s*:\s*(\d+\.\d+\.\d+\.\d+)', raw)
         if m:
             return m.group(1)
@@ -422,8 +426,7 @@ def discover_vpc_ip(host_name, ssh_client, timeout=6):
 def discover_all_vpcs(ssh_client, callback=None):
     """Discover IP thực của tất cả VPC nodes. callback(host, ip, status) được gọi mỗi node."""
     results = {}
-    hosts = [h for h in VPC_NODE_IDS.keys() if not h.startswith('VPC-DN')]
-    for host in hosts:
+    for host in VPC_NODE_IDS:
         if callback:
             callback(host, None, 'scanning')
         ip = discover_vpc_ip(host, ssh_client)
@@ -435,12 +438,6 @@ def discover_all_vpcs(ssh_client, callback=None):
         else:
             if callback:
                 callback(host, None, 'fail')
-    # Cập nhật aliases VPC-DN
-    for alias, real_host in [('VPC-DN1','VPC53'),('VPC-DN2','VPC54'),('VPC-DN3','VPC52')]:
-        r_host = 'VPC{}'.format(VPC_NODE_IDS.get(alias, 0))
-        if r_host in results:
-            HOST_IP[alias] = results[r_host]
-            results[alias] = results[r_host]
     return results
 
 
@@ -1366,10 +1363,10 @@ class CampusPingGUI(tk.Tk):
         self._log('  [OK] CSV: {}\n'.format(path),'ok')
 
     def _case1(self, ssh, count, cache):
-        pairs=[('VPC14','VPC19'),('VPC20','VPC21'),('VPC15','VPC16'),('VPC17','VPC18'),
+        pairs=[('PC-CNTT-S100-1','PC-CNTT-S100-2'),('PC-TTK-S100-1','PC-TTK-S100-2'),('PC-Luat-S100-1','PC-Luat-S100-2'),('PC-HanhChinh-S100-2','PC-HanhChinh-S100'),
                ('WebServer','MailServer'),('DHCP-Server','Syslog-Server'),
-               ('VPC43','VPC44'),('VPC-DN1','VPC-DN2'),('VPC54','VPC-DN3'),
-               ('VPC49','VPC51'),('VPC45','VPC48')]
+               ('PC-NongNghiep-S200-1','PC-NongNghiep-S200-2'),('PC-TaiChinh-S300','PC-DuLich-S300-2'),('PC-DuLich-S300-2','PC-LuHanh-S400'),
+               ('PC-LuHanh-S400-2','PC-ThuySan-S400-1'),('PC-ThuySan-S400-2','PC-TaiChinh-S300-2')]
         data=[self._ping_pair(s,d,count,ssh) for s,d in pairs]
         if HAS_MPL:
             ChartEngine.bar_chart([r['label'] for r in data],[r['latency'] for r in data],
@@ -1379,10 +1376,10 @@ class CampusPingGUI(tk.Tk):
         self._save_csv('case1_intra', data); cache['intra']=data; return cache
 
     def _case2(self, ssh, count, cache):
-        pairs=[('VPC14','VPC43'),('VPC14','VPC-DN1'),('VPC14','VPC49'),
-               ('VPC20','VPC47'),('VPC15','VPC54'),('VPC17','VPC45'),
-               ('VPC43','VPC-DN1'),('VPC43','VPC49'),('VPC-DN1','VPC49'),
-               ('WebServer','VPC43')]
+        pairs=[('PC-CNTT-S100-1','PC-NongNghiep-S200-1'),('PC-CNTT-S100-1','PC-TaiChinh-S300'),('PC-CNTT-S100-1','PC-LuHanh-S400-2'),
+               ('PC-TTK-S100-1','PC-YTe-S200'),('PC-Luat-S100-1','PC-DuLich-S300-2'),('PC-HanhChinh-S100-2','PC-ThuySan-S400-2'),
+               ('PC-NongNghiep-S200-1','PC-TaiChinh-S300'),('PC-NongNghiep-S200-1','PC-LuHanh-S400-2'),('PC-TaiChinh-S300','PC-LuHanh-S400-2'),
+               ('WebServer','PC-NongNghiep-S200-1')]
         data=[self._ping_pair(s,d,count,ssh) for s,d in pairs]
         if HAS_MPL:
             ChartEngine.bar_chart([r['label'] for r in data],[r['latency'] for r in data],
@@ -1431,11 +1428,11 @@ class CampusPingGUI(tk.Tk):
             self._log('  [i] Su dung du lieu da co tu Case truoc.\n','info')
             return cache['all']
         self._log('  [*] Thu thap du lieu toan mang...\n','info')
-        pairs=[('VPC14','VPC19'),('VPC20','VPC21'),('VPC15','VPC16'),('VPC17','VPC18'),
-               ('WebServer','MailServer'),('VPC43','VPC44'),('VPC-DN1','VPC-DN2'),
-               ('VPC49','VPC51'),('VPC45','VPC48'),
-               ('VPC14','VPC43'),('VPC14','VPC-DN1'),('VPC14','VPC49'),
-               ('VPC43','VPC-DN1'),('VPC43','VPC49'),('VPC-DN1','VPC49')]
+        pairs=[('PC-CNTT-S100-1','PC-CNTT-S100-2'),('PC-TTK-S100-1','PC-TTK-S100-2'),('PC-Luat-S100-1','PC-Luat-S100-2'),('PC-HanhChinh-S100-2','PC-HanhChinh-S100'),
+               ('WebServer','MailServer'),('PC-NongNghiep-S200-1','PC-NongNghiep-S200-2'),('PC-TaiChinh-S300','PC-DuLich-S300-2'),
+               ('PC-LuHanh-S400-2','PC-ThuySan-S400-1'),('PC-ThuySan-S400-2','PC-TaiChinh-S300-2'),
+               ('PC-CNTT-S100-1','PC-NongNghiep-S200-1'),('PC-CNTT-S100-1','PC-TaiChinh-S300'),('PC-CNTT-S100-1','PC-LuHanh-S400-2'),
+               ('PC-NongNghiep-S200-1','PC-TaiChinh-S300'),('PC-NongNghiep-S200-1','PC-LuHanh-S400-2'),('PC-TaiChinh-S300','PC-LuHanh-S400-2')]
         data=[self._ping_pair(s,d,count,ssh) for s,d in pairs]
         cache['all']=data; return data
 
@@ -1616,9 +1613,9 @@ class FailoverTab(tk.Frame):
         srcs = same + sorted(h for h in VPC_NODE_IDS if h in HOST_SITE and h not in same)
         self.src_cb['values'] = srcs
         if event is not None or self.src_var.get() not in srcs:
-            # mac dinh: VPC cung site; site 100 (SDN) mac dinh VPC43 vi traffic tu Can Tho ve
+            # mac dinh: VPC cung site; site 100 (SDN) mac dinh PC-NongNghiep-S200-1 vi traffic tu Can Tho ve
             # campus cung di qua vEdge-S100 bi cat
-            self.src_var.set('VPC43' if sid == CORE_SITE_ID else (srcs[0] if srcs else ''))
+            self.src_var.set('PC-NongNghiep-S200-1' if sid == CORE_SITE_ID else (srcs[0] if srcs else ''))
         if event is not None:
             # dich mac dinh: gateway VLAN 10 campus (VPC nguon mac dinh luon o chi nhanh)
             self.target_var.set('10.1.10.1')
@@ -1907,7 +1904,7 @@ class VlanTab(tk.Frame):
                        activebackground=BG2, font=FONT_UI).grid(row=0, column=0, columnspan=6, sticky='w')
         remotes = sorted(h for h in VPC_NODE_IDS
                          if h in HOST_SITE and SITES[HOST_SITE[h]]['site_id'] != CORE_SITE_ID)
-        self.remote_var = tk.StringVar(value='VPC43' if 'VPC43' in remotes else (remotes[0] if remotes else ''))
+        self.remote_var = tk.StringVar(value='PC-NongNghiep-S200-1' if 'PC-NongNghiep-S200-1' in remotes else (remotes[0] if remotes else ''))
         self.fw_pw_var = tk.StringVar(value='')
         self.vm_user_var = tk.StringVar(value='admin')
         self.vm_pw_var = tk.StringVar(value='')
@@ -2492,7 +2489,7 @@ class VlanTab(tk.Frame):
 
 # =========================================================
 #  CHINH SACH TAP TRUNG  –  kiem chung policy vSmart (Centralized Policy)
-#  Policy that tren vSmart (configs/05-Site900-SDWAN-Controllers/vSmart-34):
+#  Policy that tren vSmart (configs/05-Site900-Controller/vSmart-34):
 #    DP_BRANCH        data-policy from-service, site 200-400: drop telnet ->
 #                     Server Farm, drop ssh/telnet -> DMZ, count ICMP
 #    AAR_LAN          app-route-policy, site 100-400: ICMP/DSCP46 -> SLA_REALTIME,
@@ -2542,7 +2539,7 @@ class PolicyTab(tk.Frame):
         row = tk.Frame(self, bg=BG2); row.pack(fill='x', padx=10, pady=2)
         srcs = sorted(h for h in VPC_NODE_IDS
                       if h in HOST_SITE and SITES[HOST_SITE[h]]['site_id'] != CORE_SITE_ID)
-        self.src_var = tk.StringVar(value='VPC43' if 'VPC43' in srcs else (srcs[0] if srcs else ''))
+        self.src_var = tk.StringVar(value='PC-NongNghiep-S200-1' if 'PC-NongNghiep-S200-1' in srcs else (srcs[0] if srcs else ''))
         self.farm_var = tk.StringVar(value='10.1.90.10')
         self.dmz_var = tk.StringVar(value='10.1.1.10')
         self.icmp_var = tk.StringVar(value='10.1.10.1')

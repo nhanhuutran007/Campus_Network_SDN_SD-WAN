@@ -35,7 +35,7 @@
 
 Hạ tầng mạng của trường đại học phải phục vụ đồng thời nhiều khoa, phòng máy, khu hành chính, dịch vụ dùng chung và các cơ sở ở xa. Mạng truyền thống cấu hình thủ công trên từng thiết bị nên khó mở rộng, khó đồng bộ chính sách và xử lý sự cố chậm.
 
-Đề tài xây dựng một mô hình **Campus Network kết hợp SDN và SD-WAN**, mô phỏng đầy đủ trên **EVE-NG** (70 node):
+Đề tài xây dựng một mô hình **Campus Network kết hợp SDN và SD-WAN**, mô phỏng đầy đủ trên **EVE-NG** (67 node):
 
 - **Campus chính (Site 100)** theo mô hình 3 lớp Core – Distribution – Access; lớp Distribution/Access là **Open vSwitch do SDN Controller điều khiển** qua OpenFlow 1.3.
 - **3 chi nhánh** (Cần Thơ, Đà Nẵng, Nha Trang) theo mô hình *Firewall-as-Core* gọn nhẹ.
@@ -66,13 +66,13 @@ Hạ tầng mạng của trường đại học phải phục vụ đồng thờ
 | **Dự phòng** | VRRP trên Core-SW1/2, ASAv Active/Standby failover, 2 vEdge và 2 transport mỗi site, Access dual-home lên 2 Distribution |
 | **Bảo mật** | ASAv phân vùng inside/DMZ/Server Farm, OSPF Area 0 giữa FW và Core, VLAN quản trị 99 tách biệt, ASDM |
 | **Dịch vụ** | DHCP (Windows Server 2012 R2 + relay), DNS `campus.internal`, Web HTTPS (Nginx), Mail (hMailServer), Syslog (Kiwi) |
-| **Công cụ** | `campus_ping_tool.py`: đo latency/loss/jitter, batch report, kiểm thử failover SD-WAN và quản lý VLAN tự động |
+| **Công cụ** | `campus_ping_tool.py`: đo latency/loss/jitter, batch report, kiểm thử failover SD-WAN và quản lý VLAN tự động; `campus_web.py`: cùng các chức năng trên giao diện web (`python campus_web.py` → http://127.0.0.1:8080) |
 
 ---
 
 ## Kiến trúc hệ thống
 
-![Topology tổng thể](topo_tongthe.jpg)
+![Topology](topology.png)
 
 ```mermaid
 flowchart TB
@@ -121,7 +121,6 @@ flowchart TB
 | **200** | Chi nhánh Cần Thơ | Brand-FW (ASAv), SwitchBrand, SW55/56, 2 vEdge |
 | **300** | Chi nhánh Đà Nẵng | Brand-FW (ASAv), SwitchBrand, SW58/59, 2 vEdge |
 | **400** | Chi nhánh Nha Trang | Brand-FW (ASAv), SwitchBrand, SW57/60, 2 vEdge |
-| **500** | Chi nhánh mới (đang triển khai) | vEdge65, SW-S500, VPC11/12 — WAN Internet + MPLS, AS 65040 |
 | **900** | SD-WAN Controllers | vManage, vSmart, vBond, Switch32 (LAN controller) |
 | **SP** | Nhà cung cấp | Router Internet, router MPLS |
 
@@ -189,25 +188,27 @@ Bảng đầy đủ nằm trong [`campus_network_sdn_sdwan.md`](campus_network_s
 
 ```text
 .
-├── Campus Network SDN SD-WAN.unl     # File lab EVE-NG (70 node, config nhúng)
+├── Campus Network SDN SD-WAN.unl     # File lab EVE-NG (67 node, config nhúng)
 ├── campus_network_sdn_sdwan.md       # Tài liệu thiết kế: topology, bảng IP/VLAN/link
 ├── configs/                          # Cấu hình từng thiết bị theo site
 │   ├── 01-Site100-Campus/            # Core, FW, OVS scripts, app Ryu, systemd, dịch vụ
 │   ├── 02-Site200-CanTho/
 │   ├── 03-Site300-DaNang/
 │   ├── 04-Site400-NhaTrang/
-│   ├── 05-Site900-Controller/        # vManage, vSmart, vBond, Switch32/61, vEdge65
-│   ├── 05-Site900-SDWAN-Controllers/ # Bản running-config đầy đủ của controller
+│   ├── 05-Site900-Controller/        # vManager-33, vSmart-34, vBond-35 (running-config đầy đủ), Switch32/61
 │   ├── 06-ServiceProvider/           # Router Internet và MPLS (BGP)
 │   └── README.md                     # Ánh xạ node-id, cách nạp config, thứ tự khởi động
-├── HuongDan/                         # Hướng dẫn vận hành: ký cert/CSR vEdge, cài OVS, GUI,
-│                                     #   tunnel SD-WAN, kết nối EVE-NG
+├── HuongDan/                         # Hướng dẫn vận hành: ký cert vEdge, cài OVS, GUI...
+├── Giai_thich_Tunnel_SD-WAN.md       # Giải thích cơ chế tunnel SD-WAN
+├── EVE_HuongDan_KetNoi_ChoAI.md      # Hướng dẫn kết nối EVE-NG
 ├── campus_ping_tool.py               # Công cụ đo lường và kiểm thử mạng (GUI)
+├── campus_web.py, web/               # Bản web của công cụ trên (dùng lại logic campus_ping_tool.py)
 ├── sdn_controller_startup.sh         # Script khởi động SDN Controller
 ├── BangTheoDoiTienDo.md              # Bảng theo dõi tiến độ
 ├── BAOCAO_DACNTT_LVT/                # Báo cáo đồ án (LaTeX)
 ├── Baocao27/                         # Báo cáo tiến độ
-└── topo_tongthe.jpg                  # Sơ đồ topology tổng thể
+├── SlideTrinhBayDA/                  # Slide thuyết trình (LaTeX Beamer)
+└── topology.png                      # Sơ đồ topology tổng thể
 ```
 
 ---
@@ -283,7 +284,7 @@ Chi tiết xem [`BangTheoDoiTienDo.md`](BangTheoDoiTienDo.md).
 | [`campus_network_sdn_sdwan.md`](campus_network_sdn_sdwan.md) | Thiết kế chi tiết, bảng IP/VLAN/link |
 | [`configs/README.md`](configs/README.md) | Ánh xạ node-id, cách nạp config, thứ tự khởi động |
 | [`configs/01-Site100-Campus/README_NOC.md`](configs/01-Site100-Campus/README_NOC.md) | App giám sát NOC trên Ryu |
-| [`HuongDan/Giai_thich_Tunnel_SD-WAN.md`](HuongDan/Giai_thich_Tunnel_SD-WAN.md) | Cơ chế tunnel, TLOC, BFD trong SD-WAN |
+| [`Giai_thich_Tunnel_SD-WAN.md`](Giai_thich_Tunnel_SD-WAN.md) | Cơ chế tunnel, TLOC, BFD trong SD-WAN |
 | [`HuongDan/`](HuongDan/) | Hướng dẫn cài OVS, ký cert vEdge, xem GUI vManage |
 | [`BAOCAO_DACNTT_LVT/main.pdf`](BAOCAO_DACNTT_LVT/main.pdf) | Báo cáo đồ án |
 

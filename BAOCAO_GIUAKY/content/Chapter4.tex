@@ -1,0 +1,153 @@
+\section{TIẾN ĐỘ VÀ KẾT QUẢ GIỮA KỲ}\label{sec:tien_do}
+
+Chương này báo cáo trạng thái từng hạng mục tại mốc \mocbaocao. Mỗi kết quả được xếp vào một trong ba mức: \textbf{Hoàn thành} (có bằng chứng kiểm chứng trên lab), \textbf{Đang thực hiện} (đã có một phần cấu hình hoặc kiểm thử) và \textbf{Chưa bắt đầu}. Nhóm không đưa ra con số hiệu năng khi chưa có phép đo lặp lại.
+
+\subsection{Tổng hợp tiến độ theo hạng mục}
+
+\begingroup
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{|c|P{5.2cm}|P{2.2cm}|P{5.4cm}|}
+    \caption{Trạng thái 20 hạng mục tại mốc giữa kỳ}\label{tab:tien_do} \\
+    \hline
+    \textbf{\#} & \textbf{Hạng mục} & \textbf{Trạng thái} & \textbf{Bằng chứng / ghi chú} \\
+    \hline
+    \endfirsthead
+    \multicolumn{4}{c}{\textit{Bảng~\ref{tab:tien_do} (tiếp theo)}} \\
+    \hline
+    \textbf{\#} & \textbf{Hạng mục} & \textbf{Trạng thái} & \textbf{Bằng chứng / ghi chú} \\
+    \hline
+    \endhead
+    \hline
+    \endfoot
+    1 & Khảo sát, xác định phạm vi và mục tiêu & Hoàn thành & Phạm vi 4 site + controller trên EVE-NG \\
+    \hline
+    2 & Lý thuyết SDN (OpenFlow, Ryu, OVS) & Hoàn thành & Đối chiếu với hành vi thực tế trong lab \\
+    \hline
+    3 & Lý thuyết SD-WAN (controller, OMP, BFD, TLOC) & Hoàn thành & Tài liệu giải thích tunnel SD-WAN \\
+    \hline
+    4 & Thiết kế kiến trúc 4 campus & Hoàn thành & Tài liệu thiết kế, Chương~\ref{sec:thiet_ke} \\
+    \hline
+    5 & Quy hoạch IP, VLAN, DHCP, ASN & Hoàn thành & Bảng~\ref{tab:vlan_campus}--\ref{tab:system_ip} \\
+    \hline
+    6 & Topology EVE-NG và quy trình đồng bộ cấu hình & Hoàn thành & 67 node, 100 network, 47 cấu hình nhúng; công cụ kiểm tra \texttt{.unl} báo ĐẠT \\
+    \hline
+    7 & Core/Dist/Access, VLAN, trunk, VRRP, OSPF & Hoàn thành & Firewall học đủ tuyến \texttt{10.1.x} qua OSPF \\
+    \hline
+    8 & Firewall ASAv HA và quản trị ASDM & Hoàn thành & \texttt{show failover}: Primary Active, Secondary Standby Ready \\
+    \hline
+    9 & DHCP-Server và cấp phát end-to-end & Hoàn thành & 8/8 VPC Site 100 nhận địa chỉ qua relay (20/09) \\
+    \hline
+    10 & Ryu + kết nối 6 OVS & Hoàn thành & 6/6 OVS kết nối controller ổn định \\
+    \hline
+    11 & Ứng dụng L2 SDN (học MAC theo VLAN, ACL) & Hoàn thành & DHCP và ping liên VLAN qua OVS thành công \\
+    \hline
+    12 & Ba controller SD-WAN và PKI & Hoàn thành & vManage, vSmart, vBond hoạt động, CA nội bộ \\
+    \hline
+    13 & Onboard 8 vEdge, BFD và control connection & Hoàn thành & 8/8 vEdge lên controller; BFD 56/56 up (23/09) \\
+    \hline
+    14 & Định tuyến liên site và chính sách SD-WAN & Hoàn thành & Service VPN 1, OMP; SLA, AAR, data policy, control policy \\
+    \hline
+    15 & Chi nhánh 200/300/400: Brand-FW, switch, VPC & Hoàn thành & DHCP cục bộ, router-on-a-stick, ACL \texttt{SDWAN\_IN} \\
+    \hline
+    16 & vEdge chi nhánh join fabric, 2 hướng SP & Hoàn thành & 6 vEdge chi nhánh trong fabric \\
+    \hline
+    16b & Chi nhánh mới Site 500 (mạng phẳng) & Đang thực hiện & Đã đấu nối Internet/MPLS, cấu hình vEdge và cài chứng thư (01/10); còn whitelist controller, cấu hình SP, policy \\
+    \hline
+    17 & Dịch vụ Web/Mail/DNS/Syslog & Hoàn thành phần chính & DNS, HTTPS, gửi/nhận mail từ chi nhánh qua SD-WAN \\
+    \hline
+    18 & Kiểm thử tích hợp end-to-end & Đang thực hiện & Đã có DHCP, ping liên site, BFD, AAR; còn failover FW HA, mất controller \\
+    \hline
+    19 & Báo cáo cuối kỳ & Đang thực hiện & Bản nháp các chương; báo cáo giữa kỳ này \\
+    \hline
+    20 & Slide và demo trực tiếp & Chưa bắt đầu & Dự kiến 11/2026 \\
+\end{longtable}
+\endgroup
+
+Trong 21 hạng mục (gồm hạng mục 16b mới bổ sung), 16 hạng mục đã hoàn thành, 1 hạng mục hoàn thành phần chính (dịch vụ), 3 hạng mục đang thực hiện và 1 hạng mục chưa bắt đầu. Toàn bộ phần thiết kế và phần triển khai cốt lõi đã xong; khối lượng còn lại tập trung vào kiểm thử, mở rộng Site 500 và tài liệu.
+
+\subsection{Kết quả đã đạt được}
+
+\subsubsection{Hạ tầng Campus chính}
+
+Core-SW1/2 cung cấp gateway VRRP cho các VLAN 10/20/30/40/90 và trao đổi tuyến OSPF với firewall active. Cặp ASAv hoạt động active--standby, cấu hình tự đồng bộ sang unit dự phòng; PC quản trị truy cập ASDM qua VLAN 99. DHCP Server (Windows Server 2012 R2) có bốn scope cho bốn VLAN người dùng; 8/8 máy trạm Site 100 nhận đúng địa chỉ qua DHCP relay trên Core.
+
+\subsubsection{SDN}
+
+Bộ điều khiển Ryu tại \texttt{10.1.99.10} quản lý sáu OVS (Dist-SW1/2, Access-SW1--4) bằng OpenFlow 1.3. Các phép thử độ bền đã thực hiện:
+
+\begin{itemize}
+    \item Khởi động lại Ryu: cả 6 switch kết nối lại trong khoảng 15 giây.
+    \item Khởi động lại từng Access Switch: switch quay lại trong khoảng 2,5 phút.
+    \item Tắt hẳn Dist-SW1: 5 switch còn lại giữ kết nối với controller; bật lại thì hệ thống tự phục hồi 6/6 trong khoảng 2 phút.
+\end{itemize}
+
+Ngoài Ryu, nhóm cài thêm ONOS 2.7 chạy song song làm giao diện giám sát: ONOS nhận đủ 6 thiết bị và các liên kết giữa chúng, trong khi Ryu vẫn đảm nhận chuyển tiếp.
+
+\subsubsection{SD-WAN}
+
+Fabric gồm ba controller và tám vEdge thuộc Site 100--400. Kết quả kiểm chứng ngày 23/09/2026:
+
+\begin{itemize}
+    \item 8/8 vEdge có control connection tới vBond, vSmart, vManage.
+    \item 56/56 phiên BFD up, gồm cả các đường hầm chéo màu Internet--MPLS.
+    \item Service VPN 1 trên tám vEdge; OMP quảng bá subnet của bốn site; máy trạm các site ping thông nhau.
+    \item Chính sách tập trung trên vSmart: Application-Aware Routing cho ICMP, thoại, web và mail theo hai lớp SLA là \texttt{SLA\_REALTIME} và \texttt{SLA\_BUSINESS}; data policy chặn Telnet/SSH từ chi nhánh vào Server Farm và DMZ; control policy ưu tiên vEdge1 của Site 100.
+\end{itemize}
+
+Ngày 26/09/2026, nhóm thử AAR bằng cách tạo trễ nhân tạo 1000~ms trên một đường WAN của Site 100. Lưu lượng ICMP từ Site 200 đã chuyển khỏi đường hầm bị trễ. Do chu kỳ đo BFD được đặt dài (\texttt{poll-interval} 120~s), thời gian chuyển đường thực tế là vài phút; đây là kết quả của một lần thử, chưa phải số liệu đo lặp.
+
+\subsubsection{Dịch vụ qua SD-WAN}
+
+Từ máy trạm Linux tại Site 200, nhóm kiểm tra phân giải DNS bản ghi \texttt{mail}/\texttt{MX}, truy cập HTTPS tới Web Server trong DMZ (máy chủ thấy địa chỉ thật của máy trạm, không bị NAT) và gửi/nhận thư qua cổng 587/IMAP. Firewall Site 100 chỉ mở đúng các dịch vụ cần thiết từ SD-WAN vào DMZ; các cổng khác bị chặn và ghi log.
+
+\subsection{Vấn đề kỹ thuật đã gặp và cách xử lý}
+
+Bảng~\ref{tab:van_de} tổng hợp các sự cố tiêu biểu. Mỗi sự cố được xác định nguyên nhân bằng chẩn đoán theo lớp trước khi sửa.
+
+\begingroup
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{|P{3.3cm}|P{4.7cm}|P{4.8cm}|}
+    \caption{Một số vấn đề kỹ thuật và cách xử lý}\label{tab:van_de} \\
+    \hline
+    \textbf{Hiện tượng} & \textbf{Nguyên nhân} & \textbf{Cách xử lý} \\
+    \hline
+    \endfirsthead
+    \multicolumn{3}{c}{\textit{Bảng~\ref{tab:van_de} (tiếp theo)}} \\
+    \hline
+    \textbf{Hiện tượng} & \textbf{Nguyên nhân} & \textbf{Cách xử lý} \\
+    \hline
+    \endhead
+    \hline
+    \endfoot
+    Máy trạm Site 100 không nhận DHCP qua OVS & Luật table-miss không gửi gói lên controller; ứng dụng đọc VLAN sai trường (\texttt{dl\_vlan} của OpenFlow 1.0 thay vì \texttt{vlan\_vid}) & Sửa luật table-miss và cách so khớp VLAN trong ứng dụng Ryu \\
+    \hline
+    Bão broadcast, switch mất kết nối controller & VLAN 99 có vòng lặp khi tắt STP trên OVS & Cắt tỉa VLAN 99 thành cây không vòng lặp, cài flow bootstrap cho VLAN 99 \\
+    \hline
+    vEdge kẹt ở trạng thái \textit{connect} & Chứng thư có trường O khác ``Cisco Systems'' nên vBond/vSmart từ chối & Ký lại chứng thư với subject đúng chuẩn \\
+    \hline
+    vEdge rơi khỏi fabric sau khi controller khởi động lại & Danh sách thiết bị được phép trên vBond chỉ lưu trong bộ nhớ & Đẩy lại danh sách từ vManage; đưa bước kiểm tra whitelist vào quy trình sau mỗi lần khởi động lại controller \\
+    \hline
+    Màu \texttt{biz-internet} không có đường tới controller & Route /24 qua MPLS che route /16 qua Internet (longest-prefix) & Thêm route /24 cùng độ dài qua cả hai transport \\
+    \hline
+    Tunnel Internet--MPLS down hàng loạt & Khai sai màu TLOC trên vEdge2 chi nhánh & Sửa màu đúng với loại đường truyền \\
+    \hline
+    BFD chéo màu Site 100 down & Mỗi TLOC chỉ có đường tới transport còn lại qua một cổng & Thêm default route cho từng transport trong VPN 0 \\
+    \hline
+    Cổng MPLS của vEdge2-S100 không nhận gói & Card mạng ảo bị treo phía nhận & \texttt{shutdown}/\texttt{no shutdown} cổng; BGP và TLOC lên lại \\
+\end{longtable}
+\endgroup
+
+\subsection{Đánh giá giữa kỳ}
+
+Tiến độ thực tế bám sát kế hoạch: giai đoạn khảo sát, thiết kế và triển khai đã hoàn thành đúng hoặc sớm hơn mốc dự kiến (hạng mục 16 có hạn 15/10/2026). Điểm mạnh của giai đoạn vừa qua là mọi kết quả đều có bằng chứng từ thiết bị và các sự cố đều được ghi nhận nguyên nhân gốc, tạo thành tài liệu vận hành có giá trị.
+
+Các hạn chế hiện tại:
+
+\begin{itemize}
+    \item Chưa có bộ đo hiệu năng lặp lại (thông lượng, độ trễ, thời gian hội tụ); các con số hiện có là kết quả của từng lần thử.
+    \item SDN chỉ có một controller Ryu, là điểm lỗi đơn của mặt phẳng điều khiển.
+    \item Đợt rớt kết nối đồng loạt của các vEdge trong đêm 22--23/09/2026 đã tự hết nhưng chưa xác định được nguyên nhân.
+    \item Một số bước triển khai vẫn làm thủ công (Windows, OVS, controller SD-WAN), phụ thuộc vào việc tuân thủ đúng quy trình.
+\end{itemize}

@@ -1,0 +1,46 @@
+\section{KẾ HOẠCH GIAI ĐOẠN CUỐI VÀ KẾT LUẬN}\label{sec:ke_hoach}
+
+\subsection{Kế hoạch công việc còn lại}
+
+Bảng~\ref{tab:ke_hoach_cuoi} liệt kê các công việc từ mốc giữa kỳ đến ngày bảo vệ dự kiến (cuối tháng 11/2026).
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Kế hoạch giai đoạn cuối}
+    \label{tab:ke_hoach_cuoi}
+    \begin{tabularx}{\textwidth}{|c|X|P{3.0cm}|P{3.6cm}|}
+        \hline
+        \textbf{\#} & \textbf{Công việc} & \textbf{Thời gian} & \textbf{Kết quả cần đạt} \\
+        \hline
+        1 & Hoàn thiện Site 500: whitelist trên 3 controller, cấu hình BGP phía nhà cung cấp, thêm site vào chính sách vSmart, nối switch và máy trạm & 02/10--10/10 & vEdge-S500 lên fabric; máy trạm nhận DHCP và ping được các site \\
+        \hline
+        2 & Kiểm thử failover: firewall HA, mất một transport, mất một vEdge tại chi nhánh & 10/10--25/10 & Biên bản kiểm thử có điều kiện, kết quả và thời gian hội tụ \\
+        \hline
+        3 & Kiểm thử SDN khi mất controller và khi có lưu lượng mới & 15/10--30/10 & Mô tả hành vi OVS ở chế độ \texttt{secure} khi mất Ryu \\
+        \hline
+        4 & Đo lặp lại độ trễ, mất gói và thời gian chuyển đường AAR & 20/10--05/11 & Bảng số liệu nhiều lần đo, có giá trị trung bình \\
+        \hline
+        5 & Tìm nguyên nhân đợt rớt kết nối vEdge 22--23/09 nếu tái diễn & Theo dõi liên tục & Kết luận nguyên nhân hoặc ghi nhận không tái diễn \\
+        \hline
+        6 & Hoàn thiện báo cáo cuối kỳ & 01/11--20/11 & Báo cáo đầy đủ 5 chương, cập nhật số liệu kiểm thử \\
+        \hline
+        7 & Slide và kịch bản demo trên lab & 10/11--20/11 & Slide; kịch bản demo đã chạy thử \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\subsection{Rủi ro và biện pháp}
+
+\begin{itemize}
+    \item \textbf{Tài nguyên máy chủ EVE-NG:} lab 67 node cần nhiều RAM/CPU; khi chạy đồng thời dễ gây chậm hoặc treo node. Biện pháp: bật theo thứ tự đã kiểm chứng, chỉ chạy các site cần cho từng phép thử.
+    \item \textbf{Mất trạng thái khi wipe node:} vEdge mất chứng thư, Windows/OVS mất cấu hình tay. Biện pháp: không wipe các node này; lưu cấu hình và quy trình phục hồi trong kho mã nguồn.
+    \item \textbf{Whitelist controller mất sau khởi động lại:} vEdge rơi khỏi fabric mà không có cảnh báo rõ ràng. Biện pháp: kiểm tra whitelist sau mỗi lần khởi động lại controller và đẩy lại từ vManage.
+    \item \textbf{Thời gian:} khối lượng kiểm thử và viết báo cáo dồn vào tháng 11. Biện pháp: thực hiện kiểm thử song song với viết báo cáo, ghi kết quả ngay sau mỗi phép thử.
+\end{itemize}
+
+\subsection{Kết luận giữa kỳ}
+
+Đến mốc giữa kỳ, nhóm đã hoàn thành phần thiết kế và phần lớn khối lượng triển khai của đề tài. Mô hình trên EVE-NG đã thể hiện được các mục tiêu chính: Campus chính phân tầng với gateway dự phòng và firewall HA, SDN điều khiển sáu switch OVS bằng Ryu, fabric SD-WAN kết nối bốn site qua hai transport với chính sách chọn đường theo SLA, cùng các dịch vụ mạng truy cập được từ chi nhánh. Việc bổ sung Site 500 theo mô hình mạng phẳng cho thấy kiến trúc có thể mở rộng bằng quy trình rõ ràng.
+
+Nửa còn lại của dự án tập trung vào kiểm thử có số liệu, hoàn thiện chi nhánh mới và tài liệu. Nhóm đánh giá dự án đang đúng tiến độ và đủ điều kiện để hoàn thành các mục tiêu đã đề ra trước ngày bảo vệ.

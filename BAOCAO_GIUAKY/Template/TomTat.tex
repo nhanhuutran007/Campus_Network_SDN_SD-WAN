@@ -1,0 +1,17 @@
+\section*{\fontsize{18pt}{18pt}\selectfont\MakeUppercase{\de}\\TÓM TẮT BÁO CÁO GIỮA KỲ}
+
+Báo cáo giữa kỳ tổng hợp kết quả thực hiện đề tài ``Xây dựng mạng Campus Network sử dụng SDN và SD-WAN'' tính đến mốc \mocbaocao{}, tương ứng khoảng giữa kế hoạch tổng thể từ 08/08/2026 đến 21/11/2026. Mục đích của báo cáo là trình bày những gì nhóm đã thiết kế và triển khai được, mức độ kiểm chứng của từng hạng mục, các vấn đề kỹ thuật đã gặp cùng cách xử lý, và kế hoạch cho nửa còn lại của dự án.
+
+Mô hình được xây dựng trên EVE-NG gồm Campus chính (Site 100), ba cơ sở phụ Cần Thơ, Đà Nẵng, Nha Trang (Site 200, 300, 400), vùng điều khiển SD-WAN (Site 900) và hai mạng truyền tải Internet/MPLS. Tại Campus chính, kiến trúc Core--Distribution--Access được kết hợp với SDN: bộ điều khiển Ryu quản lý sáu switch Open vSwitch bằng OpenFlow 1.3 qua VLAN quản trị 99. Liên kết giữa các cơ sở sử dụng Cisco SD-WAN (Viptela 20.10.1) với vManage, vSmart, vBond, tám vEdge và underlay eBGP.
+
+Đến thời điểm giữa kỳ, nhóm đã hoàn thành giai đoạn khảo sát, thiết kế tổng thể và phần lớn giai đoạn triển khai: hạ tầng LAN Campus chính (VRRP, OSPF, firewall ASAv HA), DHCP tập trung, SDN với 6/6 OVS kết nối Ryu, fabric SD-WAN với 8/8 vEdge lên controller và 56/56 phiên BFD hoạt động, định tuyến liên site qua service VPN và các chính sách tập trung (SLA, Application-Aware Routing, data policy). Các hạng mục đang thực hiện gồm kiểm thử tích hợp có kịch bản failover, mở rộng chi nhánh mới theo mô hình mạng phẳng (Site 500) và hoàn thiện báo cáo cuối kỳ.
+
+Báo cáo gồm năm chương: Chương 1 giới thiệu đề tài và kế hoạch; Chương 2 tóm tắt cơ sở lý thuyết; Chương 3 trình bày thiết kế hệ thống; Chương 4 báo cáo tiến độ và kết quả đạt được; Chương 5 nêu kế hoạch giai đoạn cuối và kết luận giữa kỳ.
+
+Về phương pháp, nhóm triển khai theo từng lớp và chỉ chuyển sang lớp tiếp theo khi lớp bên dưới đã được kiểm chứng: hạ tầng vật lý và lớp 2, định tuyến nội bộ, firewall, dịch vụ DHCP, mặt phẳng điều khiển SDN, rồi mới tới fabric SD-WAN và chính sách. Toàn bộ cấu hình, file topology và nhật ký sự cố được lưu trong kho mã nguồn để có thể phục hồi lab và truy vết mọi thay đổi. Các kết quả nêu trong báo cáo đều đi kèm bằng chứng từ thiết bị (kết quả lệnh \texttt{show}, bảng flow, gói tin bắt được) thay vì chỉ dựa trên cấu hình.
+
+Bên cạnh kết quả kỹ thuật, giai đoạn vừa qua giúp nhóm tích lũy kinh nghiệm vận hành thực tế: xử lý vòng lặp trên VLAN quản trị của SDN, cấp và ký chứng thư cho thiết bị SD-WAN, duy trì danh sách thiết bị được phép trên controller và chẩn đoán đường hầm BFD giữa các màu transport. Những kinh nghiệm này được tổng hợp thành quy trình phục hồi lab và sẽ là cơ sở cho các kịch bản kiểm thử dự phòng trong giai đoạn cuối.
+
+\textbf{Từ khóa:} Campus Network, SDN, OpenFlow, Ryu, Open vSwitch, SD-WAN, Cisco Viptela, OMP, BFD, Application-Aware Routing, EVE-NG.
+
+\newpage

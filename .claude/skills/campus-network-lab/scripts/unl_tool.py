@@ -42,6 +42,7 @@ EXPECTED_CONFIG_NODE_IDS = {
 
 S100, S200, S300 = "01-Site100-Campus", "02-Site200-CanTho", "03-Site300-DaNang"
 S400, S900, SP = "04-Site400-NhaTrang", "05-Site900-Controller", "06-ServiceProvider"
+S500 = "07-Site500"
 
 
 def _build_config_map() -> dict[int, str]:
@@ -71,7 +72,7 @@ def _build_config_map() -> dict[int, str]:
         62: f"{S300}/SwitchBrand/config.cfg",
         63: f"{S200}/SwitchBrand/config.cfg",
         64: f"{S400}/SwitchBrand/config.cfg",
-        65: f"{S900}/vEdge65/config.cfg",
+        65: f"{S500}/vEdge65/config.cfg",
     }
     for i in (14, 15, 16, 17, 19, 20, 21):
         m[i] = f"{S100}/VPC{i}/config.txt"

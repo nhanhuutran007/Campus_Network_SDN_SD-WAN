@@ -5,7 +5,7 @@ description: Trợ lý cho đồ án "Campus Network kết hợp SDN + SD-WAN" t
 
 # Campus Network SDN + SD-WAN Lab
 
-Đồ án của Trần Hữu Nhân và Nguyễn Nhật Hào: mô phỏng 4 campus (Site 100 chính, 200 Cần Thơ, 300 Đà Nẵng, 400 Nha Trang, 500 đang triển khai) + site controller 900 trên **một lab EVE-NG**. SDN = Ryu điều khiển 6 OVS của Site 100 qua VLAN 99. SD-WAN = Viptela 20.10.1, transport Internet + MPLS, underlay BGP.
+Đồ án của Trần Hữu Nhân và Nguyễn Nhật Hào: mô phỏng 4 campus (Site 100 chính, 200 Cần Thơ, 300 Đà Nẵng, 400 Nha Trang) + site controller 900 trên **một lab EVE-NG**. SDN = Ryu điều khiển 6 OVS của Site 100 qua VLAN 99. SD-WAN = Viptela 20.10.1, transport Internet + MPLS, underlay BGP.
 
 **Ngôn ngữ**: trả lời và viết tài liệu bằng **tiếng Việt**, giữ thuật ngữ kỹ thuật tiếng Anh.
 
@@ -28,8 +28,6 @@ description: Trợ lý cho đồ án "Campus Network kết hợp SDN + SD-WAN" t
 | Chi nhánh 200/300/400, FW HA/ASDM, DHCP-Server, Web/Mail/Syslog, Core IOL | [branch-and-services.md](references/branch-and-services.md) |
 | Báo cáo LaTeX, slide, bảng tiến độ, demo | [deliverables.md](references/deliverables.md) |
 | Ta đang ở đâu, việc còn dở | [project-status.md](references/project-status.md) |
-| Đồng bộ host 2 theo host 1: tiến độ từng node, script, việc còn lại | [host2-sync.md](references/host2-sync.md) |
-| Cho các site ra Internet (DIA, NAT, DNS forwarder): kế hoạch 7 giai đoạn + tiến độ | [internet-breakout.md](references/internet-breakout.md) |
 
 Chỉ đọc file cần cho tác vụ. Mỗi file có mục lục ở đầu.
 
@@ -42,13 +40,13 @@ Chỉ đọc file cần cho tác vụ. Mỗi file có mục lục ở đầu.
 
 ## Bất biến cốt lõi (phải giữ)
 
-- **IP**: octet 2 = site (1/2/3/4/5/9); VLAN `/24`, gateway `.1`, server `.10/.11`, **DHCP pool `.100–.199`**; System-IP OMP `10.200.<site>.x` (300→`30`, 400→`40`, 500→`50`, 900→`90`); Internet `203.0.113.0/24`, MPLS `100.64.x.x/30`.
+- **IP**: octet 2 = site (1/2/3/4/9); VLAN `/24`, gateway `.1`, server `.10/.11`, **DHCP pool `.100–.199`**; System-IP OMP `10.200.<site>.x` (300→`30`, 400→`40`, 900→`90`); Internet `203.0.113.0/24`, MPLS `100.64.x.x/30`.
 - **Control plane SDN** = VLAN 99 (`10.1.99.0/24`, controller `10.1.99.10:6653`); không có mạng điều khiển riêng; không khôi phục `10.1.100/101.0/24`, `192.168.100.0/24`.
 - **Node dễ nhầm**: Access-SW1 **68**, Access-SW2 **66**, Access-SW3 **70**, Access-SW4 **69**; vEdge2 S200/S300/S400 = **42/40/41**; Brand-FW S200/S300/S400 = **37/39/38**; DHCP-Server **72**. Tên node trong `.unl` trùng nhau → dùng **id**. Bảng đầy đủ ở `topology-and-conventions.md`.
-- `.unl` có **70 node / 103 network** (03/10/2026), giữ đúng **47** node `config="1"` (=47 config nhúng; 23/09/2026 VPC 18/47/52/53 thành PC Linux); `config="0"` cho Windows, vtmgmt/vtsmart/vtbond, Linux/OVS. Không tạo `.unl.bak`. Sửa `.unl` **ở mức byte**.
+- `.unl` giữ đúng **47** node `config="1"` (=47 config nhúng; 23/09/2026 VPC 18/47/52/53 thành PC Linux); `config="0"` cho Windows, vtmgmt/vtsmart/vtbond, Linux/OVS. Không tạo `.unl.bak`. Sửa `.unl` **ở mức byte**.
 - Ryu/OVS: giữ `tag=/trunks=`, `OpenFlow13`, `fail_mode=secure`, `stp_enable=false`, OF1.3 dùng `vlan_vid` (không `dl_vlan`).
 - Chi nhánh = Firewall-as-Core; Core-SW1/2 = IOL (`vtp mode off` + `trunk encapsulation dot1q` trước `mode trunk`); underlay = BGP; DHCP-Server node 72 (Win Server 2012 R2).
-- **Không lặp lại** thứ đã xoá/từ chối: node 23, OSPF underlay, SwitchBrand làm router, dải test `192.168.100.0/24`. Node 10/11/12 nay là **Site 500** (SW-S500, VPC11, VPC12 — thêm 03/10/2026), không phải AccessTest cũ.
+- **Không lặp lại** thứ đã xoá/từ chối: AccessTest 10, VPC11/12, node DHCP Win7 cũ (id 10/23 nay đã cấp lại cho SW-S500/vEdge-Spare), OSPF underlay, SwitchBrand làm router.
 
 ## Quy trình thay đổi
 
@@ -68,7 +66,7 @@ Vật lý/link → L2 (VLAN, trunk, STP/loop) → L3 (gateway, route, BGP) → d
 - **Host 1 là nguồn chuẩn, đồng bộ một chiều host 1 → repo.** Cấm đẩy `.unl`/config từ repo lên host 1 khi người dùng chưa cho phép rõ ràng.
 - **Cấm wipe** node `config="0"` (OVS, controller, DHCP-Server, vManager/vSmart/vBond, Windows) — mất sạch cấu hình tay. Cấm chu kỳ Delete lab → Import; cấm mở/save lab bằng GUI EVE.
 - **Mật khẩu**: lưu cục bộ ở `C:\Users\nhanh\.claude\campus-lab-credentials.md` (ngoài repo và ngoài OneDrive). **Đọc file đó khi cần đăng nhập thiết bị — không hỏi lại người dùng.** Chỉ hỏi cho mục ghi "CHƯA CÓ", rồi ghi giá trị mới vào chính file đó. Tuyệt đối không chép giá trị vào skill, repo, file trong `configs/`/`HuongDan/`, commit, log hay tin nhắn trả lời; trong script đọc từ file/biến môi trường lúc chạy, không đặt trong command line hoặc nhúng cứng. Khi báo cáo kết quả chỉ nêu "đăng nhập OK", không in mật khẩu. Nếu file không tồn tại (máy khác), hỏi người dùng.
-- **Rò rỉ đã xảy ra**: `.opencode/skills/campus-network-lab/SKILL.md` (có mật khẩu lab) nằm trong commit `47e5cde` (trước 04/10/2026 là `9a97537`) đã đẩy lên `origin/main`; nhiều file `configs/`, `campus_network_sdn_sdwan.md`, `HuongDan/` cũng chứa mật khẩu thiết bị. Không commit thêm file có mật khẩu; nếu người dùng chia sẻ repo, nhắc đổi mật khẩu lab.
+- **Rò rỉ đã xảy ra**: `.opencode/skills/campus-network-lab/SKILL.md` (có mật khẩu lab) nằm trong commit `9a97537` đã đẩy lên `origin/main`; nhiều file `configs/`, `campus_network_sdn_sdwan.md`, `HuongDan/` cũng chứa mật khẩu thiết bị. Không commit thêm file có mật khẩu; nếu người dùng chia sẻ repo, nhắc đổi mật khẩu lab.
 - Không tin exit code của `unl_wrapper`/script — xác minh bằng prompt, process, port, output `show`.
 - Không suy tính năng IOL từ tên image; không `pkill -f "chuỗi có trong chính lệnh"`; login sai nhiều lần khoá tài khoản ~15 phút.
 - Node Windows/VNC: thao tác GUI do người dùng làm.

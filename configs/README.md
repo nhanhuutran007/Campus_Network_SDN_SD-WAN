@@ -14,9 +14,9 @@ configs/
 ├── 02-Site200-CanTho/         ← Brand-FW, vEdge1/2, SwitchBrand, SW55/56, VPC
 ├── 03-Site300-DaNang/         ← Brand-FW, vEdge1/2, SwitchBrand, SW58/59, VPC
 ├── 04-Site400-NhaTrang/       ← Brand-FW, vEdge1/2, SwitchBrand, SW60/57, VPC
-├── 05-Site900-Controller/     ← Switch32, Switch61, vEdge65 (node 65 nay nối Site 500, xem mục 7)
-├── 05-Site900-SDWAN-Controllers/ ← vManager-33, vSmart-34, vBond-35 (running-config thật 15/08/2026)
-└── 06-ServiceProvider/        ← Internet, MPLS
+├── 05-Site900-Controller/     ← vManager-33, vSmart-34, vBond-35 (running-config thật), Switch32, Switch61, vEdge-Spare (23)
+├── 06-ServiceProvider/        ← Internet, MPLS
+└── 07-Site500/                ← vEdge65 (chi nhánh mạng phẳng)
 ```
 
 Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, `.sh` cho node Linux/OVS).
@@ -37,17 +37,15 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | SwitchDMZ | 7 | iol |
 | Dist-SW2 | 8 | linux (OVS script) |
 | SDN_CONTROLLER | 9 | linux (OVS script) |
-| SW-S500 (Site 500, chưa có thư mục config) | 10 | iol (config="0", đang mặc định) |
-| VPC11 / VPC12 (Site 500) | 11, 12 | vpcs (config="0") |
 | Mail-Server | 13 | win (cấu hình tay) |
-| PC-CNTT-S100-1 (thư mục VPC14, VLAN10) | 14 | vpcs |
-| PC-Luat-S100-1 (thư mục VPC15, VLAN30) | 15 | vpcs |
-| PC-Luat-S100-2 (thư mục VPC16, VLAN30) | 16 | vpcs |
-| PC-HanhChinh-S100-2 (thư mục VPC17, VLAN40) | 17 | vpcs |
+| VPC14 | 14 | vpcs |
+| VPC15 | 15 | vpcs |
+| VPC16 | 16 | vpcs |
+| VPC17 | 17 | vpcs |
 | PC-HanhChinh-S100 (cũ VPC18) | 18 | linux (Ubuntu 18.04 GNOME, config="0") |
-| PC-CNTT-S100-2 (thư mục VPC19, VLAN10) | 19 | vpcs |
-| PC-TTK-S100-1 (thư mục VPC20, VLAN20) | 20 | vpcs |
-| PC-TTK-S100-2 (thư mục VPC21, VLAN20) | 21 | vpcs |
+| VPC19 | 19 | vpcs |
+| VPC20 | 20 | vpcs |
+| VPC21 | 21 | vpcs |
 | Web-Server | 22 | linux (`linux-ubuntu-18.04-server`, cấu hình tay) |
 | DHCP-Server | 72 | winserver (cấu hình tay) |
 | SwitchServerFarm | 24 | iol |
@@ -69,14 +67,15 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | vEdge2-S300 | 40 | vtedge |
 | vEdge2-S400 | 41 | vtedge |
 | vEdge2-S200 | 42 | vtedge |
-| VPC chi nhánh (thư mục VPC43…VPC54): 43=PC-NongNghiep-S200-1; 44=PC-NongNghiep-S200-2; 46=PC-YTe-S200-2; 48=PC-TaiChinh-S300-2; 50=PC-DuLich-S300-1; 54=PC-DuLich-S300-2; 45=PC-ThuySan-S400-2; 49=PC-LuHanh-S400-2; 51=PC-ThuySan-S400-1 | 43,44,45,46,48,49,50,51,54 | vpcs |
+| VPC43–VPC54 | 43,44,45,46,48,49,50,51,54 | vpcs |
 | PC-YTe-S200 / PC-LuHanh-S400 / PC-TaiChinh-S300 (cũ VPC47/52/53) | 47, 52, 53 | linux (Ubuntu 18.04 GNOME, config="0") |
 | SW55, SW56, SW57, SW58, SW59, SW60 | 55,56,57,58,59,60 | iol |
 | Switch61 | 61 | iol |
 | SwitchBrand-S300 | 62 | iol |
 | SwitchBrand-S200 | 63 | iol |
 | SwitchBrand-S400 | 64 | iol |
-| vEdge65 (Site 500 từ 03/10/2026) | 65 | vtedge |
+| vEdge65 (vEdge-S500) | 65 | vtedge |
+| vEdge-Spare (site 900, đã ký cert sẵn) | 23 | vtedge (tạo bằng GUI 08/10/2026, id 23 do EVE cấp lại) |
 | Access-SW2 | 66 | linux (OVS script) |
 | Access-SW1 | 68 | linux (OVS script) |
 | Access-SW4 | 69 | linux (OVS script) |
@@ -126,7 +125,7 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 **Các thiết bị cấu hình bằng tay (không có file):**
 - **Web-Server (22)**: dùng image `linux-ubuntu-18.04-server`, template `linux`, 2 vCPU, RAM 4096 MB và 1 NIC; đặt IP tĩnh **10.1.1.10/28**, gateway **10.1.1.1**, sau đó cài Nginx/Apache và kiểm tra TCP/80 hoặc TCP/443. Node giữ `config="0"`, cấu hình thủ công qua VNC/console.
 - **vManager (33) / vSmart (34) / vBond (35)**: khởi động vManager → vào GUI `https://10.9.0.10` (mặt LAN) hoặc `10.9.1.10` (mặt cloud). Setup cluster vBond→vSmart→vManager, cấp system-ip/site-id cho từng vEdge từ vManager (tính năng Zero-Touch/Manual). vSmart/vBond sau đó được cấu hình **từ xa qua vManager**.
-  - **15/08/2026**: đã lấy `show running-config` thật từ console host 1 (`telnet <eve>:33569/33570/33571`) lưu vào `05-Site900-SDWAN-Controllers/vManager-33|vSmart-34|vBond-35/config.cfg` và upload lên host 2 (`Campus Network SDN SD-WAN/33|34|35/`). **Cùng ngày đã sửa IP 3 con theo thiết kế** (md 2.2.5): vManager thêm eth1 = **10.9.1.10/24**; vSmart eth0 đổi dhcp → **10.9.0.11/24** + thêm eth1 = **10.9.1.11/24** + default route 10.9.0.2; vBond VPN 512 eth0 đổi dhcp → **10.9.1.12/24** (mặt cloud NAT → 203.0.113.100). **Lưu ý luật Viptela**: vSmart không cho phép IP interface trùng System-IP trong vpn 0 → **system-ip vSmart đã đổi 10.9.0.11 → 10.9.0.13** (vManager/vBond không bị chặn, system-ip = IP LAN OK). **Login CLI**: `admin`/`vnpro@123` (vManager), `admin`/`okok` (vSmart, vBond). Lưu ý khi lấy config qua console: gặp `--More--` gửi phím `!` (dump hết) — không dùng space/Ctrl-L (mất phần đầu config); nếu console đang kẹt config mode ("Uncommitted changes found") thì `exit` + trả lời `no` trước khi gõ lệnh.
+  - **15/08/2026**: đã lấy `show running-config` thật từ console host 1 (`telnet <eve>:33569/33570/33571`) lưu vào `05-Site900-Controller/vManager-33|vSmart-34|vBond-35/config.cfg` và upload lên host 2 (`Campus Network SDN SD-WAN/33|34|35/`). **Cùng ngày đã sửa IP 3 con theo thiết kế** (md 2.2.5): vManager thêm eth1 = **10.9.1.10/24**; vSmart eth0 đổi dhcp → **10.9.0.11/24** + thêm eth1 = **10.9.1.11/24** + default route 10.9.0.2; vBond VPN 512 eth0 đổi dhcp → **10.9.1.12/24** (mặt cloud NAT → 203.0.113.100). **Lưu ý luật Viptela**: vSmart không cho phép IP interface trùng System-IP trong vpn 0 → **system-ip vSmart đã đổi 10.9.0.11 → 10.9.0.13** (vManager/vBond không bị chặn, system-ip = IP LAN OK). **Login CLI**: `admin`/`vnpro@123` (vManager), `admin`/`okok` (vSmart, vBond). Lưu ý khi lấy config qua console: gặp `--More--` gửi phím `!` (dump hết) — không dùng space/Ctrl-L (mất phần đầu config); nếu console đang kẹt config mode ("Uncommitted changes found") thì `exit` + trả lời `no` trước khi gõ lệnh.
 - **Mail-Server (13), DHCP-Server (72), Syslog-Server (25), Win (36), PC-Management (73)**: đặt IP tĩnh qua Network Settings Windows:
   - Mail-Server: 10.1.1.11/28, GW 10.1.1.1
   - DHCP-Server: 10.1.90.10/24, GW 10.1.90.1 (node 72 dùng image **winserver-S2012-R2-x64** — cài role **DHCP Server** bản địa, tạo scope cho VLAN 10/20/30/40 theo mục 2.4 của md; Core đã khai `ip helper-address 10.1.90.10` trên SVI nên relay tự hoạt động. **Trạng thái 01/09/2026: ĐÃ HOÀN TẤT** — role + 4 scope VLAN10/20/30/40 Active (Xác minh: OCR VNC node 72, MMC `DHCP > IPv4` hiển thị đủ 4 scope, mỗi scope trạng thái **Active**; server khai báo IP 10.1.90.10/24). **Lưu ý data-plane SDN campus**: DHCP Discover từ VPC access (VLAN 10/20/30/40) hiện **không flood qua datapath OVS/controller lên Core SVI** (MAC VPC không học được tại Core, `vunl6_72_0` = 0 gói) — là issue SDN campus cũ, KHÔNG phải lỗi DHCP server; chờ khi datapath campus hoạt động thì relay hoạt động bình thường)
@@ -190,17 +189,17 @@ Service OVS phục hồi bridge/port theo kiểu `--may-exist`, IP `br-mgmt`, DP
 | vEdge1-S200 / vEdge2-S200 | 10.200.200.1 / .2 | Internet 203.0.113.9 — MPLS 100.64.200.1 |
 | vEdge1-S300 / vEdge2-S300 | 10.200.30.1 / .2 | Internet 203.0.113.13 — MPLS 100.64.30.1 |
 | vEdge1-S400 / vEdge2-S400 | 10.200.40.1 / .2 | Internet 203.0.113.17 — MPLS 100.64.40.1 |
-| vEdge65 (Site 500, đang triển khai) | config hiện tại 10.200.90.1 (dự kiến 10.200.50.1) | Internet 203.0.113.21 — MPLS 100.64.50.1 (phía SP đã cấu hình) |
+| vEdge65 (vEdge-S500) | 10.200.50.1 | Internet 203.0.113.21 — MPLS 100.64.50.1 |
+| vEdge-Spare (23) | 10.200.90.1 | vpn 0 ge0/0 10.9.0.100/24 (Switch32 e1/3, VLAN 10 controller), color biz-internet |
 
 ### 7.1. BGP (Service Provider — thay OSPF underlay, 15/08/2026)
 
 | ASN | Thiết bị | Peering |
 |---|---|---|
-| 64511 | Internet (26) | eBGP backbone ↔ MPLS (100.64.254.2); CE-PE ↔ vEdge Internet TLOC (203.0.113.1/.5/.9/.13/.17/.21) + `default-originate` |
-| 64512 | MPLS (27) | eBGP backbone ↔ Internet (100.64.254.1); CE-PE ↔ vEdge MPLS TLOC (100.64.100.1/.5, 100.64.200.1, 100.64.30.1, 100.64.40.1, 100.64.50.1) + `default-originate` |
+| 64511 | Internet (26) | eBGP backbone ↔ MPLS (100.64.254.2); CE-PE ↔ vEdge Internet TLOC (203.0.113.1/.5/.9/.13/.17) + `default-originate` |
+| 64512 | MPLS (27) | eBGP backbone ↔ Internet (100.64.254.1); CE-PE ↔ vEdge MPLS TLOC (100.64.100.1/.5, 100.64.200.1, 100.64.30.1, 100.64.40.1) + `default-originate` |
 | 65000 / 65010 / 65020 / 65030 | vEdge S100 / S200 / S300 / S400 | eBGP với ISP transport tương ứng (thay static default) |
-| 65040 | vEdge65 (Site 500) | Neighbor đã khai trên Internet Gi0/8 và MPLS Gi0/7 (03/10/2026); vEdge chưa cấu hình → phiên `Active` |
-| — | Switch32 (site 900) | Static CE-PE theo phạm vi thiết kế; Switch32 hiện dùng IOL High Iron |
+| — | Switch32 / vEdge-Spare (site 900) | Static CE-PE theo phạm vi thiết kế; Switch32 hiện dùng IOL High Iron |
 
 - Mỗi ISP quảng bá transit /30 của mình qua backbone (`network … mask`); Internet Gi0/0 vẫn DHCP (cấm IP tĩnh).
 - vEdge config: `router bgp <ASN>` dưới `vpn 0` + `neighbor <SP-IP> remote-as <SP-ASN>`; bỏ `ip route 0.0.0.0/0` (học default qua BGP).

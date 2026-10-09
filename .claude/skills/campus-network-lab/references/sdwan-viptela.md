@@ -1,12 +1,13 @@
 # SD-WAN Viptela 20.10.1: controller, PKI, onboarding, sự cố
 
-Nguồn: `HuongDan/cách ký và add vedge.md`, `HuongDan/PhucHoiKetNoi_2_vEdge_Site100.txt` (xác minh 19/09/2026), `HuongDan/1. Tạo CSR trên thiết bị vEdge.txt`, `configs/05-Site900-*`. Không có mật khẩu ở đây — xem `console-automation.md` mục tài khoản.
+Nguồn: `HuongDan/cách ký và add vedge.md`, `HuongDan/PhucHoiKetNoi_2_vEdge_Site100.txt` (xác minh 19/09/2026), `1. Tạo CSR trên thiết bị vEdge.txt`, `configs/05-Site900-Controller/`. Không có mật khẩu ở đây — xem `console-automation.md` mục tài khoản.
 
 ## Mục lục
 - Fabric và địa chỉ
 - Bảng chẩn đoán: vEdge không lên controller
 - Whitelist trên CẢ 3 controller
 - PKI và onboard vEdge mới (9 bước)
+- vEdge dự phòng (vEdge-Spare, node 23)
 - Định tuyến tới controller và màu TLOC
 - Cấu hình vEdge lúc boot
 - Lệnh kiểm tra
@@ -14,9 +15,9 @@ Nguồn: `HuongDan/cách ký và add vedge.md`, `HuongDan/PhucHoiKetNoi_2_vEdge_
 ## Fabric và địa chỉ
 
 - Controller site 900 (`organization-name site-900`): vManager 33 = `10.9.0.10` (+ `eth1 10.9.1.10` mặt cloud); vSmart 34 = eth0 `10.9.0.11` nhưng **system-ip `10.9.0.13`** (Viptela cấm interface IP trùng system-ip trong vpn 0 — lỗi "cannot be same in vpn 0"); vBond 35 = `10.9.0.12` local (`vbond 10.9.0.12 local`; VPN 512 eth0 `10.9.1.12`). vBond được NAT 1:1 tới `203.0.113.100` ở mặt Internet.
-- Mọi vEdge: `organization-name site-900`, `vbond 10.9.0.12`, `system-ip 10.200.<site>.x`, 2 vEdge/site (Site 900 chỉ vEdge65).
+- Mọi vEdge: `organization-name site-900`, `vbond 10.9.0.12`, `system-ip 10.200.<site>.x`, 2 vEdge/site; Site 500 = vEdge65 (`10.200.50.1`); Site 900 = **vEdge-Spare node 23** (`10.200.90.1`, đã ký cert, xem mục "vEdge dự phòng").
 - Console: `33536 + id` (vEdge 28→33564, 6→33542, 33→33569, 34→33570, 35→33571).
-- vManager `sp-organization-name site-900`. Lấy `show running-config` đầy đủ bằng cách gửi `!` ở pager (không dùng space/Ctrl-L: mất phần đầu). Bản lưu: `configs/05-Site900-SDWAN-Controllers/{vManager-33,vSmart-34,vBond-35}/config.cfg`.
+- vManager `sp-organization-name site-900`. Lấy `show running-config` đầy đủ bằng cách gửi `!` ở pager (không dùng space/Ctrl-L: mất phần đầu). Bản lưu: `configs/05-Site900-Controller/{vManager-33,vSmart-34,vBond-35}/config.cfg`.
 - Root CA thực tế của lab: **CA cũ trên vManager `/home/admin/ca/` (`root-ca.pem`/`root-ca.key`, CN `SDWAN-Lab-RootCA`)**. Controller và các edge đang chạy đều tin CA này → **ký vEdge mới bằng CA cũ**, không dùng CA v2 (`/root/sdwan-ca-v2/`, chờ dọn). Người dùng chỉ đạo: làm theo hướng dẫn 100%, không ký bằng CA khác. Ghi chú cũ "key CA mất vĩnh viễn" là SAI.
 
 ## Bảng chẩn đoán: vEdge không lên controller
@@ -65,6 +66,24 @@ Dùng cho vEdge mới, sau wipe/re-image, hoặc khi mở rộng chi nhánh (đ�
 9. **Xác minh**: `show control connections` (vbond + vmanage + vsmart Up), `show control summary` (vbond/vmanage/vsmart counts), vManage `/dataservice/device` = reachable/normal.
 
 Với 2 màu WAN kỳ vọng `vbond_counts 2 / vsmart_counts 2 / vmanage_counts 1` (vManage chỉ cần một phiên, không theo màu) và `valid_controller_counts 2`.
+
+## vEdge dự phòng (vEdge-Spare, node 23)
+
+Tạo 08/10/2026 bằng GUI EVE, đã chạy đủ 9 bước PKI ở trên, **kiểm chứng live**: control vbond/vmanage/vsmart Up, OMP peer vSmart Up, 10 BFD Up, vManage `reachable/normal`.
+- Nối dây: `ge0/0` ↔ Switch32 `e1/3` (access VLAN 10). `vpn 0` `10.9.0.100/24`, gw `10.9.0.2`, color `biz-internet`; system-ip `10.200.90.1`, site 900. Nguồn: `configs/05-Site900-Controller/vEdge-Spare/config.cfg`.
+- Chassis `ce69e515-b477-47d1-9379-fe3d2aa9ab8f`, cert serial `050CC67238AF8949E4AE8D4CDF8083AA9A73F98D` (CA `SDWAN-Lab-RootCA`, hạn 07/10/2028); file `vedge-spare.csr/.crt` trên vManage `/home/admin/ca/`. Chassis = uuid VM của node, nên **không wipe** (mất cert + private key) và không xoá/tạo lại node.
+- Đang chạy trong fabric (người dùng chọn). Site 900 nằm ngoài site-list `ALL_EDGES`/`BRANCHES` của vSmart nên không bị dính policy.
+- whitelist đã được thêm bằng CLI (`request vedge add`) trên cả 3 controller. Danh sách API của vManage (`certificate/vedge/list`, 9 entry) **không** có chassis này ⇒ nếu controller reboot thì "push" từ vManage không khôi phục được entry này; phải `request vedge add` lại bằng CLI.
+- vBond đăng nhập bằng mật khẩu của vManage, **không** phải mật khẩu của vSmart (xem `HuongDan/PhucHoiKetNoi_2_vEdge_Site100.txt`).
+
+**Biến vEdge-Spare thành chi nhánh mới (site N):**
+1. SP: thêm cổng + BGP CE-PE cho site N (mẫu `configs/07-Site500/SP-changes.txt`); vSmart: thêm site N vào `ALL_EDGES`/`BRANCHES`.
+2. Trên GUI EVE: kéo node sang vị trí chi nhánh; đổi dây `ge0/0` → Internet, `ge0/1` → MPLS, `ge0/2` → LAN. **Chỉ đổi link, không xoá node.** Sau đó kiểm tra bridge có bị kẹt tap cũ không (`/sys/class/net/vnet6_<net>/brif`).
+3. Console vEdge (`33536+23`): đổi `host-name`, `system-ip 10.200.N.x`, `site-id`. Bỏ IP/route `10.9.0.x` ở vpn 0, dán vpn 0 WAN + BGP + vpn 1 LAN (mẫu `configs/07-Site500/vEdge65/config.cfg`), rồi `commit`. **Không cần tạo CSR hay ký lại**, vì cert gắn với chassis, không gắn với system-ip.
+4. Kiểm tra `show control connections` (đủ 2 màu), `show omp peers`, `show bfd sessions`. Nếu thấy `BIDNTVRFD` thì `request vedge add` lại với chassis/serial ở trên.
+5. Muốn có vEdge dự phòng mới thì tạo node mới ở Site 900 và làm lại mục này.
+
+**Tự động hoá (09/10/2026, chưa chạy live):** `sdwan_onboard.py` + tab "Onboard vEdge" trong `campus_web.py`. Tool đọc `.unl` trên host để tìm node vtedge nối vào Switch32 (bỏ qua vEdge chi nhánh và các cổng hạ tầng e0/0–e1/2), đưa cổng về access VLAN 10, cấp `10.200.90.N` / `10.9.0.(99+N)`, sau đó chạy đủ 9 bước PKI ở trên và whitelist 3 controller. Danh sách chassis/serial lưu ở `log/onboard_registry.json`, có sẵn node 23. Nút "Đẩy lại whitelist" thay cho việc `request vedge add` bằng tay sau khi controller reboot. Chế độ tự dò không tự thử lại node bị lỗi, để tránh login sai nhiều lần làm khoá tài khoản.
 
 ## Định tuyến tới controller và màu TLOC
 

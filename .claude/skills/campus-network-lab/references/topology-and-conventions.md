@@ -1,6 +1,6 @@
 # Kiến trúc, quy ước và node-id
 
-Nguồn đã đối chiếu ngày 2026-09-20: `Campus Network SDN SD-WAN.unl` (70 node, 103 network, 47 config nhúng — cập nhật 03/10/2026 sau khi thêm Site 500), `configs/README.md`, `campus_network_sdn_sdwan.md`. Khi nghi ngờ, chạy `python .claude/skills/campus-network-lab/scripts/unl_tool.py nodes`.
+Nguồn đã đối chiếu ngày 2026-09-20: `Campus Network SDN SD-WAN.unl` (67 node, 100 network, 47 config nhúng — cập nhật 23/09/2026), `configs/README.md`, `campus_network_sdn_sdwan.md`. Khi nghi ngờ, chạy `python .claude/skills/campus-network-lab/scripts/unl_tool.py nodes`.
 
 ## Mục lục
 - Kiến trúc tổng thể
@@ -18,8 +18,7 @@ Nguồn đã đối chiếu ngày 2026-09-20: `Campus Network SDN SD-WAN.unl` (7
 |---|---|---|
 | 100 | Campus chính (Cần Thơ) | FW-ASAv HA, Core-SW1/2 (IOL), Dist-SW1/2 + Access-SW1–4 (OVS do Ryu điều khiển), Server Farm/DMZ, 2 vEdge |
 | 200 / 300 / 400 | Chi nhánh Cần Thơ / Đà Nẵng / Nha Trang | Brand-FW (L3 + DHCP) + SwitchBrand + 2 SW phòng ban + 4 VPC + 2 vEdge |
-| 500 | Chi nhánh mới (đang triển khai, 03/10/2026) | vEdge65 (chuyển từ Site 900) + SW-S500 (IOL L2) + VPC11/VPC12 |
-| 900 | SD-WAN controller | vManager 33 / vSmart 34 / vBond 35, Switch32 (LAN controller), Switch61 (cầu ra LAN thật) |
+| 900 | SD-WAN controller | vManager 33 / vSmart 34 / vBond 35, Switch32 (LAN controller), Switch61 (cầu ra LAN thật), vEdge-Spare 23 (đã ký cert sẵn để mở chi nhánh) |
 | SP | Nhà cung cấp | Internet 26 (AS 64511), MPLS 27 (AS 64512) |
 
 - **SDN**: Ryu (OpenFlow 1.3) điều khiển 6 OVS của Site 100. Control plane đi trên **VLAN 99 MANAGEMENT** (10.1.99.0/24) qua chính các uplink sẵn có — KHÔNG có mạng/link điều khiển riêng.
@@ -40,21 +39,20 @@ Không tin bảng node-id/trạng thái trong ghi chú cũ (`.opencode`, `.codex
 
 ## Quy ước địa chỉ, VLAN, ASN
 
-- Octet 2 = site: 1 Campus, 2 Cần Thơ, 3 Đà Nẵng, 4 Nha Trang, 5 Site 500, 9 Controller.
+- Octet 2 = site: 1 Campus, 2 Cần Thơ, 3 Đà Nẵng, 4 Nha Trang, 9 Controller.
 - VLAN `/24`, gateway `.1` (VRRP VIP trên Core hoặc sub-interface Brand-FW), server `.10/.11`. **DHCP pool `.100–.199`** cho PC.
 - P2P `/30`: phía gần WAN (FW/vEdge) = `.1`. Loopback OSPF `10.<site>.0.x/32`.
-- System-IP OMP: `10.200.<site>.x`, riêng site 300/400/500/900 rút octet thành `30/40/50/90` (octet >255 vô hiệu). System-IP không phải gateway.
-- WAN: Internet `203.0.113.0/24` (Internet G0/0 nối pnet0 = **DHCP, cấm IP tĩnh**); MPLS `100.64.x.x/30` (S100 `.100.0/.100.4`, S200 `.200.0`, S300 `.30.0`, S400 `.40.0`, S500 `.50.0`, backbone `.254.0/30`).
+- System-IP OMP: `10.200.<site>.x`, riêng site 300/400/900 rút octet thành `30/40/90` (octet >255 vô hiệu). System-IP không phải gateway.
+- WAN: Internet `203.0.113.0/24` (Internet G0/0 nối pnet0 = **DHCP, cấm IP tĩnh**); MPLS `100.64.x.x/30` (S100 `.100.0/.100.4`, S200 `.200.0`, S300 `.30.0`, S400 `.40.0`, backbone `.254.0/30`).
 - **Campus chính VLAN**: 10 Khoa CNTT (VPC14, 19), 20 Toán-TK (VPC20, 21), 30 Luật (VPC15, 16), 40 Hành chính (VPC17, PC-HanhChinh-S100 node 18), 90 Server Farm, 99 Management.
 - **VLAN 99 (10.1.99.0/24)**: `.1/.2` Core (SVI), `.10` SDN_CONTROLLER, `.11/.12` Dist-SW1/2, `.21–.24` Access-SW1–4, `.31` DMZ, `.32` Farm, `.33/.34` FW-Active/Standby (ASDM), `.50` PC-Management.
 - Server Farm `10.1.90.0/24`: DHCP-Server `.10`, Syslog `.11`. Core SVI có `ip helper-address 10.1.90.10`.
 - Chi nhánh: S200 v60 Nông nghiệp + v70 Y tế; S300 v80 Du lịch + v90 Tài chính; S400 v50 Thủy sản + v60 Lữ hành; mỗi site thêm v99.
 - FW failover LAN `10.1.255.0/29`: lệnh `failover interface ip failover 10.1.255.1 255.255.255.248 standby 10.1.255.2` khai **giống hệt** trên cả 2 unit (ASA tự gán theo vai trò). Khai kiểu secondary → cả hai đều lấy `.1`, không negotiate.
-- ASN: Internet 64511, MPLS 64512; site 100/200/300/400/500 = 65000/65010/65020/65030/65040 (eBGP CE-PE). Site 900 dùng **static CE-PE** (Switch32).
-- **Site 500 (03/10/2026, đang triển khai)** — link trong `.unl`: vEdge65 ge0/0 ↔ Internet Gi0/8 (net 53), ge0/1 ↔ MPLS Gi0/7 (net 92), ge0/2 ↔ SW-S500 e0/0 (net 93); SW-S500 e0/1 ↔ VPC11 (net 97), e0/2 ↔ VPC12 (net 98). Phía SP **đã cấu hình và lưu** (kiểm live 03/10): Internet Gi0/8 `203.0.113.22/30`, MPLS Gi0/7 `100.64.50.2/30`, BGP neighbor `203.0.113.21`/`100.64.50.1` AS **65040** (đang `Active` — vEdge chưa cấu hình). SW-S500 còn mặc định (mọi cổng access VLAN 1). vEdge65 vẫn mang config Site 900 cũ trong repo/config nhúng (`system-ip 10.200.90.1`, `site-id 900`, ge0/0 `203.0.113.245/30`); console không phản hồi lúc kiểm. Dự kiến theo quy ước: `system-ip 10.200.50.1`, `site-id 500`, ge0/0 `203.0.113.21/30` (biz-internet), ge0/1 `100.64.50.1/30` (mpls), LAN `10.5.x.0/24`.
+- ASN: Internet 64511, MPLS 64512; site 100/200/300/400 = 65000/65010/65020/65030 (eBGP CE-PE). Site 900 dùng **static CE-PE** (Switch32).
 - Dải test cũ `10.1.100.0/24`, `10.1.101.0/24`, `192.168.100.0/24` đã bỏ — không khôi phục.
 
-## Node-id (khớp `.unl` ngày 2026-10-03)
+## Node-id (khớp `.unl` ngày 2026-09-20)
 
 | Nhóm | Node-id |
 |---|---|
@@ -67,8 +65,8 @@ Không tin bảng node-id/trạng thái trong ghi chú cũ (`.opencode`, `.codex
 | vEdge Site 200 | vEdge1 29, vEdge2 **42** |
 | vEdge Site 300 | vEdge1 30, vEdge2 **40** |
 | vEdge Site 400 | vEdge1 31, vEdge2 **41** |
-| Site 900 | Switch32 (32), Switch61 (61) |
-| Site 500 | vEdge65 (65), SW-S500 (10), VPC11 (11), VPC12 (12) |
+| Site 900 | Switch32 (32), Switch61 (61), **vEdge-Spare (23)** |
+| Site 500 (chi nhánh mạng phẳng) | vEdge65 = vEdge-S500 (65), SW-S500 (10) |
 | SP | Internet 26, MPLS 27 |
 | Brand-FW | S200 **37**, S400 **38**, S300 **39** |
 | SwitchBrand | S300 62, S200 63, S400 64 |
@@ -76,14 +74,14 @@ Không tin bảng node-id/trạng thái trong ghi chú cũ (`.opencode`, `.codex
 | VPC | Site100: 14–17, 19–21; S200: 43, 44, 46; S300: 48, 50, 54; S400: 45, 49, 51 |
 | PC Linux (Ubuntu 18.04 GNOME, Firefox/Thunderbird, DHCP, VNC `eve`) | S100 v40: **18** PC-HanhChinh · S200 v70: **47** PC-YTe · S300 v90: **53** PC-TaiChinh · S400 v60: **52** PC-LuHanh; `firstmac` 00:06:00:00:<id>:00 |
 
-Tên node trong `.unl` trùng nhau (nhiều `vEdge1`, `SW`, `Brand-FW`) — luôn phân biệt bằng **id**. Từ 28/09/2026 VPC đặt tên theo phòng ban/VLAN/site: `PC-<PhongBan>-S<site>-<n>` (vd 14=PC-CNTT-S100-1, 46=PC-YTe-S200-2); PC Linux giữ tên không số (`PC-YTe-S200`). Thư mục `configs/` vẫn theo `VPC<id>`. Node 23 đã xoá vĩnh viễn; id 10/11/12 (AccessTest/VPC cũ, xoá 04/08) được dùng lại cho Site 500 từ 03/10/2026.
+Tên node trong `.unl` trùng nhau (nhiều `vEdge1`, `SW`, `VPC`) — luôn phân biệt bằng **id**. Node 11, 12 đã xoá vĩnh viễn; id **10** (SW-S500) và **23** (vEdge-Spare, 08/10/2026) đã được EVE cấp lại cho node mới — đừng nhầm với AccessTest/DHCP Win7 cũ.
 
 DPID OVS = node-id dạng hex 16 chữ số: Dist-SW1 `…05`, Dist-SW2 `…08`, Access-SW1 `…44`, Access-SW2 `…42`, Access-SW3 `…46`, Access-SW4 `…45`. Các tài liệu cũ đôi khi viết "dpid 68" theo thập phân — cùng một thiết bị.
 
 ## Quyết định thiết kế đã chốt (KHÔNG làm lại nếu không được yêu cầu)
 
 1. 20 VPC phòng ban chỉ có `ip dhcp` trong `config.txt`, không gán IP tĩnh hàng loạt.
-2. AccessTest (node 10), VPC11/12 cũ đã xoá 04/08/2026 (id 10/11/12 nay thuộc Site 500); node DHCP cũ id 23 (Win7) đã xoá.
+2. AccessTest (node 10), VPC11/12 đã xoá 04/08/2026; node DHCP cũ id 23 (Win7) đã xoá (id 23 nay là vEdge-Spare).
 3. **DHCP-Server = node 72**, Windows Server 2012 R2, RAM 8192, role DHCP bản địa, 4 scope VLAN 10/20/30/40. Mail/Syslog/Win/PC-Management giữ image Win7 (Kiwi Syslog, XAMPP… là phần mềm thứ ba).
 4. **Chi nhánh "Firewall-as-Core"**: Brand-FW làm gateway `.1` + `dhcpd`; SwitchBrand và SW là L2 thuần. Đã cân nhắc thay SwitchBrand bằng router IOS và **từ chối** (IOL không có `ip dhcp pool`, thêm hop/điểm lỗi, vEdge đã là router WAN). Không đổi `.unl`.
 5. **Core-SW1/2 = IOL** (thay viosl2 vì CPU-hog + không nạp config ổn định). Bắt buộc `vtp mode off` trước khối `vlan`, và `switchport trunk encapsulation dot1q` trước `switchport mode trunk`. Cổng Core↔FW: Core-SW1 `E0/3`↔FW-Standby Gi0/1, `E1/0`↔FW-Active Gi0/0; Core-SW2 `E0/3`↔FW-Active Gi0/1, `E1/0`↔FW-Standby Gi0/0.
@@ -91,7 +89,7 @@ DPID OVS = node-id dạng hex 16 chữ số: Dist-SW1 `…05`, Dist-SW2 `…08`,
 7. **Underlay SP = BGP** (quyết định 15/08/2026, "thực tế & chuyên nghiệp"). `default-originate` phải đặt **trong address-family** (IOS).
 8. **Ryu quản lý toàn bộ L2 campus**: giữ `tag=/trunks=` của OVS, `protocols=OpenFlow13`, `fail_mode=secure`, `stp_enable=false` (STP của OVS chặn frame trước pipeline), controller `tcp:10.1.99.10:6653`.
 9. `config="1"` đúng **47 node** (danh sách trong `unl_tool.py`); Windows/vtmgmt/vtsmart/vtbond/Linux-OVS giữ `config="0"` (cấu hình tay). Không tái tạo `.unl.bak`.
-10. Nhãn IP/cổng thiết bị trên canvas (textobject 27–33, 76, 100–146) được sinh lại 28/09/2026 từ liên kết `.unl` + IP trong `configs/` (tên cổng theo EVE: IOL `e0/0`, ASA/vIOS `Gi0/x`, vEdge `ge0/x`, OVS `e1..e7`); nhãn IP tĩnh của VPC đã xoá — không khôi phục. Core không có Loopback (10.1.0.1/.2 chỉ là OSPF router-id).
+10. Nhãn IP thiết bị mạng trên canvas giữ nguyên; nhãn IP tĩnh của VPC đã xoá — không khôi phục.
 
 ## Image IOL: đừng đoán theo tên
 
