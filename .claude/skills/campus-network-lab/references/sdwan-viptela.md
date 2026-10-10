@@ -32,6 +32,7 @@ Bắt đầu bằng `show control connections-history` trên vEdge (manh mối r
 | GUI "1/3 vsmart", 1 màu WAN kẹt `connect/DCONFAIL` | Route tới controller LAN chỉ có 1 ngả (longest-prefix che ngả kia) | Mục "Định tuyến tới controller" |
 | `vdaemon_disable_my_tloc`, "interface not configured yet" | Config tunnel đẩy **sau** khi vdaemon chạy | Mục "Cấu hình vEdge lúc boot" |
 | Không ping được controller từ vEdge | Route/BGP/ACL underlay | `ping vpn 0 source <ip-wan> 10.9.0.12`, kiểm `show ip route vpn 0` |
+| `DISTLOC` rồi `connect/DCONFAIL` lặp; BGP `active`; ping PE "Destination Host Unreachable" nhưng PE **có** ARP của vEdge; interface vẫn Up/Up | **NIC ảo của vEdge treo chiều nhận**: tap `vunl6_<id>_<if>` có `tx_dropped` tăng liên tục, `tx_packets` đứng yên (gặp vEdge1-S300 ge0/0, 08→10/10/2026). Cấu hình không sai. Lưu ý vEdge: `ge0/N` = tap `_<N+1>` (eth0 là id 0) | `vpn 0` → `interface ge0/N` → `shutdown`, `commit`, `no shutdown`, `commit` (phải vào ngữ cảnh interface; `vpn 0 interface ge0/0 no shutdown` một dòng bị lỗi cú pháp). Không cần reboot. Sau đó quét `tx_dropped` mọi tap để tìm cổng treo khác |
 
 Một vEdge "khỏe" giữ phiên cũ nên không lộ lỗi whitelist — nếu nó reboot sẽ rơi giống hệt. Vì vậy sau reboot controller luôn kiểm tra whitelist đủ 8 vEdge.
 

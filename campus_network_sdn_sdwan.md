@@ -889,7 +889,8 @@ Thêm trên host 1 bằng GUI EVE: vEdge65 (node 65, chuyển từ Site 900) + S
 
 **ASDM (quản lý FW HA bằng giao diện web):**
 - PC-Management (node 73, win-7) đặt IP tĩnh **10.1.99.50/24, GW 10.1.99.1** → mở trình duyệt (cần Java 8) tới **`https://10.1.99.33`** (active) hoặc **`https://10.1.99.34`** (standby) → tải ASDM Launcher → đăng nhập `admin` / `vnpro@2026`.
-- Cấu hình FW đã khai: `interface Management0/0` (nameif management, security 100), `failover management-interface management Management0/0`, `failover interface ip management 10.1.99.33 … standby 10.1.99.34`, `http server enable` + `http 10.1.99.0 255.255.255.0 management`.
+- Cấu hình FW đã khai: `interface Management0/0` (**`management-only`**, nameif management, security 100, 10.1.99.33/24), `http server enable` + `http 10.1.99.0 255.255.255.0 management`. (Hai lệnh `failover … management` cũ không hợp lệ trên ASAv 9.20 và đã bị gỡ.)
+- **Quản trị out-of-band (10/10/2026):** Management0/0 là `management-only` ⇒ 10.1.99.0/24 nằm trong bảng định tuyến riêng `mgmt-only`, chỉ phục vụ truy cập quản trị FW (ASDM/HTTPS). Lưu lượng dữ liệu tới VLAN 99 (ví dụ từ chi nhánh) đi qua cổng data: `route inside 10.1.99.0 255.255.255.0 10.1.2.2` (Core-SW1 – nơi có SVI Vlan99). Trước đây cổng này `no management-only` làm 10.1.99.0/24 là mạng nối trực tiếp của FW ⇒ gói trả về chi nhánh đi ra `management`, định tuyến bất đối xứng, ASA huỷ. VLAN 99 vẫn **không** ra Internet (ACL `INSIDE_OUT`).
 - **Bắt buộc 1 lần trên console cả 2 unit**: `crypto key generate rsa modulus 2048` (RSA key không replicate qua HA). ASDM 7.20(2) nhúng sẵn trong image ASAv (`show version` → Device Manager Version) nên không cần file asdm riêng.
 
 #### 2.3.3. Campus Chính — Site ID 100 (AS 65000)
