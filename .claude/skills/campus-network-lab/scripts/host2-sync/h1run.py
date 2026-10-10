@@ -1,7 +1,7 @@
 """h1run.py <id> <kind ios|asa>: dump host1 live running-config to h1_<id>.txt (read-only)"""
 import sys
 from eve import client, password
-from con import drain
+from _on import drain
 nid,kind=int(sys.argv[1]),sys.argv[2]
 s=client("h1")
 ch=s.get_transport().open_channel("direct-tcpip",("127.0.0.1",33536+nid),("127.0.0.1",0)); ch.settimeout(0.3)

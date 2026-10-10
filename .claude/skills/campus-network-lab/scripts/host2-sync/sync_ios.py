@@ -3,7 +3,7 @@ python sync_ios.py <id> [<id> ...]"""
 import sys, os, re, time, subprocess
 sys.path.insert(0, os.path.dirname(__file__))
 from eve import client
-from con import run, open_con, drain, send_lines, WRAP, LAB
+from _on import run, open_con, drain, send_lines, WRAP, LAB
 sys.path.insert(0, r"D:/OneDrive/HUUNHAN/STUDENT/NAM3(HK3)/DuAnCNTT/Campus_Network_SDN_SD-WAN/.claude/skills/campus-network-lab/scripts")
 import unl_tool
 REPO = r"D:/OneDrive/HUUNHAN/STUDENT/NAM3(HK3)/DuAnCNTT/Campus_Network_SDN_SD-WAN/configs/"

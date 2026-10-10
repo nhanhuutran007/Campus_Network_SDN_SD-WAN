@@ -1,7 +1,7 @@
 """Safe Viptela console login: waits for each prompt, stops after ONE failure (avoid lockout)."""
 import re, time
 from eve import password
-from con import drain
+from _on import drain
 
 
 def wait_for(ch, pat, limit=60):

@@ -2,7 +2,7 @@
 import sys, os, time
 sys.path.insert(0, os.path.dirname(__file__))
 from eve import client
-from con import run, open_con, drain, send_lines, WRAP, LAB
+from _on import run, open_con, drain, send_lines, WRAP, LAB
 from sync_ios import wait_prompt
 from sync_asa import login
 

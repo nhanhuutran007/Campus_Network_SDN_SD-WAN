@@ -107,6 +107,28 @@ Người dùng đồng ý hướng này ngày 28/09/2026. Làm theo giai đoạn
 **Vấn đề riêng phát hiện:** track SLA Brand-FW-S300 tới 10.1.255.1 đã đổi trạng thái 126 lần (vEdge1/2-S100 dùng chung loopback 10.1.255.1) — cần xem xét riêng.
 **Lưu ý DNS:** client chi nhánh nhận DNS 10.1.90.10 (Site 100) — khi DHCP-Server 72 tắt, chỉ ping theo IP được; tên miền cần giai đoạn 4.
 
+## Cảnh báo SD-WAN qua email — KẾ HOẠCH A: XONG (11/10/2026)
+
+**11/10/2026 (host 1):** bước 0 đạt (vSmart control/OMP up, ACL còn nguyên, vManage ping 8.8.8.8 3/3). Switch32 thêm `75 permit tcp host 10.9.0.10 any eq 587`, `write memory` [OK], startup có dòng. vManage `vpn 0 dns 8.8.8.8 primary` + `1.1.1.1 secondary` (commit); `nslookup vpn 0 smtp.gmail.com` OK; vshell nhận banner `220 smtp.gmail.com ESMTP`. Repo: Switch32 (+ embed node 32, validate ĐẠT), vManager-33. Gmail gửi/nhận + App Password đã ghi file credentials. Sửa kèm: script `host2-sync` import `con` → `_on` (file đã đổi tên).
+
+**Bước 3–4 (11/10/2026):** người dùng cấu hình GUI (rule `SDWAN-DOWN-ALERT`, gửi `nhanhuutran009@gmail.com` → nhận `nhanhuutran007@gmail.com`). Lần đầu lỗi `535-5.7.8 Username and Password not accepted` — App Password vẫn đúng (thử `smtplib` từ laptop LOGIN OK) ⇒ lỗi nhập trên GUI; nhập lại (Username = địa chỉ đầy đủ, App Password 16 ký tự liền) thì gửi được. Demo shutdown/no shutdown `vpn 0 interface ge0/0` vEdge2-S200 (42): mail cho BFD Node Down (~20 s), Control Node Down (~35 s), OMP Node Down (~70 s), Interface State Change cả lúc down và up. Lúc phục hồi **không** có mail BFD/Control/OMP Up (rule chỉ chọn Critical + Major) — muốn có thì thêm severity của alarm Up vào rule. vEdge2-S200 phục hồi 3 control + 8 BFD.
+- **Chẩn đoán mail nhanh:** bộ đếm `SITE900_EGRESS` dòng 75 (Switch32) cho biết vManage có kết nối 587 hay không; log `vshell` → `grep -E 'NotificationsConsumer|EmailNotiUtil' /var/log/nms/vmanage-server.log` (thấy `Recipient to …` = đã gửi, `AuthenticationFailedException` = sai tài khoản).
+- API vManage từ laptop cần Switch61 bật + route trên host 1 (`eve-ng-ops.md`); Switch61 đang tắt.
+
+Người dùng chọn A (vManage tự gửi mail). B (Console NOC đọc `/dataservice/alarms` rồi gửi mail, báo được cả khi vManage chết) để sau. Khi người dùng gọi lại: **bắt đầu ngay từ bước 0**, không đề xuất lại.
+
+0. Kiểm tra trước: vManage 33 / vSmart 34 lên (14 control + 9 OMP up), vManage `ping vpn 0 8.8.8.8` OK, Switch32 vẫn có `SITE900_EGRESS`. Router Internet nhận IP DHCP (lần cuối `10.215.28.88`, có thể đổi).
+1. **Claude làm (live, không cần hỏi):**
+   - Switch32: `ip access-list extended SITE900_EGRESS` → thêm `75 permit tcp host 10.9.0.10 any eq 587` (trước dòng `90 deny`) — chỉ vManage được gửi SMTP. `enable` trước `write memory`, đọc lại startup.
+   - vManage: `config` → `vpn 0 dns 8.8.8.8 primary` (+ `dns 1.1.1.1 secondary`) → `commit`. Kiểm: `nslookup smtp.gmail.com vpn 0`, vshell `timeout 6 bash -c 'echo > /dev/tcp/smtp.gmail.com/587'`.
+   - Đồng bộ repo: `to_repo.py` cho 32, `h1vsync.py` cho 33 → `embed` → `validate` (vManage `config="0"`, chỉ sửa file `configs/05-Site900-SDWAN-Controllers/vManager-33`).
+2. **Người dùng làm:** tạo Gmail riêng cho lab, bật 2FA, tạo **App Password**; cho Claude địa chỉ gửi/nhận ⇒ Claude ghi vào `campus-lab-credentials.md` (KHÔNG vào repo).
+3. **GUI vManage (người dùng làm, Claude hướng dẫn):** Administration → Settings → *Alarm Notifications* = Enabled; *Email Settings*: SMTP `smtp.gmail.com`, port 587, security TLS/STARTTLS, From = Gmail lab, auth = App Password. Monitor → Logs → Alarms → *Alarm Notifications* → Add: severity Critical + Major; alarm BFD Node/Site Down, Control Node/Site Down, OMP Node/Site Down, Interface State Change; email người nhận.
+4. **Demo/kiểm chứng:** shutdown `vpn 0 interface ge0/0` vEdge2-S200 (42) → mail "Down" sau ~1–2 phút → `no shutdown` → mail "Cleared". Chụp mail + màn hình Alarms làm minh chứng báo cáo.
+5. Cập nhật tài liệu (mục này, `project-status.md`), commit (không push nếu chưa được bảo).
+
+Rủi ro đã biết: vManage chết thì không có mail (lý do của B); Gmail có thể chặn đăng nhập nếu không dùng App Password.
+
 ## Các giai đoạn tiếp
 
 1. Router Internet: `ip nat inside` Gi0/1–0/7, `ip nat outside` Gi0/0, ACL `203.0.113.0/24` + `100.64.0.0/10`, `overload` ra Gi0/0; `ip route 0.0.0.0 0.0.0.0 10.215.28.1` (host 2: theo LAN của host 2). Kiểm `ping 8.8.8.8 source Gi0/5`.

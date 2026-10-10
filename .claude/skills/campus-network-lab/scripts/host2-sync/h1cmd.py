@@ -1,7 +1,7 @@
 """h1cmd.py <id> "cmd;;cmd" : run show/ping commands on host1 console (IOS/ASA), leaves console clean"""
 import sys
 from eve import client, password
-from con import drain
+from _on import drain
 nid=int(sys.argv[1]); cmds=sys.argv[2].split(";;")
 s=client("h1")
 ch=s.get_transport().open_channel("direct-tcpip",("127.0.0.1",33536+nid),("127.0.0.1",0)); ch.settimeout(0.3)

@@ -1,7 +1,7 @@
 """h1v.py <id> <credtag> "cmd;;cmd": safe login on host1 Viptela console then run commands"""
 import sys
 from eve import client
-from con import drain
+from _on import drain
 from vlogin import vlogin
 nid,tag,cmds=int(sys.argv[1]),sys.argv[2],sys.argv[3].split(";;")
 s=client("h1"); ch=s.get_transport().open_channel("direct-tcpip",("127.0.0.1",33536+nid),("127.0.0.1",0)); ch.settimeout(0.3)

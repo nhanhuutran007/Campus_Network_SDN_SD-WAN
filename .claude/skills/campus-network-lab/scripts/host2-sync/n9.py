@@ -1,7 +1,7 @@
 """n9.py <port> "cmd;;cmd": run shell cmds on node 9 serial console (host1), login as eve if needed"""
 import sys, re, time
 from eve import client, password
-from con import drain
+from _on import drain
 port, cmds = int(sys.argv[1]), sys.argv[2].split(";;")
 s=client("h1"); ch=s.get_transport().open_channel("direct-tcpip",("127.0.0.1",port),("127.0.0.1",0)); ch.settimeout(0.3)
 try:
