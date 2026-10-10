@@ -8,7 +8,7 @@ Người dùng đồng ý hướng này ngày 28/09/2026. Làm theo giai đoạn
 - Chi nhánh: Brand-FW chọn đường ra — Internet chính qua vEdge2 (`biz-internet`, DIA), dự phòng qua vEdge1 (DIA trên MPLS) khi SLA 9.9.9.9 qua `outside2` mất (chốt 04/10/2026, thay cho "dự phòng qua Site 100 bằng OMP").
 - NAT hai tầng: vEdge → IP WAN `203.0.113.x`; Router Internet → IP LAN thật (giống nhà mạng CGNAT). `203.0.113.0/24` (tài liệu) và `100.64.0.0/10` (CGNAT) không đi được trên Internet thật.
 - Split DNS: client vẫn dùng `10.1.90.10`; DNS 72 forward `8.8.8.8`/`1.1.1.1`, tắt root hints; ACL `INSIDE_OUT` chỉ cho DNS server hỏi ra ngoài.
-- VLAN 99 (quản trị) và Site 900 không ra Internet; chỉ chiều đi ra, không port-forward.
+- VLAN 99 (quản trị) không ra Internet; Site 900 ra **có kiểm soát** (chỉ DNS/NTP/HTTPS/ping, từ 10/10/2026); chỉ chiều đi ra, không port-forward.
 - Giới hạn chấp nhận: ASAv Unlicensed = 100 conn, ~100 Kbps (đủ ping/demo, không đủ lướt web).
 
 ## Giai đoạn 0 — kết quả (28/09/2026, host 1, chỉ đọc)
@@ -63,7 +63,7 @@ Người dùng đồng ý hướng này ngày 28/09/2026. Làm theo giai đoạn
 - FW-ASAv `INSIDE_OUT` (trước `permit ip any any`): VLAN 99 `10.1.99.0/24` chỉ tới 10/8, `deny ... any log warnings`; Server Farm `10.1.90.0/24` tới 10/8 + ra ngoài chỉ tcp 80/443, udp 123, còn lại `deny log warnings` (DNS server 72 đã có dòng riêng phía trên).
 - FW-ASAv `DMZ_IN`: thay `permit ip DMZ any` bằng tcp 80/443 + udp 123 ra ngoài, `deny ip DMZ any log warnings`.
 - Brand-FW 37/38/39: ACL `VLAN99_IN` (permit `10.x.99.0/24` → 10/8, deny any log) trên `vlan99`; `logging enable`, `logging trap warnings`, `logging host outside1 10.1.90.11`.
-- Site 900: **không cần đổi** — ACL `NAT_ISP` trên router Internet chỉ có 203.0.113/24 và 100.64/10, nên 10.9.x không ra được Internet (Switch32 nguồn 10.9.0.2 → 8.8.8.8 0/3).
+- Site 900: ban đầu chặn hẳn (không NAT 10.9.x). **Đổi 10/10/2026 sang "ra có kiểm soát"** (theo người dùng, giống doanh nghiệp: controller cần NTP/DNS/HTTPS cho PnP, license, cập nhật). Xem mục Site 900 bên dưới.
 - Kiểm chứng: `packet-tracer` (VLAN99/Farm:22/DMZ icmp → drop; Farm:443, DMZ:443, VLAN10 → allow); Core-SW1 nguồn Vlan10 → 8.8.8.8 3/3, nguồn Vlan99 → 0/3. `packet-tracer` UDP 53 báo `inspect-dns-invalid-pak` chỉ vì gói giả không có payload DNS — DNS thật vẫn chạy.
 - Lưu ý kiểm thử: ASA không trả lời ping vào IP của cổng khác cổng nhận gói (ping 10.2.60.1 từ Site 100 luôn fail) — dùng IP của PC làm đích.
 
@@ -76,10 +76,19 @@ Người dùng đồng ý hướng này ngày 28/09/2026. Làm theo giai đoạn
 | Traceroute hop 1 chi nhánh | ✅ vEdge2 tại chỗ (10.x.1.6) — DIA, không vòng Site 100 |
 | Cắt biz-internet S200 / khôi phục | ✅ chuyển sang MPLS và quay về |
 | Site 100 VLAN10 → Internet / VLAN99 → Internet | ✅ 3/3 / ✅ bị chặn |
-| Site 900 → Internet | ✅ bị chặn (không NAT) |
+| Site 900 → Internet | ✅ có kiểm soát (10/10): ping/443 qua, 80/22 bị chặn |
 | PC Site 100 (sau OVS/Ryu) | ⏸ chưa thử (cần bật cụm SDN); Core-SW1 nguồn Vlan10 thay thế |
 
 **VLAN 99 Site 100 ↔ chi nhánh — ĐÃ SỬA 10/10/2026 (live host 1, `write memory` [OK]):** trước đây FW-ASAv có `management` (Management0/0, 10.1.99.33, `no management-only`) nối trực tiếp 10.1.99.0/24 nên gói trả về đi ra `management` (asymmetric, `inspect-icmp-seq-num-not-matched`). Sửa theo chuẩn out-of-band: `interface Management0/0` → `management-only` (ASA 9.20 đưa 10.1.99.0/24 sang bảng `mgmt-only`, ASDM/HTTPS vẫn chạy) + `route inside 10.1.99.0 255.255.255.0 10.1.2.2 1` (dữ liệu tới VLAN 99 qua Core-SW1 – nơi duy nhất có SVI Vlan99). Kiểm chứng từ Core-SW1 nguồn Vlan99: S200 10.2.1.2 10/10, S400 10.4.1.2 5/5, S300 vEdge2 10.3.1.6 5/5; Vlan10 → S200 vẫn 5/5; Vlan99 → FW .33 OK; Vlan99 → 8.8.8.8 vẫn bị chặn (đúng thiết kế), Vlan10 → 8.8.8.8 3/3. Chỉ sửa Active; Standby nhận khi ghép HA (bản lưu riêng của Standby đang cũ). vEdge1-S300 `10.3.1.2` không tới được từ Site 100 — **ĐÃ SỬA cùng ngày**: NIC ảo ge0/0 của vEdge1-S300 treo chiều nhận từ 08/10 (mất control/OMP/BFD), shut/no shut ge0/0 → phục hồi; xem `sdwan-viptela.md` bảng chẩn đoán.
+
+**Site 900 ra Internet có kiểm soát — XONG 10/10/2026 (live host 1, cả hai `write memory` [OK], repo + `.unl` đã nhúng):**
+- Lọc tại gateway LAN controller **Switch32** (`Vlan10`, `ip access-group SITE900_EGRESS in`): permit 10.9/16 → 10/8, 100.64/10, 203.0.113/24 (fabric SD-WAN và nội bộ tự do); ra Internet chỉ udp/tcp 53, udp 123, tcp 443, icmp echo; `deny ip any any log`. Áp ACL **trước**, mở NAT **sau** để không có lúc mở toàn bộ.
+- Router Internet: `NAT_ISP` thêm `permit 10.9.0.0 0.0.0.255` (chỉ LAN controller eth0; 10.9.1.0/24 mặt cloud/vpn 512 không NAT).
+- Kiểm chứng từ vManage (vpn 0 / vshell): ping 8.8.8.8 3/3; TCP 443 tới 1.1.1.1 mở (curl 301); TCP 53 mở; TCP 80 và SSH 22 bị chặn. vSmart giữ 14 control + 9 OMP peer up trước/sau. Dòng `deny` chỉ khớp gói thử (không chặn nhầm fabric).
+- Thử Internet thật 10/10 (vManage vshell): DNS UDP `dig @8.8.8.8 www.google.com` ✅, DNS TCP ✅, HTTPS ✅ (301), SMTP 587 và HTTP 80 bị chặn ✅. NTP: router Internet NAT ra (`show ip nat translations` thấy :123), `tcpdump vpn 0 interface eth0` thấy **gói trả lời về tới eth0** nhưng ứng dụng không nhận ⇒ do `tunnel-interface` của controller đang `no allow-service ntp`, mạng không chặn. Controller chưa khai `ntp server` nào; đồng hồ hiện khớp UTC (qemu lấy RTC từ host). Nếu cần NTP thật: `system ntp server <ip> vpn 0` + `allow-service ntp` trên eth0.
+- vManage vpn 0 **chưa có `dns`** (`/etc/resolv.conf` trống) — thử phải chỉ định `@8.8.8.8`. Phân giải tên (ví dụ SMTP) cần thêm `vpn 0 dns 8.8.8.8 primary`.
+- Bẫy công cụ: vshell không có quyền `tcpdump` (dùng lệnh CLI `tcpdump vpn 0 interface eth0 options "..."`); `nc` là BusyBox, không có `-z` (dùng `bash -c 'echo > /dev/tcp/IP/port'`); tránh `!` trong lệnh gửi qua console.
+- Bẫy: console Switch32 hay rơi về `>` — `write memory` ở user mode bị lỗi im lặng; luôn `enable` và đọc lại `show startup-config`.
 
 **Repo:** đã cập nhật đủ (04/10/2026) — Brand-FW S200/S300/S400, FW-ASAv Active/Standby, vEdge1 S200/S300/S400, vEdge2-S400, router Internet, `dns-setup.ps1`.
 
