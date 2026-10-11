@@ -77,13 +77,6 @@ Máy trạm chỉ khai báo một default gateway, do đó nếu gateway gặp s
 
 \subsection{Định tuyến nội bộ và định tuyến liên miền}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.80\textwidth]{image/iprouting.png}
-    \caption{Minh họa định tuyến IP trong mạng}
-    \label{fig:ip_routing}
-\end{figure}
-
 Định tuyến là quá trình xác định đường đi cho gói tin từ mạng nguồn đến mạng đích dựa trên bảng định tuyến. Bảng định tuyến có thể được xây dựng thủ công bằng tuyến tĩnh hoặc tự động bằng giao thức định tuyến động. Khi có nhiều tuyến đến cùng một đích, thiết bị chọn tuyến có prefix dài nhất (\textit{longest prefix match}); nếu độ dài prefix bằng nhau, thiết bị so sánh khoảng cách quản trị (administrative distance) rồi đến metric. Nhiều tuyến có cùng metric có thể được dùng song song theo cơ chế ECMP (Equal-Cost Multi-Path).
 
 \subsubsection{OSPF}
@@ -143,13 +136,6 @@ Kiến trúc SDN thường được mô tả theo ba lớp: lớp ứng dụng, 
 
 \subsubsection{Nguyên lý hoạt động và giao thức OpenFlow 1.3}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.80\textwidth]{image/nguyenlyhoatdongsdn.png}
-    \caption{Nguyên lý hoạt động của SDN}
-    \label{fig:nguyen_ly_hoat_dong_sdn}
-\end{figure}
-
 OpenFlow là giao thức southbound tiêu chuẩn do Open Networking Foundation phát triển. Phiên bản 1.3 được sử dụng rộng rãi nhất và là phiên bản dùng trong đề tài. Controller và switch trao đổi bản tin trên kết nối TCP (cổng chuẩn 6653). Các khái niệm chính gồm:
 
 \begin{itemize}
@@ -168,7 +154,7 @@ Khi mất kết nối với Controller, switch hoạt động theo \textit{fail 
 
 \textbf{Ryu} là framework SDN viết bằng Python theo mô hình hướng sự kiện. Ứng dụng Ryu đăng ký các bộ xử lý sự kiện như kết nối switch, Packet-In, thay đổi trạng thái cổng và trả lời thống kê. Ryu đi kèm ứng dụng \texttt{ofctl\_rest} cung cấp REST API để đọc và thay đổi flow, phù hợp cho việc xây dựng logic điều khiển tùy biến và ứng dụng giám sát.
 
-\textbf{ONOS} (Open Network Operating System) là Controller hướng đến môi trường nhà cung cấp dịch vụ, có kiến trúc phân tán, giao diện đồ họa trực quan, cơ chế phát hiện topology qua LLDP và hệ thống ứng dụng mở rộng. ONOS có thể được dùng như một lớp quan sát topology song song với Controller chuyển tiếp chính.
+\textbf{ONOS} (Open Network Operating System) là Controller hướng đến môi trường nhà cung cấp dịch vụ, có kiến trúc phân tán, giao diện đồ họa trực quan, cơ chế phát hiện topology qua LLDP và hệ thống ứng dụng mở rộng. ONOS có thể được dùng như một lớp quan sát topology song song với Controller chuyển tiếp chính, nhưng chạy trên nền Java nên cần nhiều tài nguyên CPU và bộ nhớ hơn Ryu.
 
 \subsubsection{Phân loại mô hình SDN}
 
@@ -236,7 +222,7 @@ Chính sách được khai báo trên vSmart và áp theo danh sách site (\text
 
 \subsubsection{Direct Internet Access}
 
-Trong mô hình truyền thống, lưu lượng Internet của chi nhánh được đưa về trung tâm rồi mới ra Internet (\textit{backhaul}). SD-WAN hỗ trợ \textit{Direct Internet Access} (DIA, hay local breakout): Edge tại chi nhánh thực hiện NAT trên giao diện Internet và đưa lưu lượng Internet thẳng ra ngoài, trong khi lưu lượng nội bộ vẫn đi overlay. Cách làm này giảm tải cho cơ sở chính nhưng đòi hỏi chính sách bảo mật tại từng chi nhánh.
+Trong mô hình truyền thống, lưu lượng Internet của chi nhánh được đưa về trung tâm rồi mới ra Internet (\textit{backhaul}). SD-WAN hỗ trợ \textit{Direct Internet Access} (DIA, hay local breakout): Edge tại chi nhánh thực hiện NAT trên giao diện Internet và đưa lưu lượng Internet thẳng ra ngoài, trong khi lưu lượng nội bộ vẫn đi overlay. Cách làm này giảm tải cho cơ sở chính nhưng đòi hỏi chính sách bảo mật tại từng chi nhánh. Khi giao diện WAN của Edge chỉ mang địa chỉ do nhà cung cấp cấp phát, lưu lượng được NAT thêm một lần tại nhà cung cấp (tương tự CGNAT) trước khi ra Internet công cộng.
 
 \subsection{Nền tảng mô phỏng EVE-NG}
 

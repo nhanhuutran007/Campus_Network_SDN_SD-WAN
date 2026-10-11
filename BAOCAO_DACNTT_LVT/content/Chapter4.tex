@@ -6,15 +6,16 @@ Chương này trình bày quá trình hiện thực mô hình đã thiết kế 
 
 Việc triển khai tuân theo các nguyên tắc:
 \begin{itemize}
-    \item Địa chỉ, VLAN, Site-ID, System-IP và ánh xạ cổng thống nhất giữa tài liệu thiết kế, topology EVE-NG và cấu hình thiết bị; mỗi thiết bị có một tệp cấu hình nguồn được quản lý phiên bản bằng Git.
+    \item Địa chỉ, VLAN, Site-ID, System-IP và ánh xạ cổng thống nhất giữa tài liệu thiết kế, topology EVE-NG và cấu hình thiết bị; mỗi thiết bị có một tệp cấu hình nguồn được quản lý phiên bản bằng Git và được đối chiếu lại với cấu hình đang chạy.
     \item Triển khai từ dưới lên: underlay trước overlay, hạ tầng trước dịch vụ, kết nối trước chính sách.
     \item Kiểm thử và chẩn đoán theo lớp: vật lý/liên kết $\rightarrow$ lớp 2 (VLAN, trunk, vòng lặp) $\rightarrow$ lớp 3 (gateway, tuyến, BGP/OSPF) $\rightarrow$ dịch vụ (DHCP, kết nối điều khiển) $\rightarrow$ ứng dụng. Việc chẩn đoán dừng ở lớp đầu tiên sai, mọi kết luận đều dựa trên đầu ra lệnh \texttt{show}, thống kê hoặc bắt gói.
+    \item Các phép đo lặp lại được tự động hóa bằng script (đăng nhập thiết bị, sinh lưu lượng, đọc bộ đếm, cắt/khôi phục liên kết) để kết quả có thể tái lập.
     \item Không đưa tài khoản, mật khẩu hoặc khóa riêng vào báo cáo và kho mã nguồn.
 \end{itemize}
 
 \subsection{Môi trường triển khai}
 
-Toàn bộ hệ thống được triển khai trong một lab EVE-NG gồm \textbf{67 node} và \textbf{100 phân đoạn mạng}. Bảng~\ref{tab:nen_tang_trien_khai_ch4} tổng hợp các nền tảng sử dụng.
+Toàn bộ hệ thống được triển khai trong một lab EVE-NG gồm \textbf{70 node} và \textbf{103 phân đoạn mạng}. Bảng~\ref{tab:nen_tang_trien_khai_ch4} tổng hợp các nền tảng sử dụng.
 
 \begin{table}[H]
     \centering
@@ -27,21 +28,21 @@ Toàn bộ hệ thống được triển khai trong một lab EVE-NG gồm \text
         \hline
         Tường lửa & Cisco ASAv 9.20(2)2 & 5 & FW-ASAv-Active/Standby; Brand-FW ba chi nhánh \\
         \hline
-        Switch Cisco & Cisco IOL L2 (adventerprisek9 và ipbasek9) & 15 & Core-SW1/2, SwitchDMZ, SwitchServerFarm, Switch32, Switch61, ba SwitchBrand, sáu switch khối chi nhánh \\
+        Switch Cisco & Cisco IOL L2 (adventerprisek9 và ipbasek9) & 16 & Core-SW1/2, SwitchDMZ, SwitchServerFarm, Switch32, Switch61, ba SwitchBrand, sáu switch khối chi nhánh, SW-S500 \\
         \hline
         Router nhà cung cấp & Cisco vIOS 15.7(3)M3 & 2 & Internet, MPLS \\
         \hline
         SD-WAN Controller & Viptela 20.10.1 & 3 & vManage (32 GB RAM), vSmart, vBond \\
         \hline
-        SD-WAN Edge & vEdge Cloud 20.10.1 & 9 & Tám vEdge Site 100--400, vEdge65 Site 900 \\
+        SD-WAN Edge & vEdge Cloud 20.10.1 & 9 & Tám vEdge Site 100--400, vEdge Site 500 \\
         \hline
-        SDN & Ubuntu + Open vSwitch; Ryu; ONOS 2.7 & 7 & Dist-SW1/2, Access-SW1--4, SDN Controller \\
+        SDN & Ubuntu + Open vSwitch; Ryu & 7 & Dist-SW1/2, Access-SW1--4, SDN Controller \\
         \hline
         Máy chủ, máy trạm Linux & Ubuntu 18.04 & 5 & Web Server; bốn máy trạm đồ họa (Firefox, Thunderbird) \\
         \hline
         Windows & Windows Server 2012 R2; Windows 7 & 5 & DHCP/DNS Server; Mail, Syslog, PC-Management, máy trạm Site 900 \\
         \hline
-        Máy trạm giả lập & VPCS & 16 & Bảy máy tại Site 100, chín máy tại các chi nhánh \\
+        Máy trạm giả lập & VPCS & 18 & Bảy máy tại Site 100, chín máy tại ba chi nhánh, hai máy tại Site 500 \\
         \hline
     \end{tabularx}
 \end{table}
@@ -54,7 +55,7 @@ Thứ tự khởi động lab được chuẩn hóa để tránh lỗi phụ thu
 
 \subsubsection{Core Switch: VLAN, VRRP, DHCP Relay và OSPF}
 
-Khối lệnh~\ref{lst:core_vrrp_ch4} trích cấu hình Core-SW1. Core-SW2 có cấu hình đối xứng với địa chỉ \texttt{.3}, VRRP priority 100 và Router-ID \texttt{10.1.0.2}.
+Khối lệnh~\ref{lst:core_vrrp_ch4} trích cấu hình Core-SW1. Core-SW2 có cấu hình đối xứng với địa chỉ \texttt{.3}, VRRP priority 100 và Router-ID \texttt{10.1.0.2}; khác biệt duy nhất là Core-SW2 không tham gia VLAN 99.
 
 \begin{lstlisting}[style=customcode,caption={Trích cấu hình Core-SW1},label={lst:core_vrrp_ch4}]
 vtp mode off
@@ -71,7 +72,7 @@ interface Ethernet0/2
  description To Dist-SW1
  switchport trunk encapsulation dot1q
  switchport mode trunk
- switchport trunk allowed vlan 10,20,30,40
+ switchport trunk allowed vlan 10,20,30,40,99
 interface Ethernet1/0
  description To FW-ASAv-Active Gi0/0
  no switchport
@@ -106,6 +107,7 @@ interface GigabitEthernet0/4
  security-level 50
  ip address 10.1.1.1 255.255.255.240
 interface Management0/0
+ management-only
  nameif management
  ip address 10.1.99.33 255.255.255.0
 failover lan unit primary
@@ -118,6 +120,7 @@ access-group DMZ_IN in interface dmz
 access-group INSIDE_OUT in interface inside
 route outside 0.0.0.0 0.0.0.0 10.1.3.2 1
 route outside2 0.0.0.0 0.0.0.0 10.1.3.6 2
+route inside 10.1.99.0 255.255.255.0 10.1.2.2 1
 router ospf 1
  network 10.1.2.0 255.255.255.252 area 0
  network 10.1.2.4 255.255.255.252 area 0
@@ -131,7 +134,7 @@ Trong quá trình triển khai, OSPF giữa tường lửa và Core-SW1 ban đ�
 
 \subsection{Triển khai SDN tại Campus chính}
 
-\subsubsection{Cấu hình Open vSwitch}
+\subsubsection{Cấu hình Open vSwitch và Controller}
 
 Mỗi OVS được thiết lập bằng các lệnh \texttt{ovs-vsctl} trong một dịch vụ khởi động chạy mỗi lần boot (Khối lệnh~\ref{lst:ovs_controller_ch4}, ví dụ Access-SW1).
 
@@ -146,7 +149,21 @@ ovs-vsctl set port ens6 tag=10
 ovs-vsctl set-controller br0 tcp:10.1.99.10:6653 tcp:10.1.99.10:6654
 \end{lstlisting}
 
-Trên Controller, Ryu được chạy dưới dạng dịch vụ systemd, nạp đồng thời ba ứng dụng \texttt{campus\_switch\_13.py}, \texttt{campus\_noc\_monitor.py} và \texttt{ryu.app.ofctl\_rest}, lắng nghe OpenFlow tại TCP 6653. ONOS 2.7.0 chạy như một dịch vụ riêng, lắng nghe OpenFlow tại TCP 6654 và giao diện web tại TCP 8181, được bật tự khởi động cùng máy.
+Trên Controller, Ryu được chạy dưới dạng dịch vụ systemd (ưu tiên CPU cao), nạp đồng thời ba ứng dụng \texttt{campus\_switch\_13.py}, \texttt{campus\_noc\_monitor.py} và \texttt{ryu.app.ofctl\_rest}, lắng nghe OpenFlow tại TCP 6653 và phục vụ Campus SDN Console tại TCP 8080 (Hình~\ref{fig:console_tongquan}, Hình~\ref{fig:console_topology}). Địa chỉ Controller thứ hai (TCP 6654) còn lại từ giai đoạn thử ONOS; hiện không có tiến trình lắng nghe nên OVS chỉ thử kết nối lại định kỳ, không ảnh hưởng chuyển tiếp. Ứng dụng có bộ kiểm thử đơn vị mô phỏng cây dữ liệu và kênh quản trị trước mỗi lần triển khai. Phân vùng \texttt{/boot} của sáu OVS và Controller được đánh dấu \texttt{nofail} để máy ảo không dừng ở chế độ khẩn cấp khi khởi động đồng loạt chậm.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{image/sdn-console-tongquan.png}
+    \caption{Campus SDN Console -- trang Tổng quan: 6/6 switch, 13/13 liên kết, thời gian hội tụ và nhật ký sự kiện}
+    \label{fig:console_tongquan}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth, trim=0 280 0 100, clip]{image/sdn-console-topology.png}
+    \caption{Campus SDN Console -- đồ thị liên kết và cây dữ liệu (xanh: thuộc cây, xám: dự phòng)}
+    \label{fig:console_topology}
+\end{figure}
 
 \subsubsection{Các vấn đề kỹ thuật và nguyên nhân gốc}\label{sec:bai_hoc_sdn}
 
@@ -166,42 +183,93 @@ Phần SDN là phần tốn nhiều công sức nhất vì toàn bộ hành vi m
     \endhead
     \hline
     \endfoot
-    Máy trạm không nhận DHCP; gói bị flood với VLAN 0 & Khi switch mất kết nối tạm thời, bộ xử lý sự kiện xóa luôn bảng cổng access; khi kết nối lại, VLAN của cổng không còn nên được xác định là 0 & Giữ cấu hình cổng tĩnh khi switch mất kết nối; bổ sung hàm tra VLAN từ bảng cấu hình tĩnh \\
+    Máy trạm không nhận DHCP; gói bị flood với VLAN 0 & Khi switch mất kết nối tạm thời, bộ xử lý sự kiện xóa luôn bảng cổng access; khi kết nối lại, VLAN của cổng không còn nên được xác định là 0 & Giữ cấu hình cổng tĩnh khi switch mất kết nối; bổ sung hàm tra VLAN từ bảng cấu hình \\
     \hline
     Frame có thẻ VLAN nhưng Controller không nhận ra VLAN & Trường match của Packet-In chỉ có \texttt{in\_port}, thẻ 802.1Q nằm trong dữ liệu gói & Controller tự phân tích thẻ trong dữ liệu; tạo hành động gắn/bóc thẻ theo từng cổng ra \\
     \hline
     DHCP chỉ có Discover, Offer, thiếu Request/ACK & Cài flow unicast dùng trường \texttt{dl\_vlan} của OpenFlow 1.0, gây ngoại lệ làm dừng bộ xử lý & Dùng \texttt{vlan\_vid = OFPVID\_PRESENT | vlan} theo OpenFlow 1.3 \\
     \hline
-    Bão broadcast VLAN 99 (130.000--250.000 gói/s), OVS liên tục mất kết nối Controller & VLAN 99 được flood trên toàn bộ lưới (Access nối kép, inter-dist, bốn đường lên Core, hai Core cùng nối Server Farm), trong khi flow khởi động dùng hành động \texttt{NORMAL} & Tính cây quản trị riêng cho VLAN 99; loại VLAN 99 khỏi các trunk ngoài cây; bật lại STP cho VLAN 99 tại Core; thay flow \texttt{NORMAL} bằng flow tường minh \\
+    Bão broadcast VLAN 99 (130.000--250.000 gói/s), OVS liên tục mất kết nối Controller & VLAN 99 được flood trên toàn bộ lưới (Access nối kép, inter-dist, bốn đường lên Core) trong khi flow khởi động dùng hành động \texttt{NORMAL} & Thay flow \texttt{NORMAL} bằng flow tường minh; tính đường quản trị riêng cho VLAN 99 \\
     \hline
     Mỗi khi một OVS khởi động lại, bão ARP khoảng 200.000 gói/s lan ra toàn mạng & Chế độ in-band của OVS tự cài các flow ẩn (không hiển thị khi liệt kê flow) có hành động \texttt{NORMAL} cho ARP khi switch chưa kết nối Controller; nhật ký OVS có cảnh báo \texttt{in\_band: cannot find route for controller} & Tắt in-band (\texttt{disable-in-band=true}) vì kênh điều khiển đã đi qua bridge quản trị riêng \\
     \hline
-    Flow chặn của cây không bị xóa khi failover & Lệnh xóa không nghiêm ngặt không khớp đúng flow chặn & Dùng \texttt{OFPFC\_DELETE\_STRICT} \\
+    Sau khi cây đổi, dữ liệu vẫn mất thêm 11--12 giây & Core-SW1/2 (switch truyền thống) vẫn giữ vị trí MAC cũ của máy trạm & Controller phát RARP thay máy trạm theo đường mới ngay sau khi cài cây \\
     \hline
-    Switch Access mất đường quản trị sau khi Controller dọn flow của cổng & Hàm dọn flow xóa nhầm flow cố định của Access & Giới hạn thao tác dọn theo cookie của flow do ứng dụng học \\
+    Đứt liên kết Dist-SW2 -- Core-SW1 làm sáu OVS mất Controller tới 10 giây khi khôi phục & Khung VLAN 99 đi vòng Core-SW1 $\rightarrow$ OVS $\rightarrow$ Core-SW1 nên Core nghe chính BPDU của mình; khi khôi phục, cổng E1/2 rơi vào trạng thái \textit{Dispute} của RSTP và phải chờ hai lần forward-delay & Thiết kế lại kênh VLAN 99 không phụ thuộc STP: khung từ cổng Core không bao giờ ra cổng Core khác; mỗi switch có nhiều đường quản trị đồng thời; chống phản xạ theo MAC nguồn \\
     \hline
-    Controller mất nhiều phút mới nhận ra Dist-SW1 chết & Kết nối TCP ``chết âm thầm'' vì không có gói RST & Đặt \texttt{TCP\_USER\_TIMEOUT} 15 giây; failover chỉ khi thêm ping thất bại ba lần \\
+    Cho Core-SW2 tham gia VLAN 99 gây bão khoảng 40.000 gói/s & OVS flood tĩnh trong VLAN 99, hai router cùng VLAN định tuyến ngược unicast của nhau & Core-SW2 không tham gia VLAN 99 (SVI tắt, tuyến tĩnh qua Po10) \\
+    \hline
+    Tắt hẳn Dist-SW2 làm bốn VLAN mất 100\% khoảng 3,5 phút & Controller loại các Access mất kết nối khỏi cây và chặn cổng Dist-SW1 nối xuống chúng, dù các Access vẫn chạy bằng flow cũ & ``Đóng băng'' Access mất kết nối làm lá trên liên kết cha cũ; thêm đường quản trị dự phòng qua Dist-SW1 \\
+    \hline
+    Sau một lần cắt kép, Dist-SW2 mất Controller vĩnh viễn & Flow bảo vệ VLAN 99 bị xóa trước rồi mới cài lại; kết nối đứt giữa chừng nên bản cài mới không tới switch & Chỉ ghi đè flow quản trị, không xóa trước \\
+    \hline
+    Controller khựng 0,5--9 giây theo cụm, có lúc cả sáu OVS mất kết nối & ONOS chạy song song chiếm hơn một vCPU của máy Controller (2 vCPU); Ryu bị đói CPU & Tắt ONOS, ưu tiên CPU cho Ryu; thêm ân hạn để khựng không bị coi là liên kết chết \\
+    \hline
+    Vòng thăm dò đứng hẳn khi một switch chết & Ryu 4.34 chờ vô hạn khi hàng đợi gửi của kết nối chết đầy & Giới hạn thời gian chờ gửi 0,5 giây; Echo 2 giây $\times$ 3 lần \\
+    \hline
+    Khởi động đồng loạt: một Access vào chế độ khẩn cấp & Máy ảo bị chậm CPU lúc boot, gắn \texttt{/boot} quá thời gian & Đánh dấu \texttt{nofail} cho \texttt{/boot} trên sáu OVS và Controller \\
 \end{longtable}
 \endgroup
 
-Bài học rút ra là trong mạng SDN in-band, mặt phẳng điều khiển phải được thiết kế như một mạng riêng (cây không vòng, khởi động độc lập với Controller) trước khi xây dựng logic cho mặt phẳng dữ liệu; và mọi kết luận về nguyên nhân phải dựa trên bắt gói theo từng chặng của đường đi (máy trạm $\rightarrow$ Access $\rightarrow$ Distribution $\rightarrow$ Core $\rightarrow$ Server Farm $\rightarrow$ DHCP Server) thay vì suy đoán.
+Bài học rút ra là trong mạng SDN in-band, mặt phẳng điều khiển phải được thiết kế như một mạng riêng (không vòng, nhiều đường, khởi động độc lập với Controller) trước khi xây dựng logic cho mặt phẳng dữ liệu; Controller phải phân biệt ``mất kênh điều khiển'' với ``liên kết dữ liệu chết''; và mọi kết luận về nguyên nhân phải dựa trên bắt gói, trạng thái STP hoặc thống kê CPU theo từng thời điểm thay vì suy đoán.
 
 \subsubsection{Kết quả kiểm thử SDN}
 
-\begin{itemize}
-    \item \textbf{Kết nối Controller:} REST \texttt{/stats/switches} trả về đủ tập DPID \{5, 8, 66, 68, 69, 70\}; sáu switch kết nối ổn định; mọi liên kết của hai Distribution đều hoạt động.
-    \item \textbf{DHCP qua SDN:} tám máy trạm Site 100 xin địa chỉ thành công với đủ bốn bản tin DORA, nhận đúng scope và gateway (ví dụ VLAN 10 nhận \texttt{10.1.10.100} và \texttt{10.1.10.101}; PC-HanhChinh-S100 nhận \texttt{10.1.40.102}); ping gateway, DHCP Server và liên VLAN đều thành công.
-    \item \textbf{Khởi động lại Controller:} sáu switch kết nối lại sau khoảng 15 giây.
-    \item \textbf{Khởi động lại từng Access:} switch trở lại sau khoảng 2,5 phút, không phát sinh bão broadcast.
-    \item \textbf{Khởi động lại Dist-SW2} khi vẫn còn bốn liên kết xuống Access: phục hồi sau khoảng 105 giây.
-    \item \textbf{Dừng hẳn Dist-SW1:} năm switch còn lại giữ kết nối Controller, Controller kích hoạt failover sau khoảng 30 giây; bật lại Dist-SW1 thì hệ thống tự phục hồi 6/6 sau khoảng 2 phút. Trong toàn bộ loạt thử, lưu lượng lớn nhất đo trên các liên kết OVS chỉ khoảng 365 gói/s, so với 200.000 gói/s trước khi khắc phục.
-    \item \textbf{Khởi động cả khối SDN theo thứ tự} (Controller, Distribution, Access, máy trạm): Ryu nhận đủ sáu switch sau khoảng 4 phút kể từ khi bật Controller, tổng lưu lượng trên các liên kết OVS khoảng 1.600 gói/s, không có bão.
-    \item \textbf{ONOS song song:} ONOS nhận 6/6 thiết bị và 18 liên kết một chiều (tám liên kết Distribution--Access và liên kết inter-dist, mỗi liên kết tính hai chiều); flow của Ryu giữ nguyên, chỉ thêm hai flow LLDP mỗi switch; tám máy trạm vẫn nhận DHCP và ping thành công. Khi khởi động lại máy Controller, Ryu và ONOS cùng phục hồi sau khoảng 90 giây.
-\end{itemize}
+\textbf{Chức năng cơ bản:} sáu switch kết nối OpenFlow 1.3 ổn định; tám máy trạm Site 100 xin địa chỉ DHCP thành công với đủ bốn bản tin DORA, nhận đúng scope và gateway (ví dụ VLAN 10 nhận \texttt{10.1.10.100} và \texttt{10.1.10.101}; PC-HanhChinh-S100 nhận \texttt{10.1.40.102}); ping gateway, DHCP Server và liên VLAN đều thành công. Khởi động lại Controller, sáu switch kết nối lại sau khoảng 15 giây; khởi động lại từng Access không phát sinh bão broadcast (lưu lượng lớn nhất khoảng 365 gói/s so với 200.000 gói/s trước khi khắc phục).
 
-\textbf{Hạn chế đã xác định:} trong phép thử dừng Dist-SW1, dù Controller failover đúng và các switch còn lại giữ kết nối, máy trạm \textit{không xin lại được} địa chỉ DHCP (0/8), trong khi ping gateway vẫn thành công. Giả thuyết là khi failover, cổng từ Dist-SW2 lên Core-SW1 (Master VRRP) vẫn bị chặn dữ liệu nên phản hồi DHCP relay không về được máy trạm; hướng sửa là mở thêm cổng này trong thủ tục failover. Ngoài ra, một lần failback khi đang có lưu lượng làm cả sáu switch mất kết nối và phải phục hồi thủ công. Vì vậy chức năng failover Distribution được đánh giá là \textit{Đạt một phần}.
+\textbf{Đánh giá theo năm tiêu chí định lượng} (Bảng~\ref{tab:sdn_muc_tieu}): các phép đo được thực hiện bằng script tự động, ping 0,1 giây từ Controller tới máy trạm.
 
-Ứng dụng NOC hoạt động và trả số liệu qua REST, nhưng chưa được kiểm chứng bằng tải có kiểm soát (ví dụ iPerf) để đối chiếu độ chính xác của băng thông và tỷ lệ sử dụng.
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Kết quả đánh giá SDN theo năm tiêu chí}
+    \label{tab:sdn_muc_tieu}
+    \begin{tabularx}{\textwidth}{|P{3.3cm}|X|}
+        \hline
+        \textbf{Tiêu chí} & \textbf{Kết quả đo} \\
+        \hline
+        Thời gian thêm VLAN & SDN: \textbf{3,8 ms} (một lệnh API, đến khi switch xác nhận); cùng thay đổi trên mỗi Core IOL cần 18 lệnh CLI, khoảng 36 giây/thiết bị. Máy trạm trong VLAN mới nhận DHCP và ping gateway 3/3 \\
+        \hline
+        Thời gian khôi phục khi mất liên kết & Hội tụ của Controller dưới 16 ms; gián đoạn dữ liệu chủ yếu là thời gian phát hiện: cổng báo down 0--0,3 giây, đứt ngầm Access--Distribution 1,8 giây, Distribution--Core 2,9--3,4 giây, mất hẳn Dist-SW1 1,9 giây; khi liên kết trở lại 0--0,4 giây \\
+        \hline
+        Hiệu năng giữa các VLAN & Trong VLAN (lớp 2 qua OVS): RTT \textbf{1,57 ms}; khác VLAN (qua Core): \textbf{2,91 ms}; jitter khoảng 1,2 ms; mất gói 0\% trên 36 cặp máy trạm \\
+        \hline
+        Tải Core/Distribution & Tải điều khiển ổn định khoảng 93 packet-in/s, Ryu khoảng 5\% CPU và không tăng theo lưu lượng người dùng (luồng đã học đi thẳng bằng flow); Dist-SW2 tải nền cao nhất vì mang kênh quản trị \\
+        \hline
+        Áp chính sách tập trung & Luật chặn ICMP giữa VLAN 10 và VLAN 40 áp lên bốn Access trong \textbf{8,0 ms} (12 flow-mod), có bộ đếm gói; gỡ trong 5,2 ms; luồng khác không bị ảnh hưởng \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\textbf{Kịch bản tự phục hồi:} trang Kịch bản của Console chạy tự động sáu kịch bản cắt liên kết (mô phỏng đứt ngầm, giữ 15 giây) với tiêu chí đạt: gián đoạn khi cắt không quá 5 giây, khi khôi phục không quá 3 giây và mạng trở về đủ 13/13 liên kết, 6/6 switch. Bảng~\ref{tab:sdn_kich_ban} so sánh kết quả trước và sau khi tắt ONOS và thiết kế lại kênh VLAN 99.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Kết quả kịch bản tự phục hồi SDN (ping 0,1 giây tới bốn VLAN)}
+    \label{tab:sdn_kich_ban}
+    \begin{tabularx}{\textwidth}{|P{3.0cm}|P{1.9cm}|P{1.9cm}|P{1.6cm}|X|}
+        \hline
+        \textbf{Kịch bản} & \textbf{Gián đoạn khi cắt} & \textbf{Khi khôi phục} & \textbf{Về đủ sau} & \textbf{Trước khi sửa} \\
+        \hline
+        S1: D1-C1 & 3,3 s & 0,3 s & 1,5 s & Đạt \\
+        \hline
+        S2: A4-D1 & 2,1 s (VLAN 40) & 0 & 1,5 s & Đạt \\
+        \hline
+        S3: D1-D2 & 0 & 0 & 1,5 s & Đạt (Dist-SW1 mất Controller khoảng 1 s) \\
+        \hline
+        S4: D2-C1 & 0 & 0 & 2,0 s & Không đạt (10,9 s khi khôi phục) \\
+        \hline
+        S5: A4-D1 + D2-C1 & 3,4 s (VLAN 40) & 0 & 2,0 s & Không đạt (15 s khi cắt, 10,3 s khi khôi phục) \\
+        \hline
+        S6: D1-C1 + D1-C2 & 3,5 s & 0,3 s & 1,5 s & Đạt \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Sau khi sửa, \textbf{cả sáu kịch bản đều đạt} và không switch nào mất Controller trong cả loạt thử. Phép cắt \textbf{thật} (hạ giao diện ảo trên máy chủ EVE-NG, tương đương rút dây, giữ 20 giây) cho kết quả tương tự: D2-C1 không mất gói; A4-D1 kèm D2-C1 làm VLAN 40 mất 3,2 giây, khôi phục 0,2 giây; D1-C1 mất 2,8--3,1 giây, khôi phục không quá 0,4 giây. Khi tắt hẳn Dist-SW2, dữ liệu chỉ mất 0--5 gói và bốn Access nối lại Controller qua Dist-SW1 sau khoảng 11 giây; khi bật lại không mất gói.
+
+\textbf{Hạn chế còn lại:} vẫn ghi nhận hiếm hoi một lần Controller khựng khoảng 4,9 giây sau loạt cắt thật (nghi do tài nguyên máy chủ ảo hóa), cơ chế ân hạn giữ cho sự kiện này không bị báo nhầm thành liên kết chết. Máy trạm VPCS chỉ sinh vài trăm kbit/s nên tiêu chí tải chưa được thử ở mức tải cao.
 
 \subsection{Triển khai mạng LAN tại các cơ sở phụ}
 
@@ -220,15 +288,13 @@ interface GigabitEthernet0/1
 access-list SDWAN_IN extended permit ip 10.0.0.0 255.0.0.0 10.2.0.0 255.255.0.0
 access-group SDWAN_IN in interface outside1
 access-group SDWAN_IN in interface outside2
-sla monitor 10
- type echo protocol ipIcmpEcho 10.1.255.1 interface outside1
- num-packets 1
- frequency 2
-sla monitor schedule 10 life forever start-time now
-track 1 rtr 10 reachability
-route outside1 0.0.0.0 0.0.0.0 10.2.1.2 1 track 1
-route outside2 0.0.0.0 0.0.0.0 10.2.1.6 2
-route outside1 10.1.255.1 255.255.255.255 10.2.1.2 1
+access-list VLAN99_IN extended permit ip 10.2.99.0 255.255.255.0 10.0.0.0 255.0.0.0
+access-list VLAN99_IN extended deny ip any any log warnings
+access-group VLAN99_IN in interface vlan99
+route outside1 10.0.0.0 255.0.0.0 10.2.1.2 1 track 1
+route outside2 10.0.0.0 255.0.0.0 10.2.1.6 2
+route outside2 0.0.0.0 0.0.0.0 10.2.1.6 1 track 2
+route outside1 0.0.0.0 0.0.0.0 10.2.1.2 2
 dhcpd dns 10.1.90.10
 dhcpd domain campus.internal
 dhcpd address 10.2.60.100-10.2.60.199 vlan60
@@ -271,7 +337,13 @@ Ba controller được cấu hình với System-IP, Site-ID 900, \texttt{organiz
 
 Underlay BGP được cấu hình trên hai router nhà cung cấp (Khối lệnh~\ref{lst:isp_ch4}) và trong VPN 0 của từng vEdge. Lệnh \texttt{default-originate} phải được khai báo trong \texttt{address-family ipv4} thì IOS mới gửi tuyến mặc định cho láng giềng.
 
-\begin{lstlisting}[style=customcode,caption={Trích cấu hình BGP của router Internet},label={lst:isp_ch4}]
+\begin{lstlisting}[style=customcode,caption={Trích cấu hình BGP và NAT của router Internet},label={lst:isp_ch4}]
+interface GigabitEthernet0/0
+ ip address dhcp
+ ip nat outside
+interface GigabitEthernet0/5
+ ip address 203.0.113.10 255.255.255.252
+ ip nat inside
 router bgp 64511
  bgp router-id 203.0.113.254
  neighbor 100.64.254.2 remote-as 64512
@@ -280,12 +352,16 @@ router bgp 64511
  address-family ipv4
   network 203.0.113.0 mask 255.255.255.252
   neighbor 100.64.254.2 activate
+  neighbor 100.64.254.2 default-originate
+  neighbor 100.64.254.2 prefix-list NO_DEFAULT_IN in
   neighbor 203.0.113.1 activate
   neighbor 203.0.113.1 default-originate
-  neighbor 203.0.113.9 activate
-  neighbor 203.0.113.9 default-originate
+  neighbor 203.0.113.1 prefix-list NO_DEFAULT_IN in
  exit-address-family
+ip nat inside source list NAT_ISP interface GigabitEthernet0/0 overload
 ip route 10.9.0.0 255.255.0.0 203.0.113.249
+ip prefix-list NO_DEFAULT_IN seq 5 deny 0.0.0.0/0
+ip prefix-list NO_DEFAULT_IN seq 10 permit 0.0.0.0/0 le 32
 \end{lstlisting}
 
 \subsubsection{Cấu hình vEdge}
@@ -308,6 +384,7 @@ vpn 0
    color mpls
  interface ge0/3
   ip address 203.0.113.1/30
+  nat
   tunnel-interface
    encapsulation ipsec
    color biz-internet
@@ -326,6 +403,7 @@ vpn 1
   ip address 10.1.3.14/30
  interface loopback0
   ip address 10.1.255.1/32
+ ip route 0.0.0.0/0 vpn 0
  ip route 10.1.0.0/16 10.1.3.1
 omp
  advertise connected
@@ -362,11 +440,9 @@ omp
     \hline
     BGP CE--PE không lên & Thiếu \texttt{allow-service bgp} trên tunnel-interface, thiếu \texttt{address-family} & Bổ sung cấu hình \\
     \hline
-    TLOC MPLS của vEdge2-S100 không lên, BGP MPLS không thiết lập & Card mạng ảo của cổng ge0/3 bị treo chiều nhận & \texttt{shutdown} / \texttt{no shutdown} cổng; BGP và TLOC lên lại \\
+    Một TLOC mất hẳn kết nối điều khiển, OMP và BFD dù cấu hình không đổi (gặp ở vEdge2 Site 100 và vEdge1 Site 300) & Card mạng ảo của cổng WAN bị treo chiều nhận (bộ đếm drop của giao diện ảo trên máy chủ tăng liên tục) & \texttt{shutdown} / \texttt{no shutdown} cổng; BGP, TLOC, OMP và BFD lên lại \\
     \hline
     Đường hầm chéo màu của Site 100 down (biz-internet $\leftrightarrow$ mpls) & Mỗi TLOC chỉ có tuyến tới transport bên kia qua một cổng & Thêm tuyến mặc định qua từng transport trong VPN 0 của hai vEdge Site 100 \\
-    \hline
-    Sau khi khôi phục cổng MPLS, TLOC MPLS không được quảng bá lại & VPN 0 thiếu tuyến cụ thể đến controller qua MPLS & Thêm tuyến \texttt{10.9.0.0/24} qua MPLS; sau khoảng 60 giây DTLS, OMP và BFD phục hồi \\
     \hline
     Overlay lên nhưng máy trạm các site không thông nhau & Chưa có VPN dịch vụ, cổng LAN nằm trong VPN 512 & Tạo VPN 1 \texttt{LAN}, chuyển cổng LAN vào VPN 1, thêm tuyến tổng hợp và quảng bá OMP \\
     \hline
@@ -377,15 +453,29 @@ omp
 \subsubsection{Kết quả kiểm thử SD-WAN}
 
 \begin{itemize}
-    \item \textbf{Control plane:} ba controller và tám vEdge Site 100--400 ở trạng thái reachable trên vManage; OMP 8/8 Edge. Với hai color, vEdge Site 100 đạt hai kết nối tới vBond, hai tới vSmart và một tới vManage.
+    \item \textbf{Control plane:} ba controller và tám vEdge Site 100--400 ở trạng thái reachable trên vManage (Hình~\ref{fig:vmanage_overview}); vSmart có OMP với cả tám Edge. Với hai color, vEdge Site 100 đạt hai kết nối tới vBond, hai tới vSmart và một tới vManage. vEdge Site 500 đã được khai báo nhưng chưa vào fabric.
     \item \textbf{Underlay:} mọi phiên eBGP CE--PE và phiên giữa hai nhà cung cấp ở trạng thái Established; các vEdge nhận tuyến mặc định qua transport tương ứng.
-    \item \textbf{BFD:} toàn bộ phiên đều up --- mỗi vEdge Site 100 12/12, mỗi vEdge chi nhánh 8/8.
+    \item \textbf{BFD:} toàn bộ phiên đều up --- mỗi vEdge Site 100 12/12, mỗi vEdge chi nhánh 8/8 (Hình~\ref{fig:bfd_s200}).
     \item \textbf{Overlay dữ liệu:} ping giữa máy trạm các chi nhánh 200, 300, 400 thành công 10/10; máy trạm chi nhánh truy cập được dịch vụ tại Campus chính.
     \item \textbf{Chất lượng đường truyền:} thống kê app-route từ Site 200 đến Site 300 qua MPLS: mất gói 0\%, độ trễ 37~ms, jitter 6~ms --- thỏa \texttt{SLA\_REALTIME}.
     \item \textbf{Chính sách tập trung:} mọi vEdge nhận đúng chính sách từ vSmart (\texttt{show policy from-vsmart}). Để chứng minh chính sách được thực thi, nhóm xây dựng công cụ kiểm thử tự động: đọc bộ đếm của từng luật qua API của vManage, sinh lưu lượng thật từ máy trạm chi nhánh (PC-YTe-S200-2), rồi đọc lại bộ đếm. Kết quả 10/10 phép thử đạt (Bảng~\ref{tab:kiem_thu_chinh_sach}).
     \item \textbf{Failover transport tại chi nhánh:} công cụ đăng nhập vEdge1 của chi nhánh, tắt cổng MPLS (xác nhận bằng thông báo \texttt{Commit complete}), ping liên tục mỗi khoảng 1,2 giây qua overlay, rồi tự bật lại cổng. Thời gian khôi phục (RTO) đo được là 3,3 giây (Site 200), 4,4 giây (Site 300) và 3,3 giây (Site 400); trước khi áp thiết kế beacon, chi nhánh mất 100\% gói và không tự phục hồi. Khi MPLS trở lại, lưu lượng tự quay về vEdge1. RTO chủ yếu phụ thuộc chu kỳ thăm dò 2 giây của Brand-FW.
     \item \textbf{Failover transport tại Site 100:} khi tắt cổng MPLS trên cả hai vEdge Site 100, các đường hầm qua Internet tiếp tục mang lưu lượng; khi bật lại, TLOC MPLS chỉ phục hồi sau khi bổ sung tuyến controller qua MPLS.
 \end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{image/vmanage-overview.png}
+    \caption{Trang tổng quan vManage: ba controller, tám Edge reachable (Edge Site 500 chưa vào fabric), 92 đường hầm}
+    \label{fig:vmanage_overview}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{image/sdwan-bfd-s200.png}
+    \caption{vEdge2 Site 200: tám phiên BFD tới các site và phiên OMP với vSmart}
+    \label{fig:bfd_s200}
+\end{figure}
 
 \begin{table}[H]
     \centering
@@ -415,11 +505,106 @@ omp
 
 Bảng~\ref{tab:kiem_thu_chinh_sach} gồm 7 mã phép thử nhưng ứng với 10 lần kiểm tra: DP-3 kiểm tra đồng thời ba bộ đếm, còn CP-1 được xem trên hai vEdge của Site 200. Công cụ dùng lệnh \texttt{ping -P 6 -p <cổng>} của VPCS để gửi gói TCP SYN đến cổng đích, tương đương một lần mở kết nối Telnet/SSH đối với vEdge. Các bộ đếm tăng đúng như mong đợi đồng thời tại vEdge chi nhánh, chứng minh chính sách chỉ khai báo một lần trên vSmart đã được đẩy xuống và thực thi tại các Edge. Giới hạn của phép thử: mới đo trên luồng xuất phát từ Site 200 và một luồng ICMP; tại thời điểm đo, tường lửa và Core Site 100 đang tắt nên lưu lượng vào Campus chính được chứng minh qua bộ đếm chứ không qua phản hồi đầu--cuối.
 
+\subsection{Truy cập Internet và cảnh báo sự cố}
+
+\subsubsection{Triển khai}
+
+Việc cho người dùng ra Internet được làm theo từng giai đoạn, kiểm thử xong giai đoạn trước mới sang giai đoạn sau: (1) router Internet nhận địa chỉ DHCP từ mạng thật của phòng lab, PAT các dải \texttt{203.0.113.0/24} và \texttt{100.64.0.0/10}; (2) vEdge Site 100 bật \texttt{nat} trên cổng \texttt{biz-internet} và thêm tuyến mặc định kiểu NAT trong VPN 1; (3) chi nhánh: vEdge2 tương tự, Brand-FW tách tuyến nội bộ và tuyến Internet (Khối lệnh~\ref{lst:brandfw_ch4}); (4) DNS Server chuyển tiếp tên ngoài, tường lửa biên chỉ cho riêng máy chủ DNS hỏi ra ngoài; (5) chính sách theo vùng (VLAN 99, Server Farm, DMZ, Site 900); (6) ma trận kiểm thử. Dự phòng Internet của chi nhánh được thực hiện bằng NAT trên cổng MPLS của vEdge1 kèm IP SLA \texttt{track 2} trên Brand-FW.
+
+Cảnh báo email được triển khai sau cùng: Switch32 mở thêm một dòng ACL cho riêng vManage gửi SMTP 587, vManage được khai báo DNS (\texttt{vpn 0 dns 8.8.8.8 primary}), sau đó cấu hình máy chủ SMTP và luật thông báo \texttt{SDWAN-DOWN-ALERT} trên giao diện vManage.
+
+\subsubsection{Các vấn đề kỹ thuật}\label{sec:bai_hoc_internet}
+
+\begingroup
+\small
+\begin{longtable}{|P{3.0cm}|P{5.2cm}|P{5.3cm}|}
+    \caption{Các vấn đề khi triển khai Internet và cảnh báo}\label{tab:loi_internet} \\
+    \hline
+    \textbf{Hiện tượng} & \textbf{Nguyên nhân gốc} & \textbf{Khắc phục} \\
+    \hline
+    \endfirsthead
+    \hline
+    \textbf{Hiện tượng} & \textbf{Nguyên nhân gốc} & \textbf{Khắc phục} \\
+    \hline
+    \endhead
+    \hline
+    \endfoot
+    Router Internet mất Internet ngay sau khi bật NAT trên vEdge Site 100 & Phiên BGP lên lại, vEdge quảng bá ngược tuyến mặc định học từ MPLS; eBGP (AD 20) thắng tuyến mặc định DHCP (AD 254), tạo vòng lặp & Prefix-list \texttt{NO\_DEFAULT\_IN} chiều vào trên mọi láng giềng của router Internet, làm mới bằng \texttt{clear ip bgp * soft in} (không reset phiên) \\
+    \hline
+    Lưu lượng Internet chia tải sang MPLS và bị mất & VPN 0 có hai tuyến mặc định ECMP, MPLS ban đầu không có đường ra Internet & Router Internet gửi tuyến mặc định cho router MPLS và NAT cả dải \texttt{100.64.0.0/10} \\
+    \hline
+    Tuyến mặc định của chi nhánh xuất hiện ở mọi site & Tuyến tĩnh mặc định trong VPN 1 của vEdge1 bị \texttt{advertise static} quảng bá vào OMP & Chỉ dùng tuyến mặc định kiểu NAT (không lên OMP); để Brand-FW chọn đường ra \\
+    \hline
+    Khi vEdge2 hỏng, máy trạm vẫn không tới được một số đích Internet & Đích thăm dò SLA ban đầu là \texttt{8.8.8.8}; tuyến \texttt{/32} ghim gói thăm dò kéo cả lưu lượng người dùng tới \texttt{8.8.8.8} về vEdge2 đã hỏng & Đổi đích thăm dò sang \texttt{9.9.9.9} \\
+    \hline
+    Ping từ VLAN 99 Campus chính tới chi nhánh thất bại & Tường lửa biên có giao diện management nối trực tiếp \texttt{10.1.99.0/24} nên gói trả về đi ra management, không khớp phiên trên inside (bất đối xứng) & \texttt{management-only} cho Management0/0 và tuyến \texttt{10.1.99.0/24} qua Core-SW1 \\
+    \hline
+    vManage không gửi được thư cảnh báo & Máy chủ SMTP từ chối xác thực (\texttt{535 Username and Password not accepted}) do thông tin nhập trên giao diện sai; mạng không chặn (bộ đếm ACL của luồng 587 vẫn tăng) & Nhập lại tài khoản đầy đủ và mật khẩu ứng dụng; xác nhận qua nhật ký gửi thư của vManage \\
+\end{longtable}
+\endgroup
+
+\subsubsection{Kết quả kiểm thử}
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Ma trận kiểm thử truy cập Internet}
+    \label{tab:kiem_thu_internet}
+    \begin{tabularx}{\textwidth}{|P{5.6cm}|X|}
+        \hline
+        \textbf{Kiểm thử} & \textbf{Kết quả} \\
+        \hline
+        Máy trạm Site 200/300/400: DHCP và \texttt{ping google.com} & Đạt, 3/3 mỗi site; DNS \texttt{10.1.90.10}, tên miền \texttt{campus.internal} \\
+        \hline
+        Tên nội bộ \texttt{www.campus.internal} sau khi bật chuyển tiếp DNS & Đạt, vẫn phân giải \texttt{10.1.1.10} \\
+        \hline
+        Traceroute từ chi nhánh ra Internet & Đạt, chặng đầu là vEdge2 tại chỗ (DIA), không vòng qua Site 100 \\
+        \hline
+        Cắt \texttt{biz-internet} tại Site 200, rồi khôi phục & Đạt: \texttt{track 2} Down sau khoảng 30 giây, Internet chuyển sang MPLS (ping \texttt{8.8.8.8}, \texttt{google.com} 3/3); khôi phục thì quay về vEdge2 \\
+        \hline
+        Site 100: VLAN 10 ra Internet / VLAN 99 ra Internet & Đạt: 3/3 / bị chặn đúng thiết kế \\
+        \hline
+        VLAN 99 Campus chính tới chi nhánh & Đạt: 10/10 tới Site 200, 5/5 tới Site 300, Site 400 \\
+        \hline
+        Site 900 ra Internet có kiểm soát & Đạt: DNS, HTTPS, ping qua; HTTP 80, SSH 22 bị chặn; kết nối điều khiển của fabric không bị ảnh hưởng \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{image/dia-brandfw-s200.png}
+    \caption{Brand-FW Site 200: hai đối tượng track, tuyến mặc định qua vEdge2 và traceroute ra Internet}
+    \label{fig:dia_brandfw}
+\end{figure}
+
+\textbf{Cảnh báo email:} khi tắt cổng \texttt{biz-internet} của vEdge2 Site 200, vManage gửi thư cảnh báo cho từng sự kiện (Bảng~\ref{tab:canh_bao_email}); khi bật lại cổng, thiết bị phục hồi đủ 3 kết nối điều khiển và 8 phiên BFD, vManage gửi thư cho sự kiện Interface State Change. Thư cho các sự kiện phục hồi BFD/Control/OMP chưa được gửi vì luật thông báo hiện chỉ chọn mức Critical và Major.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Thư cảnh báo khi tắt và bật lại cổng Internet của vEdge2 Site 200}
+    \label{tab:canh_bao_email}
+    \begin{tabularx}{\textwidth}{|P{3.2cm}|X|P{2.4cm}|}
+        \hline
+        \textbf{Thời điểm sau khi tắt cổng} & \textbf{Sự kiện} & \textbf{Thư} \\
+        \hline
+        khoảng 20 giây & All BFD sessions for the node are down & Đã gửi \\
+        \hline
+        khoảng 35 giây & All Control connections for the node are down & Đã gửi \\
+        \hline
+        khoảng 70 giây & All OMP sessions for the node are down & Đã gửi \\
+        \hline
+        khi bật lại cổng & Interface State Change & Đã gửi \\
+        \hline
+    \end{tabularx}
+\end{table}
+
 \subsection{Triển khai dịch vụ}
 
 \subsubsection{DHCP và DNS}
 
-DHCP Server tại \texttt{10.1.90.10} chạy vai trò DHCP của Windows Server 2012 R2 với bốn scope đang hoạt động cho VLAN 10--40; mỗi scope có dải \texttt{.100--.199}, gateway \texttt{.1}, DNS \texttt{10.1.90.10} (option 6) và tên miền \texttt{campus.internal} (option 15). Relay từ hai Core có \texttt{giaddr} tương ứng \texttt{.2} và \texttt{.3} nên máy chủ chọn đúng scope. Cùng máy chủ chạy DNS với zone thuận \texttt{campus.internal} (bản ghi A cho www, web, mail, dns, dhcp, syslog; bản ghi MX trỏ mail) và zone ngược cho DMZ.
+DHCP Server tại \texttt{10.1.90.10} chạy vai trò DHCP của Windows Server 2012 R2 với bốn scope đang hoạt động cho VLAN 10--40; mỗi scope có dải \texttt{.100--.199}, gateway \texttt{.1}, DNS \texttt{10.1.90.10} (option 6) và tên miền \texttt{campus.internal} (option 15). Relay từ hai Core có \texttt{giaddr} tương ứng \texttt{.2} và \texttt{.3} nên máy chủ chọn đúng scope. Cùng máy chủ chạy DNS với zone thuận \texttt{campus.internal} (bản ghi A cho www, web, mail, dns, dhcp, syslog; bản ghi MX trỏ mail), zone ngược cho DMZ và chuyển tiếp tên ngoài tới \texttt{8.8.8.8}, \texttt{1.1.1.1} (tắt root hints).
 
 \subsubsection{Web và Mail}
 
@@ -429,7 +614,7 @@ Web Server chạy Nginx với chứng chỉ tự ký cho \texttt{www.campus.inte
 
 \textbf{Tên miền \texttt{.local}:} ban đầu hệ thống dùng \texttt{campus.local}. Máy trạm Ubuntu phân giải được bằng \texttt{dig} nhưng trình duyệt và ứng dụng thư không tìm thấy máy chủ, vì cấu hình phân giải tên mặc định chuyển \texttt{*.local} cho mDNS và trả ``không tồn tại'' trước khi hỏi DNS. Hệ thống được chuyển sang \texttt{campus.internal}: tạo zone mới, đổi option 15 trên DHCP Server và \texttt{dhcpd domain} trên ba Brand-FW, cấp lại chứng chỉ Web, đổi tên miền trên Mail Server (giữ \texttt{campus.local} làm bí danh trong giai đoạn chuyển tiếp). Sau khi chuyển, máy trạm Ubuntu với cấu hình mặc định phân giải đúng mọi tên nội bộ.
 
-\textbf{Giới hạn bảng kết nối của tường lửa:} ASAv chạy không có giấy phép chỉ cho phép tối đa 100 kết nối đồng thời. Các truy vấn DNS ra Internet (không có lời đáp vì lab không có Internet thật) chiếm đầy bảng kết nối, khiến kết nối IMAP từ chi nhánh bị từ chối dù ping vẫn thành công --- ứng dụng thư báo không kết nối được máy chủ. Nguyên nhân được xác định qua bộ đếm \texttt{Denied} của \texttt{show resource usage} và công cụ \texttt{packet-tracer}. Khắc phục bằng ACL \texttt{INSIDE\_OUT} chặn DNS ra ngoài và giảm thời gian chờ của phiên DNS xuống 10 giây; số kết nối giảm từ 100 xuống khoảng 45 và ổn định, bộ đếm từ chối không tăng.
+\textbf{Giới hạn bảng kết nối của tường lửa:} ASAv chạy không có giấy phép chỉ cho phép tối đa 100 kết nối đồng thời. Khi lab chưa có Internet, các truy vấn DNS ra ngoài không có lời đáp chiếm đầy bảng kết nối, khiến kết nối IMAP từ chi nhánh bị từ chối dù ping vẫn thành công. Nguyên nhân được xác định qua bộ đếm \texttt{Denied} của \texttt{show resource usage} và công cụ \texttt{packet-tracer}. Khắc phục bằng ACL \texttt{INSIDE\_OUT} chỉ cho máy chủ DNS hỏi ra ngoài và giảm thời gian chờ của phiên DNS xuống 10 giây; số kết nối giảm từ 100 xuống khoảng 45 và ổn định. Sau khi có Internet, bảng kết nối khi kiểm thử chỉ khoảng 7/100. Giới hạn băng thông của ASAv không giấy phép vẫn đủ cho ping và phân giải tên nhưng không đủ để duyệt web thực tế.
 
 \subsubsection{Kết quả kiểm thử dịch vụ}
 
@@ -441,7 +626,7 @@ Phép thử được thực hiện từ máy trạm Ubuntu PC-YTe-S200 (\texttt{
     \item Ứng dụng thư trên máy trạm Ubuntu ở ba chi nhánh kết nối IMAP ổn định sau khi xử lý giới hạn bảng kết nối.
 \end{itemize}
 
-Syslog Server nhận nhật ký thực tế từ tường lửa và các thiết bị hạ tầng qua UDP 514. Riêng máy trạm PC-HanhChinh-S100 (VLAN 40 tại Campus chính) phân giải được tên nhưng kết nối TCP đến Mail Server bị quá thời gian; nguyên nhân chưa được xác định và được ghi nhận là vấn đề mở.
+Syslog Server nhận nhật ký thực tế từ tường lửa và các thiết bị hạ tầng qua UDP 514. Riêng máy trạm PC-HanhChinh-S100 (VLAN 40 tại Campus chính) phân giải được tên nhưng kết nối TCP đến Mail Server bị quá thời gian; vấn đề được ghi nhận trước khi kênh quản trị SDN và tuyến VLAN 99 trên tường lửa được sửa, và chưa được kiểm tra lại.
 
 \subsection{Tổng hợp kết quả kiểm thử}
 
@@ -461,7 +646,7 @@ Syslog Server nhận nhật ký thực tế từ tường lửa và các thiết
     \endhead
     \hline
     \endfoot
-    T01 & Topology & 67 node, 100 mạng, không liên kết treo & \textbf{Đạt} & Kiểm tra cấu trúc tệp lab không báo lỗi \\
+    T01 & Topology & 70 node, 103 mạng, không liên kết treo & \textbf{Đạt} & Kiểm tra cấu trúc tệp lab không báo lỗi \\
     \hline
     T02 & VRRP và OSPF Site 100 & Core-SW1 Master; OSPF FULL giữa Core và FW Active & \textbf{Đạt} & Hai Core nhận default và DMZ qua OSPF \\
     \hline
@@ -471,41 +656,53 @@ Syslog Server nhận nhật ký thực tế từ tường lửa và các thiết
     \hline
     T05 & DHCP chi nhánh & Máy trạm nhận đúng subnet, gateway, DNS, tên miền & \textbf{Đạt} & Bảng~\ref{tab:dhcp_chi_nhanh_ch4} \\
     \hline
-    T06 & Ryu--OVS & 6 DPID kết nối OpenFlow 1.3 & \textbf{Đạt} & \texttt{/stats/switches} đủ 6 \\
+    T06 & Ryu--OVS & 6 switch kết nối OpenFlow 1.3 & \textbf{Đạt} & Console: 6/6 switch, 13/13 liên kết \\
     \hline
     T07 & Chống vòng lặp & Không bão khi khởi động, khởi động lại switch & \textbf{Đạt} & Tối đa khoảng 365 gói/s so với 200.000 gói/s trước khắc phục \\
     \hline
-    T08 & Phục hồi SDN & Tự kết nối lại sau khởi động lại Controller/switch & \textbf{Đạt} & 15 giây (Ryu); 2,5 phút (Access); 105 giây (Dist-SW2) \\
+    T08 & Thêm VLAN qua API & VLAN mới hoạt động trên các OVS liên quan & \textbf{Đạt} & 3,8 ms; máy trạm nhận DHCP, ping gateway 3/3 \\
     \hline
-    T09 & Failover Dist-SW1 & Giữ kết nối và dịch vụ khi Dist-SW1 hỏng & \textbf{Đạt một phần} & Kết nối Controller giữ 5/5, failover 30 giây; DHCP mới 0/8 khi failover \\
+    T09 & Tự phục hồi SDN & Kịch bản S1--S6 đạt tiêu chí gián đoạn & \textbf{Đạt} & 6/6 kịch bản; cắt thật 3/3; tắt hẳn Dist-SW2 mất 0--5 gói \\
     \hline
-    T10 & ONOS quan sát & Hiển thị thiết bị, liên kết, không ảnh hưởng Ryu & \textbf{Đạt} & 6 thiết bị, 18 liên kết; DHCP 8/8 \\
+    T10 & Hiệu năng giữa các VLAN & Không mất gói, độ trễ thấp & \textbf{Đạt} & RTT 1,57 ms (trong VLAN), 2,91 ms (khác VLAN), 36 cặp \\
     \hline
-    T11 & NOC dashboard & Số liệu cổng cập nhật, cảnh báo đúng ngưỡng & \textbf{Chưa nghiệm thu} & Chưa thử tải có kiểm soát \\
+    T11 & Chính sách SDN tập trung & Áp/gỡ luật toàn campus, có bộ đếm & \textbf{Đạt} & 8,0 ms áp, 5,2 ms gỡ; luồng khác không ảnh hưởng \\
     \hline
-    T12 & BGP underlay & Mọi phiên Established, có default & \textbf{Đạt} & Hai nhà cung cấp và 8 vEdge \\
+    T12 & Giám sát tải & Số liệu cổng, packet-in, CPU Core & \textbf{Đạt một phần} & Số liệu ổn định; chưa thử tải cao do giới hạn VPCS \\
     \hline
-    T13 & SD-WAN control plane & 8 vEdge có kết nối điều khiển và OMP & \textbf{Đạt} & 11 thiết bị reachable; OMP 8/8 \\
+    T13 & BGP underlay & Mọi phiên Established, có default & \textbf{Đạt} & Hai nhà cung cấp và 8 vEdge \\
     \hline
-    T14 & TLOC và BFD & Mọi đường hầm up & \textbf{Đạt} & 12/12 (Site 100), 8/8 (chi nhánh) \\
+    T14 & SD-WAN control plane & 8 vEdge có kết nối điều khiển và OMP & \textbf{Đạt} & 11 thiết bị reachable; OMP 8/8 \\
     \hline
-    T15 & Overlay dữ liệu & Máy trạm các site thông nhau & \textbf{Đạt} & Ping chéo chi nhánh 10/10 \\
+    T15 & TLOC và BFD & Mọi đường hầm up & \textbf{Đạt} & 12/12 (Site 100), 8/8 (chi nhánh) \\
     \hline
-    T16 & SLA và AAR & Chính sách được nhận, lưu lượng được phân loại đúng & \textbf{Đạt} & Loss 0\%, 37 ms, jitter 6 ms; bộ đếm AAR\_ICMP, AAR\_WEB tăng \\
+    T16 & Overlay dữ liệu & Máy trạm các site thông nhau & \textbf{Đạt} & Ping chéo chi nhánh 10/10 \\
     \hline
-    T17 & Data policy và control policy & Chặn Telnet/SSH vào Farm, DMZ; chi nhánh chọn vEdge1 & \textbf{Đạt} & 10/10 lần kiểm tra qua bộ đếm và bảng tuyến OMP \\
+    T17 & SLA và AAR & Chính sách được nhận, lưu lượng được phân loại đúng & \textbf{Đạt} & Loss 0\%, 37 ms, jitter 6 ms; bộ đếm AAR\_ICMP, AAR\_WEB tăng \\
     \hline
-    T18 & Failover transport Site 100 & Chuyển sang Internet khi mất MPLS & \textbf{Đạt} & Lưu lượng đi qua Internet; MPLS phục hồi sau khi bổ sung tuyến controller \\
+    T18 & Data policy và control policy & Chặn Telnet/SSH vào Farm, DMZ; chi nhánh chọn vEdge1 & \textbf{Đạt} & 10/10 lần kiểm tra qua bộ đếm và bảng tuyến OMP \\
     \hline
-    T19 & DNS, Web, Mail từ chi nhánh & Phân giải tên, HTTPS, gửi/nhận thư & \textbf{Đạt} & Kiểm thử từ PC-YTe-S200 \\
+    T19 & Failover transport Site 100 & Chuyển sang Internet khi mất MPLS & \textbf{Đạt} & Lưu lượng đi qua Internet; MPLS phục hồi sau khi bổ sung tuyến controller \\
     \hline
-    T20 & ACL biên & Chỉ cổng dịch vụ vào DMZ & \textbf{Đạt} & Cổng 8080 bị chặn; Web/Mail thông \\
+    T20 & Failover transport chi nhánh & Tự chuyển sang vEdge2 khi mất MPLS và quay lại & \textbf{Đạt} & RTO 3,3 / 4,4 / 3,3 giây (S200 / S300 / S400) \\
     \hline
-    T21 & Syslog & Nhận nhật ký UDP 514 & \textbf{Đạt} & Nhật ký từ tường lửa và thiết bị hạ tầng \\
+    T21 & Internet tại chỗ (DIA) & Máy trạm mọi site ra Internet, phân giải tên ngoài & \textbf{Đạt} & Ba chi nhánh 3/3; traceroute chặng đầu là vEdge2 \\
     \hline
-    T22 & Mail từ VLAN 40 Campus & Máy trạm Campus dùng Mail & \textbf{Chưa đạt} & TCP đến Mail quá thời gian; đang điều tra \\
+    T22 & Dự phòng Internet chi nhánh & Mất biz-internet thì ra qua MPLS & \textbf{Đạt một phần} & Đã cắt thử tại Site 200; Site 300/400 cùng cấu hình, chưa cắt thử \\
     \hline
-    T23 & Failover transport chi nhánh & Tự chuyển sang vEdge2 khi mất MPLS và quay lại & \textbf{Đạt} & RTO 3,3 / 4,4 / 3,3 giây (S200 / S300 / S400) \\
+    T23 & Chính sách Internet theo vùng & VLAN 99 bị chặn; Site 900 chỉ dịch vụ cho phép & \textbf{Đạt} & VLAN 99 bị chặn; Site 900: 80, 22 bị chặn, 443, DNS qua \\
+    \hline
+    T24 & Cảnh báo email & Có thư khi Edge mất kết nối & \textbf{Đạt} & Thư BFD, Control, OMP Down và Interface State Change \\
+    \hline
+    T25 & DNS, Web, Mail từ chi nhánh & Phân giải tên, HTTPS, gửi/nhận thư & \textbf{Đạt} & Kiểm thử từ PC-YTe-S200 \\
+    \hline
+    T26 & ACL biên & Chỉ cổng dịch vụ vào DMZ & \textbf{Đạt} & Cổng 8080 bị chặn; Web/Mail thông \\
+    \hline
+    T27 & Syslog & Nhận nhật ký UDP 514 & \textbf{Đạt} & Nhật ký từ tường lửa và thiết bị hạ tầng \\
+    \hline
+    T28 & Mail từ VLAN 40 Campus & Máy trạm Campus dùng Mail & \textbf{Chưa đạt} & TCP đến Mail quá thời gian; chưa kiểm tra lại sau các bản sửa \\
+    \hline
+    T29 & Site 500 & Edge mới vào fabric, máy trạm thông các site & \textbf{Chưa nghiệm thu} & Nhà cung cấp và chính sách đã sẵn sàng; Edge chưa cấu hình xong \\
 \end{longtable}
 \endgroup
 
@@ -513,16 +710,16 @@ Syslog Server nhận nhật ký thực tế từ tường lửa và các thiết
 
 \subsubsection{Mức độ đáp ứng yêu cầu chức năng}
 
-Trong 23 kịch bản, 20 kịch bản đạt, một kịch bản đạt một phần, một kịch bản chưa nghiệm thu và một kịch bản chưa đạt. Các chức năng cốt lõi của đề tài đều đã được chứng minh: phân đoạn VLAN; gateway dự phòng VRRP; OSPF nội bộ; tường lửa HA với DMZ; DHCP tập trung qua relay và DHCP cục bộ tại chi nhánh; điều khiển toàn bộ lớp 2 Campus chính bằng Ryu với cây chống vòng; quan sát topology bằng ONOS; overlay SD-WAN tám Edge trên hai transport với BGP underlay, PKI, chính sách SLA/AAR/data/control; và các dịch vụ DNS, Web, Mail, Syslog truy cập được từ chi nhánh.
+Trong 29 kịch bản, 25 kịch bản đạt, hai kịch bản đạt một phần, một kịch bản chưa đạt và một kịch bản chưa nghiệm thu. Các chức năng cốt lõi của đề tài đều đã được chứng minh: phân đoạn VLAN; gateway dự phòng VRRP; OSPF nội bộ; tường lửa HA với DMZ; DHCP tập trung qua relay và DHCP cục bộ tại chi nhánh; điều khiển toàn bộ lớp 2 Campus chính bằng Ryu với cây tính tập trung, tự phục hồi và giao diện giám sát; overlay SD-WAN tám Edge trên hai transport với BGP underlay, PKI, chính sách SLA/AAR/data/control và cảnh báo email; truy cập Internet tại chỗ có dự phòng; các dịch vụ DNS, Web, Mail, Syslog truy cập được từ chi nhánh.
 
 \subsubsection{Tính sẵn sàng}
 
-Tại lớp 3 và WAN, hệ thống có dự phòng ở mọi vị trí trọng yếu; phép thử cắt MPLS thật tại ba chi nhánh cho thấy lưu lượng tự khôi phục qua Internet sau 3,3--4,4 giây và tự quay về khi MPLS trở lại. Tại lớp 2 SDN, khả năng tự phục hồi khi khởi động lại Controller hoặc switch đã đạt, nhưng failover Distribution mới giữ được kết nối điều khiển, chưa giữ được dịch vụ DHCP; đây là điểm cần hoàn thiện. SDN Controller vẫn là một máy đơn; khi Controller dừng, flow đã cài được giữ nhưng máy trạm mới, ARP và DHCP mới không được xử lý.
+Tại lớp 3 và WAN, hệ thống có dự phòng ở mọi vị trí trọng yếu; phép thử cắt MPLS thật tại ba chi nhánh cho thấy lưu lượng nội bộ tự khôi phục qua Internet sau 3,3--4,4 giây, còn lưu lượng Internet tự chuyển sang MPLS khi mất đường Internet. Tại lớp 2 SDN, sáu kịch bản cắt liên kết đều đạt, gián đoạn dữ liệu không quá 3,5 giây khi cắt và gần như bằng 0 khi khôi phục; mất hẳn một Distribution cũng không làm gián đoạn đáng kể. SDN Controller vẫn là một máy đơn: khi Controller dừng, flow đã cài được giữ nên luồng đang chạy không mất, nhưng máy trạm mới, ARP và DHCP mới không được xử lý.
 
 \subsubsection{Hiệu năng và khả năng quan sát}
 
-Đề tài chưa thực hiện bộ đo có kiểm soát cho thông lượng, CPU/RAM và thời gian hội tụ qua nhiều lần lặp; các con số thời gian trong chương là quan sát của từng phép thử trong môi trường ảo hóa. Tường lửa ASAv không giấy phép giới hạn 100 kết nối và băng thông thấp, đủ cho kiểm thử chức năng nhưng không phản ánh hiệu năng thiết bị thật. Về quan sát, hệ thống có ba nguồn: số liệu cổng OpenFlow (NOC), topology ONOS và thống kê BFD/app-route của SD-WAN.
+Các số liệu SDN được đo bằng script tự động và có thể chạy lại; tuy nhiên chưa có bộ đo lặp nhiều lần cho thông lượng và chưa thử được tải cao vì máy trạm giả lập chỉ sinh lưu lượng nhỏ. Tường lửa ASAv không giấy phép giới hạn 100 kết nối và băng thông thấp, đủ cho kiểm thử chức năng nhưng không phản ánh hiệu năng thiết bị thật. Về quan sát, hệ thống có ba nguồn: Campus SDN Console cho lớp 2 Campus chính, vManage (BFD, app-route, alarm và thư cảnh báo) cho WAN, và Syslog tập trung cho tường lửa.
 
 \subsubsection{Khả năng tái lập và mở rộng}
 
-Cấu hình mọi thiết bị được lưu thành tệp nguồn theo site và theo thiết bị, cùng bảng ánh xạ node và thứ tự khởi động, cho phép dựng lại hệ thống. Các OVS và Controller có dịch vụ khởi động tự khôi phục trạng thái sau khi khởi động lại. Việc thêm một chi nhánh chỉ cần nhân bản khuôn Firewall-as-Core với mã site mới, cấp System-IP và đưa vEdge qua quy trình PKI; chính sách trên vSmart áp theo dải Site-ID nên tự bao phủ site mới nằm trong dải.
+Cấu hình mọi thiết bị được lưu thành tệp nguồn theo site và theo thiết bị, cùng bảng ánh xạ node và thứ tự khởi động, cho phép dựng lại hệ thống. Các OVS và Controller có dịch vụ khởi động tự khôi phục trạng thái sau khi khởi động lại. Việc thêm một chi nhánh chỉ cần nhân bản khuôn Firewall-as-Core với mã site mới, cấp System-IP và đưa vEdge qua quy trình PKI; chính sách trên vSmart áp theo dải Site-ID (đã mở rộng tới 500) nên tự bao phủ site mới, như đang được kiểm chứng với Site 500.

@@ -4,60 +4,97 @@
 
 \subsection*{A. Trích đoạn ứng dụng Ryu campus\_switch\_13.py}
 
-\begin{lstlisting}[style=customcode, language=Python, caption={Khai báo cổng và cây chuyển tiếp trong ứng dụng Ryu}]
-class CampusSwitch13(app_manager.RyuApp):
-    OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
-    TRUNK_VLANS = [10, 20, 30, 40, 90, 99]
+\begin{lstlisting}[style=customcode, language=Python, caption={Đồ thị liên kết và tham số thăm dò của khối SDN}]
+DIST = (5, 8)
+ACCESS = (68, 66, 70, 69)
+MGMT_VLAN = 99
+CONTROLLER_IP = '10.1.99.10'
 
-    PORT_CFG = {
-        5:  {'trunk': ['ens4', 'ens5', 'ens6', 'ens7',
-                       'ens8', 'ens9', 'ens10'],
-             'mgmt': ['patch-mgmt'], 'access': {}},
-        68: {'trunk': ['ens4', 'ens5'], 'mgmt': ['patch-mgmt'],
-             'access': {'ens6': 10, 'ens7': 10}},
-        # ... Dist-SW2 (8), Access-SW2/3/4 (66, 70, 69)
-    }
-
-    # Canh du cua cay du lieu: bi chan cho VLAN 10..90
-    L2_TREE_BLOCK = {
-        (5, 'ens8'):  'Dist-SW1 <-> Dist-SW2: inter-dist',
-        (5, 'ens10'): 'Dist-SW1 -> Core-SW2',
-        (8, 'ens4'):  'Dist-SW2 -> Access-SW1 (standby)',
-        (8, 'ens9'):  'Dist-SW2 -> Core-SW2 (standby)',
-        # ...
-    }
-
-    BLOCK_PORTS = {}            # ACL tap trung: (dpid, port) -> ly do
-    SW5_MGMT_IP = '10.1.99.11'  # xac nhan Dist-SW1 chet bang ping
-    PING_TRIES = 3
-    SOCKET_USER_TIMEOUT_MS = 15000
+# Lien ket: id -> a=(dpid, cong), b=(dpid|'C1'|'C2', cong), w=trong so
+LINKS = collections.OrderedDict([
+    ('D1-C1', {'a': (5, 'ens9'),  'b': ('C1', 'Et0/2'), 'w': 1}),
+    ('D2-C1', {'a': (8, 'ens10'), 'b': ('C1', 'Et1/2'), 'w': 2}),
+    ('D1-C2', {'a': (5, 'ens10'), 'b': ('C2', 'Et1/2'), 'w': 1}),
+    ('D2-C2', {'a': (8, 'ens9'),  'b': ('C2', 'Et0/2'), 'w': 2}),
+    ('D1-D2', {'a': (5, 'ens8'),  'b': (8, 'ens8'),     'w': 2}),
+    ('A1-D1', {'a': (68, 'ens4'), 'b': (5, 'ens4'),     'w': 1}),
+    # ... A2..A4-D1 (w=1), A1..A4-D2 (w=2)
+])
+PROBE_ETHERTYPE = 0x88B5
+PROBE_INTERVAL = 0.5        # OVS<->OVS
+CORE_PROBE_INTERVAL = 1.0   # ARP toi SVI Core
+LINK_TIMEOUT = 2.0          # OVS<->OVS: mat probe > 2 s -> chet
+CORE_TIMEOUT = 3.5          # OVS<->Core
 \end{lstlisting}
 
-\begin{lstlisting}[style=customcode, language=Python, caption={Tạo hành động gắn/bóc thẻ VLAN theo cổng ra (OpenFlow 1.3)}]
-def egress_actions(ports):
-    acts = []
-    tagged = data_tagged
-    for p in ports:
-        if p in access_map:
-            if tagged:
-                acts.append(parser.OFPActionPopVlan())
-                tagged = False
-        else:
-            if vlan != 0 and not tagged:
-                acts.append(parser.OFPActionPushVlan(ethertype=0x8100))
-                acts.append(parser.OFPActionSetField(vlan_vid=vlan_vid))
-                tagged = True
-        acts.append(parser.OFPActionOutput(p))
-    return acts
+\begin{lstlisting}[style=customcode, language=Python, caption={Tính cây dữ liệu tập trung (rút gọn)}]
+def compute_data_tree(connected, link_up, frozen=None):
+    """Goc = Core-SW1 neu con lien ket song toi no, nguoc lai Core-SW2.
+    frozen: Access mat ket noi controller nhung van chay bang flow cu
+    -> giu lam la tren lien ket cha cu."""
+    usable = {lid: l for lid, l in LINKS.items()
+              if link_up.get(lid) and endpoints_ok(lid, connected, frozen)}
+    for root in ('C1', 'C2'):
+        if not any(link_nodes(lid)[1] == root for lid in usable):
+            continue
+        # Dijkstra tu goc tren cac canh dung duoc
+        parent, done = {}, set()
+        heap = [(0, 0, '', str(root), root, None)]
+        while heap:
+            d, w, lid, _k, n, frm = heapq.heappop(heap)
+            if n in done:
+                continue
+            done.add(n)
+            if frm is not None:
+                parent[n] = (frm, lid)
+            for m, mlid, mw in adj[n]:
+                if m not in done:
+                    heapq.heappush(heap, (d + mw, mw, mlid, str(m), m, n))
+        return root, {p[1] for p in parent.values()}, parent
+    return None, set(), {}
+\end{lstlisting}
 
-# Flow unicast: OF1.3 dung vlan_vid (co bit OFPVID_PRESENT)
-m = {'in_port': in_port, 'eth_dst': dst}
-if vlan:
-    m['vlan_vid'] = OFPVID_PRESENT | vlan
-mod = parser.OFPFlowMod(datapath=dp, priority=1,
-                        match=parser.OFPMatch(**m),
-                        instructions=instructions,
-                        buffer_id=msg.buffer_id)
+\begin{lstlisting}[style=customcode, language=Python, caption={Quy tắc tĩnh có hướng của kênh quản trị VLAN 99 trên Distribution}]
+# VLAN tren inter-dist: 'up' = nho Dist kia dua len Core,
+# 'down' = khung tu Core cua Dist nay chuyen cho Dist kia
+MGMT_INTERDIST = {5: {'up': 99, 'down': 3998}, 8: {'up': 3999, 'down': 99}}
+DIST_CORE  = {8: 'ens10', 5: 'ens9'}   # cong toi Core-SW1
+DIST_CORE2 = {8: 'ens9',  5: 'ens10'}  # cong toi Core-SW2 (khong mang VLAN 99)
+
+def mgmt_rules(dpid):
+    """[(cong vao, VLAN vao, [(cong ra, VLAN ra)])]"""
+    core, v = DIST_CORE[dpid], MGMT_VLAN
+    me = MGMT_INTERDIST[dpid]
+    other = MGMT_INTERDIST[8 if dpid == 5 else 5]
+    rules = [
+        # Tu Core: xuong Access, vao bridge quan tri, sang Dist kia (di xuong)
+        (core, v, [(p, v) for p in ACC] + [(MGMT_PORT, v),
+                                         (INTER_DIST, me['down'])]),
+        # Tu bridge quan tri: len Core va nho Dist kia dua len
+        (MGMT_PORT, v, [(core, v), (INTER_DIST, me['up'])]),
+        (INTER_DIST, other['up'], [(core, v)]),
+        (INTER_DIST, other['down'], [(p, v) for p in ACC] + [(MGMT_PORT, v)]),
+        (DIST_CORE2[dpid], v, []),   # khong bao gio vong qua Core
+    ]
+    rules += [(p, v, [(core, v), (INTER_DIST, me['up'])]) for p in ACC]
+    return rules
+\end{lstlisting}
+
+\begin{lstlisting}[style=customcode, language=Python, caption={Gắn/bóc thẻ VLAN theo cổng ra và flow unicast theo OpenFlow 1.3}]
+for p in out_ports:
+    if p in access_ports:
+        if tagged:
+            acts.append(parser.OFPActionPopVlan())
+            tagged = False
+    elif not tagged:
+        acts.append(parser.OFPActionPushVlan(0x8100))
+        acts.append(parser.OFPActionSetField(vlan_vid=OFPVID_PRESENT | vlan))
+        tagged = True
+    acts.append(parser.OFPActionOutput(p))
+
+# Flow unicast (bang 1): OF1.3 dung vlan_vid co bit OFPVID_PRESENT
+match = parser.OFPMatch(in_port=in_port, eth_dst=dst,
+                        vlan_vid=OFPVID_PRESENT | vlan)
 \end{lstlisting}
 
 \subsection*{B. Chính sách tập trung trên vSmart}
@@ -84,9 +121,9 @@ policy
   data-prefix-list DMZ
    ip-prefix 10.1.1.0/28
   site-list ALL_EDGES
-   site-id 100-400
+   site-id 100-500
   site-list BRANCHES
-   site-id 200-400
+   site-id 200-500
  app-route-policy AAR_LAN
   vpn-list VPN_LAN
    sequence 10
@@ -137,33 +174,36 @@ apply-policy
   data-policy DP_BRANCH from-service
 \end{lstlisting}
 
-\subsection*{C. Theo dõi đường MPLS tại tường lửa chi nhánh}
+\subsection*{C. Theo dõi đường truyền tại tường lửa chi nhánh}
 
-\begin{lstlisting}[style=customcode, caption={IP SLA và tuyến dự phòng trên Brand-FW Site 200}]
+\begin{lstlisting}[style=customcode, caption={IP SLA, tuyến nội bộ và tuyến Internet trên Brand-FW Site 200}]
 sla monitor 10
  type echo protocol ipIcmpEcho 10.1.255.1 interface outside1
- num-packets 1
  timeout 1000
  threshold 1000
  frequency 2
 sla monitor schedule 10 life forever start-time now
+sla monitor 20
+ type echo protocol ipIcmpEcho 9.9.9.9 interface outside2
+ timeout 2000
+ threshold 2000
+ frequency 10
+sla monitor schedule 20 life forever start-time now
 track 1 rtr 10 reachability
-route outside1 0.0.0.0 0.0.0.0 10.2.1.2 1 track 1
-route outside2 0.0.0.0 0.0.0.0 10.2.1.6 2
+track 2 rtr 20 reachability
+! Noi bo: MPLS chinh, Internet du phong
+route outside1 10.0.0.0 255.0.0.0 10.2.1.2 1 track 1
+route outside2 10.0.0.0 255.0.0.0 10.2.1.6 2
 route outside1 10.1.255.1 255.255.255.255 10.2.1.2 1
+! Internet: DIA qua vEdge2 chinh, qua MPLS du phong
+route outside2 0.0.0.0 0.0.0.0 10.2.1.6 1 track 2
+route outside1 0.0.0.0 0.0.0.0 10.2.1.2 2
+route outside2 9.9.9.9 255.255.255.255 10.2.1.6 1
 \end{lstlisting}
 
-\subsection*{D. Danh sách truy cập trên tường lửa biên Campus chính}
+\subsection*{D. Danh sách truy cập trên tường lửa biên và Site 900}
 
-\begin{lstlisting}[style=customcode, caption={ACL SDWAN\_IN và DMZ\_IN}]
-object-group service WEB_SVC tcp
- port-object eq www
- port-object eq https
-object-group service MAIL_SVC tcp
- port-object eq smtp
- port-object eq 587
- port-object eq imap4
- port-object eq 993
+\begin{lstlisting}[style=customcode, caption={ACL SDWAN\_IN, DMZ\_IN và INSIDE\_OUT trên tường lửa biên Campus chính (rút gọn)}]
 access-list SDWAN_IN extended permit tcp 10.0.0.0 255.0.0.0 host 10.1.1.10 object-group WEB_SVC
 access-list SDWAN_IN extended permit tcp 10.0.0.0 255.0.0.0 host 10.1.1.11 object-group MAIL_SVC
 access-list SDWAN_IN extended permit icmp 10.0.0.0 255.0.0.0 10.1.1.0 255.255.255.240 echo
@@ -174,10 +214,38 @@ access-list DMZ_IN extended permit udp 10.1.1.0 255.255.255.240 host 10.1.90.11 
 access-list DMZ_IN extended permit udp 10.1.1.0 255.255.255.240 host 10.1.90.10 eq domain
 access-list DMZ_IN extended permit icmp 10.1.1.0 255.255.255.240 10.0.0.0 255.0.0.0 echo
 access-list DMZ_IN extended deny ip 10.1.1.0 255.255.255.240 10.0.0.0 255.0.0.0 log
-access-list DMZ_IN extended permit ip 10.1.1.0 255.255.255.240 any
+access-list DMZ_IN extended permit tcp 10.1.1.0 255.255.255.240 any eq www
+access-list DMZ_IN extended permit tcp 10.1.1.0 255.255.255.240 any eq https
+access-list DMZ_IN extended permit udp 10.1.1.0 255.255.255.240 any eq ntp
+access-list DMZ_IN extended deny ip 10.1.1.0 255.255.255.240 any log warnings
+access-list INSIDE_OUT extended permit udp any 10.0.0.0 255.0.0.0 eq domain
+access-list INSIDE_OUT extended permit udp host 10.1.90.10 any eq domain
+access-list INSIDE_OUT extended deny udp any any eq domain
+access-list INSIDE_OUT extended permit ip 10.1.99.0 255.255.255.0 10.0.0.0 255.0.0.0
+access-list INSIDE_OUT extended deny ip 10.1.99.0 255.255.255.0 any log warnings
+access-list INSIDE_OUT extended permit ip 10.1.90.0 255.255.255.0 10.0.0.0 255.0.0.0
+access-list INSIDE_OUT extended permit tcp 10.1.90.0 255.255.255.0 any eq https
+access-list INSIDE_OUT extended deny ip 10.1.90.0 255.255.255.0 any log warnings
+access-list INSIDE_OUT extended permit ip any any
 class-map DNS_CONN
  match port udp eq domain
 policy-map global_policy
  class DNS_CONN
   set connection timeout idle 0:00:10
+\end{lstlisting}
+
+\begin{lstlisting}[style=customcode, caption={ACL SITE900\_EGRESS trên Switch32 (rút gọn)}]
+ip access-list extended SITE900_EGRESS
+ permit ip 10.9.0.0 0.0.255.255 10.0.0.0 0.255.255.255
+ permit ip 10.9.0.0 0.0.255.255 100.64.0.0 0.63.255.255
+ permit ip 10.9.0.0 0.0.255.255 203.0.113.0 0.0.0.255
+ permit udp 10.9.0.0 0.0.255.255 any eq domain
+ permit tcp 10.9.0.0 0.0.255.255 any eq domain
+ permit udp 10.9.0.0 0.0.255.255 any eq ntp
+ permit tcp 10.9.0.0 0.0.255.255 any eq 443
+ permit icmp 10.9.0.0 0.0.255.255 any echo
+ permit tcp host 10.9.0.10 any eq 587
+ deny   ip any any log
+interface Vlan10
+ ip access-group SITE900_EGRESS in
 \end{lstlisting}

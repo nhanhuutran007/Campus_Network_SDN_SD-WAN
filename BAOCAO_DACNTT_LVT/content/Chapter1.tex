@@ -16,8 +16,10 @@ Hai công nghệ điều khiển bằng phần mềm là SDN (Software-Defined N
     \item Thiết kế mạng Campus chính theo mô hình Core--Distribution--Access với gateway dự phòng VRRP, định tuyến OSPF, cặp tường lửa Active/Standby, vùng DMZ và Server Farm.
     \item Thiết kế mô hình chi nhánh rút gọn (Firewall-as-Core) cho ba cơ sở phụ Cần Thơ, Đà Nẵng và Nha Trang.
     \item Xây dựng quy hoạch VLAN, địa chỉ IP, System-IP, TLOC và ASN thống nhất cho toàn hệ thống.
-    \item Xây dựng ứng dụng SDN Controller (Ryu, OpenFlow 1.3) điều khiển toàn bộ chuyển mạch lớp 2 tại cơ sở chính: học MAC theo VLAN, chống vòng lặp tập trung, failover, ACL tập trung, REST API và giám sát tải cổng.
-    \item Triển khai SD-WAN (Cisco Viptela) kết nối bốn site qua hai nhà cung cấp Internet và MPLS với BGP underlay, xác thực PKI, chính sách SLA, định tuyến theo ứng dụng và lọc lưu lượng tập trung.
+    \item Xây dựng ứng dụng SDN Controller (Ryu, OpenFlow 1.3) điều khiển toàn bộ chuyển mạch lớp 2 tại cơ sở chính: học MAC theo VLAN, cây chuyển tiếp tính tập trung kèm thăm dò liên kết chủ động, tự phục hồi khi mất liên kết hoặc thiết bị, kênh quản trị VLAN 99 không phụ thuộc STP, thêm VLAN và áp chính sách qua API, cùng giao diện giám sát tập trung (Campus SDN Console).
+    \item Đánh giá SDN theo năm tiêu chí định lượng: thời gian thêm VLAN, thời gian khôi phục khi mất liên kết, hiệu năng giữa các VLAN, tải Core/Distribution và thời gian áp chính sách tập trung.
+    \item Triển khai SD-WAN (Cisco Viptela) kết nối các site qua hai nhà cung cấp Internet và MPLS với BGP underlay, xác thực PKI, chính sách SLA, định tuyến theo ứng dụng, lọc lưu lượng tập trung và cảnh báo sự cố qua email.
+    \item Cho người dùng các cơ sở truy cập Internet trực tiếp tại chỗ (Direct Internet Access) có dự phòng, trong khi vùng quản trị và trung tâm điều khiển chỉ được ra Internet có kiểm soát.
     \item Cung cấp các dịch vụ dùng chung DHCP, DNS, Web, Mail, Syslog cho mọi cơ sở và bảo vệ chúng bằng chính sách bảo mật nhiều lớp.
     \item Kiểm thử theo lớp, đánh giá mức độ đáp ứng và ghi nhận trung thực các hạn chế.
 \end{itemize}
@@ -28,9 +30,9 @@ Hai công nghệ điều khiển bằng phần mềm là SDN (Software-Defined N
 
 \textbf{Phạm vi thực hiện} được giới hạn như sau:
 \begin{itemize}
-    \item Mô hình được hiện thực trên nền tảng mô phỏng EVE-NG với 67 node, gồm Campus chính (Site 100), ba cơ sở phụ (Site 200, 300, 400), trung tâm điều khiển SD-WAN (Site 900) và hai router mô phỏng nhà cung cấp Internet, MPLS.
-    \item SDN được áp dụng cho tầng Distribution và Access của Campus chính (sáu Open vSwitch); tầng Core và tường lửa giữ cơ chế truyền thống theo mô hình Hybrid SDN.
-    \item Mạng Internet công cộng được mô phỏng bằng dải địa chỉ tài liệu; kết nối Internet thật cho người dùng, mạng không dây và xác thực 802.1X nằm ngoài phạm vi triển khai và được nêu ở phần hướng phát triển.
+    \item Mô hình được hiện thực trên nền tảng mô phỏng EVE-NG với 70 node, gồm Campus chính (Site 100), ba cơ sở phụ (Site 200, 300, 400), trung tâm điều khiển SD-WAN (Site 900), hai router mô phỏng nhà cung cấp Internet, MPLS và một cơ sở mở rộng (Site 500) đang được đưa vào hệ thống.
+    \item SDN được áp dụng cho tầng Distribution và Access của Campus chính (sáu Open vSwitch); tầng Core và tường lửa giữ cơ chế truyền thống theo mô hình Hybrid SDN. Liên kết giữa các cơ sở do SD-WAN đảm nhận.
+    \item Mạng WAN giữa các site dùng dải \texttt{203.0.113.0/24} (dành cho tài liệu) và dải \texttt{100.64.0.0/10} (CGNAT); router nhà cung cấp Internet nối ra mạng thật của phòng lab để người dùng truy cập Internet. Mạng không dây và xác thực 802.1X nằm ngoài phạm vi triển khai và được nêu ở phần hướng phát triển.
     \item Đánh giá tập trung vào tính đúng đắn chức năng và khả năng phục hồi; hiệu năng tuyệt đối không được đo do giới hạn của môi trường ảo hóa.
 \end{itemize}
 
