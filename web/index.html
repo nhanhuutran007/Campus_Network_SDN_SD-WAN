@@ -520,7 +520,7 @@ dialog img { max-width: 100%; display: block; margin: auto; border-radius: 8px; 
             <div class="tablewrap" style="margin-top:10px">
               <table>
                 <thead><tr><th>Node</th><th>Tên EVE</th><th>vEdge ↔ Switch32</th><th>Trạng thái</th><th>Đề xuất</th></tr></thead>
-                <tbody id="oCandRows"><tr><td colspan="5" class="empty">Bấm "Quét" (cần SSH tới EVE).</td></tr></tbody>
+                <tbody id="oCandRows"><tr><td colspan="5" class="empty">Bấm "Quét" để dò vEdge mới.</td></tr></tbody>
               </table>
             </div>
             <div class="grid" style="margin-top:14px">
@@ -1079,7 +1079,7 @@ async function poll() {
   META = await api('/api/meta');
   if (META.local) {                        // web chạy ngay trên host EVE-NG -> không cần SSH
     document.body.classList.add('local'); $('sshCard').classList.add('local');
-    $('sshCard').querySelector('.sshhead div').firstChild.textContent = 'Host EVE-NG (local)';
+    $('sshCard').querySelector('.sshhead div').firstChild.textContent = 'Kết nối EVE-NG';
   }
   const sd = META.ssh_defaults;
   if (!$('sshHost').value) $('sshHost').value = sd.host;

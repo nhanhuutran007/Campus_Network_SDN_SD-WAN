@@ -137,6 +137,28 @@ class LocalEVE:
     def close(self):
         pass
 
+
+class DirectEVE:
+    """Khong SSH: noi TCP thang toi cong console EVE (eve_ip:33536+id) tu may chay tool
+    (vd may Win trong lab hoac may that). Khong co shell tren host EVE nen: ping
+    'tu host' chay ngay tren may nay, vManage API goi HTTPS truc tiep (VManageAPI)."""
+    no_shell = True
+
+    def __init__(self, host):
+        self.host = host
+
+    def get_transport(self):
+        return self
+
+    def open_channel(self, kind, dest_addr=None, src_addr=None):
+        return _LocalChannel((self.host, dest_addr[1]))
+
+    def exec_command(self, cmd, timeout=None):
+        raise RuntimeError('che do console truc tiep khong co shell tren host EVE')
+
+    def close(self):
+        pass
+
 # =========================================================
 #  COLOR CONSTANTS  (GitHub dark theme – ala mpls_gui.py)
 # =========================================================
@@ -683,6 +705,11 @@ def asa_open_active(ssh_client, enable_pw='', log=None):
     return None
 
 
+def _json_or_none(s):
+    try: return json.loads(s)
+    except ValueError: return None
+
+
 class VManageAPI:
     """Doc REST API vManage (GET; POST chi cho day whitelist). Uu tien curl tu host EVE; neu host khong
     co route toi 10.9.x (Switch61 down) thi di qua console vManage -> vshell ->
@@ -692,6 +719,23 @@ class VManageAPI:
     def __init__(self, ssh_client, user, password):
         self.ssh, self.user, self.password = ssh_client, user, password
         self.chan = None; self.base = None; self._logged_in = False
+        self.http = None          # urllib opener khi goi HTTPS truc tiep (DirectEVE)
+
+    def _http_login(self, base):
+        import ssl, urllib.request, urllib.parse, http.cookiejar
+        op = urllib.request.build_opener(
+            urllib.request.HTTPSHandler(context=ssl._create_unverified_context()),
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        data = urllib.parse.urlencode({'j_username': self.user, 'j_password': self.password}).encode()
+        body = op.open(base + '/j_security_check', data, timeout=8).read()
+        if b'<html' in body.lower():          # vManage tra lai trang login = sai user/pass
+            raise RuntimeError('dang nhap vManage that bai (sai user/pass?)')
+        self.http, self.base = op, base
+
+    def _http(self, path, body=None, headers=None, timeout=30):
+        import urllib.request
+        req = urllib.request.Request(self.base + '/dataservice/' + path, data=body, headers=headers or {})
+        return self.http.open(req, timeout=timeout).read().decode('utf-8', errors='replace')
 
     def _host(self, cmd, timeout=40):
         _, out, _ = self.ssh.exec_command(cmd, timeout=timeout)
@@ -705,12 +749,23 @@ class VManageAPI:
                    u=shlex.quote('j_username=' + self.user), p=shlex.quote('j_password=' + self.password))
 
     def open(self):
-        for ip in VMANAGE_IPS:
-            code = self._host("curl -sk -o /dev/null -w '%{http_code}' --max-time 4 https://" + ip + "/", 15).strip()
-            if code and code != '000':
-                self.base = 'https://' + ip
-                self._host(self._login_cmd())
-                return 'host->' + ip
+        if getattr(self.ssh, 'no_shell', False):
+            # DirectEVE: may chay tool (vd Win 10.9.0.20) goi HTTPS thang toi vManage
+            for ip in VMANAGE_IPS:
+                try:
+                    self._http_login('https://' + ip)
+                    return 'https->' + ip
+                except RuntimeError:
+                    raise
+                except Exception:     # khong toi duoc IP nay -> thu IP khac, roi console
+                    pass
+        else:
+            for ip in VMANAGE_IPS:
+                code = self._host("curl -sk -o /dev/null -w '%{http_code}' --max-time 4 https://" + ip + "/", 15).strip()
+                if code and code != '000':
+                    self.base = 'https://' + ip
+                    self._host(self._login_cmd())
+                    return 'host->' + ip
         # fallback: console vManage
         self.chan = console_open(self.ssh, VMANAGE_NODE_ID)
         self.chan.send('\n'); time.sleep(1.5)
@@ -744,6 +799,11 @@ class VManageAPI:
         Loc NGAY TREN vManage: tach moi object JSON phang ra 1 dong (grep -o) va
         chi giu dong khop regex `grep` -> output nho; console serial lam rot ky
         tu khi output dai (>~10KB) nen parse tung dong, bo dong hong."""
+        if self.http:
+            objs = re.findall(r'\{[^{}]*\}', self._http(path))
+            if grep:
+                objs = [o for o in objs if re.search(grep, o)]
+            return [r for r in (_json_or_none(o) for o in objs) if r is not None]
         cmd = "curl -sk --max-time 30 -b {} '{}/dataservice/{}' | grep -o '{{[^{{}}]*}}'".format(
             self.CJ, self.base, path)
         if grep:
@@ -760,7 +820,13 @@ class VManageAPI:
     def post(self, path, body='{}'):
         """POST /dataservice/<path> (can XSRF token) -> chuoi response tho.
         Chi dung cho thao tac an toan, idempotent (vd day whitelist vEdge)."""
-        tok = self._exec("curl -sk --max-time 20 -b {} '{}/dataservice/client/token'".format(
+        if self.http:
+            tok = self._http('client/token', timeout=20).strip()
+            if not tok or '<' in tok:
+                raise RuntimeError('khong lay duoc XSRF token vManage')
+            return self._http(path, body.encode('utf-8'),
+                              {'X-XSRF-TOKEN': tok, 'Content-Type': 'application/json'}).strip()
+        tok =self._exec("curl -sk --max-time 20 -b {} '{}/dataservice/client/token'".format(
             self.CJ, self.base)).strip().split('\n')[-1].strip()
         if not tok or '<' in tok:
             raise RuntimeError('khong lay duoc XSRF token vManage')
@@ -770,7 +836,9 @@ class VManageAPI:
 
     def close(self):
         try:
-            if self.chan is None:
+            if self.http:
+                self.http = None
+            elif self.chan is None:
                 self._host('rm -f ' + self.CJ, 10)
             else:
                 console_send(self.chan, 'rm -f {}; stty echo; exit'.format(self.CJ), wait=0.8, read_timeout=2)
@@ -788,6 +856,8 @@ def ping_host(target_ip, count=10, timeout_sec=2, ssh_client=None):
     result = PingResult()
     raw    = ''
 
+    if getattr(ssh_client, 'no_shell', False):
+        ssh_client = None             # DirectEVE: khong co shell host -> ping tu may nay
     if ssh_client is not None:
         cmd = 'ping -c {} -i 0.2 -W {} {}'.format(count, timeout_sec, target_ip)
         try:

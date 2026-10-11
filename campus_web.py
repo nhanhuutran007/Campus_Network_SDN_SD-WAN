@@ -16,9 +16,13 @@ Cach chay:
   python campus_web.py --port 9000
   python campus_web.py --host 0.0.0.0  # cho may khac trong LAN truy cap
                                        # (KHONG co dang nhap - chi dung trong lab)
-  Chay ngay tren host EVE-NG (co /opt/unetlab): tu dung che do local - lenh
-  bash + console node chay tai cho, KHONG can SSH/paramiko/tkinter:
+  KHONG can SSH: tool noi thang cong console EVE (IP:33536+node-id) va goi
+  HTTPS thang toi vManage. Chay tren may Win trong lab / may that:
+    python campus_web.py                       # EVE mac dinh 10.215.28.26
+    python campus_web.py --eve 192.168.1.50    # IP host EVE khac
+  Chay ngay tren host EVE-NG (co /opt/unetlab): tu dung bash + console tai cho
     python3 campus_web.py --host 0.0.0.0 --no-browser
+  Can kieu cu (SSH nhap tren giao dien): them --ssh
 ================================================================
 """
 import argparse, ipaddress, json, mimetypes, os, re, threading, webbrowser
@@ -29,12 +33,14 @@ from urllib.parse import urlparse, parse_qs, unquote
 import campus_ping_tool as core
 from campus_ping_tool import (
     SITES, HOST_IP, HOST_SITE, VPC_NODE_IDS, VEDGE_NODE_IDS, WAN_IFACE, SITE_VEDGES, CORE_SITE_ID,
-    LOG_DIR, HAS_MPL, HAS_SSH, LocalEVE, is_eve_host,CampusPingGUI, FailoverTab, VlanTab, PolicyTab, vlan_network,
+    LOG_DIR, HAS_MPL, HAS_SSH, LocalEVE, DirectEVE, is_eve_host, EVE_CONSOLE_BASE, VMANAGE_NODE_ID,
+    CampusPingGUI, FailoverTab, VlanTab, PolicyTab, vlan_network,
 )
 import sdwan_onboard as onb
 from campus_throughput import ThroughputTest
 
 WEB_DIR = os.path.join(core._SCRIPT_DIR, 'web')
+EVE_DEFAULT_IP = '10.215.28.26'
 LOG_MAX = 5000          # so dong log giu trong bo nho
 
 
@@ -65,10 +71,7 @@ class WebGUI(_detk(CampusPingGUI)):
         self._lines = []            # [(id, ts, msg, tag)]
         self._next_id = 1
         self._stop_event = threading.Event()
-        # web chay ngay tren host EVE-NG -> lenh/console chay tai cho, khong can SSH
-        self.local = is_eve_host()
-        self._ssh_client = LocalEVE() if self.local else None
-        self.ssh_info = 'local (host EVE-NG)' if self.local else ''
+        self.local, self._ssh_client, self.ssh_info = False, None, ''
         self.status = 'San sang'
         self.busy = False           # thanh tien trinh (giong progress bar ban desktop)
         self.job = None             # ten tac vu dang chay (chi 1 tac vu 1 luc)
@@ -78,8 +81,34 @@ class WebGUI(_detk(CampusPingGUI)):
                      'timeout_var', 'batch_count_var'):
             setattr(self, name, Var())
         self._boot_log()
-        if self.local:
-            self._log('[LOCAL] Dang chay tren host EVE-NG - lenh/console chay tai cho, khong can SSH\n', 'ok')
+
+    def set_backend(self, eve_ip, use_ssh=False):
+        """Chon cach toi console EVE (goi 1 lan luc khoi dong):
+          * tren chinh host EVE-NG -> LocalEVE (bash + console 127.0.0.1)
+          * may khac (vd Win trong lab) -> DirectEVE: TCP thang eve_ip:33536+id
+          * --ssh -> giu kieu cu, ket noi SSH tren giao dien"""
+        if use_ssh:
+            return
+        self.local = True
+        if is_eve_host():
+            self._ssh_client, self.ssh_info = LocalEVE(), 'local (host EVE-NG)'
+        else:
+            self._ssh_client, self.ssh_info = DirectEVE(eve_ip), 'console truc tiep {}'.format(eve_ip)
+        self._log('[EVE] {} - khong can SSH\n'.format(self.ssh_info), 'ok')
+        threading.Thread(target=self._probe_consoles, args=(eve_ip,), daemon=True).start()
+
+    def _probe_consoles(self, eve_ip):
+        """Thu mo cong console vManage + 1 VPC de bao som neu khong toi duoc host EVE."""
+        import socket
+        host = '127.0.0.1' if isinstance(self._ssh_client, LocalEVE) else eve_ip
+        for name, nid in (('vManage', VMANAGE_NODE_ID), ('PC-NongNghiep-S200-1', VPC_NODE_IDS.get('PC-NongNghiep-S200-1'))):
+            port = EVE_CONSOLE_BASE + nid
+            try:
+                socket.create_connection((host, port), timeout=3).close()
+                self._log('[EVE] console {} {}:{} OK\n'.format(name, host, port), 'ok')
+            except OSError as e:
+                self._log('[EVE] console {} {}:{} KHONG toi duoc ({}) - node chua bat hoac sai IP EVE (--eve)\n'
+                          .format(name, host, port, e), 'err')
 
     # ---- thay cac ham gan voi widget Tk ----
     def after(self, ms, fn=None, *args):
@@ -226,7 +255,7 @@ def api_meta(_):
         'system_ips': {ip: n for d in SITE_VEDGES.values() for ip, n in d.items()},
         'deps': {'matplotlib': HAS_MPL, 'paramiko': HAS_SSH},
         'log_dir': LOG_DIR,
-        'ssh_defaults': {'host': '10.215.28.26', 'user': 'root', 'port': 22},
+        'ssh_defaults': {'host': EVE_DEFAULT_IP, 'user': 'root', 'port': 22},
         'local': GUI.local,
     }
 
@@ -756,7 +785,11 @@ def main():
     ap.add_argument('--host', default='127.0.0.1', help='dia chi lang nghe (mac dinh 127.0.0.1)')
     ap.add_argument('--port', type=int, default=8080)
     ap.add_argument('--no-browser', action='store_true', help='khong tu mo trinh duyet')
+    ap.add_argument('--eve', default=EVE_DEFAULT_IP,
+                    help='IP host EVE-NG de noi thang cong console (mac dinh {})'.format(EVE_DEFAULT_IP))
+    ap.add_argument('--ssh', action='store_true', help='dung kieu cu: ket noi SSH tren giao dien')
     args = ap.parse_args()
+    GUI.set_backend(args.eve, args.ssh)
 
     # Windows: SO_REUSEADDR cho 2 tien trinh cung nghe 1 cong -> trinh duyet gap server cu
     ThreadingHTTPServer.allow_reuse_address = os.name != 'nt'

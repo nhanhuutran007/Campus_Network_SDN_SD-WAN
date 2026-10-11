@@ -138,8 +138,18 @@ def sw_port_long(short):
 def discover(ssh, lab_override=''):
     """Tra ve (lab_path, [candidate]) - moi candidate la vEdge noi vao Switch32
     chua co trong danh sach onboard va khong phai vEdge chi nhanh dang chay."""
-    lab = find_lab(ssh, lab_override)
-    raw = _host(ssh, 'cat {}'.format(shlex.quote(lab)), 60)
+    if getattr(ssh, 'no_shell', False):
+        # DirectEVE: khong doc duoc file tren host EVE -> doc ban .unl ngay canh tool
+        # (export lai tu EVE neu vua them node vEdge moi)
+        lab = lab_override or os.path.join(os.path.dirname(os.path.abspath(__file__)), LAB_NAME)
+        try:
+            with open(lab, encoding='utf-8') as f:
+                raw = f.read()
+        except OSError as e:
+            raise OnboardError('khong doc duoc file lab {}: {}'.format(lab, e))
+    else:
+        lab = find_lab(ssh, lab_override)
+        raw = _host(ssh, 'cat {}'.format(shlex.quote(lab)), 60)
     try:
         root = ET.fromstring(raw)
     except ET.ParseError as e:
