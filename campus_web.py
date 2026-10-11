@@ -746,7 +746,12 @@ def main():
     ap.add_argument('--no-browser', action='store_true', help='khong tu mo trinh duyet')
     args = ap.parse_args()
 
-    srv = ThreadingHTTPServer((args.host, args.port), Handler)
+    # Windows: SO_REUSEADDR cho 2 tien trinh cung nghe 1 cong -> trinh duyet gap server cu
+    ThreadingHTTPServer.allow_reuse_address = os.name != 'nt'
+    try:
+        srv = ThreadingHTTPServer((args.host, args.port), Handler)
+    except OSError as e:
+        raise SystemExit('[!] Cong {} dang bi chiem ({}) - tat web cu (taskkill /F /IM python.exe) roi chay lai'.format(args.port, e))
     srv.daemon_threads = True
     url = 'http://{}:{}/'.format('127.0.0.1' if args.host in ('0.0.0.0', '') else args.host, args.port)
     print('Campus web tool: {}  (Ctrl+C de thoat)'.format(url))
