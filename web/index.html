@@ -598,8 +598,8 @@ dialog img { max-width: 100%; display: block; margin: auto; border-radius: 8px; 
 
 <script>
 const $ = id => document.getElementById(id);
-const store = { get(k) { try { return localStorage.getItem('cw.' + k); } catch { return null; } },
-                set(k, v) { try { localStorage.setItem('cw.' + k, v); } catch {} } };
+const store = { get(k) { try { return localStorage.getItem('cw.' + k); } catch (e) { return null; } },
+                set(k, v) { try { localStorage.setItem('cw.' + k, v); } catch (e) {} } };
 let META = null, logSince = 0, lastJob = null, vlanSel = null, fileFilter = 'all';
 
 // ---------- helpers ----------
@@ -620,7 +620,7 @@ async function act(path, body, okMsg) {
   catch (e) { toast(e.message); return null; }
 }
 function fillSelect(sel, values, keep) {
-  const cur = keep ?? sel.value;
+  const cur = (keep != null ? keep : sel.value);
   sel.innerHTML = values.map(v => `<option>${v}</option>`).join('');
   if (values.includes(cur)) sel.value = cur;
 }
@@ -770,7 +770,7 @@ async function tpPoll() {
       TP.samples.push(...d.samples.filter(s => s.i > TP.since));
       if (TP.samples.length) TP.since = TP.samples[TP.samples.length - 1].i;
       renderTp();
-    } catch {}
+    } catch (e) {}
   }
   setTimeout(tpPoll, 1500);
 }
@@ -1068,7 +1068,7 @@ async function poll() {
       loadFiles(); if (/VLAN/.test(lastJob)) loadVlans(); if (/onboard|whitelist|danh tinh/i.test(lastJob)) loadOnboard();
     }
     lastJob = d.job;
-  } catch { $('status').textContent = 'Mất kết nối tới server'; $('statusPill').classList.remove('busy'); }
+  } catch (e) { $('status').textContent = 'Mất kết nối tới server'; $('statusPill').classList.remove('busy'); }
   setTimeout(poll, 800);
 }
 
@@ -1086,7 +1086,7 @@ async function poll() {
   fillSelect($('pSrc'), remotes, $('pSrc').dataset.saved || 'PC-NongNghiep-S200-1');
   if (!META.deps.matplotlib) toast('Thiếu matplotlib: pip install matplotlib (không vẽ được PNG)');
   const tab = store.get('tab') || 'measure';
-  document.querySelector(`#tabs [data-tab="${tab}"]`)?.click();
+  { const t = document.querySelector(`#tabs [data-tab="${tab}"]`); if (t) t.click(); }
   loadVlans(); loadFiles(); poll(); tpPoll();
 })();
 </script>
