@@ -14,9 +14,9 @@ configs/
 ├── 02-Site200-CanTho/         ← Brand-FW, vEdge1/2, SwitchBrand, SW55/56, VPC
 ├── 03-Site300-DaNang/         ← Brand-FW, vEdge1/2, SwitchBrand, SW58/59, VPC
 ├── 04-Site400-NhaTrang/       ← Brand-FW, vEdge1/2, SwitchBrand, SW60/57, VPC
-├── 05-Site900-Controller/     ← Switch32, Switch61, vEdge65 (node 65 nay nối Site 500, xem mục 7)
-├── 05-Site900-SDWAN-Controllers/ ← vManager-33, vSmart-34, vBond-35 (running-config thật 15/08/2026)
-└── 06-ServiceProvider/        ← Internet, MPLS
+├── 05-Site900-Controller/     ← vManager-33, vSmart-34, vBond-35 (running-config thật), Switch32, Switch61, vEdge-Spare (23)
+├── 06-ServiceProvider/        ← Internet, MPLS
+└── 07-Site500/                ← vEdge65 (node 65 nối Site 500, xem mục 7), SP-changes.txt
 ```
 
 Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, `.sh` cho node Linux/OVS).

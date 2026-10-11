@@ -140,3 +140,9 @@ Ghi: ngày, việc đã làm + **bằng chứng** (lệnh + kết quả), việc
 - **Không đồng bộ**: vManage 33 (32 GB RAM, đĩa ~50 GB), vEdge65 (người dùng bỏ qua), SwitchBrand-S400 64 (tenant 0).
 - Ngoài phạm vi (agent khác): DMZ + Server Farm Site 100 (7, 13, 22, 24, 25, 72).
 - Repo `configs/` đã sửa theo host 1 (chưa commit): Internet/MPLS route /16, SW57/SW60 e0/0, Switch32 timezone, Brand-FW SLA/track, FW-ASAv bỏ 2 lệnh `failover … management` không hợp lệ, SwitchServerFarm `trunk encapsulation dot1q`.
+
+## Cập nhật 08/10/2026 — vEdge dự phòng Site 900 (live, ghi nhận của Hào — merge 11/10)
+
+- Node **23 vEdge-Spare** (do người dùng tạo bằng GUI, `ge0/0` ↔ Switch32 e1/3): đã dán config, ký cert bằng CA cũ, whitelist trên 3 controller. Kiểm chứng: control vbond/vmanage/vsmart Up, OMP Up, 10 BFD Up, vManage `reachable/normal`. Chi tiết và cách đưa thành chi nhánh mới: `sdwan-viptela.md` mục "vEdge dự phòng".
+- **Chưa làm:** `.unl` trong repo chưa có node 23 (và cả node 10 SW-S500). Cần lấy `.unl` từ host 1 về repo, cập nhật `EXPECTED_CONFIG_NODE_IDS`/`CONFIG_MAP` trong `unl_tool.py`, embed config nếu node để `config="1"`, rồi chạy `validate`.
+- **11/10/2026 (merge):** `.unl` repo (70 node, đồng bộ host 1) vẫn **chưa có node 23**; cần kiểm trên host 1 node 23 có thật không trước khi kéo `.unl` về.

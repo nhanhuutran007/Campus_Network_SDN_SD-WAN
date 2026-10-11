@@ -1,0 +1,50 @@
+! ===== Site 500 (vEdge65) - phan them tren SP =====
+! Internet (node 26) - cong Gi0/8 (doi neu ban cam cong khac)
+conf t
+interface GigabitEthernet0/8
+ description To vEdge-S500 ge0/0 (203.0.113.20/30)
+ ip address 203.0.113.22 255.255.255.252
+ no shutdown
+exit
+router bgp 64511
+ neighbor 203.0.113.21 remote-as 65040
+ address-family ipv4
+  network 203.0.113.20 mask 255.255.255.252
+  neighbor 203.0.113.21 activate
+  neighbor 203.0.113.21 default-originate
+ exit-address-family
+end
+write memory
+
+! MPLS (node 27) - cong Gi0/7 (doi neu ban cam cong khac)
+conf t
+interface GigabitEthernet0/7
+ description To vEdge-S500 ge0/1 (100.64.50.0/30)
+ ip address 100.64.50.2 255.255.255.252
+ no shutdown
+exit
+router bgp 64512
+ neighbor 100.64.50.1 remote-as 65040
+ address-family ipv4
+  network 100.64.50.0 mask 255.255.255.252
+  neighbor 100.64.50.1 activate
+  neighbor 100.64.50.1 default-originate
+ exit-address-family
+end
+write memory
+
+! ===== vSmart (node 34) - dua site 500 vao policy =====
+conf t
+policy
+ lists
+  site-list ALL_EDGES
+   no site-id 100-400
+   site-id 100-500
+  !
+  site-list BRANCHES
+   no site-id 200-400
+   site-id 200-500
+  !
+ !
+!
+commit

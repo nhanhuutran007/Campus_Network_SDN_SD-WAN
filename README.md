@@ -196,9 +196,9 @@ Bảng đầy đủ nằm trong [`campus_network_sdn_sdwan.md`](campus_network_s
 │   ├── 02-Site200-CanTho/
 │   ├── 03-Site300-DaNang/
 │   ├── 04-Site400-NhaTrang/
-│   ├── 05-Site900-Controller/        # vManage, vSmart, vBond, Switch32/61, vEdge65
-│   ├── 05-Site900-SDWAN-Controllers/ # Bản running-config đầy đủ của controller
+│   ├── 05-Site900-Controller/        # vManager-33, vSmart-34, vBond-35 (running-config đầy đủ), Switch32/61, vEdge-Spare
 │   ├── 06-ServiceProvider/           # Router Internet và MPLS (BGP)
+│   ├── 07-Site500/                   # vEdge65 (chi nhánh Site 500)
 │   └── README.md                     # Ánh xạ node-id, cách nạp config, thứ tự khởi động
 ├── HuongDan/                         # Hướng dẫn vận hành: ký cert/CSR vEdge, cài OVS, GUI,
 │                                     #   tunnel SD-WAN, kết nối EVE-NG

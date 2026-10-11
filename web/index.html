@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus SDN + SD-WAN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f3f5fb; --surface: #ffffff; --surface2: #eef1f8; --border: #dde3ef; --border2: #c9d2e4;
+  --text: #18203a; --muted: #5d6886; --faint: #95a0b8;
+  --accent: #4f5bd5; --accent2: #7c3aed;
+  --sky: #0284c7; --teal: #0d9488; --green: #059669; --amber: #b45309; --red: #dc2626;
+  --orange: #c2410c; --violet: #7c3aed; --slate: #64748b;
+  --shadow: 0 1px 2px rgba(20, 30, 60, .06), 0 4px 16px rgba(20, 30, 60, .06); --on-solid: #fff;
+  --term-bg: #0b1122; --term-text: #d6dcf0;
+  --font: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a0f1e; --surface: #111831; --surface2: #172042; --border: #222c4f; --border2: #2e3a66;
+    --text: #e4e8f7; --muted: #8e98bb; --faint: #5b6690;
+    --accent: #8b95ff; --accent2: #c084fc;
+    --sky: #38bdf8; --teal: #2dd4bf; --green: #34d399; --amber: #fbbf24; --red: #f87171;
+    --orange: #fb923c; --violet: #c084fc; --slate: #94a3b8;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    --term-bg: #070b17; --on-solid: #0a0f1e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a0f1e; --surface: #111831; --surface2: #172042; --border: #222c4f; --border2: #2e3a66;
+  --text: #e4e8f7; --muted: #8e98bb; --faint: #5b6690;
+  --accent: #8b95ff; --accent2: #c084fc;
+  --sky: #38bdf8; --teal: #2dd4bf; --green: #34d399; --amber: #fbbf24; --red: #f87171;
+  --orange: #fb923c; --violet: #c084fc; --slate: #94a3b8;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  --term-bg: #070b17; --on-solid: #0a0f1e; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; color: inherit; }
+svg.i { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- khung ứng dụng ---------- */
+.app { display: grid; grid-template-columns: 250px minmax(0, 1fr); height: 100vh; }
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 18px 18px 14px; }
+.logo { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 40%, transparent); }
+.logo svg { width: 22px; height: 22px; }
+.brand b { display: block; font-size: 15px; letter-spacing: .2px; }
+.brand small { color: var(--muted); font-size: 12px; }
+
+nav.tabs { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; }
+nav.tabs button { display: flex; align-items: center; gap: 11px; background: none; border: 0; border-radius: 8px;
+  padding: 9px 12px; color: var(--muted); cursor: pointer; text-align: left; font-weight: 500; }
+nav.tabs button:hover { background: var(--surface2); color: var(--text); }
+nav.tabs button.active { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.navlabel { padding: 14px 22px 4px; font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--faint); }
+
+.sshcard { margin: auto 12px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.sshhead { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
+.sshhead small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--faint); flex-shrink: 0; }
+.dot.on { background: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 25%, transparent); }
+.sshform { display: grid; gap: 8px; margin-top: 10px; }
+.sshform .two { display: grid; grid-template-columns: 1fr 72px; gap: 8px; }
+.sshcard.connected .sshform { display: none; }
+.sshcard:not(.connected) #sshDisconnect { display: none; }
+#sshDisconnect { margin-top: 10px; width: 100%; }
+
+.workspace { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+.topbar h1 { margin: 0; font-size: 18px; font-weight: 700; }
+.topbar p { margin: 0; color: var(--muted); font-size: 12.5px; }
+.spacer { flex: 1; }
+.pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+  background: var(--surface2); border: 1px solid var(--border); font-size: 13px; max-width: 46vw; min-width: 0; }
+.pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill.busy { border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.spin { width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; display: none; flex-shrink: 0; }
+.pill.busy .spin { display: block; }
+.pill:not(.busy) .idle { display: block; }
+.idle { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: none; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.iconbtn { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; background: var(--surface2);
+  border: 1px solid var(--border); cursor: pointer; color: var(--muted); }
+.iconbtn:hover { color: var(--text); }
+
+main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(380px, 40%); gap: 18px; padding: 18px 22px; min-height: 0; flex: 1; }
+.content { overflow-y: auto; min-height: 0; padding-right: 4px; }
+.tab { display: none; }
+.tab.active { display: block; animation: fade .18s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } }
+
+/* ---------- card & form ---------- */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.card h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.card h2 .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface2); color: var(--muted); }
+.hint { color: var(--muted); font-size: 12.5px; margin: 0 0 14px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 14px; }
+.field { display: grid; gap: 5px; min-width: 0; align-content: start; }
+.field > span { font-size: 12px; font-weight: 500; color: var(--muted); }
+.field small { font-size: 11.5px; color: var(--faint); }
+input[type=text], input[type=password], input[type=number], select {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; transition: border-color .15s, box-shadow .15s; }
+input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+.check { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px; cursor: pointer; }
+.check input { margin-top: 3px; width: 15px; height: 15px; accent-color: var(--accent); flex-shrink: 0; }
+.check small { color: var(--faint); }
+.checks { display: grid; gap: 8px; }
+.checks.boxed .check { padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface2); }
+.checks.boxed .check:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
+.warnbox { display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; margin-top: 14px;
+  background: color-mix(in srgb, var(--amber) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent); color: var(--amber); }
+.warnbox .check { color: var(--text); }
+
+.btn { --c: var(--slate); display: inline-flex; align-items: center; gap: 7px; border-radius: 8px; padding: 8px 15px; cursor: pointer;
+  font-weight: 600; font-size: 13px; color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 30%, transparent); transition: background .15s, transform .05s; text-decoration: none; }
+.btn:hover:not(:disabled) { background: color-mix(in srgb, var(--c) 20%, transparent); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.solid { background: var(--c); color: var(--on-solid); border-color: transparent; }
+.btn.solid:hover:not(:disabled) { background: color-mix(in srgb, var(--c) 85%, var(--text)); }
+.btn.green { --c: var(--green); } .btn.cyan { --c: var(--sky); } .btn.red { --c: var(--red); } .btn.yellow { --c: var(--amber); }
+.btn.purple { --c: var(--violet); } .btn.teal { --c: var(--teal); } .btn.orange { --c: var(--orange); } .btn.grey { --c: var(--slate); }
+.btn.accent { --c: var(--accent); }
+.btn.sm { padding: 5px 11px; font-size: 12px; }
+.btn.full { width: 100%; justify-content: center; }
+
+/* ---------- metric ---------- */
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 10px; margin-top: 12px; }
+.metric { --c: var(--accent); position: relative; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; overflow: hidden; }
+.metric::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--c); }
+.metric span { display: block; font-size: 12px; color: var(--muted); }
+.metric b { font: 600 20px var(--mono); color: var(--c); }
+.qos { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--surface2); color: var(--muted); }
+.qos.good { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+.qos.mid { background: color-mix(in srgb, var(--amber) 15%, transparent); color: var(--amber); }
+.qos.bad { background: color-mix(in srgb, var(--red) 15%, transparent); color: var(--red); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; margin-top: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+/* ---------- bảng ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px; background: var(--surface2); }
+th:first-child { border-top-left-radius: 8px; } th:last-child { border-top-right-radius: 8px; }
+#vlanRows tr { cursor: pointer; }
+#vlanRows tr:hover { background: var(--surface2); }
+#vlanRows tr.sel { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+tr.deleted td { color: var(--faint); }
+.badge { font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+.badge.on { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+.badge.off { background: var(--surface2); color: var(--faint); }
+.tablewrap { overflow-x: auto; }
+.empty { color: var(--muted); font-size: 13px; padding: 18px 0; text-align: center; }
+
+/* ---------- log ---------- */
+.logpane { display: flex; flex-direction: column; background: var(--term-bg); border: 1px solid var(--border); border-radius: 14px; min-height: 0; overflow: hidden; box-shadow: var(--shadow); }
+.logpane .head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #1c2544; color: #aab3d4; }
+.logpane .head b { font-size: 12.5px; letter-spacing: .6px; }
+.lights { display: flex; gap: 6px; } .lights i { width: 10px; height: 10px; border-radius: 50%; background: #2a3358; }
+.lights i:nth-child(1) { background: #f87171; } .lights i:nth-child(2) { background: #fbbf24; } .lights i:nth-child(3) { background: #34d399; }
+.logpane .btn { --c: #9aa5cf; }
+.logpane .check { color: #aab3d4; font-size: 12px; }
+#log { flex: 1; overflow-y: auto; margin: 0; padding: 12px 14px; font: 12.5px/1.6 var(--mono); white-space: pre-wrap; word-break: break-word; color: var(--term-text); }
+#log .ts, #log .sep { color: #4a5680; } #log .hdr { color: #8b95ff; font-weight: 600; } #log .ok { color: #34d399; }
+#log .err { color: #f87171; } #log .info { color: #fbbf24; } #log .data { color: #c4b5fd; } #log .plain { color: var(--term-text); }
+#log::-webkit-scrollbar, .content::-webkit-scrollbar { width: 10px; }
+#log::-webkit-scrollbar-thumb { background: #1f2a4d; border-radius: 10px; border: 2px solid var(--term-bg); }
+.content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; border: 2px solid var(--bg); }
+
+/* ---------- file ---------- */
+.files { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+.file { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform .12s, border-color .12s; }
+.file:hover { border-color: var(--accent); transform: translateY(-2px); }
+.file img { width: 100%; height: 130px; object-fit: contain; background: #0d1117; display: block; }
+.file .ico { height: 130px; display: grid; place-items: center; font: 700 20px var(--mono); color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.file div.meta { padding: 8px 10px; font-size: 12.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file div.meta small { display: block; color: var(--muted); font-weight: 400; }
+.seg { display: inline-flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: none; padding: 5px 12px; border-radius: 7px; cursor: pointer; font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+
+dialog { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 14px; padding: 0; width: min(1100px, 95vw); max-height: 90vh; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+dialog::backdrop { background: rgba(5, 8, 20, .6); backdrop-filter: blur(2px); }
+dialog .head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+dialog .head b { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+dialog .body { padding: 14px; overflow: auto; max-height: calc(90vh - 60px); }
+dialog img { max-width: 100%; display: block; margin: auto; border-radius: 8px; }
+
+#toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); padding: 11px 18px; border-radius: 10px; max-width: 90vw;
+  display: none; z-index: 20; font-size: 13.5px; font-weight: 500; color: #fff; background: #b91c1c; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+#toast.ok { background: #047857; }
+
+@media (max-width: 1150px) {
+  .app { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .sidebar { min-width: 0; border-right: 0; border-bottom: 1px solid var(--border); }
+  nav.tabs { flex-direction: row; overflow-x: auto; }
+  nav.tabs button { white-space: nowrap; }
+  .topbar { padding: 12px 16px; }
+  .navlabel { display: none; }
+  .sshcard { margin: 0 12px 12px; }
+  main { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .content { overflow: visible; padding-right: 0; }
+  .logpane { height: 60vh; }
+  .pill { max-width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M12 7.2v4.3M12 11.5l-5.6 4.7M12 11.5l5.6 4.7"/></svg></div>
+      <div><b>Campus Network</b><small>SDN + SD-WAN Lab</small></div>
+    </div>
+    <div class="navlabel">Công cụ</div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="measure" class="active" data-title="Đo lường mạng" data-sub="Ping nội bộ / liên chi nhánh, đo latency · loss · jitter và xuất báo cáo">
+        <svg class="i" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Đo lường</button>
+      <button data-tab="failover" data-title="SD-WAN Failover" data-sub="Cắt 1 màu WAN trên vEdge và đo thời gian khôi phục (RTO)">
+        <svg class="i" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>SD-WAN Failover</button>
+      <button data-tab="vlan" data-title="Quản lý VLAN" data-sub="Thêm / sửa / xoá VLAN trên Core-SW và kiểm chứng qua overlay SD-WAN">
+        <svg class="i" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>Quản lý VLAN</button>
+      <button data-tab="policy" data-title="Chính sách tập trung" data-sub="Kiểm chứng policy vSmart bằng traffic thật và counter trên vEdge">
+        <svg class="i" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>Chính sách tập trung</button>
+      <button data-tab="onboard" data-title="Onboard vEdge" data-sub="Cắm vEdge mới vào Switch32 (Site 900) → tự cấu hình, ký chứng chỉ, whitelist 3 controller">
+        <svg class="i" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0V8Z"/><path d="M12 18v4"/></svg>Onboard vEdge</button>
+      <button data-tab="files" data-title="Kết quả" data-sub="Biểu đồ PNG, CSV và log đã lưu trong thư mục log/">
+        <svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>Kết quả</button>
+    </nav>
+
+    <div class="sshcard" id="sshCard">
+      <div class="sshhead"><span class="dot" id="sshDot"></span><div style="min-width:0">SSH tới EVE-NG<small id="sshText">Chưa kết nối</small></div></div>
+      <div class="sshform">
+        <div class="two">
+          <input type="text" id="sshHost" data-persist placeholder="Host" aria-label="Host">
+          <input type="number" id="sshPort" data-persist placeholder="Port" aria-label="Port">
+        </div>
+        <input type="text" id="sshUser" data-persist placeholder="User" aria-label="User">
+        <input type="password" id="sshPass" placeholder="Password" aria-label="Password" autocomplete="current-password">
+        <button class="btn accent solid full" id="sshConnect">Kết nối SSH</button>
+      </div>
+      <button class="btn grey sm" id="sshDisconnect">Ngắt kết nối</button>
+    </div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar">
+      <div><h1 id="pageTitle">Đo lường mạng</h1><p id="pageSub"></p></div>
+      <div class="spacer"></div>
+      <div class="pill" id="statusPill"><div class="spin"></div><div class="idle"></div><span id="status">Đang tải…</span></div>
+      <button class="btn red" id="stopBtn" title="Dừng ping liên tục / tác vụ đang chạy">
+        <svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Dừng</button>
+      <button class="iconbtn" id="themeBtn" title="Đổi giao diện sáng / tối">
+        <svg class="i" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
+    </header>
+
+    <main>
+      <section class="content">
+
+        <!-- ============ ĐO LƯỜNG ============ -->
+        <div class="tab active" id="tab-measure">
+          <div class="card">
+            <h2>Quick Ping Test</h2>
+            <p class="hint">Chọn host nguồn và đích theo site. Bật SSH Mode để ping từ host EVE-NG, VPCS Mode để ping từ chính VPC nguồn.</p>
+            <div class="grid">
+              <label class="field"><span>Site nguồn</span><select id="srcSite" data-persist></select></label>
+              <label class="field"><span>Host nguồn</span><select id="srcHost" data-persist></select></label>
+              <label class="field"><span>Site đích</span><select id="dstSite" data-persist></select></label>
+              <label class="field"><span>Host đích</span><select id="dstHost" data-persist></select></label>
+              <label class="field"><span>Số gói</span><input type="number" id="pingCount" value="10" min="1" max="300" data-persist></label>
+              <label class="field"><span>Timeout (s)</span><input type="number" id="pingTimeout" value="2" min="1" max="10" data-persist></label>
+            </div>
+            <div class="row" style="gap:22px">
+              <label class="check"><input type="checkbox" id="sshMode" data-persist><span>SSH Mode <small>(ping từ host EVE-NG)</small></span></label>
+              <label class="check"><input type="checkbox" id="vpcsMode" data-persist><span>VPCS Mode <small>(ping từ bên trong VPC nguồn)</small></span></label>
+            </div>
+            <div class="row">
+              <button class="btn accent solid job" id="pingBtn">Ping Test</button>
+              <button class="btn cyan job" id="pingContBtn">Ping liên tục</button>
+              <button class="btn teal job" id="discoverBtn">Auto-Discover IPs</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Kết quả đo lường <span class="qos" id="qosBadge">Chưa đo</span></h2>
+            <div class="metrics">
+              <div class="metric" style="--c:var(--sky)"><span>Avg Latency</span><b id="m-avg_lat">--</b></div>
+              <div class="metric" style="--c:var(--red)"><span>Avg Loss</span><b id="m-loss">--</b></div>
+              <div class="metric" style="--c:var(--amber)"><span>Avg Jitter</span><b id="m-jitter">--</b></div>
+              <div class="metric" style="--c:var(--teal)"><span>Min RTT</span><b id="m-min_lat">--</b></div>
+              <div class="metric" style="--c:var(--orange)"><span>Max RTT</span><b id="m-max_lat">--</b></div>
+            </div>
+            <div class="legend">
+              <span><i style="background:var(--green)"></i>Tốt: Loss 0%, Lat &lt; 50ms, Jitter &lt; 10ms</span>
+              <span><i style="background:var(--amber)"></i>Trung bình: Loss &lt; 5%, Lat &lt; 150ms</span>
+              <span><i style="background:var(--red)"></i>Kém: Loss ≥ 5% hoặc Lat ≥ 150ms</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Batch Report Cases</h2>
+            <p class="hint">Dùng chung chế độ SSH / VPCS ở trên. Biểu đồ PNG và CSV lưu vào log/ và xem được ở mục Kết quả.</p>
+            <div class="checks boxed" id="caseList" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))"></div>
+            <div class="row">
+              <label class="field" style="width:120px"><span>Gói / tuyến</span><input type="number" id="batchCount" value="10" min="1" max="200" data-persist></label>
+              <div class="spacer"></div>
+              <button class="btn purple job" id="casesSelBtn" style="align-self:end">Chạy Cases đã chọn</button>
+              <button class="btn yellow solid job" id="casesAllBtn" style="align-self:end">Chạy TẤT CẢ</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ FAILOVER ============ -->
+        <div class="tab" id="tab-failover">
+          <div class="card">
+            <h2>SD-WAN Failover Test <span class="tag">RTO</span></h2>
+            <p class="hint">Chọn 1 vEdge và 1 màu WAN để cắt (shutdown interface qua console), ping liên tục sang host ở site khác qua tunnel còn lại, đo thời gian từ lúc cắt đến lúc ping thông trở lại. Liên kết được TỰ ĐỘNG khôi phục (no shutdown) sau khi test, dù thành công hay lỗi.</p>
+            <div class="grid">
+              <label class="field"><span>vEdge nguồn</span><select id="foVedge" data-persist></select></label>
+              <label class="field"><span>Màu WAN cắt</span><select id="foColor"></select></label>
+              <label class="field"><span>Ping từ (VPC nguồn)</span><select id="foSrc"></select><small>Chiều ping phải đi qua vEdge bị cắt</small></label>
+              <label class="field"><span>Ping tới (IP đích)</span><input type="text" id="foTarget" value="10.1.10.1"><small>Host ở site khác, không dùng system-ip 10.200.x</small></label>
+              <label class="field"><span>Giám sát sau cắt (s)</span><input type="number" id="foDuration" value="60" min="20" max="300" data-persist></label>
+              <label class="field"><span>User vEdge</span><input type="text" id="foUser" value="admin" data-persist></label>
+              <label class="field"><span>Password vEdge</span><input type="password" id="foPass" autocomplete="off"></label>
+            </div>
+            <div class="warnbox">
+              <svg class="i" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
+              <label class="check"><input type="checkbox" id="foConfirm"><span>Tôi hiểu đây là shutdown/no-shutdown THẬT trên vEdge trong lab của tôi</span></label>
+            </div>
+            <div class="row">
+              <button class="btn orange solid job" id="foRunBtn">Chạy Failover Test</button>
+              <button class="btn green" id="foRestoreBtn">Khôi phục ngay (no shutdown)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ VLAN ============ -->
+        <div class="tab" id="tab-vlan">
+          <div class="card">
+            <h2>Cấu hình VLAN</h2>
+            <p class="hint">VLAN + SVI trên Core-SW1 (và Core-SW2 nếu chọn VRRP), tự đưa subnet vào OSPF để FW-ASAv học đường về; SD-WAN mang VLAN sang site khác qua route tổng 10.1.0.0/16 (OMP). Bấm 1 dòng trong bảng bên dưới để nạp vào form.</p>
+            <div class="grid">
+              <label class="field"><span>VLAN ID</span><input type="number" id="vVid" value="50" min="1" max="4094"></label>
+              <label class="field"><span>Tên VLAN</span><input type="text" id="vName" value="TEST_VLAN"></label>
+              <label class="field"><span>IP Core-SW1 (SVI)</span><input type="text" id="vIp1" value="10.1.50.2"></label>
+              <label class="field"><span>IP Core-SW2 (SVI)</span><input type="text" id="vIp2" value="10.1.50.3"></label>
+              <label class="field"><span>VRRP VIP (Gateway)</span><input type="text" id="vVip" value="10.1.50.1"></label>
+              <label class="field"><span>Prefix (CIDR)</span><input type="number" id="vPrefix" value="24" min="8" max="30"></label>
+              <label class="field"><span>VRRP Group ID</span><input type="text" id="vVrid" value="50"></label>
+            </div>
+            <div class="row" style="gap:22px">
+              <label class="check"><input type="checkbox" id="vDual" checked><span>Cả Core-SW1 + Core-SW2 (VRRP)</span></label>
+              <label class="check"><input type="checkbox" id="vWr"><span>Lưu cấu hình (write memory)</span></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Kiểm chứng qua SD-WAN <span class="tag">T1 → T4</span></h2>
+            <p class="hint">T1 SVI up · T2 FW học OSPF · T3 vManage xác nhận OMP+BFD · T4 VPC site khác ping thông + traceroute qua vEdge. Để trống FW pass nếu console FW đã ở "#"; để trống vManage pass = bỏ qua T3.</p>
+            <label class="check"><input type="checkbox" id="vVerify" checked data-persist><span>Bật kiểm chứng (T2 / T3 / T4)</span></label>
+            <div class="grid" style="margin-top:12px">
+              <label class="field"><span>VPC site khác</span><select id="vRemote" data-persist></select></label>
+              <label class="field"><span>FW enable pass</span><input type="password" id="vFwPw" autocomplete="off"></label>
+              <label class="field"><span>vManage user</span><input type="text" id="vVmUser" value="admin" data-persist></label>
+              <label class="field"><span>vManage pass</span><input type="password" id="vVmPw" autocomplete="off"></label>
+            </div>
+            <div class="row">
+              <button class="btn accent solid job" id="vAddBtn">Thêm VLAN</button>
+              <button class="btn cyan job" id="vEditBtn">Sửa VLAN</button>
+              <button class="btn teal job" id="vRestoreBtn">Khôi phục</button>
+              <button class="btn red job" id="vDelBtn">Xoá VLAN</button>
+              <div class="spacer"></div>
+              <button class="btn grey" id="vForgetBtn">Bỏ khỏi danh sách</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>VLAN do tool quản lý</h2>
+            <div class="tablewrap" style="margin-top:10px">
+              <table>
+                <thead><tr><th>VLAN</th><th>Tên</th><th>Subnet</th><th>Gateway</th><th>Core-SW</th><th>Trạng thái</th><th>Cập nhật</th></tr></thead>
+                <tbody id="vlanRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ POLICY ============ -->
+        <div class="tab" id="tab-policy">
+          <div class="card">
+            <h2>Tham số kiểm tra</h2>
+            <p class="hint">Tool sinh traffic thật từ 1 VPC chi nhánh rồi so counter policy trên vEdge (vManage API) trước/sau. Không sửa policy trên vSmart.</p>
+            <div class="grid">
+              <label class="field"><span>VPC nguồn (chi nhánh)</span><select id="pSrc" data-persist></select><small>DP_BRANCH chỉ áp cho site 200–400</small></label>
+              <label class="field"><span>IP Server Farm</span><input type="text" id="pFarm" value="10.1.90.10" data-persist><small>Đích test Telnet bị chặn + ICMP</small></label>
+              <label class="field"><span>IP DMZ (Web/Mail)</span><input type="text" id="pDmz" value="10.1.1.10" data-persist><small>Đích test SSH bị chặn + HTTP cho qua</small></label>
+              <label class="field"><span>IP đích ICMP liên site</span><input type="text" id="pIcmp" value="10.1.10.1" data-persist><small>Host/gateway ở site KHÁC</small></label>
+              <label class="field"><span>Số gói ICMP</span><input type="number" id="pCount" value="10" min="3" max="100" data-persist></label>
+              <label class="field"><span>vManage user</span><input type="text" id="pVmUser" value="admin" data-persist></label>
+              <label class="field"><span>vManage pass</span><input type="password" id="pVmPw" autocomplete="off"><small>Bắt buộc – đọc counter qua vManage API</small></label>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Nhóm kiểm tra</h2>
+            <div class="checks boxed" style="margin-top:10px">
+              <label class="check"><input type="checkbox" class="pGroup" value="W" checked><span><b>W</b> · Whitelist vEdge trên vBond <small>(tự động đẩy lại từ vManage nếu thiếu)</small></span></label>
+              <label class="check"><input type="checkbox" class="pGroup" value="DP" checked><span><b>DP</b> · Data-policy DP_BRANCH <small>Telnet→Farm, SSH→DMZ bị chặn; HTTP→DMZ, ICMP cho qua</small></span></label>
+              <label class="check"><input type="checkbox" class="pGroup" value="AAR" checked><span><b>AAR</b> · App-route AAR_LAN <small>ICMP liên site khớp luật SLA_REALTIME (AAR_ICMP)</small></span></label>
+              <label class="check"><input type="checkbox" class="pGroup" value="CP" checked><span><b>CP</b> · Control-policy PREFER-VE1 <small>chi nhánh chọn route 10.1.0.0/16 của vEdge1-S100</small></span></label>
+            </div>
+            <div class="row">
+              <button class="btn orange solid job" id="pRunBtn">Chạy kiểm tra chính sách</button>
+              <button class="btn cyan job" id="pWlBtn">Chỉ kiểm tra whitelist</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ ONBOARD vEdge ============ -->
+        <div class="tab" id="tab-onboard">
+          <div class="card">
+            <h2>Tài khoản & tuỳ chọn <span class="tag">Site 900</span></h2>
+            <p class="hint">Tạo node vEdge trên EVE, nối 1 cổng (ge0/0) vào Switch32 (từ e1/3 trở đi) rồi start node. Tool đọc file lab .unl trên host EVE để tìm node mới, cấu hình cổng Switch32 về VLAN 10, đặt system-ip 10.200.90.N / vpn 0 10.9.0.(99+N), ký cert bằng CA cũ trên vManage và whitelist cả 3 controller. Mật khẩu không được lưu.</p>
+            <div class="grid">
+              <label class="field"><span>Mật khẩu vEdge</span><input type="password" id="oVePw" autocomplete="off"><small>vEdge mới (admin/admin) sẽ được đặt mật khẩu này</small></label>
+              <label class="field"><span>vManage user</span><input type="text" id="oVmUser" value="admin" data-persist></label>
+              <label class="field"><span>vManage pass</span><input type="password" id="oVmPw" autocomplete="off"><small>Ký cert (vshell) + scp</small></label>
+              <label class="field"><span>vSmart pass</span><input type="password" id="oVsPw" autocomplete="off"></label>
+              <label class="field"><span>vBond pass</span><input type="password" id="oVbPw" autocomplete="off"><small>Để trống = dùng vManage pass</small></label>
+              <label class="field"><span>Chờ control Up (s)</span><input type="number" id="oVerify" value="240" min="30" max="900" data-persist></label>
+              <label class="field"><span>Chu kỳ tự dò (s)</span><input type="number" id="oInterval" value="30" min="10" max="600" data-persist></label>
+              <label class="field"><span>File lab .unl (tuỳ chọn)</span><input type="text" id="oLab" placeholder="tự tìm" data-persist></label>
+            </div>
+            <div class="row" style="gap:22px">
+              <label class="check"><input type="checkbox" id="oSwitch" checked data-persist><span>Cấu hình cổng Switch32 → VLAN 10</span></label>
+              <label class="check"><input type="checkbox" id="oWr" checked data-persist><span>write memory Switch32</span></label>
+              <label class="check"><input type="checkbox" id="oResign"><span>Ký lại kể cả khi đã có cert</span></label>
+            </div>
+            <div class="row">
+              <button class="btn teal" id="oScanBtn">Quét vEdge trên Switch32</button>
+              <button class="btn purple solid job" id="oWatchBtn">Tự động dò & onboard</button>
+              <button class="btn cyan job" id="oWlBtn">Đẩy lại whitelist (sau reboot controller)</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>vEdge nối Switch32</h2>
+            <p class="hint">Bấm 1 dòng để nạp vào form bên dưới. Node vEdge chi nhánh đang chạy và cổng hạ tầng (e0/0–e1/2) bị bỏ qua.</p>
+            <div class="tablewrap" style="margin-top:10px">
+              <table>
+                <thead><tr><th>Node</th><th>Tên EVE</th><th>vEdge ↔ Switch32</th><th>Trạng thái</th><th>Đề xuất</th></tr></thead>
+                <tbody id="oCandRows"><tr><td colspan="5" class="empty">Bấm "Quét" (cần SSH tới EVE).</td></tr></tbody>
+              </table>
+            </div>
+            <div class="grid" style="margin-top:14px">
+              <label class="field"><span>Node ID</span><input type="number" id="oNode" min="1"></label>
+              <label class="field"><span>Hostname</span><input type="text" id="oHost"></label>
+              <label class="field"><span>System-IP</span><input type="text" id="oSip"></label>
+              <label class="field"><span>IP vpn 0 (/24)</span><input type="text" id="oLan"><small>10.9.0.100–199, gw 10.9.0.2</small></label>
+              <label class="field"><span>Interface vEdge</span><input type="text" id="oWan" value="ge0/0"></label>
+              <label class="field"><span>Cổng Switch32</span><input type="text" id="oPort" placeholder="e1/3"></label>
+            </div>
+            <div class="row">
+              <button class="btn accent solid job" id="oRunBtn">Onboard node này</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>vEdge đã onboard</h2>
+            <p class="hint">Lưu ở log/onboard_registry.json (chassis + serial) để đẩy lại whitelist khi controller reboot. Bấm 1 dòng để đổi danh tính khi biến vEdge thành chi nhánh mới (cert gắn chassis, không cần ký lại).</p>
+            <div class="tablewrap" style="margin-top:10px">
+              <table>
+                <thead><tr><th>Node</th><th>Hostname</th><th>System-IP</th><th>Site</th><th>vpn 0</th><th>Chassis</th><th>Trạng thái</th><th>Cập nhật</th></tr></thead>
+                <tbody id="oRegRows"></tbody>
+              </table>
+            </div>
+            <div class="grid" style="margin-top:14px">
+              <label class="field"><span>Hostname mới</span><input type="text" id="rHost"></label>
+              <label class="field"><span>System-IP mới</span><input type="text" id="rSip" placeholder="10.200.N.x"></label>
+              <label class="field"><span>Site-ID mới</span><input type="number" id="rSite" min="1"></label>
+            </div>
+            <div class="row">
+              <button class="btn orange job" id="rRenameBtn">Đổi host-name / system-ip / site-id</button>
+              <div class="spacer"></div>
+              <button class="btn grey" id="rForgetBtn">Bỏ khỏi danh sách</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ FILES ============ -->
+        <div class="tab" id="tab-files">
+          <div class="card">
+            <div class="row" style="margin:0 0 14px">
+              <div class="seg" id="fileFilter">
+                <button data-filter="all" class="on">Tất cả</button>
+                <button data-filter="png">Biểu đồ</button>
+                <button data-filter="csv">CSV</button>
+                <button data-filter="txt">Log</button>
+              </div>
+              <div class="spacer"></div>
+              <button class="btn grey sm" id="filesRefresh">Làm mới</button>
+            </div>
+            <div class="files" id="fileGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="logpane">
+        <div class="head">
+          <div class="lights"><i></i><i></i><i></i></div>
+          <b>KẾT QUẢ / LOGS</b>
+          <div class="spacer"></div>
+          <label class="check"><input type="checkbox" id="autoScroll" checked><span>Tự cuộn</span></label>
+          <button class="btn sm" id="logClear">Xoá</button>
+          <button class="btn sm" id="logSave">Lưu</button>
+        </div>
+        <pre id="log"></pre>
+      </section>
+    </main>
+  </div>
+</div>
+
+<dialog id="viewer">
+  <div class="head"><b id="viewerTitle"></b><a class="btn sm accent" id="viewerDl" href="#">Tải về</a><button class="btn sm grey" id="viewerClose">Đóng</button></div>
+  <div class="body" id="viewerBody"></div>
+</dialog>
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const store = { get(k) { try { return localStorage.getItem('cw.' + k); } catch { return null; } },
+                set(k, v) { try { localStorage.setItem('cw.' + k, v); } catch {} } };
+let META = null, logSince = 0, lastJob = null, vlanSel = null, fileFilter = 'all';
+
+// ---------- helpers ----------
+function toast(msg, ok) {
+  const t = $('toast'); t.textContent = msg; t.className = ok ? 'ok' : '';
+  t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', ok ? 2500 : 6000);
+}
+async function api(path, body) {
+  const opt = body === undefined ? {} :
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  const r = await fetch(path, opt);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+  return data;
+}
+async function act(path, body, okMsg) {
+  try { const d = await api(path, body); if (okMsg) toast(okMsg, true); return d; }
+  catch (e) { toast(e.message); return null; }
+}
+function fillSelect(sel, values, keep) {
+  const cur = keep ?? sel.value;
+  sel.innerHTML = values.map(v => `<option>${v}</option>`).join('');
+  if (values.includes(cur)) sel.value = cur;
+}
+const val = id => $(id).value.trim();
+const num = id => Number($(id).value);
+const on = id => $(id).checked;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---------- giao diện sáng / tối ----------
+function applyTheme(t) { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
+applyTheme(store.get('theme'));
+$('themeBtn').onclick = () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const t = dark ? 'light' : 'dark'; applyTheme(t); store.set('theme', t);
+};
+
+// ---------- persist (không lưu mật khẩu) ----------
+function restorePersist() {
+  document.querySelectorAll('[data-persist]').forEach(el => {
+    const v = store.get(el.id); if (v === null) return;
+    if (el.type === 'checkbox') el.checked = v === '1'; else el.dataset.saved = v, el.value = v;
+  });
+}
+document.addEventListener('change', e => {
+  const el = e.target; if (!el.matches('[data-persist]')) return;
+  store.set(el.id, el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value);
+});
+
+// ---------- tabs ----------
+$('tabs').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tab]'); if (!b) return;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('active', x === b));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
+  $('pageTitle').textContent = b.dataset.title; $('pageSub').textContent = b.dataset.sub;
+  store.set('tab', b.dataset.tab);
+  if (b.dataset.tab === 'files') loadFiles();
+  if (b.dataset.tab === 'vlan') loadVlans();
+  if (b.dataset.tab === 'onboard') loadOnboard();
+});
+
+// ---------- SSH ----------
+$('sshConnect').onclick = async () => {
+  $('sshConnect').disabled = true; $('sshConnect').textContent = 'Đang kết nối…';
+  const d = await act('/api/ssh/connect', { host: val('sshHost'), user: val('sshUser'),
+    password: $('sshPass').value, port: num('sshPort') }, 'Đã kết nối SSH');
+  $('sshConnect').disabled = false; $('sshConnect').textContent = 'Kết nối SSH';
+  if (d && !$('sshMode').checked) { $('sshMode').checked = true; store.set('sshMode', '1'); }
+};
+$('sshPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('sshConnect').click(); });
+$('sshDisconnect').onclick = () => act('/api/ssh/disconnect', {});
+
+// ---------- Đo lường ----------
+function hostsOf(siteName) { return (META.sites.find(s => s.name === siteName) || { hosts: [] }).hosts; }
+function initMeasure() {
+  const names = META.sites.map(s => s.name);
+  for (const [siteSel, hostSel] of [['srcSite', 'srcHost'], ['dstSite', 'dstHost']]) {
+    fillSelect($(siteSel), names, $(siteSel).dataset.saved);
+    const upd = () => fillSelect($(hostSel), hostsOf($(siteSel).value), $(hostSel).dataset.saved);
+    $(siteSel).addEventListener('change', () => { $(hostSel).dataset.saved = ''; upd(); });
+    upd();
+  }
+  const cases = ['Ping nội bộ từng Site', 'Ping liên chi nhánh (SD-WAN)', 'Biểu đồ Avg Latency',
+                 'Biểu đồ Avg Loss (%)', 'Biểu đồ Avg Jitter', 'Dashboard tổng hợp (PNG)'];
+  $('caseList').innerHTML = cases.map((c, i) =>
+    `<label class="check"><input type="checkbox" class="caseChk" value="${i + 1}"><span><b>Case ${i + 1}</b> · ${c}</span></label>`).join('');
+}
+const pingBody = () => ({ src: $('srcHost').value, dst: $('dstHost').value, count: num('pingCount'),
+  timeout: num('pingTimeout'), ssh: on('sshMode'), vpcs: on('vpcsMode') });
+$('pingBtn').onclick = () => act('/api/ping', pingBody());
+$('pingContBtn').onclick = () => act('/api/ping/continuous', pingBody());
+$('discoverBtn').onclick = () => act('/api/discover', {});
+$('stopBtn').onclick = () => act('/api/stop', {});
+function runCases(all) {
+  if (all) document.querySelectorAll('.caseChk').forEach(c => c.checked = true);
+  const cases = [...document.querySelectorAll('.caseChk:checked')].map(c => +c.value);
+  act('/api/cases', { cases, count: num('batchCount'), ssh: on('sshMode'), vpcs: on('vpcsMode') });
+}
+$('casesAllBtn').onclick = () => runCases(true);
+$('casesSelBtn').onclick = () => runCases(false);
+
+// Đánh giá QoS giống ngưỡng của tool desktop
+function updateQos(m) {
+  const lat = parseFloat(m.avg_lat), loss = parseFloat(m.loss), jit = parseFloat(m.jitter), b = $('qosBadge');
+  if (isNaN(loss)) { b.className = 'qos'; b.textContent = 'Chưa đo'; return; }
+  if (isNaN(lat)) { b.className = 'qos bad'; b.textContent = 'Không phản hồi'; return; }
+  if (loss === 0 && lat < 50 && jit < 10) { b.className = 'qos good'; b.textContent = 'Tốt'; }
+  else if (loss < 5 && lat < 150) { b.className = 'qos mid'; b.textContent = 'Trung bình'; }
+  else { b.className = 'qos bad'; b.textContent = 'Kém'; }
+}
+
+// ---------- Failover ----------
+const siteOfVedge = v => { const m = v.match(/S(\d+)$/); return m ? +m[1] : null; };
+function foUpdate(userChanged) {
+  const v = $('foVedge').value;
+  fillSelect($('foColor'), Object.keys(META.wan_iface[v] || {}));
+  const sid = siteOfVedge(v);
+  const same = META.vpcs.filter(h => META.host_site_id[h] === sid);
+  const srcs = same.concat(META.vpcs.filter(h => h in META.host_site_id && !same.includes(h)));
+  // mặc định: VPC cùng site; site 100 (SDN) mặc định PC-NongNghiep-S200-1 vì traffic từ Cần Thơ về campus đi qua vEdge-S100
+  const def = sid === META.core_site_id ? 'PC-NongNghiep-S200-1' : (srcs[0] || '');
+  fillSelect($('foSrc'), srcs, userChanged || !srcs.includes($('foSrc').value) ? def : undefined);
+  if (userChanged) $('foTarget').value = '10.1.10.1';
+}
+function initFailover() {
+  const vedges = Object.keys(META.wan_iface).sort();
+  fillSelect($('foVedge'), vedges, $('foVedge').dataset.saved || 'vEdge1-S200');
+  $('foVedge').addEventListener('change', () => foUpdate(true));
+  foUpdate(false);
+}
+const foBody = () => ({ vedge: $('foVedge').value, color: $('foColor').value, src: $('foSrc').value,
+  target: val('foTarget'), duration: num('foDuration'), vuser: val('foUser'), vpass: $('foPass').value,
+  confirm: on('foConfirm') });
+$('foRunBtn').onclick = () => {
+  if (!on('foConfirm')) return toast('Tick "Tôi hiểu đây là shutdown/no-shutdown THẬT…" trước khi chạy.');
+  act('/api/failover/run', foBody());
+};
+$('foRestoreBtn').onclick = () => {
+  const b = foBody();
+  if (confirm(`Gửi "no shutdown" cho màu ${b.color} trên ${b.vedge}?`)) act('/api/failover/restore', b, 'Đã gửi lệnh khôi phục – xem log');
+};
+
+// ---------- VLAN ----------
+const vlanForm = () => ({ vid: num('vVid'), name: val('vName'), ip1: val('vIp1'), ip2: val('vIp2'),
+  vip: val('vVip'), prefix: val('vPrefix'), vrid: val('vVrid'), dual: on('vDual'), wr: on('vWr'),
+  verify: on('vVerify'), remote: $('vRemote').value, fw_pw: $('vFwPw').value, vm_user: val('vVmUser'),
+  vm_pw: $('vVmPw').value });
+let VLANS = [];
+async function loadVlans() {
+  const d = await act('/api/vlan'); if (!d) return;
+  VLANS = d.rows;
+  $('vlanRows').innerHTML = VLANS.length ? VLANS.map(r => {
+    const del = r.status === 'deleted';
+    const st = del ? '<span class="badge off">Đã xoá</span>'
+                   : '<span class="badge on">Active</span>' + (r.edits ? ` <small>sửa ${r.edits} lần</small>` : '');
+    return `<tr data-vid="${r.vid}" class="${del ? 'deleted' : ''}${r.vid === vlanSel ? ' sel' : ''}">
+      <td><b>${r.vid}</b></td><td>${esc(r.cfg.name)}</td><td>${r.subnet}</td><td>${esc(r.cfg.vip || '-')}</td>
+      <td>${r.cfg.dual ? '1 + 2' : '1'}</td><td>${st}</td><td>${r.updated}</td></tr>`;
+  }).join('') : '<tr><td colspan="7" class="empty">Chưa có VLAN nào do tool tạo.</td></tr>';
+}
+$('vlanRows').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-vid]'); if (!tr) return;
+  vlanSel = +tr.dataset.vid;
+  const r = VLANS.find(x => x.vid === vlanSel);
+  $('vVid').value = r.vid;
+  for (const [id, k] of [['vName', 'name'], ['vIp1', 'ip1'], ['vIp2', 'ip2'], ['vVip', 'vip'], ['vPrefix', 'prefix'], ['vVrid', 'vrid']])
+    $(id).value = r.cfg[k];
+  $('vDual').checked = r.cfg.dual;
+  document.querySelectorAll('#vlanRows tr').forEach(x => x.classList.toggle('sel', x === tr));
+});
+$('vAddBtn').onclick = () => act('/api/vlan/add', vlanForm());
+$('vEditBtn').onclick = () => {
+  const f = vlanForm();
+  if (confirm(`Áp dụng cấu hình mới cho VLAN ${f.vid}?`)) act('/api/vlan/edit', f);
+};
+$('vDelBtn').onclick = () => {
+  const f = vlanForm(), known = VLANS.find(r => r.vid === f.vid);
+  let msg = `Xoá VLAN ${f.vid} + SVI + OSPF network trên Core-SW1/2?`;
+  if (!known) msg += '\n\nVLAN này KHÔNG có trong danh sách → không thể Khôi phục sau khi xoá.';
+  if (confirm(msg)) act('/api/vlan/delete', f);
+};
+$('vRestoreBtn').onclick = () => {
+  const f = vlanForm(), r = VLANS.find(x => x.vid === f.vid);
+  if (!r) return toast('Chọn 1 VLAN trong danh sách để khôi phục.');
+  const msg = r.status === 'deleted' ? `Tạo lại VLAN ${r.vid} (${r.cfg.name}) với cấu hình trước khi xoá?`
+                                     : `Hoàn tác lần sửa gần nhất của VLAN ${r.vid}?`;
+  if (confirm(msg)) act('/api/vlan/restore', f);
+};
+$('vForgetBtn').onclick = async () => {
+  const r = VLANS.find(x => x.vid === vlanSel);
+  if (!r) return toast('Bấm chọn 1 dòng trong bảng trước.');
+  if (r.status === 'active' && !confirm(`VLAN ${r.vid} vẫn đang active trên thiết bị. Chỉ bỏ khỏi danh sách (không đụng vào thiết bị)?`)) return;
+  if (await act('/api/vlan/forget', { vid: r.vid })) { vlanSel = null; loadVlans(); }
+};
+
+// ---------- Policy ----------
+function policyBody(onlyWl) {
+  return { src: $('pSrc').value, farm: val('pFarm'), dmz: val('pDmz'), icmp: val('pIcmp'), count: num('pCount'),
+    vm_user: val('pVmUser'), vm_pw: $('pVmPw').value, only_whitelist: onlyWl,
+    groups: [...document.querySelectorAll('.pGroup:checked')].map(c => c.value) };
+}
+$('pRunBtn').onclick = () => act('/api/policy/run', policyBody(false));
+$('pWlBtn').onclick = () => act('/api/policy/run', policyBody(true));
+
+// ---------- Onboard vEdge ----------
+let OREG = [], oRegSel = null;
+const oCreds = () => ({ vedge_pw: $('oVePw').value, vm_user: val('oVmUser'), vm_pw: $('oVmPw').value,
+  vs_pw: $('oVsPw').value, vb_pw: $('oVbPw').value, cfg_switch: on('oSwitch'), wr: on('oWr'),
+  resign: on('oResign'), verify_s: num('oVerify'), interval: num('oInterval'), lab: val('oLab') });
+const oBadge = s => s === 'done' ? '<span class="badge on">Trong fabric</span>'
+  : s === 'new' ? '<span class="badge">Mới</span>' : `<span class="badge off">${esc(s)}</span>`;
+async function loadOnboard() {
+  const d = await act('/api/onboard'); if (!d) return;
+  OREG = d.rows;
+  $('oRegRows').innerHTML = OREG.length ? OREG.map(r => `<tr data-node="${r.node}" class="${r.node === oRegSel ? 'sel' : ''}">
+    <td><b>${r.node}</b></td><td>${esc(r.hostname)}</td><td>${esc(r.system_ip)}</td><td>${r.site_id}</td>
+    <td>${esc(r.vpn0_ip)}</td><td><small>${esc((r.chassis || '-').slice(0, 8))}</small></td><td>${oBadge(r.status)}</td>
+    <td>${esc(r.updated || '')}</td></tr>`).join('') : '<tr><td colspan="8" class="empty">Chưa có.</td></tr>';
+}
+$('oScanBtn').onclick = async () => {
+  const d = await act('/api/onboard/scan', { lab: val('oLab') }); if (!d) return;
+  $('oCandRows').innerHTML = d.candidates.length ? d.candidates.map(c => {
+    const st = c.known ? '<span class="badge">vEdge chi nhánh</span>' : c.protected ? '<span class="badge off">Cổng hạ tầng</span>' : oBadge(c.status);
+    const sg = c.suggest ? `${esc(c.suggest.hostname)} · ${c.suggest.system_ip} · ${c.suggest.vpn0_ip}` : '-';
+    return `<tr data-c="${esc(JSON.stringify(c))}"><td><b>${c.node}</b></td><td>${esc(c.name)}</td>
+      <td>${esc(c.wan_if)} ↔ ${esc(c.sw_port)}</td><td>${st}</td><td>${sg}</td></tr>`;
+  }).join('') : '<tr><td colspan="5" class="empty">Không có vEdge nào nối Switch32.</td></tr>';
+  toast(`Lab: ${d.lab}`, true);
+};
+$('oCandRows').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-c]'); if (!tr) return;
+  const c = JSON.parse(tr.dataset.c), sg = c.suggest || {};
+  $('oNode').value = c.node; $('oWan').value = c.wan_if; $('oPort').value = c.sw_port;
+  const r = OREG.find(x => x.node === c.node) || {};
+  $('oHost').value = sg.hostname || r.hostname || ''; $('oSip').value = sg.system_ip || r.system_ip || '';
+  $('oLan').value = sg.vpn0_ip || r.vpn0_ip || '';
+  document.querySelectorAll('#oCandRows tr').forEach(x => x.classList.toggle('sel', x === tr));
+});
+$('oRunBtn').onclick = () => {
+  const b = Object.assign(oCreds(), { node: num('oNode'), hostname: val('oHost'), system_ip: val('oSip'),
+    vpn0_ip: val('oLan'), wan_if: val('oWan'), sw_port: val('oPort') });
+  if (!b.node) return toast('Chọn 1 vEdge trong bảng hoặc nhập Node ID.');
+  if (confirm(`Onboard node ${b.node} → ${b.hostname} (${b.system_ip}, ${b.vpn0_ip})?\nTool sẽ cấu hình THẬT Switch32, vEdge và whitelist trên 3 controller.`))
+    act('/api/onboard/run', b).then(() => setTimeout(loadOnboard, 1500));
+};
+$('oWatchBtn').onclick = () => {
+  if (confirm('Bật tự động: mỗi chu kỳ quét .unl, vEdge mới nối Switch32 và đã boot xong sẽ được onboard THẬT.\nBấm "Dừng" để thoát.'))
+    act('/api/onboard/watch', oCreds(), 'Đang tự dò – xem log');
+};
+$('oWlBtn').onclick = () => {
+  if (confirm(`Chạy "request vedge add" cho ${OREG.filter(r => r.chassis).length} vEdge trên vManage / vSmart / vBond?`))
+    act('/api/onboard/whitelist', oCreds());
+};
+$('oRegRows').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-node]'); if (!tr) return;
+  oRegSel = +tr.dataset.node;
+  const r = OREG.find(x => x.node === oRegSel);
+  $('rHost').value = r.hostname; $('rSip').value = r.system_ip; $('rSite').value = r.site_id;
+  document.querySelectorAll('#oRegRows tr').forEach(x => x.classList.toggle('sel', x === tr));
+});
+$('rRenameBtn').onclick = () => {
+  const r = OREG.find(x => x.node === oRegSel);
+  if (!r) return toast('Bấm chọn 1 vEdge trong bảng trước.');
+  const b = { node: r.node, hostname: val('rHost'), system_ip: val('rSip'), site_id: num('rSite'), vedge_pw: $('oVePw').value };
+  if (confirm(`Đổi node ${r.node}: ${r.hostname} → ${b.hostname}, ${b.system_ip}, site ${b.site_id}?`))
+    act('/api/onboard/rename', b).then(() => setTimeout(loadOnboard, 3000));
+};
+$('rForgetBtn').onclick = async () => {
+  const r = OREG.find(x => x.node === oRegSel);
+  if (!r) return toast('Bấm chọn 1 dòng trong bảng trước.');
+  if (!confirm(`Bỏ node ${r.node} khỏi danh sách (không đụng thiết bị)? Nút "Đẩy lại whitelist" sẽ không còn bao node này.`)) return;
+  if (await act('/api/onboard/forget', { node: r.node })) { oRegSel = null; loadOnboard(); }
+};
+
+// ---------- Files ----------
+async function loadFiles() {
+  const d = await act('/api/files'); if (!d) return;
+  const files = d.files.filter(f => fileFilter === 'all' || f.name.toLowerCase().endsWith('.' + fileFilter));
+  $('fileGrid').innerHTML = files.length ? files.map(f => {
+    const ext = f.name.split('.').pop().toLowerCase(), url = '/files/' + encodeURIComponent(f.name);
+    const when = new Date(f.mtime * 1000).toLocaleString('vi-VN');
+    const thumb = ext === 'png' ? `<img loading="lazy" src="${url}?t=${f.mtime}" alt="">` : `<div class="ico">.${ext}</div>`;
+    return `<div class="file" data-name="${esc(f.name)}">${thumb}<div class="meta">${esc(f.name)}<small>${when} · ${(f.size / 1024).toFixed(1)} KB</small></div></div>`;
+  }).join('') : '<div class="empty" style="grid-column:1/-1">Chưa có file nào — chạy một bài đo để tạo biểu đồ.</div>';
+}
+$('fileFilter').addEventListener('click', e => {
+  const b = e.target.closest('button[data-filter]'); if (!b) return;
+  fileFilter = b.dataset.filter;
+  document.querySelectorAll('#fileFilter button').forEach(x => x.classList.toggle('on', x === b));
+  loadFiles();
+});
+$('filesRefresh').onclick = loadFiles;
+$('fileGrid').addEventListener('click', async e => {
+  const card = e.target.closest('.file'); if (!card) return;
+  const name = card.dataset.name, url = '/files/' + encodeURIComponent(name);
+  $('viewerTitle').textContent = name; $('viewerDl').href = url + '?dl=1';
+  const body = $('viewerBody');
+  if (name.toLowerCase().endsWith('.png')) body.innerHTML = `<img src="${url}?t=${Date.now()}" alt="${esc(name)}">`;
+  else {
+    const text = await (await fetch(url)).text();
+    body.innerHTML = name.toLowerCase().endsWith('.csv') ? csvTable(text) : `<pre style="white-space:pre-wrap;font:12px var(--mono)">${esc(text)}</pre>`;
+  }
+  $('viewer').showModal();
+});
+function csvTable(text) {
+  const rows = text.trim().split(/\r?\n/).map(l => {
+    const out = []; let cur = '', q = false;
+    for (let i = 0; i < l.length; i++) {
+      const c = l[i];
+      if (q) { if (c === '"' && l[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+      else if (c === '"') q = true; else if (c === ',') { out.push(cur); cur = ''; } else cur += c;
+    }
+    out.push(cur); return out;
+  });
+  const [head, ...body] = rows;
+  return `<div class="tablewrap"><table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+    <tbody>${body.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+$('viewerClose').onclick = () => $('viewer').close();
+$('viewer').addEventListener('click', e => { if (e.target === $('viewer')) $('viewer').close(); });
+
+// ---------- Log ----------
+$('logClear').onclick = async () => { if (await act('/api/log/clear', {})) $('log').textContent = ''; };
+$('logSave').onclick = async () => { const d = await act('/api/log/save', {}); if (d) toast('Đã lưu log/' + d.file, true); };
+function appendLines(lines) {
+  if (!lines.length) return;
+  const log = $('log'), frag = document.createDocumentFragment();
+  for (const l of lines) {
+    if (l.tag && l.tag !== 'sep' && l.tag !== 'ts') {
+      const t = document.createElement('span'); t.className = 'ts'; t.textContent = `[${l.ts}] `; frag.append(t);
+    }
+    const s = document.createElement('span'); s.className = l.tag || 'plain'; s.textContent = l.msg; frag.append(s);
+  }
+  log.append(frag);
+  while (log.childNodes.length > 12000) log.firstChild.remove();
+  if (on('autoScroll')) log.scrollTop = log.scrollHeight;
+}
+
+// ---------- Poll trạng thái ----------
+async function poll() {
+  try {
+    const d = await api('/api/poll?since=' + logSince);
+    if (d.lines.length && d.lines[0].id <= logSince) $('log').textContent = '';   // server khởi động lại
+    appendLines(d.lines);
+    if (d.lines.length) logSince = d.lines[d.lines.length - 1].id;
+    $('status').textContent = d.job ? `${d.job} · ${d.status}` : d.status;
+    $('statusPill').classList.toggle('busy', d.busy || !!d.job);
+    $('sshDot').classList.toggle('on', !!d.ssh);
+    $('sshCard').classList.toggle('connected', !!d.ssh);
+    $('sshText').textContent = d.ssh || 'Chưa kết nối';
+    for (const [k, v] of Object.entries(d.metrics)) $('m-' + k).textContent = v;
+    updateQos(d.metrics);
+    document.querySelectorAll('button.job').forEach(b => b.disabled = !!d.job);
+    if (lastJob && !d.job) {                 // tác vụ vừa xong -> làm mới dữ liệu phụ thuộc
+      loadFiles(); if (/VLAN/.test(lastJob)) loadVlans(); if (/onboard|whitelist|danh tinh/i.test(lastJob)) loadOnboard();
+    }
+    lastJob = d.job;
+  } catch { $('status').textContent = 'Mất kết nối tới server'; $('statusPill').classList.remove('busy'); }
+  setTimeout(poll, 800);
+}
+
+// ---------- khởi động ----------
+(async function init() {
+  restorePersist();
+  META = await api('/api/meta');
+  const sd = META.ssh_defaults;
+  if (!$('sshHost').value) $('sshHost').value = sd.host;
+  if (!$('sshUser').value) $('sshUser').value = sd.user;
+  if (!$('sshPort').value) $('sshPort').value = sd.port;
+  initMeasure(); initFailover();
+  const remotes = META.branch_vpcs;
+  fillSelect($('vRemote'), remotes, $('vRemote').dataset.saved || 'PC-NongNghiep-S200-1');
+  fillSelect($('pSrc'), remotes, $('pSrc').dataset.saved || 'PC-NongNghiep-S200-1');
+  if (!META.deps.matplotlib) toast('Thiếu matplotlib: pip install matplotlib (không vẽ được PNG)');
+  const tab = store.get('tab') || 'measure';
+  document.querySelector(`#tabs [data-tab="${tab}"]`)?.click();
+  loadVlans(); loadFiles(); poll();
+})();
+</script>
+</body>
+</html>

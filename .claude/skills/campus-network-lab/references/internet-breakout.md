@@ -121,7 +121,7 @@ Người dùng chọn A (vManage tự gửi mail). B (Console NOC đọc `/datas
 1. **Claude làm (live, không cần hỏi):**
    - Switch32: `ip access-list extended SITE900_EGRESS` → thêm `75 permit tcp host 10.9.0.10 any eq 587` (trước dòng `90 deny`) — chỉ vManage được gửi SMTP. `enable` trước `write memory`, đọc lại startup.
    - vManage: `config` → `vpn 0 dns 8.8.8.8 primary` (+ `dns 1.1.1.1 secondary`) → `commit`. Kiểm: `nslookup smtp.gmail.com vpn 0`, vshell `timeout 6 bash -c 'echo > /dev/tcp/smtp.gmail.com/587'`.
-   - Đồng bộ repo: `to_repo.py` cho 32, `h1vsync.py` cho 33 → `embed` → `validate` (vManage `config="0"`, chỉ sửa file `configs/05-Site900-SDWAN-Controllers/vManager-33`).
+   - Đồng bộ repo: `to_repo.py` cho 32, `h1vsync.py` cho 33 → `embed` → `validate` (vManage `config="0"`, chỉ sửa file `configs/05-Site900-Controller/vManager-33`).
 2. **Người dùng làm:** tạo Gmail riêng cho lab, bật 2FA, tạo **App Password**; cho Claude địa chỉ gửi/nhận ⇒ Claude ghi vào `campus-lab-credentials.md` (KHÔNG vào repo).
 3. **GUI vManage (người dùng làm, Claude hướng dẫn):** Administration → Settings → *Alarm Notifications* = Enabled; *Email Settings*: SMTP `smtp.gmail.com`, port 587, security TLS/STARTTLS, From = Gmail lab, auth = App Password. Monitor → Logs → Alarms → *Alarm Notifications* → Add: severity Critical + Major; alarm BFD Node/Site Down, Control Node/Site Down, OMP Node/Site Down, Interface State Change; email người nhận.
 4. **Demo/kiểm chứng:** shutdown `vpn 0 interface ge0/0` vEdge2-S200 (42) → mail "Down" sau ~1–2 phút → `no shutdown` → mail "Cleared". Chụp mail + màn hình Alarms làm minh chứng báo cáo.

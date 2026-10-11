@@ -1,0 +1,79 @@
+\section{TỔNG QUAN ĐỀ TÀI}\label{sec:tong_quan}
+
+\subsection{Lý do chọn đề tài}
+
+Hạ tầng mạng của một trường đại học nhiều cơ sở phải phục vụ đồng thời đào tạo, nghiên cứu, hành chính và các dịch vụ số. Khi số khoa, phòng máy và cơ sở phụ tăng lên, mô hình cấu hình thủ công trên từng thiết bị bộc lộ hạn chế: thay đổi VLAN, thêm chi nhánh hay áp chính sách truy cập đều tốn thời gian và dễ sai sót. SDN tách mặt phẳng điều khiển khỏi thiết bị chuyển mạch để quản lý tập trung mạng nội bộ; SD-WAN cho phép kết nối nhiều cơ sở qua nhiều đường truyền và điều khiển đường đi theo chính sách. Kết hợp hai công nghệ này với kiến trúc Campus phân tầng là hướng tiếp cận phù hợp với nhu cầu thực tế của nhà trường.
+
+\subsection{Mục tiêu đề tài}
+
+\begin{itemize}
+    \item Thiết kế mạng Campus đa cơ sở theo mô hình Core--Distribution--Access tại cơ sở chính và mô hình rút gọn tại các chi nhánh.
+    \item Quy hoạch VLAN, địa chỉ IP, ASN và System-IP thống nhất, dễ mở rộng.
+    \item Triển khai SDN với bộ điều khiển Ryu quản lý các switch Open vSwitch bằng OpenFlow 1.3.
+    \item Triển khai SD-WAN Cisco (Viptela) kết nối các cơ sở qua hai mạng truyền tải Internet và MPLS, có chính sách chọn đường theo SLA.
+    \item Xây dựng các kịch bản kiểm thử chức năng, dự phòng và đánh giá kết quả bằng bằng chứng thực nghiệm.
+\end{itemize}
+
+\subsection{Phạm vi và phương pháp thực hiện}
+
+Toàn bộ hệ thống được mô phỏng trên một lab EVE-NG gồm 67 node và 100 network. Phạm vi gồm thiết kế logic, cấu hình thiết bị, dịch vụ mạng cơ bản (DHCP, DNS, Web, Mail, Syslog) và kiểm thử chức năng; không bao gồm triển khai trên phần cứng vật lý hay đo hiệu năng ở quy mô sản xuất.
+
+Phương pháp thực hiện kết hợp nghiên cứu lý thuyết với triển khai và kiểm chứng trên lab. Mọi cấu hình được lưu trong kho mã nguồn (thư mục \texttt{configs/}, file topology \texttt{.unl}, tài liệu thiết kế) để truy vết. Khi xử lý sự cố, nhóm chẩn đoán theo lớp: vật lý/liên kết, lớp 2, lớp 3, dịch vụ, rồi mới tới ứng dụng, và chỉ kết luận khi có kết quả lệnh \texttt{show} hoặc gói tin bắt được làm bằng chứng.
+
+\subsection{Yêu cầu đặt ra cho hệ thống}
+
+Từ bối cảnh một trường đại học có một cơ sở chính và nhiều chi nhánh, nhóm xác định các yêu cầu chức năng mà mô hình cần đáp ứng:
+
+\begin{itemize}
+    \item Mỗi khoa, phòng ban thuộc một VLAN riêng; máy trạm nhận địa chỉ tự động qua DHCP và truy cập được các dịch vụ dùng chung (Web, Mail, DNS).
+    \item Máy trạm tại các chi nhánh liên lạc được với Campus chính và với nhau thông qua mạng diện rộng, không phụ thuộc vào một nhà cung cấp đường truyền duy nhất.
+    \item Switch tại Campus chính được quản lý tập trung từ bộ điều khiển SDN thay vì cấu hình riêng lẻ trên từng thiết bị.
+    \item Lưu lượng giữa các site được điều khiển theo chính sách: chọn đường theo chất lượng, chặn các truy cập quản trị không được phép vào vùng máy chủ.
+\end{itemize}
+
+Bên cạnh đó là các yêu cầu phi chức năng:
+
+\begin{itemize}
+    \item \textbf{Tính sẵn sàng:} có dự phòng tại gateway, firewall và đường truyền WAN để một sự cố đơn lẻ không làm gián đoạn toàn bộ dịch vụ.
+    \item \textbf{Bảo mật:} tách vùng người dùng, Server Farm và DMZ; thiết bị SD-WAN chỉ tham gia mạng khi được xác thực bằng chứng thư.
+    \item \textbf{Khả năng mở rộng:} quy hoạch địa chỉ và định danh thống nhất để thêm chi nhánh mới mà không phải thiết kế lại.
+    \item \textbf{Khả năng kiểm chứng:} mọi chức năng phải được chứng minh bằng kết quả thực tế trên lab.
+\end{itemize}
+
+\subsection{Kế hoạch tổng thể}
+
+Dự án được chia thành sáu giai đoạn với 20 hạng mục công việc, tổng hợp trong Bảng~\ref{tab:ke_hoach_tong_the}. Mốc báo cáo giữa kỳ (\mocbaocao) nằm ở cuối giai đoạn triển khai và đầu giai đoạn kiểm thử tích hợp.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Các giai đoạn trong kế hoạch tổng thể}
+    \label{tab:ke_hoach_tong_the}
+    \begin{tabularx}{\textwidth}{|P{4.2cm}|c|P{2.6cm}|X|}
+        \hline
+        \textbf{Giai đoạn} & \textbf{Hạng mục} & \textbf{Thời gian} & \textbf{Đầu ra chính} \\
+        \hline
+        Khảo sát và lý thuyết & 1--3 & 06/2026--08/2026 & Phạm vi đề tài; lý thuyết SDN, SD-WAN \\
+        \hline
+        Thiết kế tổng thể & 4--6 & 07/2026--08/2026 & Kiến trúc 4 site; bảng IP/VLAN/ASN; topology EVE-NG \\
+        \hline
+        Triển khai hạ tầng Campus & 7--9 & 08/2026--09/2026 & Core/Dist/Access, firewall HA, DHCP \\
+        \hline
+        Triển khai SDN và SD-WAN & 10--16 & 08/2026--10/2026 & Ryu + 6 OVS; 3 controller + 8 vEdge; chi nhánh \\
+        \hline
+        Dịch vụ và kiểm thử tích hợp & 17--18 & 09/2026--11/2026 & Web/Mail/DNS/Syslog; kịch bản kiểm thử end-to-end \\
+        \hline
+        Báo cáo và bảo vệ & 19--20 & 11/2026 & Báo cáo cuối kỳ, slide, demo trên lab \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\subsection{Bố cục báo cáo giữa kỳ}
+
+\begin{itemize}
+    \item \textbf{Chương 1 -- Tổng quan đề tài:} lý do, mục tiêu, phạm vi, phương pháp và kế hoạch.
+    \item \textbf{Chương 2 -- Cơ sở lý thuyết:} tóm tắt các công nghệ nền tảng được sử dụng.
+    \item \textbf{Chương 3 -- Thiết kế hệ thống:} kiến trúc, topology, quy hoạch địa chỉ và các quyết định thiết kế.
+    \item \textbf{Chương 4 -- Tiến độ và kết quả giữa kỳ:} các hạng mục đã hoàn thành, đang thực hiện, kết quả kiểm chứng và vấn đề đã xử lý.
+    \item \textbf{Chương 5 -- Kế hoạch giai đoạn cuối và kết luận:} công việc còn lại, rủi ro và kết luận giữa kỳ.
+\end{itemize}
