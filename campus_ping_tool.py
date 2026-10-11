@@ -30,8 +30,15 @@ Cai thu vien:
 import threading, time, subprocess, os, platform, re, csv, sys, json, ipaddress
 from datetime import datetime
 
-import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
+try:
+    import tkinter as tk
+    from tkinter import ttk, scrolledtext, messagebox
+    HAS_TK = True
+except ImportError:   # host EVE-NG (Ubuntu server) thuong khong co python3-tk - ban web van chay duoc
+    import types
+    tk = types.SimpleNamespace(Tk=object, Toplevel=object, Frame=object)
+    ttk = scrolledtext = messagebox = None
+    HAS_TK = False
 
 # ---------- optional deps ----------
 try:
@@ -49,6 +56,86 @@ try:
     HAS_SSH = True
 except ImportError:
     HAS_SSH = False
+
+
+# =========================================================
+#  LOCAL EVE  -  khi tool chay NGAY TREN host EVE-NG thi khong can SSH.
+#  Gia lap dung phan API paramiko.SSHClient ma tool dung:
+#    exec_command()  -> chay bash tai cho
+#    get_transport().open_channel('direct-tcpip', dest_addr=(ip, port))
+#                    -> socket TCP thang toi console telnet cua node
+# =========================================================
+EVE_LAB_ROOT = '/opt/unetlab'
+
+
+def is_eve_host():
+    return platform.system() == 'Linux' and os.path.isdir(EVE_LAB_ROOT)
+
+
+class _LocalStream:
+    def __init__(self, data): self._data = data
+    def read(self): return self._data
+
+
+class _LocalChannel:
+    """Socket TCP toi console EVE, cung giao dien send/recv/recv_ready/close voi paramiko Channel."""
+    def __init__(self, addr):
+        import socket
+        self.sock = socket.create_connection(addr, timeout=10)
+        self.sock.setblocking(False)
+
+    def send(self, data):
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+        self.sock.setblocking(True)
+        try: self.sock.sendall(data)
+        finally: self.sock.setblocking(False)
+        return len(data)
+
+    def recv_ready(self):
+        import select
+        return bool(select.select([self.sock], [], [], 0)[0])
+
+    def recv(self, n):
+        try:
+            return _strip_telnet_iac(self.sock.recv(n))
+        except BlockingIOError:
+            return b''
+
+    def close(self):
+        try: self.sock.close()
+        except Exception: pass
+
+
+def _strip_telnet_iac(data):
+    """Bo cac lenh telnet IAC (0xFF ...) ma console EVE gui luc dau - paramiko di qua
+    direct-tcpip cung nhan raw bytes nhu vay, nhung loc di cho output sach hon."""
+    if b'\xff' not in data:
+        return data
+    return re.sub(rb'\xff[\xfb-\xfe].|\xff\xfa.*?\xff\xf0|\xff[\xf0-\xfa]', b'', data, flags=re.S)
+
+
+class _LocalTransport:
+    def open_channel(self, kind, dest_addr=None, src_addr=None):
+        return _LocalChannel(dest_addr)
+
+
+class LocalEVE:
+    """Thay paramiko.SSHClient khi chay tren chinh host EVE-NG."""
+    def exec_command(self, cmd, timeout=None):
+        try:
+            p = subprocess.run(['bash', '-c', cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               stdin=subprocess.DEVNULL, timeout=timeout)
+            out, err = p.stdout, p.stderr
+        except subprocess.TimeoutExpired as e:
+            out, err = e.stdout or b'', (e.stderr or b'') + b'\n[local] timeout'
+        return None, _LocalStream(out), _LocalStream(err)
+
+    def get_transport(self):
+        return _LocalTransport()
+
+    def close(self):
+        pass
 
 # =========================================================
 #  COLOR CONSTANTS  (GitHub dark theme – ala mpls_gui.py)
@@ -240,7 +327,7 @@ class PingResult:
 def ping_via_vpcs(src_host, dst_ip, count=10, ssh_client=None):
     """Ping từ VPC node (VPCS) qua SSH+Telnet console."""
     result = PingResult()
-    if ssh_client is None or not HAS_SSH:
+    if ssh_client is None:
         return ping_host(dst_ip, count)   # fallback
 
     node_id = VPC_NODE_IDS.get(src_host)
@@ -398,18 +485,13 @@ def discover_vpc_ip(host_name, ssh_client, timeout=6):
         return None
     port = EVE_CONSOLE_BASE + node_id
     try:
-        shell = ssh_client.invoke_shell(width=200, height=50)
-        time.sleep(0.5); _flush(shell)
-        shell.send('telnet 127.0.0.1 {}\n'.format(port))
-        time.sleep(1.5); _flush(shell)
+        # direct-tcpip thang toi console VPC (chay duoc ca qua SSH lan LocalEVE)
+        chan = console_open(ssh_client, node_id)
         # Thử wakeup VPC (press Enter)
-        shell.send('\n'); time.sleep(0.5)
-        shell.send('show ip\n'); time.sleep(1.5)
-        raw = _read_all(shell)
-        # Thoát telnet
-        shell.send('\x1d'); time.sleep(0.3)
-        shell.send('quit\n'); time.sleep(0.3)
-        shell.close()
+        chan.send('\n'); time.sleep(0.5)
+        chan.send('show ip\n'); time.sleep(1.5)
+        raw = _read_all(chan)
+        chan.close()
         # Parse: "NAME  : PC-NongNghiep-S200-1[1]"  "IP    : 10.2.60.101/24"
         m = re.search(r'IP\s*:\s*(\d+\.\d+\.\d+\.\d+)', raw)
         if m:
@@ -706,7 +788,7 @@ def ping_host(target_ip, count=10, timeout_sec=2, ssh_client=None):
     result = PingResult()
     raw    = ''
 
-    if ssh_client is not None and HAS_SSH:
+    if ssh_client is not None:
         cmd = 'ping -c {} -i 0.2 -W {} {}'.format(count, timeout_sec, target_ip)
         try:
             _, stdout, stderr = ssh_client.exec_command(cmd, timeout=count*3+8)

@@ -73,6 +73,7 @@ nav.tabs button.active { background: color-mix(in srgb, var(--accent) 14%, trans
 .sshcard.connected .sshform { display: none; }
 .sshcard:not(.connected) #sshDisconnect { display: none; }
 #sshDisconnect { margin-top: 10px; width: 100%; }
+.sshcard.local .sshform, .sshcard.local #sshDisconnect, body.local .sshmode { display: none; }
 
 .workspace { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .topbar { display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
@@ -303,7 +304,7 @@ dialog img { max-width: 100%; display: block; margin: auto; border-radius: 8px; 
               <label class="field"><span>Timeout (s)</span><input type="number" id="pingTimeout" value="2" min="1" max="10" data-persist></label>
             </div>
             <div class="row" style="gap:22px">
-              <label class="check"><input type="checkbox" id="sshMode" data-persist><span>SSH Mode <small>(ping từ host EVE-NG)</small></span></label>
+              <label class="check sshmode"><input type="checkbox" id="sshMode" data-persist><span>SSH Mode <small>(ping từ host EVE-NG)</small></span></label>
               <label class="check"><input type="checkbox" id="vpcsMode" data-persist><span>VPCS Mode <small>(ping từ bên trong VPC nguồn)</small></span></label>
             </div>
             <div class="row">
@@ -1076,6 +1077,10 @@ async function poll() {
 (async function init() {
   restorePersist();
   META = await api('/api/meta');
+  if (META.local) {                        // web chạy ngay trên host EVE-NG -> không cần SSH
+    document.body.classList.add('local'); $('sshCard').classList.add('local');
+    $('sshCard').querySelector('.sshhead div').firstChild.textContent = 'Host EVE-NG (local)';
+  }
   const sd = META.ssh_defaults;
   if (!$('sshHost').value) $('sshHost').value = sd.host;
   if (!$('sshUser').value) $('sshUser').value = sd.user;

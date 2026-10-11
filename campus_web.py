@@ -16,6 +16,9 @@ Cach chay:
   python campus_web.py --port 9000
   python campus_web.py --host 0.0.0.0  # cho may khac trong LAN truy cap
                                        # (KHONG co dang nhap - chi dung trong lab)
+  Chay ngay tren host EVE-NG (co /opt/unetlab): tu dung che do local - lenh
+  bash + console node chay tai cho, KHONG can SSH/paramiko/tkinter:
+    python3 campus_web.py --host 0.0.0.0 --no-browser
 ================================================================
 """
 import argparse, ipaddress, json, mimetypes, os, re, threading, webbrowser
@@ -26,7 +29,7 @@ from urllib.parse import urlparse, parse_qs, unquote
 import campus_ping_tool as core
 from campus_ping_tool import (
     SITES, HOST_IP, HOST_SITE, VPC_NODE_IDS, VEDGE_NODE_IDS, WAN_IFACE, SITE_VEDGES, CORE_SITE_ID,
-    LOG_DIR, HAS_MPL, HAS_SSH, CampusPingGUI, FailoverTab, VlanTab, PolicyTab, vlan_network,
+    LOG_DIR, HAS_MPL, HAS_SSH, LocalEVE, is_eve_host,CampusPingGUI, FailoverTab, VlanTab, PolicyTab, vlan_network,
 )
 import sdwan_onboard as onb
 from campus_throughput import ThroughputTest
@@ -62,8 +65,10 @@ class WebGUI(_detk(CampusPingGUI)):
         self._lines = []            # [(id, ts, msg, tag)]
         self._next_id = 1
         self._stop_event = threading.Event()
-        self._ssh_client = None
-        self.ssh_info = ''
+        # web chay ngay tren host EVE-NG -> lenh/console chay tai cho, khong can SSH
+        self.local = is_eve_host()
+        self._ssh_client = LocalEVE() if self.local else None
+        self.ssh_info = 'local (host EVE-NG)' if self.local else ''
         self.status = 'San sang'
         self.busy = False           # thanh tien trinh (giong progress bar ban desktop)
         self.job = None             # ten tac vu dang chay (chi 1 tac vu 1 luc)
@@ -73,6 +78,8 @@ class WebGUI(_detk(CampusPingGUI)):
                      'timeout_var', 'batch_count_var'):
             setattr(self, name, Var())
         self._boot_log()
+        if self.local:
+            self._log('[LOCAL] Dang chay tren host EVE-NG - lenh/console chay tai cho, khong can SSH\n', 'ok')
 
     # ---- thay cac ham gan voi widget Tk ----
     def after(self, ms, fn=None, *args):
@@ -220,6 +227,7 @@ def api_meta(_):
         'deps': {'matplotlib': HAS_MPL, 'paramiko': HAS_SSH},
         'log_dir': LOG_DIR,
         'ssh_defaults': {'host': '10.215.28.26', 'user': 'root', 'port': 22},
+        'local': GUI.local,
     }
 
 
@@ -231,6 +239,8 @@ def api_poll(q):
 
 
 def api_ssh_connect(d):
+    if GUI.local:
+        raise WebError('Web dang chay tren host EVE-NG - khong can SSH.')
     if not HAS_SSH:
         raise WebError('Thieu thu vien: pip install paramiko')
     import paramiko
@@ -255,6 +265,8 @@ def api_ssh_connect(d):
 
 
 def api_ssh_disconnect(_):
+    if GUI.local:
+        raise WebError('Web dang chay tren host EVE-NG - khong can SSH.')
     if GUI.job:
         raise WebError('Dang chay "{}" - doi xong roi moi ngat SSH.'.format(GUI.job))
     if GUI._ssh_client:
@@ -266,7 +278,7 @@ def api_ssh_disconnect(_):
 
 
 def _ping_opts(d):
-    use_ssh = bool(d.get('ssh'))
+    use_ssh = GUI.local or bool(d.get('ssh'))
     if use_ssh:
         GUI.ssh()
     GUI.ssh_var.set(use_ssh)
@@ -309,7 +321,7 @@ def api_cases(d):
     cases = sorted({int(c) for c in d.get('cases', []) if str(c).isdigit() and 1 <= int(c) <= 6})
     if not cases:
         raise WebError('Chon it nhat 1 Case.')
-    use_ssh = bool(d.get('ssh'))
+    use_ssh = GUI.local or bool(d.get('ssh'))
     if use_ssh:
         GUI.ssh()
     GUI.ssh_var.set(use_ssh)
