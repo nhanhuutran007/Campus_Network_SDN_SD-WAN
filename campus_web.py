@@ -29,6 +29,7 @@ from campus_ping_tool import (
     LOG_DIR, HAS_MPL, HAS_SSH, CampusPingGUI, FailoverTab, VlanTab, PolicyTab, vlan_network,
 )
 import sdwan_onboard as onb
+from campus_throughput import ThroughputTest
 
 WEB_DIR = os.path.join(core._SCRIPT_DIR, 'web')
 LOG_MAX = 5000          # so dong log giu trong bo nho
@@ -175,6 +176,7 @@ class WebPolicy(_detk(PolicyTab)):
 
 
 FAILOVER, VLAN, POLICY = WebFailover(GUI), WebVlan(GUI), WebPolicy(GUI)
+THROUGHPUT = ThroughputTest(GUI)
 
 
 # =========================================================
@@ -492,6 +494,29 @@ def api_policy_run(d):
     return {}
 
 
+# ---- Thong luong ----
+def api_throughput_run(d):
+    ssh = GUI.ssh()
+    vname = d.get('vedge', '')
+    if vname not in WAN_IFACE:
+        raise WebError('Chon vEdge.')
+    opts = {'vedge': vname, 'user': d.get('vuser', '').strip() or 'admin', 'password': d.get('vpass', ''),
+            'interval': _int(d, 'interval', 3, 60, 5), 'duration': _int(d, 'duration', 10, 900, 60),
+            'scope': 'all' if d.get('scope') == 'all' else 'wan', 'gen_src': ''}
+    if d.get('gen'):
+        if d.get('gen_src') not in VPC_NODE_IDS:
+            raise WebError('Chon VPC bom tai.')
+        opts.update(gen_src=d['gen_src'], gen_target=_ip(d.get('gen_target', '').strip(), 'IP dich bom tai'),
+                    gen_size=_int(d, 'gen_size', 56, 1472, 1400), gen_interval=_int(d, 'gen_interval', 0, 1000, 10))
+    GUI._stop_event.clear()
+    GUI.run_job('Do thong luong', THROUGHPUT._thread, ssh, opts)
+    return {}
+
+
+def api_throughput_state(q):
+    return THROUGHPUT.snapshot(_int(q, 'since', 0, 10 ** 9, 0))
+
+
 # ---- Onboard vEdge moi (Site 900) ----
 def _onb_opts(d, need_vm=True):
     opts = {'vedge_pw': d.get('vedge_pw', ''), 'vm_user': d.get('vm_user', '').strip() or 'admin',
@@ -635,6 +660,8 @@ ROUTES = {
     ('POST', '/api/vlan/restore'): api_vlan_restore,
     ('POST', '/api/vlan/forget'): api_vlan_forget,
     ('POST', '/api/policy/run'): api_policy_run,
+    ('GET', '/api/throughput'): api_throughput_state,
+    ('POST', '/api/throughput/run'): api_throughput_run,
     ('GET', '/api/onboard'): api_onboard_list,
     ('POST', '/api/onboard/scan'): api_onboard_scan,
     ('POST', '/api/onboard/run'): api_onboard_run,

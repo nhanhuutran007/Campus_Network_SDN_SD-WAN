@@ -190,6 +190,25 @@ tr.deleted td { color: var(--faint); }
 .seg button { border: 0; background: none; padding: 5px 12px; border-radius: 7px; cursor: pointer; font-size: 12.5px; color: var(--muted); font-weight: 500; }
 .seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
 
+/* ---------- thông lượng ---------- */
+:root { --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100; --series-5: #e87ba4; --series-6: #008300; }
+:root[data-theme="dark"] { --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; } }
+.tpwrap { position: relative; margin-top: 14px; }
+#tpChart { width: 100%; height: 280px; display: block; }
+#tpChart text { font: 11px var(--mono); fill: var(--muted); }
+#tpChart .grid line { stroke: var(--border); }
+#tpChart .axis { stroke: var(--border2); }
+#tpChart .cross { stroke: var(--faint); stroke-dasharray: 3 3; }
+#tpTip { position: absolute; pointer-events: none; display: none; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 7px 10px; font-size: 12px; box-shadow: var(--shadow); white-space: nowrap; z-index: 2; }
+#tpTip b { font-family: var(--mono); font-weight: 600; }
+#tpTip i, .tplegend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; margin-right: 6px; vertical-align: middle; }
+.tplegend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; margin-top: 8px; color: var(--muted); }
+.tplegend i.tx, #tpTip i.tx { border-top-style: dashed; }
+.genbox { display: none; margin-top: 12px; }
+.genbox.on { display: grid; }
+
 dialog { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 14px; padding: 0; width: min(1100px, 95vw); max-height: 90vh; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
 dialog::backdrop { background: rgba(5, 8, 20, .6); backdrop-filter: blur(2px); }
 dialog .head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
@@ -233,6 +252,8 @@ dialog img { max-width: 100%; display: block; margin: auto; border-radius: 8px; 
         <svg class="i" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>Quản lý VLAN</button>
       <button data-tab="policy" data-title="Chính sách tập trung" data-sub="Kiểm chứng policy vSmart bằng traffic thật và counter trên vEdge">
         <svg class="i" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>Chính sách tập trung</button>
+      <button data-tab="throughput" data-title="Đo thông lượng" data-sub="Đọc bộ đếm interface vEdge theo chu kỳ → RX/TX Mbps, tuỳ chọn bơm tải bằng VPCS">
+        <svg class="i" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="m12 18 4-6"/></svg>Thông lượng</button>
       <button data-tab="onboard" data-title="Onboard vEdge" data-sub="Cắm vEdge mới vào Switch32 (Site 900) → tự cấu hình, ký chứng chỉ, whitelist 3 controller">
         <svg class="i" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0V8Z"/><path d="M12 18v4"/></svg>Onboard vEdge</button>
       <button data-tab="files" data-title="Kết quả" data-sub="Biểu đồ PNG, CSV và log đã lưu trong thư mục log/">
@@ -343,6 +364,44 @@ dialog img { max-width: 100%; display: block; margin: auto; border-radius: 8px; 
               <button class="btn orange solid job" id="foRunBtn">Chạy Failover Test</button>
               <button class="btn green" id="foRestoreBtn">Khôi phục ngay (no shutdown)</button>
             </div>
+          </div>
+        </div>
+
+        <!-- ============ THÔNG LƯỢNG ============ -->
+        <div class="tab" id="tab-throughput">
+          <div class="card">
+            <h2>Tham số đo <span class="tag">Mbps</span></h2>
+            <p class="hint">Tool giữ 1 phiên console vEdge, chạy <code>show interface statistics</code> mỗi chu kỳ và tính RX/TX = Δoctet × 8 / Δt. Chỉ đọc, không đổi cấu hình. Muốn thấy tải thật thì bật bơm tải: VPC nguồn ping gói lớn liên tục sang site khác qua overlay SD-WAN.</p>
+            <div class="grid">
+              <label class="field"><span>vEdge</span><select id="tpVedge" data-persist></select></label>
+              <label class="field"><span>Interface</span><select id="tpScope" data-persist><option value="wan">WAN (vpn 0) + LAN (vpn 1)</option><option value="all">Tất cả</option></select></label>
+              <label class="field"><span>Chu kỳ lấy mẫu (s)</span><input type="number" id="tpInterval" value="5" min="3" max="60" data-persist></label>
+              <label class="field"><span>Thời gian đo (s)</span><input type="number" id="tpDuration" value="60" min="10" max="900" data-persist></label>
+              <label class="field"><span>User vEdge</span><input type="text" id="tpUser" value="admin" data-persist></label>
+              <label class="field"><span>Password vEdge</span><input type="password" id="tpPass" autocomplete="off"><small>Để trống sẽ thử các mật khẩu lab</small></label>
+            </div>
+            <div class="row"><label class="check"><input type="checkbox" id="tpGen" data-persist><span>Bơm tải bằng VPCS <small>(ping -l &lt;size&gt; -t, đo thêm goodput đầu-cuối)</small></span></label></div>
+            <div class="grid genbox" id="tpGenBox">
+              <label class="field"><span>VPC nguồn</span><select id="tpGenSrc" data-persist></select><small>Nên cùng site với vEdge đang đo</small></label>
+              <label class="field"><span>IP đích</span><input type="text" id="tpGenTarget" value="10.1.10.1" data-persist><small>Host ở site khác</small></label>
+              <label class="field"><span>Kích thước gói (byte)</span><input type="number" id="tpGenSize" value="1400" min="56" max="1472" data-persist></label>
+              <label class="field"><span>Giãn cách (ms)</span><input type="number" id="tpGenInt" value="10" min="0" max="1000"><small>Nhỏ = tải dày hơn; 0 = mặc định VPCS (1 gói/s)</small></label>
+            </div>
+            <div class="row"><button class="btn cyan solid job" id="tpRunBtn">Bắt đầu đo</button><span class="hint" style="margin:0">Bấm <b>Dừng</b> ở trên cùng để kết thúc sớm (vẫn xuất CSV/PNG).</span></div>
+          </div>
+
+          <div class="card">
+            <h2>Thông lượng trực tiếp <span class="qos" id="tpBadge">Chưa đo</span></h2>
+            <div class="metrics">
+              <div class="metric" style="--c:var(--sky)"><span>RX hiện tại</span><b id="tpRx">--</b></div>
+              <div class="metric" style="--c:var(--orange)"><span>TX hiện tại</span><b id="tpTx">--</b></div>
+              <div class="metric" style="--c:var(--teal)"><span>Đỉnh RX+TX</span><b id="tpPeak">--</b></div>
+              <div class="metric" style="--c:var(--violet)"><span>Goodput tải VPCS</span><b id="tpGood">--</b></div>
+            </div>
+            <div class="tpwrap" id="tpWrap"><svg id="tpChart" role="img" aria-label="Biểu đồ thông lượng theo thời gian"></svg><div id="tpTip"></div></div>
+            <div class="tplegend" id="tpLegend"></div>
+            <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Interface</th><th>RX TB</th><th>RX max</th><th>TX TB</th><th>TX max</th><th>Mẫu</th></tr></thead>
+              <tbody id="tpRows"><tr><td colspan="6" class="empty">Chưa có dữ liệu</td></tr></tbody></table></div>
           </div>
         </div>
 
@@ -684,6 +743,116 @@ $('foRestoreBtn').onclick = () => {
   if (confirm(`Gửi "no shutdown" cho màu ${b.color} trên ${b.vedge}?`)) act('/api/failover/restore', b, 'Đã gửi lệnh khôi phục – xem log');
 };
 
+// ---------- Thông lượng ----------
+let TP = { started: null, series: [], samples: [], since: 0, running: false, duration: 60 };
+const tpCol = i => `var(--series-${i % 6 + 1})`;
+const fmtM = v => v == null || isNaN(v) ? '--' : (v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(3)) + ' Mbps';
+function initThroughput() {
+  fillSelect($('tpVedge'), Object.keys(META.wan_iface).sort(), $('tpVedge').dataset.saved || 'vEdge1-S200');
+  fillSelect($('tpGenSrc'), META.vpcs, $('tpGenSrc').dataset.saved || 'PC-NongNghiep-S200-1');
+  const gen = () => $('tpGenBox').classList.toggle('on', on('tpGen'));
+  $('tpGen').addEventListener('change', gen); gen();
+  new ResizeObserver(() => drawTp()).observe($('tpWrap'));
+  $('tpWrap').addEventListener('mousemove', tpHover);
+  $('tpWrap').addEventListener('mouseleave', () => { $('tpTip').style.display = 'none'; drawTp(); });
+}
+$('tpRunBtn').onclick = () => act('/api/throughput/run', { vedge: $('tpVedge').value, scope: $('tpScope').value,
+  interval: num('tpInterval'), duration: num('tpDuration'), vuser: val('tpUser'), vpass: $('tpPass').value,
+  gen: on('tpGen'), gen_src: $('tpGenSrc').value, gen_target: val('tpGenTarget'), gen_size: num('tpGenSize'),
+  gen_interval: num('tpGenInt') });
+async function tpPoll() {
+  if ($('tab-throughput').classList.contains('active') || TP.running) {
+    try {
+      const d = await api('/api/throughput?since=' + TP.since);
+      if (d.started !== TP.started) TP = { started: d.started, series: [], samples: [], since: 0 };
+      Object.assign(TP, { series: d.series || [], running: d.running, duration: d.duration || 60,
+                          vedge: d.vedge, gen: d.gen, summary: d.summary });
+      TP.samples.push(...d.samples.filter(s => s.i > TP.since));
+      if (TP.samples.length) TP.since = TP.samples[TP.samples.length - 1].i;
+      renderTp();
+    } catch {}
+  }
+  setTimeout(tpPoll, 1500);
+}
+function renderTp() {
+  const b = $('tpBadge');
+  b.className = 'qos' + (TP.running ? ' mid' : TP.samples.length ? ' good' : '');
+  b.textContent = TP.running ? `Đang đo ${TP.vedge}…` : TP.samples.length ? `Xong · ${TP.vedge}` : 'Chưa đo';
+  const last = TP.samples[TP.samples.length - 1];
+  const sum = (s, k) => Object.values(s.v).reduce((a, x) => a + x[k], 0);
+  $('tpRx').textContent = last ? fmtM(sum(last, 0)) : '--';
+  $('tpTx').textContent = last ? fmtM(sum(last, 1)) : '--';
+  $('tpPeak').textContent = TP.samples.length ? fmtM(Math.max(...TP.samples.map(s => sum(s, 0) + sum(s, 1)))) : '--';
+  $('tpGood').textContent = TP.gen ? fmtM(TP.gen.mbps) + (TP.gen.loss ? ` · ${TP.gen.loss}% loss` : '') : '--';
+  $('tpLegend').innerHTML = TP.series.map((s, i) =>
+    `<span><i style="color:${tpCol(i)}"></i>${esc(s.label)} RX</span><span><i class="tx" style="color:${tpCol(i)}"></i>${esc(s.label)} TX</span>`).join('');
+  const avg = a => a.reduce((p, c) => p + c, 0) / a.length;
+  const rows = TP.series.map(s => {
+    const v = TP.samples.map(x => x.v[s.key]).filter(Boolean);
+    if (!v.length) return null;
+    const rx = v.map(x => x[0]), tx = v.map(x => x[1]);
+    return [s.label, fmtM(avg(rx)), fmtM(Math.max(...rx)), fmtM(avg(tx)), fmtM(Math.max(...tx)), v.length];
+  }).filter(Boolean);
+  $('tpRows').innerHTML = rows.length ? rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')
+    : '<tr><td colspan="6" class="empty">Chưa có dữ liệu</td></tr>';
+  drawTp();
+}
+function tpGeom() {
+  const W = $('tpWrap').clientWidth || 600, H = 280, P = { l: 56, r: 14, t: 12, b: 28 };
+  const xmax = Math.max(TP.duration || 10, ...TP.samples.map(s => s.t));
+  let ymax = 0;
+  for (const s of TP.samples) for (const v of Object.values(s.v)) ymax = Math.max(ymax, v[0], v[1]);
+  const raw = (ymax || 0.1) / 4, p = 10 ** Math.floor(Math.log10(raw)), n = raw / p;
+  const step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p, yTop = step * 4;
+  return { W, H, P, xmax, step, x: t => P.l + t / xmax * (W - P.l - P.r), y: v => H - P.b - v / yTop * (H - P.t - P.b) };
+}
+function drawTp(hoverIdx) {
+  const svg = $('tpChart'), g = tpGeom(), { W, H, P } = g;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let h = '<g class="grid">';
+  for (let k = 0; k <= 4; k++) {
+    const v = g.step * k, yy = g.y(v);
+    h += `<line x1="${P.l}" x2="${W - P.r}" y1="${yy}" y2="${yy}"/><text x="${P.l - 6}" y="${yy + 4}" text-anchor="end">${+v.toPrecision(3)}</text>`;
+  }
+  h += `</g><text x="${P.l - 6}" y="${P.t - 2}" text-anchor="end" style="font-size:10px">Mbps</text>`;
+  const xt = Math.max(5, Math.ceil(g.xmax / 6 / 5) * 5);
+  for (let t = 0; t <= g.xmax; t += xt) h += `<text x="${g.x(t)}" y="${H - 8}" text-anchor="middle">${t}s</text>`;
+  h += `<line class="axis" x1="${P.l}" x2="${W - P.r}" y1="${g.y(0)}" y2="${g.y(0)}"/>`;
+  if (!TP.samples.length)
+    h += `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">${TP.running ? 'Đang lấy mẫu đầu tiên…' : 'Chưa có dữ liệu'}</text>`;
+  TP.series.forEach((s, i) => {
+    for (const k of [0, 1]) {
+      const pts = TP.samples.filter(x => x.v[s.key]).map(x => `${g.x(x.t).toFixed(1)},${g.y(x.v[s.key][k]).toFixed(1)}`);
+      if (pts.length) h += `<polyline points="${pts.join(' ')}" fill="none" stroke="${tpCol(i)}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${k ? ' stroke-dasharray="6 4"' : ''}/>`;
+    }
+  });
+  if (hoverIdx != null) {
+    const smp = TP.samples[hoverIdx], xx = g.x(smp.t);
+    h += `<line class="cross" x1="${xx}" x2="${xx}" y1="${P.t}" y2="${g.y(0)}"/>`;
+    TP.series.forEach((s, i) => {
+      const v = smp.v[s.key]; if (!v) return;
+      for (const k of [0, 1]) h += `<circle cx="${xx}" cy="${g.y(v[k])}" r="4" fill="${tpCol(i)}" stroke="var(--surface)" stroke-width="2"/>`;
+    });
+  }
+  svg.innerHTML = h;
+}
+function tpHover(e) {
+  if (!TP.samples.length) return;
+  const g = tpGeom(), r = $('tpWrap').getBoundingClientRect(), mx = e.clientX - r.left;
+  let best = 0;
+  TP.samples.forEach((s, i) => { if (Math.abs(g.x(s.t) - mx) < Math.abs(g.x(TP.samples[best].t) - mx)) best = i; });
+  drawTp(best);
+  const smp = TP.samples[best], tip = $('tpTip');
+  tip.innerHTML = `<div style="color:var(--muted)">t = ${smp.t}s</div>` + TP.series.map((s, i) => {
+    const v = smp.v[s.key]; if (!v) return '';
+    return `<div><i style="color:${tpCol(i)}"></i>${esc(s.label)}: RX <b>${fmtM(v[0])}</b> · TX <b>${fmtM(v[1])}</b></div>`;
+  }).join('');
+  tip.style.display = 'block';
+  const left = g.x(smp.t) + 12, w = tip.offsetWidth;
+  tip.style.left = (left + w > r.width ? g.x(smp.t) - w - 12 : left) + 'px';
+  tip.style.top = '10px';
+}
+
 // ---------- VLAN ----------
 const vlanForm = () => ({ vid: num('vVid'), name: val('vName'), ip1: val('vIp1'), ip2: val('vIp2'),
   vip: val('vVip'), prefix: val('vPrefix'), vrid: val('vVrid'), dual: on('vDual'), wr: on('vWr'),
@@ -911,14 +1080,14 @@ async function poll() {
   if (!$('sshHost').value) $('sshHost').value = sd.host;
   if (!$('sshUser').value) $('sshUser').value = sd.user;
   if (!$('sshPort').value) $('sshPort').value = sd.port;
-  initMeasure(); initFailover();
+  initMeasure(); initFailover(); initThroughput();
   const remotes = META.branch_vpcs;
   fillSelect($('vRemote'), remotes, $('vRemote').dataset.saved || 'PC-NongNghiep-S200-1');
   fillSelect($('pSrc'), remotes, $('pSrc').dataset.saved || 'PC-NongNghiep-S200-1');
   if (!META.deps.matplotlib) toast('Thiếu matplotlib: pip install matplotlib (không vẽ được PNG)');
   const tab = store.get('tab') || 'measure';
   document.querySelector(`#tabs [data-tab="${tab}"]`)?.click();
-  loadVlans(); loadFiles(); poll();
+  loadVlans(); loadFiles(); poll(); tpPoll();
 })();
 </script>
 </body>
