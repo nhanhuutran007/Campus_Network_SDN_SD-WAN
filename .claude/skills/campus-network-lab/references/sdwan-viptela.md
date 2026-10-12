@@ -84,7 +84,7 @@ Tạo 08/10/2026 bằng GUI EVE, đã chạy đủ 9 bước PKI ở trên, **ki
 4. Kiểm tra `show control connections` (đủ 2 màu), `show omp peers`, `show bfd sessions`. Nếu thấy `BIDNTVRFD` thì `request vedge add` lại với chassis/serial ở trên.
 5. Muốn có vEdge dự phòng mới thì tạo node mới ở Site 900 và làm lại mục này.
 
-**Tự động hoá (09/10/2026, chưa chạy live):** `sdwan_onboard.py` + tab "Onboard vEdge" trong `campus_web.py`. Tool đọc `.unl` trên host để tìm node vtedge nối vào Switch32 (bỏ qua vEdge chi nhánh và các cổng hạ tầng e0/0–e1/2), đưa cổng về access VLAN 10, cấp `10.200.90.N` / `10.9.0.(99+N)`, sau đó chạy đủ 9 bước PKI ở trên và whitelist 3 controller. Danh sách chassis/serial lưu ở `log/onboard_registry.json`, có sẵn node 23. Nút "Đẩy lại whitelist" thay cho việc `request vedge add` bằng tay sau khi controller reboot. Chế độ tự dò không tự thử lại node bị lỗi, để tránh login sai nhiều lần làm khoá tài khoản.
+**Tự động hoá (09/10/2026, chưa chạy live):** `sdwan_onboard.py` (tab "Onboard vEdge" đã bỏ khỏi `campus_web.py` từ 12/10/2026: web chỉ lấy dữ liệu qua vManage API, không console host EVE; script này vẫn dùng console nên chỉ chạy riêng). Tool đọc `.unl` trên host để tìm node vtedge nối vào Switch32 (bỏ qua vEdge chi nhánh và các cổng hạ tầng e0/0–e1/2), đưa cổng về access VLAN 10, cấp `10.200.90.N` / `10.9.0.(99+N)`, sau đó chạy đủ 9 bước PKI ở trên và whitelist 3 controller. Danh sách chassis/serial lưu ở `log/onboard_registry.json`, có sẵn node 23. Nút "Đẩy lại whitelist" thay cho việc `request vedge add` bằng tay sau khi controller reboot. Chế độ tự dò không tự thử lại node bị lỗi, để tránh login sai nhiều lần làm khoá tài khoản.
 
 ## Định tuyến tới controller và màu TLOC
 

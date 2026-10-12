@@ -168,6 +168,10 @@ class ThroughputTest:
             st['gen'] = self._gen.stats()
         return st
 
+    def _make_reader(self, ssh, vname, opts):
+        """Nguon bo dem interface; ban web ghi de de doc qua vManage API (sdwan_monitor)."""
+        return VedgeCounterReader(ssh, vname, opts['user'], opts['password'])
+
     @staticmethod
     def _label(vname, vpn, ifname):
         colors = {i: c for c, i in WAN_IFACE.get(vname, {}).items()}
@@ -204,8 +208,8 @@ class ThroughputTest:
             ' | tai VPCS {} -> {} ({} byte)'.format(opts['gen_src'], opts['gen_target'], opts['gen_size'])
             if opts.get('gen_src') else ''), 'hdr')
         try:
-            self.gui._set_status('Dang nhap console {}...'.format(vname), True)
-            reader = VedgeCounterReader(ssh, vname, opts['user'], opts['password'])
+            self.gui._set_status('Ket noi doc bo dem {}...'.format(vname), True)
+            reader = self._make_reader(ssh, vname, opts)
             t_prev, prev, raw = reader.read()
             keys = self._pick(vname, prev, opts['scope'])
             if not keys:
