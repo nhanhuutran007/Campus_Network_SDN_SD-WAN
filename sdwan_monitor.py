@@ -86,7 +86,13 @@ class VManage:
             if e.code in (401, 403) and retry:
                 self.login()
                 return self._request(path, body, timeout, False)
-            msg = e.read().decode('utf-8', 'replace')[:300]
+            msg = e.read().decode('utf-8', 'replace')
+            if '<html' in msg.lower():              # trang loi HTML cua vManage -> chi giu <title>
+                t = re.search(r'<title>(.*?)</title>', msg, re.S | re.I)
+                msg = '(trang HTML{}){}'.format(': ' + t.group(1).strip() if t else '',
+                                                ' - vManage dang qua tai / khoi dong lai dich vu'
+                                                if e.code in (502, 503, 504) else '')
+            msg = msg[:300]
             raise VManageError('vManage {} {}: HTTP {} {}'.format('POST' if body is not None else 'GET',
                                                                  path, e.code, msg))
         except (urllib.error.URLError, OSError) as e:
@@ -721,7 +727,11 @@ def policy_job(ctx, vm, opts):
                 pending = {str(n) for n in missing.values()}
                 while pending and time.time() - t0 < REJOIN_TIMEOUT and not stop.is_set():
                     stop.wait(10)
-                    up = {d.get('host-name') for d in vm.devices() if d.get('reachability') == 'reachable'}
+                    try:
+                        up = {d.get('host-name') for d in vm.devices() if d.get('reachability') == 'reachable'}
+                    except VManageError as ex:          # vManage ban (503) ngay sau push -> doi tiep
+                        log('      (doi vManage: {})\n'.format(str(ex)[:120]), 'info')
+                        continue
                     for n in sorted(pending & up):
                         log('      {} reachable sau {:.0f}s\n'.format(n, time.time() - t0), 'ok')
                     pending -= up

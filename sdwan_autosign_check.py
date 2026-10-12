@@ -18,7 +18,7 @@ Chay tren may lab (vd 10.9.0.20):
     python sdwan_autosign_check.py --bootstrap <UUID>
 Ket qua tho luu vao log/autosign_check_<thoigian>.json -> gui file nay de phan tich.
 """
-import argparse, getpass, json, os, sys
+import argparse, getpass, json, os, re, sys
 from datetime import datetime
 
 from sdwan_monitor import VManage, VManageError, VMANAGE_DEFAULT
@@ -106,6 +106,9 @@ def main():
         d = try_get(vm, 'system/device/bootstrap/device/{}?configtype=cloudinit'.format(a.bootstrap), dump)
         cfg = (d or {}).get('bootstrapConfig', '') if isinstance(d, dict) else ''
         print(cfg or json.dumps(d, ensure_ascii=False)[:1500])
+        otp = re.search(r'\botp\s*:\s*(\S+)', cfg or '')
+        print('\n  -> OTP token: {}'.format(otp.group(1) if otp else
+                                          'KHONG co (vManage khong cap token cho muc nay)'))
 
     os.makedirs(LOG_DIR, exist_ok=True)
     out = os.path.join(LOG_DIR, 'autosign_check_{}.json'.format(datetime.now().strftime('%Y%m%d_%H%M%S')))
