@@ -71,8 +71,8 @@ nav.tabs button.active { background: color-mix(in srgb, var(--accent) 14%, trans
 .sshform { display: grid; gap: 8px; margin-top: 10px; }
 .sshform .two { display: grid; grid-template-columns: 1fr 72px; gap: 8px; }
 .sshcard.connected .sshform { display: none; }
-.sshcard:not(.connected) #sshDisconnect { display: none; }
-#sshDisconnect { margin-top: 10px; width: 100%; }
+.sshcard:not(.connected) #vmDisconnect { display: none; }
+#vmDisconnect { margin-top: 10px; width: 100%; }
 
 
 .workspace { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -509,7 +509,7 @@ function fillSelect(sel, values, keep, labels) {
 const val = id => $(id).value.trim();
 const num = id => Number($(id).value);
 const on = id => $(id).checked;
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 // ---------- giao diện sáng / tối ----------
 function applyTheme(t) { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
