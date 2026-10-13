@@ -30,3 +30,6 @@ tools/*.exe
 # Python cache
 __pycache__/
 *.pyc
+
+# Bản sao base image EVE (lớn, có bản quyền) — không commit
+images/

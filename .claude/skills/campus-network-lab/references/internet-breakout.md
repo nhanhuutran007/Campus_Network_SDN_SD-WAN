@@ -112,7 +112,24 @@ Người dùng đồng ý hướng này ngày 28/09/2026. Làm theo giai đoạn
 **11/10/2026 (host 1):** bước 0 đạt (vSmart control/OMP up, ACL còn nguyên, vManage ping 8.8.8.8 3/3). Switch32 thêm `75 permit tcp host 10.9.0.10 any eq 587`, `write memory` [OK], startup có dòng. vManage `vpn 0 dns 8.8.8.8 primary` + `1.1.1.1 secondary` (commit); `nslookup vpn 0 smtp.gmail.com` OK; vshell nhận banner `220 smtp.gmail.com ESMTP`. Repo: Switch32 (+ embed node 32, validate ĐẠT), vManager-33. Gmail gửi/nhận + App Password đã ghi file credentials. Sửa kèm: script `host2-sync` import `con` → `_on` (file đã đổi tên).
 
 **Bước 3–4 (11/10/2026):** người dùng cấu hình GUI (rule `SDWAN-DOWN-ALERT`, gửi `nhanhuutran009@gmail.com` → nhận `nhanhuutran007@gmail.com`). Lần đầu lỗi `535-5.7.8 Username and Password not accepted` — App Password vẫn đúng (thử `smtplib` từ laptop LOGIN OK) ⇒ lỗi nhập trên GUI; nhập lại (Username = địa chỉ đầy đủ, App Password 16 ký tự liền) thì gửi được. Demo shutdown/no shutdown `vpn 0 interface ge0/0` vEdge2-S200 (42): mail cho BFD Node Down (~20 s), Control Node Down (~35 s), OMP Node Down (~70 s), Interface State Change cả lúc down và up. Lúc phục hồi **không** có mail BFD/Control/OMP Up (rule chỉ chọn Critical + Major) — muốn có thì thêm severity của alarm Up vào rule. vEdge2-S200 phục hồi 3 control + 8 BFD.
-- **Chẩn đoán mail nhanh:** bộ đếm `SITE900_EGRESS` dòng 75 (Switch32) cho biết vManage có kết nối 587 hay không; log `vshell` → `grep -E 'NotificationsConsumer|EmailNotiUtil' /var/log/nms/vmanage-server.log` (thấy `Recipient to …` = đã gửi, `AuthenticationFailedException` = sai tài khoản).
+- **(Đã làm 13/10, xem dưới) Thêm mail phục hồi.** Rule hiện tại (`GET /dataservice/notifications/rules`, id `95480364-edb7-4928-afc4-0e8dd2913920`): `severity` = `Critical,Major`, `alarmName` = 6 alarm *_Down + `Interface_State_Change`, `emailThreshold` 5. Cần thêm severity `Medium` + `BFD_Node_Up,BFD_Site_Up,Control_Node_Up,Control_Site_Up,OMP_Node_Up,OMP_Site_Up`. Hai cách: (a) GUI — cần bật Switch61 + `ip route add 10.9.1.0/24 via <IP e0/0 Switch61>` trên host 1 rồi tunnel 8443 (`eve-ng-ops.md`); (b) API qua console vManage 33 (`vshell` + curl `https://127.0.0.1:8443`, GET không gửi header XSRF, PUT/POST cần `X-XSRF-TOKEN`; script mẫu `vmapi.py` ở scratchpad phiên 11/10 — có thể mất). Người dùng chưa chọn cách. Kiểm chứng: shutdown/no shutdown `vpn 0 interface ge0/0` vEdge2-S200 (42) → nhận cả mail Down và Up.
+- **Mail phục hồi: XONG 13/10/2026 (API)**:
+  - Đã sửa rule bằng `PUT /dataservice/notifications/rule?ruleId=<id>` (dùng `uniqueId` sẽ bị lỗi 400 "Null or empty ruleId"). Rule mới có `severity` = `Critical,Major,Medium` và thêm 6 alarm *_Up; các alarm *_Up đều có severity Medium.
+  - Đã kiểm chứng bằng cách cắt rồi bật lại vEdge2-S200: nhận đủ mail BFD, Control và OMP Down, Interface down/up, rồi BFD, Control và OMP "came up".
+- **vManage không sinh alarm (event vẫn vào) sau khi VM bị kill đột ngột** (12/10/2026):
+  - Dấu hiệu:
+    - Chỉ mục ES `alarm*` đứng ở một thời điểm;
+    - `GET /alarms/stats` báo `Added Events: 0`;
+    - `vmanage-alarm.log` lặp `initTask: request count N` và `node localhost has stopped heartbeating`, nhưng không có `clearInitTask`.
+  - Nguyên nhân: kho file NATS Streaming bị lùi seq, còn durable subscription giữ `last_sent` lớn hơn `last_seq` nên không giao tin mới. Kiểm tra trong vshell bằng `curl http://127.0.0.1:8222/streaming/channelsz?channel=<c>&subs=1`.
+  - Restart messaging/app/coordination server hay reboot vManage đều **không** sửa được.
+  - Cách sửa:
+    1. Stop node 33.
+    2. Chạy `guestfish -a virtiob.qcow2`, mount `/dev/sda`, rồi `rm-rf /containers/mounts/messaging-server/store/standalone/<channel>` cho đúng các channel bị lệch (lần này là `AlarmEvent0`, `CorrelationEngineEventMessage`, `CorrelationEngineManagerEventMessage`); sao lưu trước bằng `copy-out`.
+    3. Start node 33. Sau ~10 phút phải thấy `clearInitTask: finish initialization` và `last_sent` = `last_seq`.
+  - Phòng ngừa: tránh để vManage bị kill (cấm `stopall`).
+  - Đọc kết quả API dài qua console dễ mất ký tự: lọc trên vManage trước rồi mới in ra.
+- **Chẩn đoán mail nhanh:** bộ đếm `SITE900_EGRESS` dòng 75, nay là 80 (Switch32) cho biết vManage có kết nối 587 hay không; log `vshell` → `grep -E 'NotificationsConsumer|EmailNotiUtil' /var/log/nms/vmanage-server.log` (thấy `Recipient to …` = đã gửi, `AuthenticationFailedException` = sai tài khoản).
 - API vManage từ laptop cần Switch61 bật + route trên host 1 (`eve-ng-ops.md`); Switch61 đang tắt.
 
 Người dùng chọn A (vManage tự gửi mail). B (Console NOC đọc `/dataservice/alarms` rồi gửi mail, báo được cả khi vManage chết) để sau. Khi người dùng gọi lại: **bắt đầu ngay từ bước 0**, không đề xuất lại.
