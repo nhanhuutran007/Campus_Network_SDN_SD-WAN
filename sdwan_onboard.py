@@ -138,8 +138,18 @@ def sw_port_long(short):
 def discover(ssh, lab_override=''):
     """Tra ve (lab_path, [candidate]) - moi candidate la vEdge noi vao Switch32
     chua co trong danh sach onboard va khong phai vEdge chi nhanh dang chay."""
-    lab = find_lab(ssh, lab_override)
-    raw = _host(ssh, 'cat {}'.format(shlex.quote(lab)), 60)
+    if getattr(ssh, 'no_shell', False):
+        # DirectEVE: khong doc duoc file tren host EVE -> doc ban .unl ngay canh tool
+        # (export lai tu EVE neu vua them node vEdge moi)
+        lab = lab_override or os.path.join(os.path.dirname(os.path.abspath(__file__)), LAB_NAME)
+        try:
+            with open(lab, encoding='utf-8') as f:
+                raw = f.read()
+        except OSError as e:
+            raise OnboardError('khong doc duoc file lab {}: {}'.format(lab, e))
+    else:
+        lab = find_lab(ssh, lab_override)
+        raw = _host(ssh, 'cat {}'.format(shlex.quote(lab)), 60)
     try:
         root = ET.fromstring(raw)
     except ET.ParseError as e:
@@ -222,7 +232,7 @@ class Console:
         """Vao prompt exec '#'. Thu lan luot passwords (moi mat khau 1 lan);
         vEdge moi (admin/admin) bat dat mat khau dau tien -> dat new_pw."""
         passwords = [p for p in passwords if p]
-        for _ in range(3):
+        for _ in range(5):
             self.chan.send('\n')
             buf = _read_chan(self.chan, timeout=3)
             tail = _last_line(buf)
@@ -230,6 +240,9 @@ class Console:
                 self.chan.send('no\n'); time.sleep(1); continue
             if '(config' in tail:
                 self.chan.send('end\n'); time.sleep(1); continue
+            if tail.endswith('$') or tail.startswith('VSH#'):
+                # console bi bo lai trong vshell (lan chay truoc / mo tay) -> ve CLI
+                self.chan.send('stty echo; exit\n'); time.sleep(1.5); continue
             if tail.endswith('#'):
                 return
             if re.search(r'login\s*:\s*$', tail, re.I):
