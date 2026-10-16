@@ -498,6 +498,7 @@ class CampusSwitch13(_RyuApp):
                          op['switches'], op['mods'])
         self._write_metric(ev)
         del self._ops[op_id]
+        self._announce_after_barrier(op)
 
     @set_ev_cls(ofp_event.EventOFPBarrierReply, MAIN_DISPATCHER)
     def _barrier_reply_handler(self, ev):
@@ -967,7 +968,9 @@ class CampusSwitch13(_RyuApp):
         if changed:
             ev['announced'] = self._announce_hosts(ports)
             if _RyuApp is not object:
-                hub.spawn(self._announce_later, ports)
+                hub.spawn(self._announce_later, ports, 0.3, self.tree_version)
+            # Phat lai sau khi switch xac nhan (barrier) - xem _finish_if_done
+            self._ops[op_id]['announce'] = (self.tree_version, ports)
         self._finish_if_done(op_id)
 
     def _apply_switch(self, dp, active, op_id, flush):
@@ -1038,9 +1041,24 @@ class CampusSwitch13(_RyuApp):
                 sent += 1
         return sent
 
-    def _announce_later(self, ports):
-        hub.sleep(0.3)      # lap lai 1 lan: phong khi flow moi chua kip cai xong
+    def _announce_later(self, ports, delay=0.3, version=None):
+        hub.sleep(delay)    # lap lai: phong khi flow moi chua kip cai xong
+        if version is not None and version != self.tree_version:
+            return          # cay da doi tiep -> lan tinh moi tu thong bao
         self._announce_hosts(ports)
+
+    def _announce_after_barrier(self, op):
+        """RARP gui ngay luc tinh cay co the den Dist TRUOC khi no xoa flow DROP
+        o cong xuong Access (canh ngoai cay cu) -> bi drop; ban 0,3 s cung vay khi
+        switch/controller cham (16/10/2026: tat Dist-SW1, flow-mod mat 629 ms,
+        Core-SW1 giu bang MAC cu -> 4 VLAN mat 10 s toi lan doi cay sau). Phat lai
+        khi barrier da ve (hoac het OP_TIMEOUT) va them 1 lan sau 1 s."""
+        ann = op.get('announce')
+        if not ann or not op['switches'] or ann[0] != self.tree_version:
+            return
+        op['ev']['announced_after'] = self._announce_hosts(ann[1])
+        if _RyuApp is not object:
+            hub.spawn(self._announce_later, ann[1], 1.0, ann[0])
 
     def _data_ports(self, dpid, vlan):
         """Cong flood cho VLAN du lieu: trunk thuoc cay + access cua VLAN."""

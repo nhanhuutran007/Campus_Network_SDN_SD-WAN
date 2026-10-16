@@ -604,6 +604,66 @@ class CampusRyuTest(unittest.TestCase):
         ev = [e for e in self.app.event_log if e['kind'] == 'link_down'][-1]
         self.assertEqual(ev['announced'], 1)
 
+    def _learn_host69(self):
+        p = packet.Packet()
+        p.add_protocol(ethernet.ethernet(dst='ff:ff:ff:ff:ff:ff', src='00:06:00:00:18:00',
+                                         ethertype=0x0806))
+        p.add_protocol(arp.arp(src_mac='00:06:00:00:18:00', src_ip='10.1.40.102',
+                               dst_ip='10.1.40.1'))
+        p.serialize()
+        self.app._packet_in_handler(Ev(PacketIn(self.dps[69], self.pno(69, 'ens7'), p.data)))
+
+    def _rarp69(self):
+        return [m for m in self.dps[69].sent if isinstance(m, parser.OFPPacketOut)
+                and packet.Packet(m.data).get_protocol(ethernet.ethernet).src == '00:06:00:00:18:00']
+
+    def _reply_barriers(self, skip=()):
+        for d, dp in self.dps.items():
+            if d in skip:
+                continue
+            for b in dp.flows(parser.OFPBarrierRequest):
+                rep = parser.OFPBarrierReply(dp)
+                rep.xid = b.xid
+                self.app._barrier_reply_handler(Ev(rep))
+
+    def test_rarp_reannounced_after_barrier(self):
+        # 16/10/2026: RARP luc tinh cay den Dist-SW2 truoc khi no go DROP cong
+        # xuong Access -> mat; phai phat lai khi switch da xac nhan flow moi
+        self._learn_host69()
+        self.dps[69].sent = []
+        self.app._set_link('A4-D1', False, time.time(), 'test')
+        self.assertEqual(len(self._rarp69()), 1)
+        self._reply_barriers()
+        po = self._rarp69()
+        self.assertEqual(len(po), 2)
+        self.assertEqual(po[1].actions[0].port, self.pno(69, 'ens5'))
+        ev = [e for e in self.app.event_log if e['kind'] == 'link_down'][-1]
+        self.assertTrue(ev.get('done'))
+        self.assertEqual(ev['announced_after'], 1)
+
+    def test_rarp_reannounce_on_barrier_timeout(self):
+        # Dist-SW1 chet nhung TCP chua dong: khong tra barrier -> van phat lai khi het han
+        self._learn_host69()
+        self.dps[69].sent = []
+        self.app._set_link('A4-D1', False, time.time(), 'test')
+        self._reply_barriers(skip=(5,))
+        self.assertEqual(len(self._rarp69()), 1)
+        ev = [e for e in self.app.event_log if e['kind'] == 'link_down'][-1]
+        op_id = [k for k, v in self.app._ops.items() if isinstance(k, tuple) and v['ev'] is ev][0]
+        self.app._finish_if_done(op_id, force=True)
+        self.assertEqual(len(self._rarp69()), 2)
+
+    def test_rarp_not_reannounced_for_stale_tree(self):
+        self._learn_host69()
+        self.app._set_link('A4-D1', False, time.time(), 'test')
+        ev = [e for e in self.app.event_log if e['kind'] == 'link_down'][-1]
+        self.app._set_link('A4-D1', True, time.time(), 'test')     # cay doi tiep truoc barrier
+        self.dps[69].sent = []
+        op_id = [k for k, v in self.app._ops.items() if isinstance(k, tuple) and v['ev'] is ev][0]
+        self.app._finish_if_done(op_id, force=True)
+        self.assertEqual(self._rarp69(), [])
+        self.assertNotIn('announced_after', ev)
+
     def test_barrier_timeout_dead_switch(self):
         # sw5 chet nhung TCP chua dong: van trong self.switches, khong tra barrier
         self.app._set_link('A1-D1', False, time.time(), 'test')
