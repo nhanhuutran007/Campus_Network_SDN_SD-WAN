@@ -180,8 +180,13 @@ def discover(ssh, lab_override=''):
 #  CONSOLE (Viptela CLI / IOS / vshell)
 # =========================================================
 class Console:
-    def __init__(self, ssh, node_id, name):
+    def __init__(self, ssh, node_id, name, chan=None):
+        """chan: shell SSH da mo thang toi IP thiet bi (sdwan_certsign.py) -> khong
+        di qua console EVE; cac ham login/cli/commit/vshell dung chung."""
         self.name, self.node = name, node_id
+        if chan is not None:
+            self.chan = chan
+            return
         try:
             self.chan = console_open(ssh, node_id)
         except Exception as e:
@@ -371,8 +376,8 @@ def _scp(con, src, dst, vm_pw, timeout=90):
         raise OnboardError('scp {} -> {} loi: {!r}'.format(src, dst, _last_line(out)))
 
 
-def sign_on_vmanage(ssh, log, csr, crt, vm_user, vm_pw):
-    con = Console(ssh, VMANAGE_NODE_ID, 'vManage')
+def sign_on_vmanage(ssh, log, csr, crt, vm_user, vm_pw, con=None):
+    con = con or Console(ssh, VMANAGE_NODE_ID, 'vManage')
     try:
         con.login(vm_user, [vm_pw])
         con.vshell()
@@ -402,8 +407,9 @@ CONTROLLERS = (  # (ten, node, khoa mat khau trong opts, lenh kiem tra)
 )
 
 
-def whitelist(ssh, log, entries, opts):
-    """request vedge add cho moi entry tren ca 3 controller. Tra ve so controller OK."""
+def whitelist(ssh, log, entries, opts, connect=None):
+    """request vedge add cho moi entry tren ca 3 controller. Tra ve so controller OK.
+    connect(ten, node) -> Console mo san (SSH thang IP controller); mac dinh = console EVE."""
     ok = 0
     for name, nid, key, show in CONTROLLERS:
         pw = opts.get(key) or (opts.get('vm_pw') if key == 'vb_pw' else '')
@@ -412,7 +418,7 @@ def whitelist(ssh, log, entries, opts):
             continue
         con = None
         try:
-            con = Console(ssh, nid, name)
+            con = connect(name, nid) if connect else Console(ssh, nid, name)
             con.login(opts.get('vm_user') or 'admin', [pw])
             good = True
             for e in entries:
@@ -450,6 +456,38 @@ def wait_control(con, log, timeout, stop=None):
         time.sleep(15)
 
 
+def install_cert(con, log, hostname, opts, sign):
+    """Buoc PKI tren vEdge dang mo (console hoac SSH): CSR -> scp len vManage ->
+    sign(csr, crt) ky bang CA cu -> scp cert + root CA ve -> cai chain roi cert.
+    Da co cert Valid thi bo qua (tru opts['resign']). Tra ve local_props."""
+    p = local_props(con)
+    csr, crt = hostname.lower() + '.csr', hostname.lower() + '.crt'
+    if p['validity'] == 'Valid' and p['chain'] == 'Installed' and not opts.get('resign'):
+        log('  [3/6] Da co cert hop le (serial {}) - khong ky lai\n'.format(p['serial']), 'ok')
+    else:
+        log('  [3/6] Tao CSR + ky tren vManage (CA {})\n'.format(CA_DIR), 'info')
+        out = con.cli('request csr upload /home/admin/' + csr, 90,
+                      answers=[[r'organi[sz]ation', ORG, 4], [r'\[yes,no\]', 'yes', 2]])
+        if re.search(r'error|fail', out, re.I):
+            raise OnboardError('tao CSR loi: {!r}'.format(_last_line(out)))
+        _scp(con, '/home/admin/' + csr, 'admin@{}:{}/{}'.format(VMANAGE_IP, CA_DIR, csr), opts['vm_pw'])
+        sign(csr, crt)
+        for f in (crt, 'root-ca.pem'):
+            _scp(con, 'admin@{}:{}/{}'.format(VMANAGE_IP, CA_DIR, f), '/home/admin/' + f, opts['vm_pw'])
+        for c in ('request root-cert-chain install /home/admin/root-ca.pem',
+                  'request certificate install /home/admin/' + crt):
+            out = con.cli(c, 90, answers=[[r'\[yes,no\]', 'yes', 2]])
+            if re.search(r'error|fail', out, re.I):
+                raise OnboardError('"{}" loi: {!r}'.format(c, _last_line(out)))
+        p = local_props(con)
+        if p['validity'] != 'Valid':
+            raise OnboardError('cert sau khi cai chua Valid ({})'.format(p))
+        log('      Cert Valid, root chain {}, serial {}\n'.format(p['chain'], p['serial']), 'ok')
+    if not p['chassis'] or not p['serial']:
+        raise OnboardError('khong doc duoc chassis/serial tu local-properties')
+    return p
+
+
 def onboard(ssh, log, e, opts, stop=None):
     """Chay du cac buoc cho 1 vEdge. e = entry registry (node, hostname,
     system_ip, vpn0_ip, wan_if, sw_port). Luu trang thai sau moi buoc."""
@@ -478,31 +516,9 @@ def onboard(ssh, log, e, opts, stop=None):
             log('      Commit complete\n', 'ok')
 
             step = 'cert'
-            p = local_props(con)
-            csr, crt = e['hostname'].lower() + '.csr', e['hostname'].lower() + '.crt'
-            if p['validity'] == 'Valid' and p['chain'] == 'Installed' and not opts.get('resign'):
-                log('  [3/6] Da co cert hop le (serial {}) - khong ky lai\n'.format(p['serial']), 'ok')
-            else:
-                log('  [3/6] Tao CSR + ky tren vManage (CA {})\n'.format(CA_DIR), 'info')
-                out = con.cli('request csr upload /home/admin/' + csr, 90,
-                              answers=[[r'organi[sz]ation', ORG, 4], [r'\[yes,no\]', 'yes', 2]])
-                if re.search(r'error|fail', out, re.I):
-                    raise OnboardError('tao CSR loi: {!r}'.format(_last_line(out)))
-                _scp(con, '/home/admin/' + csr, 'admin@{}:{}/{}'.format(VMANAGE_IP, CA_DIR, csr), opts['vm_pw'])
-                sign_on_vmanage(ssh, log, csr, crt, opts.get('vm_user') or 'admin', opts['vm_pw'])
-                for f in (crt, 'root-ca.pem'):
-                    _scp(con, 'admin@{}:{}/{}'.format(VMANAGE_IP, CA_DIR, f), '/home/admin/' + f, opts['vm_pw'])
-                for c in ('request root-cert-chain install /home/admin/root-ca.pem',
-                          'request certificate install /home/admin/' + crt):
-                    out = con.cli(c, 90, answers=[[r'\[yes,no\]', 'yes', 2]])
-                    if re.search(r'error|fail', out, re.I):
-                        raise OnboardError('"{}" loi: {!r}'.format(c, _last_line(out)))
-                p = local_props(con)
-                if p['validity'] != 'Valid':
-                    raise OnboardError('cert sau khi cai chua Valid ({})'.format(p))
-                log('      Cert Valid, root chain {}, serial {}\n'.format(p['chain'], p['serial']), 'ok')
-            if not p['chassis'] or not p['serial']:
-                raise OnboardError('khong doc duoc chassis/serial tu local-properties')
+            p = install_cert(con, log, e['hostname'], opts,
+                             lambda csr, crt: sign_on_vmanage(ssh, log, csr, crt, opts.get('vm_user') or 'admin',
+                                                              opts['vm_pw']))
             e.update(chassis=p['chassis'], serial=p['serial'], status='signed'); save_entry(e)
 
             step = 'whitelist'
