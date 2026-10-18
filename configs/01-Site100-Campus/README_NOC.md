@@ -227,6 +227,12 @@ Xử lý (người dùng cho phép tắt ONOS): `systemctl disable --now onos` v
 
 Nguyên nhân S4/S5 (đã bắt `show spanning-tree vlan 99` trên Core-SW1 mỗi 2,5 s trong lúc chạy lại S4): khi cắt, Et0/2 đi `Back BLK → Desg BLK → LRN → FWD` (~10 s, đường dự phòng mở). Khi khôi phục, Et0/2 về `Back BLK` ngay nhưng **Et1/2 rơi vào `Desg BLK … Dispute` → `LRN` → `FWD` mất ~8 s**: Et1/2 nhận BPDU designated/forwarding của chính Et0/2 vòng qua OVS (sw5.ens9 → ens8 → sw8.ens10), và vì "hàng xóm" là chính nó nên không có bắt tay proposal/agreement → phải chờ 2 × forward-delay. Trong ~8 s đó VLAN 99 mất ở cả 2 cổng ⇒ 6 OVS mất controller. VLAN 10 (dữ liệu) trên Core vẫn FWD suốt — phần mất ping có thể một phần do chính controller (nguồn ping) bị cô lập, cần đo thêm từ VPC để tách bạch. Hướng sửa: bỏ phụ thuộc STP cho VLAN 99 (OVS không chuyển BPDU giữa 2 cổng Core, controller tự chọn 1 đường quản trị + rapid-PVST chỉ làm lưới an toàn) – chưa làm.
 
+### Tắt hẳn Dist-SW1 – RARP phát lại sau barrier (16–17/10/2026)
+
+`sdn_realcut_test.py --node 5` (dừng hẳn VM Dist-SW1). Lần 1 (giữ 120 s, controller khựng 10 lần): 4 VLAN mất **10,2 s**. Cây đã chuyển 4 Access sang Dist-SW2 ở +3 s (flow-mod mất 629 ms) nhưng dữ liệu chỉ chạy lại ở +10,3 s, đúng lúc lần đổi cây tiếp theo (`switch_down`) phát RARP lần nữa. Nguyên nhân: RARP chỉ được phát lúc tính cây và sau 0,3 s, trong khi trên Dist-SW2 cổng xuống Access vẫn còn flow DROP (cạnh ngoài cây cũ) cho tới khi flow-mod được áp ⇒ cả 2 RARP bị drop, Core-SW1 giữ bảng MAC cũ (Et0/2 → Dist-SW1 đã chết). Capture lần tái hiện (không khựng, mất 2,1 s): Dist-SW1 còn chuyển dữ liệu ~1,3 s sau khi kênh OpenFlow mất; RARP tới Core 7,33 → dữ liệu qua Et1/2 từ 7,37.
+
+Sửa `campus_switch_13.py`: thêm `_announce_after_barrier` — phát lại RARP khi mọi switch đã trả barrier (hoặc hết `OP_TIMEOUT`), thêm một lần sau 1 s; bỏ qua nếu cây đã đổi tiếp. Sự kiện có trường `announced_after`. Unit test 28/28 (thêm 3). Sau deploy: tắt Dist-SW1 giữ 30 s **mất 1,8 s, khôi phục ≤ 0,2 s, ĐẠT** (lần đo này không có khựng, nên chưa thử được đúng điều kiện race).
+
 ## Kết quả đo mục tiêu 3 – hiệu năng giữa các VLAN (04/10/2026)
 
 `scripts/lab/sdn_perf_test.py --count 5`: VPC14 (V10), VPC20/21 (V20), VPC15/16 (V30), VPC17 + PC-HanhChinh (V40), các nguồn chạy song song, 36 cặp trong 54 s.
