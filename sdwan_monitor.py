@@ -92,6 +92,12 @@ class VManage:
                 msg = '(trang HTML{}){}'.format(': ' + t.group(1).strip() if t else '',
                                                 ' - vManage dang qua tai / khoi dong lai dich vu'
                                                 if e.code in (502, 503, 504) else '')
+            else:                                   # {"error":{"message":..,"details":..}} -> doc duoc ngay
+                try:
+                    err = json.loads(msg).get('error') or {}
+                    msg = ' - '.join(str(err[k]) for k in ('message', 'details') if err.get(k)) or msg
+                except (ValueError, AttributeError):
+                    pass
             msg = msg[:300]
             raise VManageError('vManage {} {}: HTTP {} {}'.format('POST' if body is not None else 'GET',
                                                                  path, e.code, msg))
@@ -124,11 +130,11 @@ class VManage:
     def vedges(self):
         return [d for d in self.devices() if d.get('personality') == 'vedge' or d.get('device-type') == 'vedge']
 
-    def bfd(self, sysip):
-        return self.rows('device/bfd/sessions?deviceId=' + sysip)
+    def bfd(self, sysip, timeout=None):
+        return self.rows('device/bfd/sessions?deviceId=' + sysip, timeout)
 
-    def control(self, sysip):
-        return self.rows('device/control/connections?deviceId=' + sysip)
+    def control(self, sysip, timeout=None):
+        return self.rows('device/control/connections?deviceId=' + sysip, timeout)
 
     def interfaces(self, sysip):
         return self.rows('device/interface?deviceId=' + sysip)
@@ -454,8 +460,12 @@ def _uptime(d):
     return '{}d {}h'.format(days, rem // 3600) if days else '{}h {}m'.format(rem // 3600, rem % 3600 // 60)
 
 
-def overview(vm):
-    """Danh sach thiet bi + so phien BFD/control cua tung vEdge (goi song song)."""
+OVERVIEW_RT_TIMEOUT = 20   # moi lenh realtime (vManage hoi vEdge qua NETCONF) - vEdge treo khong giu ca bang
+
+
+def overview(vm, quick=False):
+    """Danh sach thiet bi + so phien BFD/control cua tung vEdge (goi song song).
+    quick=True: chi /device (nhanh) de web ve bang ngay, BFD/control dien sau."""
     devs = vm.devices()
     out = []
     for d in devs:
@@ -464,18 +474,18 @@ def overview(vm):
                     'site': d.get('site-id', ''), 'reach': d.get('reachability', ''),
                     'version': d.get('version', ''), 'uptime': _uptime(d),
                     'bfd_up': None, 'bfd_total': None, 'ctrl_up': None})
-    edges = [o for o in out if o['type'] == 'vedge' and o['reach'] == 'reachable']
+    edges = [] if quick else [o for o in out if o['type'] == 'vedge' and o['reach'] == 'reachable']
 
     def fill(o):
         try:
-            b = vm.bfd(o['sysip'])
+            b = vm.bfd(o['sysip'], OVERVIEW_RT_TIMEOUT)
             o['bfd_total'] = len(b)
             o['bfd_up'] = sum(1 for s in b if s.get('state') == 'up')
-            c = vm.control(o['sysip'])
+            c = vm.control(o['sysip'], OVERVIEW_RT_TIMEOUT)
             o['ctrl_up'] = sum(1 for s in c if s.get('state') == 'up')
         except Exception as e:
             o['error'] = str(e)[:120]
-    with ThreadPoolExecutor(max_workers=6) as ex:
+    with ThreadPoolExecutor(max_workers=8) as ex:
         list(ex.map(fill, edges))
     order = {'vmanage': 0, 'vsmart': 1, 'vbond': 2, 'vedge': 3}
     out.sort(key=lambda o: (order.get(o['type'], 9), str(o['site']), o['host']))

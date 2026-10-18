@@ -264,6 +264,8 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
         <svg class="i" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>Kiểm chứng VLAN</button>
       <button data-tab="policy" data-title="Chính sách tập trung" data-sub="Whitelist, route OMP theo control-policy và counter data-policy / app-route trên vEdge">
         <svg class="i" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>Chính sách tập trung</button>
+      <button data-tab="certsign" data-title="Ký cert vEdge" data-sub="Day-0 → CSR → ký bằng CA trên vManage → cài cert → whitelist 3 controller, SSH thẳng IP thiết bị (không qua host EVE)">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.2-8.2M16 7l2 2M19 4l2 2"/></svg>Ký cert vEdge</button>
       <button data-tab="files" data-title="Kết quả" data-sub="Biểu đồ PNG, CSV và log đã lưu trong thư mục log/">
         <svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>Kết quả</button>
     </nav>
@@ -439,6 +441,48 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
           </div>
         </div>
 
+        <!-- ============ KÝ CERT vEdge ============ -->
+        <div class="tab" id="tab-certsign">
+          <div class="card">
+            <h2>1. Day-0 cho vEdge mới <span class="tag">site 900</span></h2>
+            <p class="hint">Tool cấp system-ip <code>10.200.90.N</code> và IP vpn 0 <code>10.9.0.(99+N)</code> chưa ai dùng, dựa trên danh sách bên dưới. Cắm cổng WAN của vEdge vào Switch32 (access VLAN <span id="csVlan">10</span>), đăng nhập console thiết bị (lần đầu sẽ bắt đổi mật khẩu admin), rồi dán đoạn cấu hình này vào.</p>
+            <div class="grid">
+              <label class="field"><span>Tên vEdge</span><input type="text" id="csHost" placeholder="để trống = vEdge-SpareN" data-persist></label>
+              <label class="field"><span>Interface WAN</span><input type="text" id="csWan" value="ge0/0" data-persist></label>
+            </div>
+            <div class="row"><button class="btn accent solid" id="csDay0Btn">Tạo Day-0</button>
+              <button class="btn grey sm" id="csCopyBtn" style="display:none">Sao chép</button></div>
+            <pre id="csDay0" style="display:none;white-space:pre;overflow:auto;max-height:320px;font:12px var(--mono);padding:12px;border-radius:10px;background:var(--surface2)"></pre>
+          </div>
+
+          <div class="card">
+            <h2>2. Ký cert + whitelist</h2>
+            <p class="hint">Tác vụ này <b>sửa cấu hình thiết bị</b>, gồm các bước: SSH vào vEdge để tạo CSR, scp CSR lên vManage, ký bằng openssl (CA <code>/home/admin/ca</code>), cài root chain và cert, chạy <code>request vedge add</code> trên vManage/vSmart/vBond, rồi chờ control Up và vManage báo <code>reachable</code>. Mật khẩu chỉ giữ trong bộ nhớ của tác vụ, không ghi log. Nếu một mật khẩu bị sai, tool dừng ngay để tài khoản không bị khoá.</p>
+            <div class="grid">
+              <label class="field"><span>IP vpn 0 của vEdge</span><input type="text" id="csIps" placeholder="10.9.0.102, 10.9.0.103" data-persist><small>Nhiều vEdge thì cách nhau bằng dấu phẩy</small></label>
+              <label class="field"><span>User</span><input type="text" id="csUser" value="admin" data-persist></label>
+              <label class="field"><span>Mật khẩu vEdge</span><input type="password" id="csVedgePw" autocomplete="off"></label>
+              <label class="field"><span>Mật khẩu vManage</span><input type="password" id="csVmPw" autocomplete="off" placeholder="trống = phiên đang kết nối"></label>
+              <label class="field"><span>Mật khẩu vSmart</span><input type="password" id="csVsPw" autocomplete="off" placeholder="trống = như vManage"></label>
+              <label class="field"><span>Mật khẩu vBond</span><input type="password" id="csVbPw" autocomplete="off" placeholder="trống = như vManage"></label>
+              <label class="field"><span>Chờ control Up (s)</span><input type="number" id="csVerify" value="240" min="60" max="900" data-persist></label>
+            </div>
+            <div class="row"><label class="check"><input type="checkbox" id="csResign"><span>Ký lại kể cả khi cert đang Valid</span></label></div>
+            <div class="row">
+              <button class="btn green solid job" id="csSignBtn">Ký cert + whitelist</button>
+              <button class="btn orange job" id="csRewlBtn" title="request vedge add lại cho mọi vEdge trong danh sách (sau khi controller reboot)">Đẩy lại whitelist (SSH)</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>vEdge đã onboard <span class="tag">log/onboard_registry.json</span></h2>
+            <div class="row" style="margin:0 0 12px"><button class="btn grey sm" id="csRegRefresh">Làm mới</button></div>
+            <div class="tablewrap"><table>
+              <thead><tr><th>vEdge</th><th>System-IP</th><th>Site</th><th>IP vpn 0</th><th>Chassis</th><th>Trạng thái</th><th>Cập nhật</th></tr></thead>
+              <tbody id="csRows"><tr><td colspan="7" class="empty">Đang tải…</td></tr></tbody></table></div>
+          </div>
+        </div>
+
         <!-- ============ FILES ============ -->
         <div class="tab" id="tab-files">
           <div class="card">
@@ -540,6 +584,7 @@ $('tabs').addEventListener('click', e => {
   $('pageTitle').textContent = b.dataset.title; $('pageSub').textContent = b.dataset.sub;
   store.set('tab', b.dataset.tab);
   if (b.dataset.tab === 'files') loadFiles();
+  if (b.dataset.tab === 'certsign') loadRegistry();
   if (b.dataset.tab === 'overview' && VM) loadOverview();
 });
 
@@ -559,25 +604,34 @@ function ratio(up, total) {
   if (up == null) return '<span class="badge off">–</span>';
   return `<span class="badge ${up === total && total ? 'on' : up ? 'mid' : 'bad'}">${up}/${total}</span>`;
 }
+let ovBusy = false;
 async function loadOverview() {
-  $('ovRefresh').disabled = true;
-  const d = await act('/api/overview');
-  $('ovRefresh').disabled = false;
-  if (!d) return;
-  $('ovTime').textContent = 'cập nhật ' + d.time;
+  if (ovBusy) return;            // lan tai truoc (BFD/control realtime) chua xong
+  ovBusy = true; $('ovRefresh').disabled = true;
+  try {
+    // pha 1: chi /device -> ve bang ngay; pha 2: BFD/control tung vEdge (cham, vManage hoi qua NETCONF)
+    const q = await act('/api/overview?quick=1');
+    if (!q) return;
+    renderOverview(q, true);
+    const d = await act('/api/overview');
+    if (d) renderOverview(d, false);
+  } finally { ovBusy = false; $('ovRefresh').disabled = false; }
+}
+function renderOverview(d, partial) {
+  $('ovTime').textContent = partial ? 'đang tải BFD/control…' : 'cập nhật ' + d.time;
   const devs = d.devices, edges = devs.filter(x => x.type === 'vedge');
   const reach = devs.filter(x => x.reach === 'reachable').length;
   const bfdUp = edges.reduce((a, x) => a + (x.bfd_up || 0), 0), bfdTot = edges.reduce((a, x) => a + (x.bfd_total || 0), 0);
   const kpi = (c, l, v) => `<div class="metric" style="--c:var(${c})"><span>${l}</span><b>${v}</b></div>`;
   $('ovKpis').innerHTML = kpi('--sky', 'Thiết bị reachable', `${reach}/${devs.length}`) +
     kpi('--teal', 'vEdge reachable', `${edges.filter(x => x.reach === 'reachable').length}/${edges.length}`) +
-    kpi(bfdUp === bfdTot ? '--green' : '--amber', 'Phiên BFD up', `${bfdUp}/${bfdTot}`);
+    kpi(bfdUp === bfdTot ? '--green' : '--amber', 'Phiên BFD up', partial ? '…' : `${bfdUp}/${bfdTot}`);
   $('ovRows').innerHTML = devs.length ? devs.map(x => {
     const isEdge = x.type === 'vedge' && x.reach === 'reachable';
     return `<tr class="${isEdge ? 'edge' : ''}${x.host === ovSel ? ' sel' : ''}" data-host="${esc(x.host)}">
-      <td><b>${esc(x.host)}</b>${x.error ? ` <small style="color:var(--red)">${esc(x.error)}</small>` : ''}</td><td>${esc(x.type)}</td>
+      <td><b>${esc(x.host)}</b>${x.error ? ` <small style="color:var(--red)" title="${esc(x.error)}">${esc(x.error.replace(/^vManage (GET )?\S+: (HTTP \d+ )?/, ''))}</small>` : ''}</td><td>${esc(x.type)}</td>
       <td>${esc(x.sysip)}</td><td>${esc(x.site)}</td><td>${stBadge(x.reach === 'reachable', x.reach || '?')}</td>
-      <td>${x.ctrl_up == null ? '–' : x.ctrl_up}</td><td>${ratio(x.bfd_up, x.bfd_total)}</td>
+      <td>${x.ctrl_up == null ? (partial && isEdge ? '…' : '–') : x.ctrl_up}</td><td>${partial && isEdge ? '<span class="badge off">…</span>' : ratio(x.bfd_up, x.bfd_total)}</td>
       <td>${esc(x.uptime)}</td><td>${esc(x.version)}</td></tr>`;
   }).join('') : '<tr><td colspan="9" class="empty">vManage không trả về thiết bị nào.</td></tr>';
 }
@@ -774,6 +828,36 @@ $('vRunBtn').onclick = () => act('/api/vlan/verify', { net: val('vNet'), gw: val
 $('pRunBtn').onclick = () => act('/api/policy/run', { window: num('pWindow'), farm: val('pFarm'), dmz: val('pDmz'),
   push: on('pPush'), groups: [...document.querySelectorAll('.pGroup:checked')].map(c => c.value) });
 
+// ---------- Ký cert vEdge ----------
+$('csDay0Btn').onclick = async () => {
+  const d = await act(`/api/certsign/day0?hostname=${encodeURIComponent(val('csHost'))}&wan_if=${encodeURIComponent(val('csWan'))}`);
+  if (!d) return;
+  $('csVlan').textContent = d.vlan;
+  $('csDay0').textContent = d.config; $('csDay0').style.display = 'block'; $('csCopyBtn').style.display = '';
+  if (!val('csIps')) $('csIps').value = d.entry.vpn0_ip;
+  toast(`${d.entry.hostname}: system-ip ${d.entry.system_ip}, vpn 0 ${d.entry.vpn0_ip}`, true);
+};
+$('csCopyBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText($('csDay0').textContent); toast('Đã sao chép', true); }
+  catch (e) {        // http khong phai localhost -> khong co clipboard API: boi den de Ctrl+C
+    const r = document.createRange(); r.selectNodeContents($('csDay0'));
+    getSelection().removeAllRanges(); getSelection().addRange(r); toast('Đã bôi đen – bấm Ctrl+C', true);
+  }
+};
+const csBody = () => ({ user: val('csUser'), vedge_pw: $('csVedgePw').value, vm_pw: $('csVmPw').value,
+  vs_pw: $('csVsPw').value, vb_pw: $('csVbPw').value, verify: num('csVerify'), resign: on('csResign') });
+$('csSignBtn').onclick = () => act('/api/certsign/sign', { ...csBody(), ips: val('csIps') }, 'Đang ký cert – xem log');
+$('csRewlBtn').onclick = () => act('/api/certsign/rewhitelist', csBody(), 'Đang đẩy lại whitelist – xem log');
+async function loadRegistry() {
+  const d = await act('/api/certsign/registry'); if (!d) return;
+  const cls = s => s === 'done' ? 'on' : /^failed|fail$/.test(s) ? 'bad' : 'mid';
+  $('csRows').innerHTML = d.entries.length ? d.entries.map(e => `<tr><td><b>${esc(e.hostname)}</b></td><td>${esc(e.system_ip)}</td>
+    <td>${esc(e.site_id)}</td><td>${esc(e.vpn0_ip)}</td><td title="${esc(e.chassis)}">${esc(String(e.chassis).slice(0, 8))}</td>
+    <td><span class="badge ${cls(e.status)}">${esc(e.status || '?')}</span></td><td>${esc(e.updated)}</td></tr>`).join('')
+    : '<tr><td colspan="7" class="empty">Chưa có vEdge nào.</td></tr>';
+}
+$('csRegRefresh').onclick = loadRegistry;
+
 // ---------- Files ----------
 async function loadFiles() {
   const d = await act('/api/files'); if (!d) return;
@@ -854,7 +938,10 @@ async function poll() {
     for (const [k, v] of Object.entries(d.metrics)) $('m-' + k).textContent = v;
     updateQos(d.metrics);
     document.querySelectorAll('button.job').forEach(b => b.disabled = !!d.job);
-    if (lastJob && !d.job) loadFiles();      // tác vụ vừa xong -> làm mới danh sách file
+    if (lastJob && !d.job) {                 // tác vụ vừa xong -> làm mới danh sách file / vEdge đã ký
+      loadFiles();
+      if ($('tab-certsign').classList.contains('active')) loadRegistry();
+    }
     lastJob = d.job;
   } catch (e) { $('status').textContent = 'Mất kết nối tới server'; $('statusPill').classList.remove('busy'); }
   setTimeout(poll, 800);

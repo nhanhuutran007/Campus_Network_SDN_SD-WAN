@@ -12,6 +12,9 @@ IP cua no, dung kieu NOC van hanh that:
   * ping tu chinh may chay web toi IP thiet bi
 Logic do nam o sdwan_monitor.py. Cac tab chi DO / KIEM CHUNG, khong sua cau
 hinh thiet bi (rieng nut day lai whitelist goi API vManage "Send to Controllers").
+Ngoai le: tab "Ky cert vEdge" (sdwan_certsign.py) SSH thang toi IP vEdge / vManage /
+vSmart / vBond tren CONTROLLER-LAN 10.9.0.0/24 de cai cert + whitelist - van khong
+qua host EVE.
 
 Cach chay (tren may Win trong lab 10.9.0.20, cung LAN controller site 900):
   python campus_web.py                       # http://127.0.0.1:8080
@@ -20,7 +23,7 @@ Cach chay (tren may Win trong lab 10.9.0.20, cung LAN controller site 900):
                                              # (KHONG co dang nhap - chi dung trong lab)
 ================================================================
 """
-import argparse, ipaddress, json, mimetypes, os, threading, webbrowser
+import argparse, ipaddress, json, mimetypes, os, re, threading, webbrowser
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs, unquote
@@ -210,9 +213,9 @@ def api_vm_disconnect(_):
     return {}
 
 
-def api_overview(_):
+def api_overview(q):
     try:
-        return {'devices': mon.overview(GUI.vmanage()), 'time': datetime.now().strftime('%H:%M:%S')}
+        return {'devices': mon.overview(GUI.vmanage(), quick=q.get('quick') == '1'), 'time': datetime.now().strftime('%H:%M:%S')}
     except mon.VManageError as e:
         raise WebError(str(e))
 
@@ -350,6 +353,88 @@ def api_throughput_state(q):
     return THROUGHPUT.snapshot(_int(q, 'since', 0, 10 ** 9, 0))
 
 
+# ---- Ky cert vEdge: SSH thang IP thiet bi tren CONTROLLER-LAN (sdwan_certsign.py) ----
+def _certsign():
+    try:
+        import sdwan_certsign
+    except ImportError as e:
+        raise WebError('Thieu thu vien cho tab Ky cert: {} (pip install paramiko)'.format(e))
+    return sdwan_certsign
+
+
+def _cs_opts(d, need_vedge):
+    """Mat khau chi giu trong bo nho cua tac vu, khong log. vManage de trong -> dung
+    phien vManage dang ket noi; vSmart/vBond de trong -> = mat khau vManage."""
+    cs = _certsign()
+    user = d.get('user', '').strip() or 'admin'
+    vm_pw = d.get('vm_pw') or (GUI.vm.password if GUI.vm and GUI.vm.host == cs.ob.VMANAGE_IP else '')
+    if not vm_pw:
+        raise WebError('Nhap mat khau vManage (hoac ket noi vManage {} o ben trai).'.format(cs.ob.VMANAGE_IP))
+    opts = {'vm_user': user, 'vedge_user': user, 'vm_pw': vm_pw, 'vs_pw': d.get('vs_pw') or vm_pw,
+            'vb_pw': d.get('vb_pw') or vm_pw, 'resign': bool(d.get('resign')),
+            'verify_s': _int(d, 'verify', 60, 900, 240),
+            'vm': GUI.vm if GUI.vm and GUI.vm.host == cs.ob.VMANAGE_IP else None}
+    if need_vedge:
+        if not d.get('vedge_pw'):
+            raise WebError('Nhap mat khau vEdge (da dat luc dan Day-0).')
+        opts['vedge_pw'] = d['vedge_pw']
+    return cs, opts
+
+
+def api_cs_day0(q):
+    cs = _certsign()
+    hostname, wan_if = q.get('hostname', '').strip(), q.get('wan_if', '').strip() or 'ge0/0'
+    if hostname and not re.match(r'^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$', hostname):
+        raise WebError('Ten vEdge chi gom chu, so, - va _ (toi da 32 ky tu).')
+    if not re.match(r'^ge\d+/\d+$', wan_if):
+        raise WebError('Interface WAN dang ge0/0.')
+    e, lines = cs.day0_config(hostname or None, wan_if)
+    return {'entry': e, 'config': '\n'.join(lines), 'vlan': cs.ob.CONTROLLER_VLAN}
+
+
+def api_cs_registry(_):
+    reg = _certsign().ob.load_registry()
+    keys = ('hostname', 'system_ip', 'site_id', 'vpn0_ip', 'chassis', 'status', 'updated', 'via')
+    return {'entries': sorted(({k: v.get(k, '') for k in keys} for v in reg.values()),
+                              key=lambda v: str(v['system_ip']))}
+
+
+def api_cs_sign(d):
+    ips = [s.strip() for s in re.split(r'[\s,;]+', d.get('ips', '')) if s.strip()]
+    if not ips:
+        raise WebError('Nhap IP vpn 0 cua vEdge (10.9.0.x).')
+    cs, opts = _cs_opts(d, True)
+    for ip in ips:
+        if ipaddress.ip_address(_ip(ip, 'IP vEdge')) not in cs.ob.LAN_NET:
+            raise WebError('{} khong thuoc CONTROLLER-LAN {}.'.format(ip, cs.ob.LAN_NET))
+    if len(set(ips)) != len(ips):
+        raise WebError('IP vEdge bi trung.')
+
+    def run():
+        ok = 0
+        for i, ip in enumerate(ips, 1):
+            if GUI._stop_event.is_set():
+                GUI._log('[CERTSIGN] Da dung truoc {}\n'.format(ip), 'info')
+                break
+            GUI._set_status('Ky cert {} ({}/{})'.format(ip, i, len(ips)), True)
+            ok += bool(cs.certsign(ip, opts, GUI._log, GUI._stop_event))
+        GUI._log('[CERTSIGN] Xong: {}/{} vEdge vao fabric\n'.format(ok, len(ips)), 'ok' if ok == len(ips) else 'err')
+    GUI.run_job('Ky cert vEdge', run)
+    return {}
+
+
+def api_cs_rewhitelist(d):
+    cs, opts = _cs_opts(d, False)
+
+    def run():
+        GUI._set_status('Day lai whitelist (SSH)...', True)
+        ok = cs.rewhitelist(opts, GUI._log)
+        GUI._log('[REWHITELIST] {}\n'.format('Du 3/3 controller' if ok else 'Chua du 3 controller - xem log'),
+                 'ok' if ok else 'err')
+    GUI.run_job('Day lai whitelist', run)
+    return {}
+
+
 ROUTES = {
     ('GET', '/api/meta'): api_meta,
     ('GET', '/api/poll'): api_poll,
@@ -370,6 +455,10 @@ ROUTES = {
     ('POST', '/api/policy/run'): api_policy_run,
     ('GET', '/api/throughput'): api_throughput_state,
     ('POST', '/api/throughput/run'): api_throughput_run,
+    ('GET', '/api/certsign/day0'): api_cs_day0,
+    ('GET', '/api/certsign/registry'): api_cs_registry,
+    ('POST', '/api/certsign/sign'): api_cs_sign,
+    ('POST', '/api/certsign/rewhitelist'): api_cs_rewhitelist,
 }
 
 

@@ -96,47 +96,60 @@ def running_system(con):
             'org': get('organization-name').strip('"'), 'vbond': get('vbond')}
 
 
-def vmanage_reachable(opts, system_ip, timeout=180):
-    """Xac nhan tu phia vManage (giong cach van hanh that). Khong co API thi bo qua."""
-    try:
-        from sdwan_monitor import VManage
-        vm = VManage(ob.VMANAGE_IP, opts['vm_user'], opts['vm_pw'])
-        vm.login()
-    except Exception as e:
-        log('      (bo qua kiem tra vManage API: {})\n'.format(str(e)[:120]))
-        return None
+def vmanage_reachable(opts, system_ip, log=log, stop=None, timeout=180):
+    """Xac nhan tu phia vManage (giong cach van hanh that). Khong co API thi bo qua.
+    opts['vm']: phien VManage da dang nhap (web) -> dung lai, khong login them."""
+    vm = opts.get('vm')
+    if vm is None:
+        try:
+            from sdwan_monitor import VManage
+            vm = VManage(ob.VMANAGE_IP, opts['vm_user'], opts['vm_pw'])
+            vm.login()
+        except Exception as e:
+            log('      (bo qua kiem tra vManage API: {})\n'.format(str(e)[:120]), 'info')
+            return None
     t0 = time.time()
-    while time.time() - t0 < timeout:
+    while time.time() - t0 < timeout and not (stop and stop.is_set()):
         try:
             for d in vm.devices():
                 if d.get('system-ip') == system_ip and d.get('reachability') == 'reachable':
                     log('      vManage API: {} reachable ({:.0f}s)\n'.format(system_ip, time.time() - t0), 'ok')
                     return True
         except Exception as e:
-            log('      (doi vManage: {})\n'.format(str(e)[:120]))
-        time.sleep(15)
-    log('      vManage API: {} chua reachable sau {}s\n'.format(system_ip, timeout), 'err')
+            log('      (doi vManage: {})\n'.format(str(e)[:120]), 'info')
+        if stop: stop.wait(15)
+        else: time.sleep(15)
+    log('      vManage API: {} chua reachable sau {:.0f}s\n'.format(system_ip, time.time() - t0), 'err')
     return False
 
 
+def day0_config(hostname=None, wan_if='ge0/0'):
+    """Cap system-ip / IP vpn 0 ke tiep chua dung (theo registry) -> (entry, cac dong cau hinh).
+    Chua ghi registry: IP chi duoc giu khi certsign chay xong buoc doc system."""
+    n, sip, lan = ob.allocate(ob.load_registry())
+    e = {'hostname': hostname or ob.default_hostname(n), 'system_ip': sip, 'site_id': ob.SITE_ID,
+         'vpn0_ip': lan, 'wan_if': wan_if}
+    return e, ['config'] + ob.base_config(e) + ['commit and-quit']
+
+
 def day0(a):
-    reg = ob.load_registry()
-    n, sip, lan = ob.allocate(reg)
-    e = {'hostname': a.hostname or ob.default_hostname(n), 'system_ip': sip, 'site_id': ob.SITE_ID,
-         'vpn0_ip': lan, 'wan_if': a.wan_if}
+    e, lines = day0_config(a.hostname, a.wan_if)
     print('! Day-0 cho vEdge moi - cam {} vao Switch32 (access VLAN {}), dang nhap console thiet bi,'
           .format(a.wan_if, ob.CONTROLLER_VLAN))
     print('! go "config", dan doan duoi, roi "commit and-quit". Sau do chay:')
-    print('!   python sdwan_certsign.py {}'.format(lan))
-    print('config')
-    print('\n'.join(ob.base_config(e)))
-    print('commit and-quit')
+    print('!   python sdwan_certsign.py {}'.format(e['vpn0_ip']))
+    print('\n'.join(lines))
     return 0
 
 
-def certsign(ip, opts):
-    log('\n' + '=' * 55 + '\n[CERTSIGN] vEdge {} (SSH truc tiep, khong qua EVE)\n'.format(ip))
-    con = SshConsole(ip, opts['vedge_user'], opts['vedge_pw'], 'vEdge ' + ip)
+def certsign(ip, opts, log=log, stop=None):
+    log('\n' + '=' * 55 + '\n', 'sep')
+    log('[CERTSIGN] vEdge {} (SSH truc tiep, khong qua EVE)\n'.format(ip), 'hdr')
+    try:
+        con = SshConsole(ip, opts['vedge_user'], opts['vedge_pw'], 'vEdge ' + ip)
+    except OnboardError as ex:
+        log('  [!] {}\n'.format(ex), 'err')
+        return False
     step = 'system'
     e = None
     try:
@@ -144,7 +157,7 @@ def certsign(ip, opts):
         con.cli('screen-length 0', 10)
         s = running_system(con)
         log('  [1/6] {} system-ip {} site {} org "{}" vbond {}\n'.format(
-            s['hostname'], s['system_ip'], s['site_id'], s['org'], s['vbond']))
+            s['hostname'], s['system_ip'], s['site_id'], s['org'], s['vbond']), 'info')
         if s['org'] != ob.ORG or not s['system_ip'] or not s['vbond']:
             raise OnboardError('Day-0 chua du (can organization-name {}, system-ip, vbond) - '
                                'xem "python sdwan_certsign.py --day0"'.format(ob.ORG))
@@ -163,30 +176,31 @@ def certsign(ip, opts):
         e.update(chassis=p['chassis'], serial=p['serial'], status='signed'); ob.save_entry(e)
 
         step = 'whitelist'
-        log('  [4/6] Whitelist tren vManage / vSmart / vBond (SSH)\n')
+        log('  [4/6] Whitelist tren vManage / vSmart / vBond (SSH)\n', 'info')
         n_ok = ob.whitelist(None, log, [e], opts, connect=connect_controller(opts))
         e['status'] = 'whitelisted' if n_ok == 3 else 'whitelist {}/3'.format(n_ok); ob.save_entry(e)
 
         step = 'verify'
-        log('  [5/6] Cho control connection (toi da {}s)\n'.format(opts['verify_s']))
-        up = ob.wait_control(con, log, opts['verify_s'])
+        log('  [5/6] Cho control connection (toi da {}s)\n'.format(opts['verify_s']), 'info')
+        up = ob.wait_control(con, log, opts['verify_s'], stop)
     except Exception as ex:
         if e:
             e['status'] = 'failed:' + step; ob.save_entry(e)
-        log('  [!] Dung o buoc {}: {}\n'.format(step, ex))
+        log('  [!] Dung o buoc {}: {}\n'.format(step, ex), 'err')
         return False
     finally:
         con.close()
     if up:
-        up = vmanage_reachable(opts, e['system_ip']) is not False
+        up = vmanage_reachable(opts, e['system_ip'], log, stop) is not False
     e['status'] = 'done' if up else 'verify-fail'; ob.save_entry(e)
-    log('  [6/6] {} {}\n'.format(e['hostname'], 'DA VAO FABRIC' if up else 'chua len du controller - xem log'))
+    log('  [6/6] {} {}\n'.format(e['hostname'], 'DA VAO FABRIC' if up else 'chua len du controller - xem log'),
+        'ok' if up else 'err')
     return up
 
 
-def rewhitelist(opts):
+def rewhitelist(opts, log=log):
     entries = [v for v in ob.load_registry().values() if v.get('chassis') and v.get('serial')]
-    log('[REWHITELIST] {} vEdge: {}\n'.format(len(entries), ', '.join(v['hostname'] for v in entries)))
+    log('\n[REWHITELIST] {} vEdge: {}\n'.format(len(entries), ', '.join(v['hostname'] for v in entries)), 'hdr')
     return ob.whitelist(None, log, entries, opts, connect=connect_controller(opts)) == 3
 
 
