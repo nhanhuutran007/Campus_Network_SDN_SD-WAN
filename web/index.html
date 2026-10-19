@@ -264,7 +264,7 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
         <svg class="i" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>Kiểm chứng VLAN</button>
       <button data-tab="policy" data-title="Chính sách tập trung" data-sub="Whitelist, route OMP theo control-policy và counter data-policy / app-route trên vEdge">
         <svg class="i" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>Chính sách tập trung</button>
-      <button data-tab="certsign" data-title="Ký cert vEdge" data-sub="Day-0 → CSR → ký bằng CA trên vManage → cài cert → whitelist 3 controller, SSH thẳng IP thiết bị (không qua host EVE)">
+      <button data-tab="certsign" data-title="Ký cert vEdge" data-sub="Day-0 → vManage tự ký bằng UUID + OTP (Automated), hoặc ký tay bằng CA enterprise. SSH thẳng IP thiết bị, không qua host EVE">
         <svg class="i" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.2-8.2M16 7l2 2M19 4l2 2"/></svg>Ký cert vEdge</button>
       <button data-tab="files" data-title="Kết quả" data-sub="Biểu đồ PNG, CSV và log đã lưu trong thư mục log/">
         <svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>Kết quả</button>
@@ -445,7 +445,7 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
         <div class="tab" id="tab-certsign">
           <div class="card">
             <h2>1. Day-0 cho vEdge mới <span class="tag">site 900</span></h2>
-            <p class="hint">Tool cấp system-ip <code>10.200.90.N</code> và IP vpn 0 <code>10.9.0.(99+N)</code> chưa ai dùng, dựa trên danh sách bên dưới. Cắm cổng WAN của vEdge vào Switch32 (access VLAN <span id="csVlan">10</span>), đăng nhập console thiết bị (lần đầu sẽ bắt đổi mật khẩu admin), rồi dán đoạn cấu hình này vào.</p>
+            <p class="hint">Tool cấp system-ip <code>10.200.90.N</code> và IP vpn 0 <code>10.9.0.(99+N)</code> chưa ai dùng, dựa trên danh sách bên dưới. Cắm cổng WAN của vEdge vào Switch32 (access VLAN <span id="csVlan">10</span>), đăng nhập console thiết bị (lần đầu sẽ bắt đổi mật khẩu admin), rồi dán đoạn cấu hình này vào. Sau đó làm tiếp bước 2 (hoặc bước 3 nếu không còn mục trống).</p>
             <div class="grid">
               <label class="field"><span>Tên vEdge</span><input type="text" id="csHost" placeholder="để trống = vEdge-SpareN" data-persist></label>
               <label class="field"><span>Interface WAN</span><input type="text" id="csWan" value="ge0/0" data-persist></label>
@@ -456,7 +456,25 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
           </div>
 
           <div class="card">
-            <h2>2. Ký cert + whitelist</h2>
+            <h2>2. vManage tự ký <span class="tag">Automated · UUID + OTP</span></h2>
+            <p class="hint">vManage đang để <code>WAN Edge Cloud Certificate Authorization = Automated</code>. Mỗi vEdge mới cần một mục <b>trống</b> trong WAN Edge List, tức là mục đang có token. Tool SSH vào vEdge chỉ để cài root chain CA enterprise và chạy <code>request vedge-cloud activate chassis-number &lt;UUID&gt; token &lt;OTP&gt;</code>. Sau đó <b>vManage tự ký cert và tự whitelist</b> trên vSmart/vBond, tool chỉ theo dõi qua API cho tới khi vEdge <code>reachable</code>. Cần kết nối vManage ở thanh bên trái; OTP không gửi về trình duyệt.</p>
+            <div class="row" style="margin:0 0 12px"><button class="btn grey sm" id="asRefresh">Tải WAN Edge List</button><span class="hint" style="margin:0" id="asSum"></span></div>
+            <div class="tablewrap"><table>
+              <thead><tr><th>UUID / chassis</th><th>vEdge</th><th>System-IP</th><th>Cert state</th><th>Validity</th><th></th></tr></thead>
+              <tbody id="asRows"><tr><td colspan="6" class="empty">Bấm "Tải WAN Edge List" (cần kết nối vManage).</td></tr></tbody></table></div>
+            <p class="hint" style="margin-top:10px"><b>Giải phóng</b> chỉ có ở mục site 900 (<code>10.200.90.x</code>) hoặc mục chưa dùng. vManage sẽ thu hồi cert của vEdge đang dùng mục đó (vEdge này rớt khỏi fabric) và sinh token mới.</p>
+            <div class="grid">
+              <label class="field"><span>IP vpn 0 của vEdge</span><input type="text" id="asIp" placeholder="10.9.0.102" data-persist></label>
+              <label class="field"><span>Mục WAN Edge List trống</span><select id="asUuid"></select></label>
+              <label class="field"><span>User vEdge</span><input type="text" id="asUser" value="admin" data-persist></label>
+              <label class="field"><span>Mật khẩu vEdge</span><input type="password" id="asVedgePw" autocomplete="off"></label>
+              <label class="field"><span>Chờ control Up (s)</span><input type="number" id="asVerify" value="300" min="60" max="900" data-persist></label>
+            </div>
+            <div class="row"><button class="btn green solid job" id="asActBtn">Kích hoạt – vManage ký</button></div>
+          </div>
+
+          <div class="card">
+            <h2>3. Ký tay bằng CA <span class="tag">dự phòng</span></h2>
             <p class="hint">Tác vụ này <b>sửa cấu hình thiết bị</b>, gồm các bước: SSH vào vEdge để tạo CSR, scp CSR lên vManage, ký bằng openssl (CA <code>/home/admin/ca</code>), cài root chain và cert, chạy <code>request vedge add</code> trên vManage/vSmart/vBond, rồi chờ control Up và vManage báo <code>reachable</code>. Mật khẩu chỉ giữ trong bộ nhớ của tác vụ, không ghi log. Nếu một mật khẩu bị sai, tool dừng ngay để tài khoản không bị khoá.</p>
             <div class="grid">
               <label class="field"><span>IP vpn 0 của vEdge</span><input type="text" id="csIps" placeholder="10.9.0.102, 10.9.0.103" data-persist><small>Nhiều vEdge thì cách nhau bằng dấu phẩy</small></label>
@@ -584,7 +602,7 @@ $('tabs').addEventListener('click', e => {
   $('pageTitle').textContent = b.dataset.title; $('pageSub').textContent = b.dataset.sub;
   store.set('tab', b.dataset.tab);
   if (b.dataset.tab === 'files') loadFiles();
-  if (b.dataset.tab === 'certsign') loadRegistry();
+  if (b.dataset.tab === 'certsign') { loadRegistry(); if (VM) loadAutosign(); }
   if (b.dataset.tab === 'overview' && VM) loadOverview();
 });
 
@@ -848,6 +866,31 @@ const csBody = () => ({ user: val('csUser'), vedge_pw: $('csVedgePw').value, vm_
   vs_pw: $('csVsPw').value, vb_pw: $('csVbPw').value, verify: num('csVerify'), resign: on('csResign') });
 $('csSignBtn').onclick = () => act('/api/certsign/sign', { ...csBody(), ips: val('csIps') }, 'Đang ký cert – xem log');
 $('csRewlBtn').onclick = () => act('/api/certsign/rewhitelist', csBody(), 'Đang đẩy lại whitelist – xem log');
+// vManage tu ky (Automated)
+async function loadAutosign() {
+  const d = await act('/api/autosign/list'); if (!d) return;
+  const free = d.entries.filter(e => e.free);
+  $('asSum').textContent = `${d.entries.length} mục · ${free.length} trống`;
+  fillSelect($('asUuid'), free.map(e => e.uuid), null, free.map(e => `${e.uuid.slice(0, 8)}… (${e.state || 'trống'})`));
+  $('asRows').innerHTML = d.entries.map(e => `<tr><td title="${esc(e.uuid)}"><code>${esc(e.uuid)}</code></td><td>${esc(e.hostname || '–')}</td>
+    <td>${esc(e.system_ip || '–')}</td><td>${e.free ? '<span class="badge on">trống · có token</span>' : esc(e.state)}</td><td>${esc(e.validity)}</td>
+    <td>${e.decom ? `<button class="btn red sm asDecom" data-uuid="${esc(e.uuid)}" data-name="${esc(e.hostname || e.uuid.slice(0, 8))}">Giải phóng</button>` : ''}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="empty">WAN Edge List rỗng.</td></tr>';
+}
+$('asRefresh').onclick = loadAutosign;
+$('asRows').addEventListener('click', async e => {
+  const b = e.target.closest('.asDecom'); if (!b) return;
+  const name = b.dataset.name;
+  const typed = prompt(`Decommission ${name} (${b.dataset.uuid})?
+vManage sẽ thu hồi cert, ${name} rớt khỏi fabric.
+Gõ "${name}" để xác nhận:`);
+  if (typed === null) return;
+  if (await act('/api/autosign/decommission', { uuid: b.dataset.uuid, confirm: typed }, `Đã giải phóng mục của ${name}`)) {
+    loadAutosign(); loadRegistry();
+  }
+});
+$('asActBtn').onclick = () => act('/api/autosign/activate', { ip: val('asIp'), uuid: $('asUuid').value, user: val('asUser'),
+  vedge_pw: $('asVedgePw').value, verify: num('asVerify') }, 'Đang kích hoạt – xem log');
 async function loadRegistry() {
   const d = await act('/api/certsign/registry'); if (!d) return;
   const cls = s => s === 'done' ? 'on' : /^failed|fail$/.test(s) ? 'bad' : 'mid';
@@ -940,7 +983,7 @@ async function poll() {
     document.querySelectorAll('button.job').forEach(b => b.disabled = !!d.job);
     if (lastJob && !d.job) {                 // tác vụ vừa xong -> làm mới danh sách file / vEdge đã ký
       loadFiles();
-      if ($('tab-certsign').classList.contains('active')) loadRegistry();
+      if ($('tab-certsign').classList.contains('active')) { loadRegistry(); if (VM) loadAutosign(); }
     }
     lastJob = d.job;
   } catch (e) { $('status').textContent = 'Mất kết nối tới server'; $('statusPill').classList.remove('busy'); }

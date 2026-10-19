@@ -423,6 +423,63 @@ def api_cs_sign(d):
     return {}
 
 
+def _vm_on_ca(cs):
+    vm = GUI.vmanage()
+    if vm.host != cs.ob.VMANAGE_IP:
+        raise WebError('Can ket noi vManage {} (CA) - dang ket noi {}.'.format(cs.ob.VMANAGE_IP, vm.host))
+    return vm
+
+
+def api_as_list(_):
+    """WAN Edge List cho che do vManage tu ky. OTP khong gui ve trinh duyet."""
+    cs = _certsign()
+    try:
+        rows = cs.wan_edge_list(_vm_on_ca(cs))
+    except mon.VManageError as e:
+        raise WebError(str(e))
+    for r in rows:
+        r['token'] = bool(r['token'] and r['state'] == 'tokengenerated')
+        r['decom'] = not r['free'] and (not r['system_ip'] or r['system_ip'].startswith(cs.STAGING_NET))
+    return {'entries': rows}
+
+
+def api_as_decommission(d):
+    cs = _certsign()
+    vm, uuid = _vm_on_ca(cs), d.get('uuid', '')
+    e = next((x for x in cs.wan_edge_list(vm) if x['uuid'] == uuid), None)
+    if e is None:
+        raise WebError('Khong co muc {} trong WAN Edge List.'.format(uuid))
+    if d.get('confirm', '').strip() != (e['hostname'] or uuid[:8]):
+        raise WebError('Go dung "{}" de xac nhan.'.format(e['hostname'] or uuid[:8]))
+    try:
+        cs.decommission(vm, uuid, GUI._log)
+    except (cs.OnboardError, mon.VManageError) as ex:
+        GUI._log('[AUTOSIGN] Decommission loi: {}\n'.format(ex), 'err')
+        raise WebError(str(ex))
+    return {}
+
+
+def api_as_activate(d):
+    cs = _certsign()
+    vm = _vm_on_ca(cs)
+    ip = _ip(d.get('ip', '').strip(), 'IP vEdge')
+    if ipaddress.ip_address(ip) not in cs.ob.LAN_NET:
+        raise WebError('{} khong thuoc CONTROLLER-LAN {}.'.format(ip, cs.ob.LAN_NET))
+    uuid = d.get('uuid', '')
+    if not any(x['uuid'] == uuid and x['free'] for x in cs.wan_edge_list(vm)):
+        raise WebError('Chon 1 muc WAN Edge List dang trong (tokengenerated).')
+    if not d.get('vedge_pw'):
+        raise WebError('Nhap mat khau vEdge (da dat luc dan Day-0).')
+    opts = {'vm': vm, 'vm_user': vm.user, 'vm_pw': vm.password, 'vedge_user': d.get('user', '').strip() or 'admin',
+            'vedge_pw': d['vedge_pw'], 'verify_s': _int(d, 'verify', 60, 900, 300)}
+
+    def run():
+        GUI._set_status('Kich hoat {} (vManage tu ky)'.format(ip), True)
+        cs.activate(ip, uuid, opts, GUI._log, GUI._stop_event)
+    GUI.run_job('vManage tu ky', run)
+    return {}
+
+
 def api_cs_rewhitelist(d):
     cs, opts = _cs_opts(d, False)
 
@@ -459,6 +516,9 @@ ROUTES = {
     ('GET', '/api/certsign/registry'): api_cs_registry,
     ('POST', '/api/certsign/sign'): api_cs_sign,
     ('POST', '/api/certsign/rewhitelist'): api_cs_rewhitelist,
+    ('GET', '/api/autosign/list'): api_as_list,
+    ('POST', '/api/autosign/decommission'): api_as_decommission,
+    ('POST', '/api/autosign/activate'): api_as_activate,
 }
 
 

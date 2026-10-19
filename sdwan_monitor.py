@@ -69,7 +69,7 @@ class VManage:
                 pass                               # ban cu khong co token
         return self
 
-    def _request(self, path, body=None, timeout=None, retry=True):
+    def _request(self, path, body=None, timeout=None, retry=True, method=None):
         if self._op is None:
             self.login()
         headers = {'Accept': 'application/json'}
@@ -79,13 +79,14 @@ class VManage:
             headers['Content-Type'] = 'application/json'
             if self._token:
                 headers['X-XSRF-TOKEN'] = self._token
-        req = urllib.request.Request(self.base + '/dataservice/' + path.lstrip('/'), data=data, headers=headers)
+        req = urllib.request.Request(self.base + '/dataservice/' + path.lstrip('/'), data=data, headers=headers,
+                                     method=method)
         try:
             raw = self._op.open(req, timeout=timeout or self.timeout).read().decode('utf-8', 'replace')
         except urllib.error.HTTPError as e:
             if e.code in (401, 403) and retry:
                 self.login()
-                return self._request(path, body, timeout, False)
+                return self._request(path, body, timeout, False, method)
             msg = e.read().decode('utf-8', 'replace')
             if '<html' in msg.lower():              # trang loi HTML cua vManage -> chi giu <title>
                 t = re.search(r'<title>(.*?)</title>', msg, re.S | re.I)
@@ -99,14 +100,14 @@ class VManage:
                 except (ValueError, AttributeError):
                     pass
             msg = msg[:300]
-            raise VManageError('vManage {} {}: HTTP {} {}'.format('POST' if body is not None else 'GET',
+            raise VManageError('vManage {} {}: HTTP {} {}'.format(method or ('POST' if body is not None else 'GET'),
                                                                  path, e.code, msg))
         except (urllib.error.URLError, OSError) as e:
             raise VManageError('vManage {}: {}'.format(path, getattr(e, 'reason', e)))
         if raw.lstrip().startswith('<'):           # het phien -> trang login
             if retry:
                 self.login()
-                return self._request(path, body, timeout, False)
+                return self._request(path, body, timeout, False, method)
             raise VManageError('vManage tra ve HTML cho {} (het phien dang nhap?)'.format(path))
         try:
             return json.loads(raw) if raw.strip() else {}
@@ -122,6 +123,9 @@ class VManage:
 
     def post(self, path, body=None, timeout=None):
         return self._request(path, body if body is not None else {}, timeout)
+
+    def put(self, path, body=None, timeout=None):
+        return self._request(path, body if body is not None else {}, timeout, method='PUT')
 
     # ---- tien ich hay dung ----
     def devices(self):
