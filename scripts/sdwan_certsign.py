@@ -328,16 +328,17 @@ def activate(ip, uuid, opts, log=log, stop=None):
             log('  [2/5] Da kich hoat voi muc nay (cert Valid) - chi kiem tra control\n', 'ok')
         else:
             step = 'root-chain'
-            if p['chain'] != 'Installed':
-                log('  [2/5] Cai root chain CA enterprise (de vEdge tin cert vBond/vSmart)\n', 'info')
-                ob._scp(con, 'admin@{}:{}/root-ca.pem'.format(ob.VMANAGE_IP, ob.CA_DIR), '/home/admin/root-ca.pem',
-                        opts['vm_pw'])
-                out = con.cli('request root-cert-chain install /home/admin/root-ca.pem', 90,
-                              answers=[[r'\[yes,no\]', 'yes', 2]])
-                if re.search(r'error|fail', out, re.I):
-                    raise OnboardError('cai root chain loi: {!r}'.format(ob._last_line(out)))
-            else:
-                log('  [2/5] Root chain da Installed\n', 'ok')
+            # luon cai lai: chain "Installed" nhung sai CA van gay CRTVERFL voi vBond
+            log('  [2/5] Cai root chain cua vManage ({}) de vEdge tin cert vBond/vSmart\n'.format(ob.ROOT_BUNDLE), 'info')
+            ob.install_root_chain(con, opts)
+
+            # sau decommission vBond can nhan danh sach co token moi, neu khong vEdge xac thuc that bai
+            try:
+                vm.post('certificate/vedge/list?action=push', {})
+                log('      Send to Controllers: day WAN Edge List (token moi) xuong vBond/vSmart\n', 'info')
+                time.sleep(5)
+            except Exception as ex:
+                log('      (Send to Controllers loi: {})\n'.format(str(ex)[:120]), 'err')
 
             step = 'activate'
             otp = otp_of(vm, entry)

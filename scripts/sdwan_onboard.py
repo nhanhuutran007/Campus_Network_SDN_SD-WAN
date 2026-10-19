@@ -43,6 +43,7 @@ VBOND_IP        = '10.9.0.12'
 ORG             = 'site-900'
 SITE_ID         = 900
 CA_DIR          = '/home/admin/ca'   # CA cu SDWAN-Lab-RootCA (root-ca.pem/.key)
+ROOT_BUNDLE     = '/usr/share/viptela/root-ca.crt'   # root chain vManage dang tin -> cai len vEdge moi
 LAB_NAME        = 'Campus Network SDN SD-WAN.unl'
 REGISTRY        = os.path.join(LOG_DIR, 'onboard_registry.json')
 # cong Switch32 dang noi ha tang (configs/05-Site900-Controller/Switch32) -> cam doi VLAN
@@ -448,12 +449,34 @@ def wait_control(con, log, timeout, stop=None):
             return True
         if time.time() - t0 > timeout or (stop and stop.is_set()):
             log('      control chua du sau {:.0f}s: {}\n'.format(time.time() - t0, up), 'err')
-            hist = con.cli('show control connections-history | include CONNECT|DOWN|ERR|BID', 30)
-            for line in [l for l in hist.replace('\r', '').split('\n')[1:-1] if l.strip()][:6]:
-                log('        ' + line.strip() + '\n', 'data')
+            # loc trong Python: tren Viptela dau '|' trong "include a|b" bi hieu la pipe moi -> syntax error
+            hist = con.cli('show control connections-history', 30)
+            rows = [l.strip() for l in hist.replace('\r', '').split('\n')[1:-1]
+                    if re.search(r'vbond|vsmart|vmanage|CONNECT|DOWN|ERR|BID|FAIL|MIS', l, re.I)]
+            for line in rows[:8]:
+                log('        ' + line + '\n', 'data')
             log('      Goi y: BIDNTVRFD = thieu whitelist; "interface not configured" -> request reboot vEdge\n', 'info')
             return False
         time.sleep(15)
+
+
+def install_root_chain(con, opts, with_lab_ca=False):
+    """Root chain cho vEdge = bo chain vManage dang tin (ROOT_BUNDLE, nhieu CA). Chi cai CA lab
+    root-ca.pem thi vEdge khong xac minh duoc cert vBond -> CRTVERFL (19/10/2026). Ky tay bang CA
+    lab thi noi them root-ca.pem de 'request certificate install' kiem duoc cert vua ky."""
+    _scp(con, 'admin@{}:{}'.format(VMANAGE_IP, ROOT_BUNDLE), '/home/admin/vm-root.crt', opts['vm_pw'])
+    path = '/home/admin/vm-root.crt'
+    if with_lab_ca:
+        _scp(con, 'admin@{}:{}/root-ca.pem'.format(VMANAGE_IP, CA_DIR), '/home/admin/root-ca.pem', opts['vm_pw'])
+        con.vshell()
+        try:
+            con.sh('cat /home/admin/vm-root.crt /home/admin/root-ca.pem > /home/admin/root-chain.pem')
+        finally:
+            con.vshell_exit()
+        path = '/home/admin/root-chain.pem'
+    out = con.cli('request root-cert-chain install ' + path, 90, answers=[[r'\[yes,no\]', 'yes', 2]])
+    if re.search(r'error|fail', out, re.I):
+        raise OnboardError('cai root chain loi: {!r}'.format(_last_line(out)))
 
 
 def install_cert(con, log, hostname, opts, sign):
@@ -472,13 +495,12 @@ def install_cert(con, log, hostname, opts, sign):
             raise OnboardError('tao CSR loi: {!r}'.format(_last_line(out)))
         _scp(con, '/home/admin/' + csr, 'admin@{}:{}/{}'.format(VMANAGE_IP, CA_DIR, csr), opts['vm_pw'])
         sign(csr, crt)
-        for f in (crt, 'root-ca.pem'):
-            _scp(con, 'admin@{}:{}/{}'.format(VMANAGE_IP, CA_DIR, f), '/home/admin/' + f, opts['vm_pw'])
-        for c in ('request root-cert-chain install /home/admin/root-ca.pem',
-                  'request certificate install /home/admin/' + crt):
-            out = con.cli(c, 90, answers=[[r'\[yes,no\]', 'yes', 2]])
-            if re.search(r'error|fail', out, re.I):
-                raise OnboardError('"{}" loi: {!r}'.format(c, _last_line(out)))
+        _scp(con, 'admin@{}:{}/{}'.format(VMANAGE_IP, CA_DIR, crt), '/home/admin/' + crt, opts['vm_pw'])
+        install_root_chain(con, opts, with_lab_ca=True)
+        c = 'request certificate install /home/admin/' + crt
+        out = con.cli(c, 90, answers=[[r'\[yes,no\]', 'yes', 2]])
+        if re.search(r'error|fail', out, re.I):
+            raise OnboardError('"{}" loi: {!r}'.format(c, _last_line(out)))
         p = local_props(con)
         if p['validity'] != 'Valid':
             raise OnboardError('cert sau khi cai chua Valid ({})'.format(p))
