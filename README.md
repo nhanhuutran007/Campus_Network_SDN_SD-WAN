@@ -66,13 +66,13 @@ Hạ tầng mạng của trường đại học phải phục vụ đồng thờ
 | **Dự phòng** | VRRP trên Core-SW1/2, ASAv Active/Standby failover, 2 vEdge và 2 transport mỗi site, Access dual-home lên 2 Distribution |
 | **Bảo mật** | ASAv phân vùng inside/DMZ/Server Farm, OSPF Area 0 giữa FW và Core, VLAN quản trị 99 tách biệt, ASDM |
 | **Dịch vụ** | DHCP (Windows Server 2012 R2 + relay), DNS `campus.internal`, Web HTTPS (Nginx), Mail (hMailServer), Syslog (Kiwi) |
-| **Công cụ** | `campus_ping_tool.py`: đo latency/loss/jitter, batch report, kiểm thử failover SD-WAN và quản lý VLAN tự động |
+| **Công cụ** | `scripts/campus_ping_tool.py`: đo latency/loss/jitter, batch report, kiểm thử failover SD-WAN và quản lý VLAN tự động |
 
 ---
 
 ## Kiến trúc hệ thống
 
-![Topology tổng thể](topo_tongthe.jpg)
+![Topology tổng thể](docs/hinh/topo_tongthe.jpg)
 
 ```mermaid
 flowchart TB
@@ -200,14 +200,26 @@ Bảng đầy đủ nằm trong [`campus_network_sdn_sdwan.md`](campus_network_s
 │   ├── 06-ServiceProvider/           # Router Internet và MPLS (BGP)
 │   ├── 07-Site500/                   # vEdge65 (chi nhánh Site 500)
 │   └── README.md                     # Ánh xạ node-id, cách nạp config, thứ tự khởi động
-├── HuongDan/                         # Hướng dẫn vận hành: ký cert/CSR vEdge, cài OVS, GUI,
-│                                     #   tunnel SD-WAN, kết nối EVE-NG
-├── campus_ping_tool.py               # Công cụ đo lường và kiểm thử mạng (GUI)
-├── sdn_controller_startup.sh         # Script khởi động SDN Controller
-├── BangTheoDoiTienDo.md              # Bảng theo dõi tiến độ
-├── BAOCAO_DACNTT_LVT/                # Báo cáo đồ án (LaTeX)
-├── Baocao27/                         # Báo cáo tiến độ
-└── topo_tongthe.jpg                  # Sơ đồ topology tổng thể
+├── scripts/                          # Công cụ chạy trên laptop (chạy từ gốc repo: python scripts/<tên>.py)
+│   ├── campus_ping_tool.py           #   đo latency/loss/jitter, failover SD-WAN, VLAN (GUI)
+│   ├── campus_web.py                 #   giao diện web giám sát (dùng web/index.html)
+│   ├── campus_throughput.py          #   đo throughput
+│   ├── sdwan_monitor.py              #   đọc API vManage
+│   ├── sdwan_onboard.py, sdwan_certsign.py, sdwan_autosign_check.py  # onboard/ký cert vEdge
+│   └── sdn_controller_startup.sh     #   script khởi động SDN Controller
+├── web/                              # Giao diện của campus_web.py
+├── log/                              # Kết quả đo (CSV/PNG/JSON), log/sdn-eval: số liệu đánh giá SDN
+├── docs/
+│   ├── de-tai/                       # Đề bài, mô tả đề tài
+│   ├── huong-dan/                    # Hướng dẫn vận hành: ký cert/CSR vEdge, cài OVS, GUI,
+│   │                                 #   tunnel SD-WAN, kết nối EVE-NG
+│   ├── ket-qua/                      # Tài liệu kết quả: SD-WAN failover, chính sách tập trung
+│   ├── tien-do/                      # Bảng theo dõi tiến độ (md + xlsx)
+│   └── hinh/                         # topo_tongthe.jpg (dùng chung README + slide)
+└── baocao/
+    ├── cuoi-ky/                      # Báo cáo đồ án cuối kỳ (LaTeX)
+    ├── giua-ky/                      # Báo cáo giữa kỳ (LaTeX)
+    └── slide-tuan/                   # Slide báo cáo tiến độ hằng tuần
 ```
 
 ---
@@ -240,7 +252,7 @@ pip install matplotlib paramiko numpy
    2. Site 100: Core-SW1/2 → FW-ASAv → Server Farm/DMZ → SDN Controller → Dist/Access → PC.
    3. Chi nhánh: Brand-FW → SwitchBrand/SW → PC.
 4. **SDN:** controller chạy `campus-ryu.service` (OpenFlow `6653`, REST `8080`) và ONOS (`6654`, GUI `8181`). OVS tự khôi phục cấu hình qua `campus-ovs-restore.service`.
-5. **SD-WAN:** onboard vEdge (CSR → ký cert → whitelist trên cả 3 controller) theo [`HuongDan/cách ký và add vedge.md`](HuongDan/cách%20ký%20và%20add%20vedge.md).
+5. **SD-WAN:** onboard vEdge (CSR → ký cert → whitelist trên cả 3 controller) theo [`docs/huong-dan/cách ký và add vedge.md`](docs/huong-dan/cách%20ký%20và%20add%20vedge.md).
 
 ---
 
@@ -254,7 +266,7 @@ pip install matplotlib paramiko numpy
 | Control plane SD-WAN | `show control connections` trên vEdge | vBond, vManage, vSmart đều Up |
 | Data plane SD-WAN | `show bfd sessions`, `show omp routes` | BFD Up, có route service VPN 1 |
 | Liên site | Ping VPC giữa Site 200/300/400 | Thông qua overlay |
-| Failover WAN | `campus_ping_tool.py` → SD-WAN Failover Test | Đo RTO khi tắt một màu WAN |
+| Failover WAN | `scripts/campus_ping_tool.py` → SD-WAN Failover Test | Đo RTO khi tắt một màu WAN |
 | Dịch vụ | `https://www.campus.internal`, gửi/nhận mail | Truy cập được từ PC các site |
 
 ---
@@ -272,7 +284,7 @@ pip install matplotlib paramiko numpy
 - [ ] Ma trận kiểm thử tích hợp đầy đủ (FW failover, mất controller, cold-start toàn lab)
 - [ ] Hoàn thiện báo cáo, slide và video demo
 
-Chi tiết xem [`BangTheoDoiTienDo.md`](BangTheoDoiTienDo.md).
+Chi tiết xem [`docs/tien-do/BangTheoDoiTienDo.md`](docs/tien-do/BangTheoDoiTienDo.md).
 
 ---
 
@@ -283,9 +295,9 @@ Chi tiết xem [`BangTheoDoiTienDo.md`](BangTheoDoiTienDo.md).
 | [`campus_network_sdn_sdwan.md`](campus_network_sdn_sdwan.md) | Thiết kế chi tiết, bảng IP/VLAN/link |
 | [`configs/README.md`](configs/README.md) | Ánh xạ node-id, cách nạp config, thứ tự khởi động |
 | [`configs/01-Site100-Campus/README_NOC.md`](configs/01-Site100-Campus/README_NOC.md) | App giám sát NOC trên Ryu |
-| [`HuongDan/Giai_thich_Tunnel_SD-WAN.md`](HuongDan/Giai_thich_Tunnel_SD-WAN.md) | Cơ chế tunnel, TLOC, BFD trong SD-WAN |
-| [`HuongDan/`](HuongDan/) | Hướng dẫn cài OVS, ký cert vEdge, xem GUI vManage |
-| [`BAOCAO_DACNTT_LVT/main.pdf`](BAOCAO_DACNTT_LVT/main.pdf) | Báo cáo đồ án |
+| [`docs/huong-dan/Giai_thich_Tunnel_SD-WAN.md`](docs/huong-dan/Giai_thich_Tunnel_SD-WAN.md) | Cơ chế tunnel, TLOC, BFD trong SD-WAN |
+| [`docs/huong-dan/`](docs/huong-dan/) | Hướng dẫn cài OVS, ký cert vEdge, xem GUI vManage |
+| [`baocao/cuoi-ky/main.pdf`](baocao/cuoi-ky/main.pdf) | Báo cáo đồ án |
 
 ---
 

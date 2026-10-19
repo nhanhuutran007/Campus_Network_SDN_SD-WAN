@@ -30,7 +30,7 @@ from campus_ping_tool import SITES, HOST_IP, HOST_SITE, WAN_IFACE, SITE_VEDGES, 
 import sdwan_monitor as mon
 from campus_throughput import ThroughputTest
 
-WEB_DIR = os.path.join(core._SCRIPT_DIR, 'web')
+WEB_DIR = os.path.join(core._REPO_DIR, 'web')
 LOG_MAX = 5000          # so dong log giu trong bo nho
 
 

@@ -2,8 +2,7 @@
 *.img
 
 # Agent skill/config cục bộ (chỉ đẩy skills/ lên git, ẩn cấu hình nhạy cảm)
-.opencode/*
-!.opencode/skills/
+.opencode/
 .codex/
 
 

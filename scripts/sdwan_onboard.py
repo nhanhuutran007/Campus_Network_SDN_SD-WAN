@@ -141,7 +141,7 @@ def discover(ssh, lab_override=''):
     if getattr(ssh, 'no_shell', False):
         # DirectEVE: khong doc duoc file tren host EVE -> doc ban .unl ngay canh tool
         # (export lai tu EVE neu vua them node vEdge moi)
-        lab = lab_override or os.path.join(os.path.dirname(os.path.abspath(__file__)), LAB_NAME)
+        lab = lab_override or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), LAB_NAME)
         try:
             with open(lab, encoding='utf-8') as f:
                 raw = f.read()

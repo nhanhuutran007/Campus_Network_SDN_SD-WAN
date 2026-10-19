@@ -75,7 +75,7 @@ Wrapper trả 0 nhưng node không chạy: nguyên nhân thường là `.lock` 0
 - Host 1 không với tới host 2 trực tiếp → đồng bộ qua PC trung gian (SFTP get từ host 1 → put lên host 2): tải `.unl` + thư mục node config → kiểm tra bản local (70 node / 47 `config="1"` / 47 config nhúng / 103 network, từ 03/10/2026) → upload → `chown -R root:root`, dir 755, file 644 → kiểm tra lại trên host 2 → **xoá thư mục tạm trên PC**.
 - Khi start CLI trên host 2 dùng `-T 0` (GUI 6.7.5 quản lý ở tenant 0; `dpkg` báo eve-ng 6.2.0-4). Dùng `-T 6` sẽ tạo qemu song song và xung đột port. Console tenant 0 = `32768 + id`.
 - Tài nguyên: 8 vCPU, **8 GB RAM** → bật từng node rồi tắt; vManage (`ram=32768` trong `.unl`) không chạy nổi trên host 2.
-- **IOL device-id = (node-id×16 + tenant) mod 1024** → ở tenant 0, **node 64 (SwitchBrand-S400) ra id 0 = không hợp lệ**, `iol_wrapper` báo `Cannot open AF_UNIX sockets` và chết. Host 1 (tenant 6) chạy bình thường. Chỉ khắc phục được bằng đổi tenant hoặc node-id — chưa làm.
+- **IOL device-id = `(node_id & 0x3f) << 4 | tenant`** (`cli.php`) → node 64 ở tenant 0 ra 0, không chạy. **Đã xử lý 19/10/2026: trên host 2 node 64 đổi thành id 75** (chỉ host 2; xem `host2-sync.md`).
 - **Base image khác host 1** (27/09/2026): `linux-ubuntu-ovs-16p` (cùng kích thước, khác nội dung) và `asav-9-20-2-2` (host 1 lớn hơn). Overlay qcow2 copy từ host 1 chỉ dùng được khi base giống hệt ⇒ đã thay base ASAv bằng bản host 1 (backup bản cũ ở `/root/base-backup-20260927/`); base OVS chưa thay. Các base còn lại (vtedge/vtsmart/vtbond/vtmgmt, vios, win7, winserver) đã so md5 toàn file: giống nhau. Thiếu image `linux-ubuntu-18.04-server` (node 18/22/47/52/53).
 - Relay host 1 → PC → host 2 chỉ ~1,5 MB/s; nén `gzip -1` phía host 1 nhanh ~4×. Copy overlay của node **đang chạy** trên host 1 không nhất quán — phải tắt node đó trước.
 - Kiểm chứng đồng bộ tốt nhất: so `show running-config` live host 1 (console `33536+id`, chỉ đọc) với host 2. Sau khi dump xong phải để console host 1 sạch (không kẹt `--More--`: IOS dùng `terminal length 0`, ASA `terminal pager 0`; dán config ASA có `pager lines 24` sẽ bật lại pager).
@@ -88,7 +88,7 @@ Switch61 (node 61, IOL L2): `e0/0` = routed port (`no switchport` + `ip address 
 3. Kiểm tra nhanh vManage sống: `curl -sk https://10.9.1.10/dataservice/device` (200).
 4. Chụp GUI tự động (04/10/2026, Switch61 e0/0 = `10.215.28.72`): forward cổng qua paramiko `direct-tcpip` tới `10.9.1.10:443`, đăng nhập `POST /j_security_check` bằng Python (mật khẩu đọc từ file credentials), rồi đưa cookie `JSESSIONID` vào một context Playwright riêng có `ignoreHTTPSErrors` (chứng chỉ tự ký → `ERR_CERT_AUTHORITY_INVALID`). Trang: `#/app/monitor2/overview`, `/devices`, `/tunnels`.
 
-Xem thêm `HuongDan/Xem GUI Manger trên Lap.txt`.
+Xem thêm `docs/huong-dan/Xem GUI Manger trên Lap.txt`.
 
 ## Bẫy hay gặp khi viết script trên host EVE
 

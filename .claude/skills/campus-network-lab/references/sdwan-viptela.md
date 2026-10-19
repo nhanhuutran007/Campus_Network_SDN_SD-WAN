@@ -1,6 +1,6 @@
 # SD-WAN Viptela 20.10.1: controller, PKI, onboarding, sự cố
 
-Nguồn: `HuongDan/cách ký và add vedge.md`, `HuongDan/PhucHoiKetNoi_2_vEdge_Site100.txt` (xác minh 19/09/2026), `1. Tạo CSR trên thiết bị vEdge.txt`, `configs/05-Site900-Controller/`. Không có mật khẩu ở đây — xem `console-automation.md` mục tài khoản.
+Nguồn: `docs/huong-dan/cách ký và add vedge.md`, `docs/huong-dan/PhucHoiKetNoi_2_vEdge_Site100.txt` (xác minh 19/09/2026), `1. Tạo CSR trên thiết bị vEdge.txt`, `configs/05-Site900-Controller/`. Không có mật khẩu ở đây — xem `console-automation.md` mục tài khoản.
 
 ## Mục lục
 - Fabric và địa chỉ
@@ -75,7 +75,7 @@ Tạo 08/10/2026 bằng GUI EVE, đã chạy đủ 9 bước PKI ở trên, **ki
 - Chassis `ce69e515-b477-47d1-9379-fe3d2aa9ab8f`, cert serial `050CC67238AF8949E4AE8D4CDF8083AA9A73F98D` (CA `SDWAN-Lab-RootCA`, hạn 07/10/2028); file `vedge-spare.csr/.crt` trên vManage `/home/admin/ca/`. Chassis = uuid VM của node, nên **không wipe** (mất cert + private key) và không xoá/tạo lại node.
 - Đang chạy trong fabric (người dùng chọn). Site 900 nằm ngoài site-list `ALL_EDGES`/`BRANCHES` của vSmart nên không bị dính policy.
 - whitelist đã được thêm bằng CLI (`request vedge add`) trên cả 3 controller. Danh sách API của vManage (`certificate/vedge/list`, 9 entry) **không** có chassis này ⇒ nếu controller reboot thì "push" từ vManage không khôi phục được entry này; phải `request vedge add` lại bằng CLI.
-- vBond đăng nhập bằng mật khẩu của vManage, **không** phải mật khẩu của vSmart (xem `HuongDan/PhucHoiKetNoi_2_vEdge_Site100.txt`).
+- vBond đăng nhập bằng mật khẩu của vManage, **không** phải mật khẩu của vSmart (xem `docs/huong-dan/PhucHoiKetNoi_2_vEdge_Site100.txt`).
 
 **Biến vEdge-Spare thành chi nhánh mới (site N):**
 1. SP: thêm cổng + BGP CE-PE cho site N (mẫu `configs/07-Site500/SP-changes.txt`); vSmart: thêm site N vào `ALL_EDGES`/`BRANCHES`.
@@ -84,9 +84,9 @@ Tạo 08/10/2026 bằng GUI EVE, đã chạy đủ 9 bước PKI ở trên, **ki
 4. Kiểm tra `show control connections` (đủ 2 màu), `show omp peers`, `show bfd sessions`. Nếu thấy `BIDNTVRFD` thì `request vedge add` lại với chassis/serial ở trên.
 5. Muốn có vEdge dự phòng mới thì tạo node mới ở Site 900 và làm lại mục này.
 
-**Tự động hoá (09/10/2026, chưa chạy live):** `sdwan_onboard.py` (tab "Onboard vEdge" đã bỏ khỏi `campus_web.py` từ 12/10/2026: web chỉ lấy dữ liệu qua vManage API, không console host EVE; script này vẫn dùng console nên chỉ chạy riêng). Tool đọc `.unl` trên host để tìm node vtedge nối vào Switch32 (bỏ qua vEdge chi nhánh và các cổng hạ tầng e0/0–e1/2), đưa cổng về access VLAN 10, cấp `10.200.90.N` / `10.9.0.(99+N)`, sau đó chạy đủ 9 bước PKI ở trên và whitelist 3 controller. Danh sách chassis/serial lưu ở `log/onboard_registry.json`, có sẵn node 23. Nút "Đẩy lại whitelist" thay cho việc `request vedge add` bằng tay sau khi controller reboot. Chế độ tự dò không tự thử lại node bị lỗi, để tránh login sai nhiều lần làm khoá tài khoản.
+**Tự động hoá (09/10/2026, chưa chạy live):** `scripts/sdwan_onboard.py` (tab "Onboard vEdge" đã bỏ khỏi `scripts/campus_web.py` từ 12/10/2026: web chỉ lấy dữ liệu qua vManage API, không console host EVE; script này vẫn dùng console nên chỉ chạy riêng). Tool đọc `.unl` trên host để tìm node vtedge nối vào Switch32 (bỏ qua vEdge chi nhánh và các cổng hạ tầng e0/0–e1/2), đưa cổng về access VLAN 10, cấp `10.200.90.N` / `10.9.0.(99+N)`, sau đó chạy đủ 9 bước PKI ở trên và whitelist 3 controller. Danh sách chassis/serial lưu ở `log/onboard_registry.json`, có sẵn node 23. Nút "Đẩy lại whitelist" thay cho việc `request vedge add` bằng tay sau khi controller reboot. Chế độ tự dò không tự thử lại node bị lỗi, để tránh login sai nhiều lần làm khoá tài khoản.
 
-**Ký cert qua IP thiết bị (16/10/2026, chưa chạy live):** `sdwan_certsign.py` chạy trên Win 10.9.0.20 và không đụng tới host EVE. Nó giữ CA enterprise, vì vManage 20.10.1 ở chế độ enterprise và WAN Edge List hết mục trống (11/11), nên không cấp được OTP để chạy Automated. Kỹ thuật viên dán Day-0 (`--day0` in sẵn cấu hình, cấp IP không trùng theo registry). Sau đó tool SSH thẳng vào vEdge (`allow-service all` trên vpn 0), vManage 10.9.0.10 (ký bằng openssl trong vshell), vSmart 10.9.0.11 và vBond 10.9.0.12 để whitelist. Cuối cùng tool kiểm control Up và xác nhận `reachable` qua vManage API. `--rewhitelist` đẩy lại whitelist cho toàn registry qua SSH. Mật khẩu lấy từ biến môi trường `SDWAN_VEDGE_PW/VM_PW/VS_PW/VB_PW` hoặc getpass. Script dùng chung `Console`, `install_cert` và `whitelist` với `sdwan_onboard.py`; các hàm này nhận channel SSH thay cho console. SSH bằng paramiko có fallback keyboard-interactive, chưa thử với Viptela thật.
+**Ký cert qua IP thiết bị (16/10/2026, chưa chạy live):** `scripts/sdwan_certsign.py` chạy trên Win 10.9.0.20 và không đụng tới host EVE. Nó giữ CA enterprise, vì vManage 20.10.1 ở chế độ enterprise và WAN Edge List hết mục trống (11/11), nên không cấp được OTP để chạy Automated. Kỹ thuật viên dán Day-0 (`--day0` in sẵn cấu hình, cấp IP không trùng theo registry). Sau đó tool SSH thẳng vào vEdge (`allow-service all` trên vpn 0), vManage 10.9.0.10 (ký bằng openssl trong vshell), vSmart 10.9.0.11 và vBond 10.9.0.12 để whitelist. Cuối cùng tool kiểm control Up và xác nhận `reachable` qua vManage API. `--rewhitelist` đẩy lại whitelist cho toàn registry qua SSH. Mật khẩu lấy từ biến môi trường `SDWAN_VEDGE_PW/VM_PW/VS_PW/VB_PW` hoặc getpass. Script dùng chung `Console`, `install_cert` và `whitelist` với `scripts/sdwan_onboard.py`; các hàm này nhận channel SSH thay cho console. SSH bằng paramiko có fallback keyboard-interactive, chưa thử với Viptela thật.
 
 ## Định tuyến tới controller và màu TLOC
 

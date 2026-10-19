@@ -30,6 +30,7 @@ description: Trợ lý cho đồ án "Campus Network kết hợp SDN + SD-WAN" t
 | Ta đang ở đâu, việc còn dở | [project-status.md](references/project-status.md) |
 | Đồng bộ host 2 theo host 1: tiến độ từng node, script, việc còn lại | [host2-sync.md](references/host2-sync.md) |
 | Cho các site ra Internet (DIA, NAT, DNS forwarder): kế hoạch 7 giai đoạn + tiến độ | [internet-breakout.md](references/internet-breakout.md) |
+| Mất host 1 / không có server: dựng lại lab trên Google Cloud (máy, ngân sách 300 USD, các bước) — chỉ làm khi người dùng yêu cầu | [disaster-recovery-gcp.md](references/disaster-recovery-gcp.md) |
 
 Chỉ đọc file cần cho tác vụ. Mỗi file có mục lục ở đầu.
 
@@ -67,8 +68,8 @@ Vật lý/link → L2 (VLAN, trunk, STP/loop) → L3 (gateway, route, BGP) → d
 - **Hỏi trước** khi: commit/push; SCP/ghi lên EVE; wipe/start/stop node; xoá `.lock`; đổi config live trên thiết bị; xoá bridge OVS. Việc cục bộ, chỉ đọc, thì cứ làm.
 - **Host 1 là nguồn chuẩn, đồng bộ một chiều host 1 → repo.** Cấm đẩy `.unl`/config từ repo lên host 1 khi người dùng chưa cho phép rõ ràng.
 - **Cấm wipe** node `config="0"` (OVS, controller, DHCP-Server, vManager/vSmart/vBond, Windows) — mất sạch cấu hình tay. Cấm chu kỳ Delete lab → Import; cấm mở/save lab bằng GUI EVE.
-- **Mật khẩu**: lưu cục bộ ở `C:\Users\nhanh\.claude\campus-lab-credentials.md` (ngoài repo và ngoài OneDrive). **Đọc file đó khi cần đăng nhập thiết bị — không hỏi lại người dùng.** Chỉ hỏi cho mục ghi "CHƯA CÓ", rồi ghi giá trị mới vào chính file đó. Tuyệt đối không chép giá trị vào skill, repo, file trong `configs/`/`HuongDan/`, commit, log hay tin nhắn trả lời; trong script đọc từ file/biến môi trường lúc chạy, không đặt trong command line hoặc nhúng cứng. Khi báo cáo kết quả chỉ nêu "đăng nhập OK", không in mật khẩu. Nếu file không tồn tại (máy khác), hỏi người dùng.
-- **Rò rỉ đã xảy ra**: `.opencode/skills/campus-network-lab/SKILL.md` (có mật khẩu lab) nằm trong commit `47e5cde` (trước 04/10/2026 là `9a97537`) đã đẩy lên `origin/main`; nhiều file `configs/`, `campus_network_sdn_sdwan.md`, `HuongDan/` cũng chứa mật khẩu thiết bị. Không commit thêm file có mật khẩu; nếu người dùng chia sẻ repo, nhắc đổi mật khẩu lab.
+- **Mật khẩu**: lưu cục bộ ở `C:\Users\nhanh\.claude\campus-lab-credentials.md` (ngoài repo và ngoài OneDrive). **Đọc file đó khi cần đăng nhập thiết bị — không hỏi lại người dùng.** Chỉ hỏi cho mục ghi "CHƯA CÓ", rồi ghi giá trị mới vào chính file đó. Tuyệt đối không chép giá trị vào skill, repo, file trong `configs/`/`docs/huong-dan/`, commit, log hay tin nhắn trả lời; trong script đọc từ file/biến môi trường lúc chạy, không đặt trong command line hoặc nhúng cứng. Khi báo cáo kết quả chỉ nêu "đăng nhập OK", không in mật khẩu. Nếu file không tồn tại (máy khác), hỏi người dùng.
+- **Rò rỉ đã xảy ra**: `.opencode/skills/campus-network-lab/SKILL.md` (có mật khẩu lab) nằm trong commit `47e5cde` (trước 04/10/2026 là `9a97537`) đã đẩy lên `origin/main`; nhiều file `configs/`, `campus_network_sdn_sdwan.md`, `docs/huong-dan/` cũng chứa mật khẩu thiết bị. Không commit thêm file có mật khẩu; nếu người dùng chia sẻ repo, nhắc đổi mật khẩu lab.
 - Không tin exit code của `unl_wrapper`/script — xác minh bằng prompt, process, port, output `show`.
 - Không suy tính năng IOL từ tên image; không `pkill -f "chuỗi có trong chính lệnh"`; login sai nhiều lần khoá tài khoản ~15 phút.
 - Node Windows/VNC: thao tác GUI do người dùng làm.

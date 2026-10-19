@@ -32,7 +32,7 @@
 
 | # | Hạng mục | Tình trạng | Bằng chứng / ghi chú |
 |---|---|---|---|
-| 1–3 | Khảo sát, lý thuyết SDN/SD-WAN | ✅ Xong | Lý thuyết + ghi chú lỗi thực tế (`HuongDan/Giai_thich_Tunnel_SD-WAN.md`) |
+| 1–3 | Khảo sát, lý thuyết SDN/SD-WAN | ✅ Xong | Lý thuyết + ghi chú lỗi thực tế (`docs/huong-dan/Giai_thich_Tunnel_SD-WAN.md`) |
 | 4–6 | Thiết kế tổng thể, IP/VLAN/ASN, quy hoạch node | ✅ Xong | `campus_network_sdn_sdwan.md`, `configs/README.md`; `.unl` 67 node / 47 config nhúng, `unl_tool.py validate` ĐẠT |
 | 7 | Core/Dist/Access, VRRP, OSPF | ✅ Xong | OSPF FW↔Core đủ route 10.1.x (kiểm `show route` trên FW 23/09) |
 | 8 | ASAv HA + ASDM | ✅ Xong | `show failover`: Primary Active / Secondary Standby Ready; luật mới tự đồng bộ sang Standby |
@@ -51,5 +51,5 @@
 
 1. Bảng đề xuất khung giai đoạn/hạng mục theo các khối công việc thực tế trong skill; nếu nhóm đã có bảng riêng, chỉ cần giữ cấu trúc cột và điền nội dung cho từng hàng sẵn có.
 2. Mốc **Bắt đầu** các hạng mục đã triển khai lấy theo ngày thực tế trong skill; các mục tương lai ước theo thứ tự hợp lý.
-3. **Hạn bảo vệ giả định ~ cuối 11/2026** (học kỳ 3 năm 3, đối chiếu `Template_Timeline_Tong_quan_08-08_den_21-11-2026.xlsx`); nếu khác, chỉ cần chỉnh cột (6) các hạng mục 19–20.
+3. **Hạn bảo vệ giả định ~ cuối 11/2026** (học kỳ 3 năm 3, đối chiếu `docs/tien-do/Template_Timeline_Tong_quan_08-08_den_21-11-2026.xlsx`); nếu khác, chỉ cần chỉnh cột (6) các hạng mục 19–20.
 4. Cột **(4) nhóm tự điền** để trống đúng yêu cầu — nhóm tự điền trách nhiệm/tên/phân công.

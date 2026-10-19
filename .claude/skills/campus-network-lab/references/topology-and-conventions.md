@@ -34,7 +34,7 @@ Nguồn đã đối chiếu ngày 2026-09-20: `Campus Network SDN SD-WAN.unl` (7
 | Cấu hình thiết bị | trạng thái live → `configs/` (chú ý drift, xem `unl_tool.py drift`) |
 | Thiết kế, bảng IP/VLAN/link, lý do | `campus_network_sdn_sdwan.md` |
 | Node-id ↔ tên, thứ tự boot | `configs/README.md` + `.unl` |
-| Ảnh/nhãn trong `BAOCAO_DACNTT_LVT/prism-uploads/` | CHỈ minh họa — có nhãn IP cũ, không dùng làm nguồn cấu hình |
+| Ảnh/nhãn trong `baocao/cuoi-ky/prism-uploads/` | CHỈ minh họa — có nhãn IP cũ, không dùng làm nguồn cấu hình |
 
 Không tin bảng node-id/trạng thái trong ghi chú cũ (`.opencode`, `.codex`) nếu mâu thuẫn với `.unl`: Codex từng ghi sai vEdge S200/S300/S400 là 29/40, 30/41, 31/42.
 

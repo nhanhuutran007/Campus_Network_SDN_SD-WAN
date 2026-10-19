@@ -193,7 +193,8 @@ def _find_script_dir():
         return os.path.abspath('.')
 
 _SCRIPT_DIR = _find_script_dir()
-LOG_DIR     = os.path.join(_SCRIPT_DIR, 'log')
+_REPO_DIR   = os.path.dirname(_SCRIPT_DIR)   # script nam trong scripts/, log/ va web/ o goc repo
+LOG_DIR     = os.path.join(_REPO_DIR, 'log')
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # =========================================================
