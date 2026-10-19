@@ -4,6 +4,14 @@
 
 ## Kiểm tra cục bộ đã làm (20/09, đáng tin nhất)
 
+- **19/10/2026 — Web: tiêu chí đánh giá (chưa chạy live, mới thử với vManage giả).**
+  - **Hiệu năng (tab Đo lường):** Case 1–5 so sánh Campus chính với chi nhánh theo Delay, Jitter, Loss (mỗi site 2 loại đường, LAN và WAN) và Throughput (bộ đếm vpn 0 của mọi vEdge mỗi site). Kết quả lưu `log/so_sanh_*`.
+  - **Độ tin cậy (tab mới, `scripts/sdwan_reliability.py`):**
+    - Tổng hợp `failover_*.csv` thành RTO min / TB / max và PRR (tab Failover nay ghi thêm `PRR_pct`).
+    - Controller Recovery: người dùng tự tắt và bật vSmart; tool đọc control connections của mọi vEdge và ping liên tục; mốc LOST, BACK, RESTORED.
+    - Availability: theo dõi dài hạn, mỗi chu kỳ từng site ping WebServer; tính %, MTTR, MTBF.
+    - Kết quả lưu `log/tin_cay_*`.
+
 - `.unl`: 67 node, 100 network, **47** `config="1"` = 47 config nhúng (23/09: VPC 18/47/52/53 → PC Linux); `unl_tool.py validate` **ĐẠT**.
 - **16/10/2026 (tối) — Bật lại cụm SDN Site 100 (live)**: thứ tự 24, 3, 4, 72 → 9 → 5, 8 → 68, 66, 70, 69 (cách 20 s) → VPC 14–17, 19–21. OpenFlow 6/6 (`.11/.12/.21–.24` ↔ `10.1.99.10`, tcpdump `vunl6_9_0`), pps cao nhất 987 (không storm), 7/7 VPC nhận DHCP + ping `10.1.90.10` và liên VLAN. **Không bật** FW-ASAv 1/2, DMZ 7, node 18/22. Bẫy: VPCS qua telnet phải gõ **từng ký tự** (~0,15 s), gửi cả dòng thì lệnh bị bỏ qua. REST: `ens6` node 9 nay là **`10.215.28.174`** (DHCP đổi; script đặt `SDN_CTL=http://10.215.28.174:8080`).
 - **16–17/10/2026 — Kiểm SDN sau khi bật lại (live, không đổi cấu hình)**:

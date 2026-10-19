@@ -258,6 +258,8 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
         <svg class="i" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Đo lường</button>
       <button data-tab="failover" data-title="SD-WAN Failover" data-sub="Bạn tự cắt link WAN, tool theo dõi BFD và ping để đo thời gian khôi phục (RTO)">
         <svg class="i" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>SD-WAN Failover</button>
+      <button data-tab="reliability" data-title="Độ tin cậy" data-sub="Link Failover Time, Controller Recovery Time, Packet Recovery Rate, Availability (bạn tự gây sự cố, tool chỉ đo)">
+        <svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M21 3v6h-6"/><path d="M12 7v5l3 2"/></svg>Độ tin cậy</button>
       <button data-tab="throughput" data-title="Đo thông lượng" data-sub="Đọc bộ đếm interface vEdge qua vManage theo chu kỳ → RX/TX Mbps">
         <svg class="i" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="m12 18 4-6"/></svg>Thông lượng</button>
       <button data-tab="vlan" data-title="Kiểm chứng VLAN" data-sub="Sau khi tạo VLAN/SVI trên Core-SW, kiểm tra OMP và đo thời gian chi nhánh ping thông">
@@ -348,11 +350,17 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
           </div>
 
           <div class="card">
-            <h2>Batch Report Cases</h2>
-            <p class="hint">Mỗi tuyến do vEdge của site nguồn ping host đích qua vManage. Biểu đồ PNG và CSV lưu vào log/, xem ở mục Kết quả.</p>
+            <h2>So sánh Campus chính – chi nhánh <span class="tag">Delay · Jitter · Loss · Throughput</span></h2>
+            <p class="hint">Mỗi site (S100 Campus chính, S200 Cần Thơ, S300 Đà Nẵng, S400 Nha Trang) đo 2 loại đường, nguồn là vEdge của site, ping qua vManage:
+              <b>LAN nội bộ</b> (vEdge → host cùng site) và <b>WAN qua SD-WAN</b> (chi nhánh → PC-CNTT và WebServer ở campus chính; campus chính → mỗi chi nhánh).
+              Log in bảng theo site, kèm chênh lệch WAN so với campus chính và đánh giá Tốt / Trung bình / Kém.
+              <b>Throughput</b>: đọc bộ đếm cổng WAN (vpn 0) của mọi vEdge ở mỗi site cùng lúc, theo chu kỳ. Số đo chỉ phản ánh traffic đang chạy trong lúc đo, nên muốn so sánh năng lực thì phải tạo cùng mức tải ở mọi site (ví dụ một PC mỗi site chạy <code>ping 10.1.1.10 -l 1400 -t</code>).
+              Biểu đồ PNG và CSV lưu vào log/ với tên <code>so_sanh_*</code>.</p>
             <div class="checks boxed" id="caseList" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))"></div>
             <div class="row">
               <label class="field" style="width:120px"><span>Gói / tuyến</span><input type="number" id="batchCount" value="5" min="1" max="50" data-persist></label>
+              <label class="field" style="width:150px"><span>Đo throughput (s)</span><input type="number" id="tpWindow" value="60" min="20" max="900" data-persist></label>
+              <label class="field" style="width:150px"><span>Chu kỳ lấy mẫu (s)</span><input type="number" id="tpEvery" value="10" min="5" max="60" data-persist></label>
               <div class="spacer"></div>
               <button class="btn purple job" id="casesSelBtn" style="align-self:end">Chạy Cases đã chọn</button>
               <button class="btn yellow solid job" id="casesAllBtn" style="align-self:end">Chạy TẤT CẢ</button>
@@ -373,6 +381,43 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
               <label class="field"><span>Theo dõi sau cắt (s)</span><input type="number" id="foDuration" value="60" min="10" max="300" data-persist></label>
             </div>
             <div class="row"><button class="btn orange solid job" id="foRunBtn">Bắt đầu theo dõi</button></div>
+          </div>
+        </div>
+
+        <!-- ============ ĐỘ TIN CẬY ============ -->
+        <div class="tab" id="tab-reliability">
+          <div class="card">
+            <h2>1. Link Failover Time + Packet Recovery Rate</h2>
+            <p class="hint">Mỗi lần đo làm ở tab <b>SD-WAN Failover</b>: bấm Bắt đầu, tự cắt link WAN, tool đo RTO và tỉ lệ gói đến được đích (<b>Packet Recovery Rate</b> = gói nhận / gói gửi sau lúc cắt). Mỗi kịch bản nên lặp 3–5 lần. Sau đó bấm <b>Tổng hợp</b>: tool đọc mọi file <code>log/failover_*.csv</code>, gom theo vEdge bị cắt, tính RTO min / TB / max và PRR trung bình.</p>
+            <div class="grid">
+              <label class="field"><span>Chỉ lấy các lần đo từ ngày</span><input type="date" id="relSince" data-persist><small>Để trống = lấy tất cả</small></label>
+            </div>
+            <div class="row"><button class="btn grey" id="relGoFo">Mở tab SD-WAN Failover</button>
+              <button class="btn orange solid job" id="relFoBtn">Tổng hợp các lần đo</button></div>
+          </div>
+
+          <div class="card">
+            <h2>2. Controller Recovery Time <span class="tag">vSmart</span></h2>
+            <p class="hint">Bấm Bắt đầu rồi <b>tự tắt vSmart</b> (Stop node trên EVE), chờ 1–3 phút rồi <b>bật lại</b>. Tool đọc control connections của mọi vEdge qua vManage (việc đọc không phụ thuộc vSmart), đồng thời một vEdge ping liên tục qua overlay. Kết quả gồm: thời gian các vEdge mất vSmart; <b>Controller Recovery Time</b> (từ lúc vManage thấy vSmart sống lại đến lúc mọi vEdge kết nối lại); và data plane có mất gói không trong lúc mất controller (OMP graceful restart). Không đo được vManage theo cách này vì chính vManage là nguồn dữ liệu.</p>
+            <div class="grid">
+              <label class="field"><span>vEdge ping liên tục</span><select id="relProbe" data-persist></select></label>
+              <label class="field"><span>IP đích (site khác)</span><input type="text" id="relTarget" value="10.1.1.10" data-persist><small>Mặc định WebServer ở campus chính</small></label>
+              <label class="field"><span>Chờ tắt vSmart tối đa (s)</span><input type="number" id="relWait" value="300" min="30" max="1800" data-persist></label>
+              <label class="field"><span>Theo dõi tối đa sau khi mất (s)</span><input type="number" id="relDur" value="900" min="60" max="3600" data-persist></label>
+              <label class="field"><span>Chu kỳ đọc control (s)</span><input type="number" id="relEvery" value="5" min="3" max="30" data-persist></label>
+            </div>
+            <div class="row"><button class="btn orange solid job" id="relCtlBtn">Bắt đầu theo dõi</button></div>
+          </div>
+
+          <div class="card">
+            <h2>3. Availability <span class="tag">theo dõi dài hạn</span></h2>
+            <p class="hint">Mỗi chu kỳ, vEdge của từng site ping dịch vụ đào tạo ở campus chính: site 100 đi qua LAN, các chi nhánh đi qua SD-WAN. Site không còn vEdge reachable, hoặc ping mất hết, thì tính là <b>DOWN</b>. <b>Availability</b> = số mẫu UP / tổng số mẫu, kèm danh sách sự cố, MTTR và MTBF. CSV được ghi dần trong lúc đo; bấm <b>Dừng</b> để kết thúc sớm mà vẫn có kết quả. Có thể chủ động cắt link trong lúc theo dõi để thấy dự phòng giữ Availability cao.</p>
+            <div class="grid">
+              <label class="field"><span>IP dịch vụ</span><input type="text" id="avTarget" value="10.1.1.10" data-persist></label>
+              <label class="field"><span>Thời gian theo dõi (phút)</span><input type="number" id="avMin" value="60" min="5" max="1440" data-persist></label>
+              <label class="field"><span>Chu kỳ (s)</span><input type="number" id="avEvery" value="30" min="10" max="600" data-persist></label>
+            </div>
+            <div class="row"><button class="btn green solid job" id="avBtn">Bắt đầu theo dõi</button></div>
           </div>
         </div>
 
@@ -701,7 +746,7 @@ $('stopBtn').onclick = () => act('/api/stop', {});
 function runCases(all) {
   if (all) document.querySelectorAll('.caseChk').forEach(c => c.checked = true);
   const cases = [...document.querySelectorAll('.caseChk:checked')].map(c => +c.value);
-  act('/api/cases', { cases, count: num('batchCount') });
+  act('/api/cases', { cases, count: num('batchCount'), tp_window: num('tpWindow'), tp_interval: num('tpEvery') });
 }
 $('casesAllBtn').onclick = () => runCases(true);
 $('casesSelBtn').onclick = () => runCases(false);
@@ -726,6 +771,17 @@ $('foRunBtn').onclick = () => {
   act('/api/failover/run', { watch: $('foWatch').value, probe: $('foProbe').value, target: val('foTarget'),
     wait_cut: num('foWait'), duration: num('foDuration') }, 'Đang lấy mốc – xem log, rồi cắt link');
 };
+
+// ---------- Độ tin cậy ----------
+function initReliability() {
+  fillSelect($('relProbe'), META.vedges, $('relProbe').dataset.saved || 'vEdge1-S200');
+}
+$('relGoFo').onclick = () => document.querySelector('#tabs [data-tab="failover"]').click();
+$('relFoBtn').onclick = () => act('/api/reliability/failover', { since: $('relSince').value });
+$('relCtlBtn').onclick = () => act('/api/reliability/controller', { probe: $('relProbe').value, target: val('relTarget'),
+  wait_down: num('relWait'), duration: num('relDur'), interval: num('relEvery') }, 'Đang lấy mốc – xem log rồi tắt vSmart');
+$('avBtn').onclick = () => act('/api/reliability/availability', { target: val('avTarget'), minutes: num('avMin'),
+  interval: num('avEvery') }, 'Đang theo dõi Availability – bấm Dừng để kết thúc sớm');
 
 // ---------- Thông lượng ----------
 let TP = { started: null, series: [], samples: [], since: 0, running: false, duration: 60 };
@@ -996,7 +1052,7 @@ async function poll() {
   META = await api('/api/meta');
   if (!$('vmHost').value) $('vmHost').value = META.vm_default;
   if (!$('vmUser').value) $('vmUser').value = 'admin';
-  initMeasure(); initFailover(); initThroughput(); initVlan();
+  initMeasure(); initFailover(); initReliability(); initThroughput(); initVlan();
   if (!META.deps.matplotlib) toast('Thiếu matplotlib: pip install matplotlib (không vẽ được PNG)');
   const tab = store.get('tab') || 'overview';
   { const t = document.querySelector(`#tabs [data-tab="${tab}"]`); if (t) t.click(); }
