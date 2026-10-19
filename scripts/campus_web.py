@@ -404,19 +404,26 @@ def _cs_opts(d, need_vedge):
             'vm': GUI.vm if GUI.vm and GUI.vm.host == cs.ob.VMANAGE_IP else None}
     if need_vedge:
         if not d.get('vedge_pw'):
-            raise WebError('Nhap mat khau vEdge (da dat luc dan Day-0).')
+            raise WebError('Nhap mat khau vEdge (da dat luc go lenh bat SSH tren console).')
         opts['vedge_pw'] = d['vedge_pw']
+        opts['hostname'] = _hostname(d)
     return cs, opts
 
 
-def api_cs_day0(q):
-    cs = _certsign()
-    hostname, wan_if = q.get('hostname', '').strip(), q.get('wan_if', '').strip() or 'ge0/0'
+def _hostname(d):
+    hostname = d.get('hostname', '').strip()
     if hostname and not re.match(r'^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$', hostname):
         raise WebError('Ten vEdge chi gom chu, so, - va _ (toi da 32 ky tu).')
+    return hostname or None
+
+
+def api_cs_day0(q):
+    """Lenh toi thieu go tren console vEdge moi (IP vpn 0 + SSH); phan con lai tool day qua SSH."""
+    cs = _certsign()
+    wan_if = q.get('wan_if', '').strip() or 'ge0/0'
     if not re.match(r'^ge\d+/\d+$', wan_if):
         raise WebError('Interface WAN dang ge0/0.')
-    e, lines = cs.day0_config(hostname or None, wan_if)
+    e, lines = cs.ssh_bootstrap(_hostname(q), wan_if)
     return {'entry': e, 'config': '\n'.join(lines), 'vlan': cs.ob.CONTROLLER_VLAN}
 
 
@@ -497,8 +504,8 @@ def api_as_activate(d):
     if not any(x['uuid'] == uuid and x['free'] for x in cs.wan_edge_list(vm)):
         raise WebError('Chon 1 muc WAN Edge List dang trong (tokengenerated).')
     if not d.get('vedge_pw'):
-        raise WebError('Nhap mat khau vEdge (da dat luc dan Day-0).')
-    opts = {'vm': vm, 'vm_user': vm.user, 'vm_pw': vm.password, 'vedge_user': d.get('user', '').strip() or 'admin',
+        raise WebError('Nhap mat khau vEdge (da dat luc go lenh bat SSH tren console).')
+    opts = {'vm': vm, 'hostname': _hostname(d), 'vm_user': vm.user, 'vm_pw': vm.password, 'vedge_user': d.get('user', '').strip() or 'admin',
             'vedge_pw': d['vedge_pw'], 'verify_s': _int(d, 'verify', 60, 900, 300)}
 
     def run():
