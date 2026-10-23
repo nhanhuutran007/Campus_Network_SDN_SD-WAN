@@ -62,7 +62,9 @@ for mod in ("shift", "ctrl", "alt"):
     v.keyUp(mod)
 if args and args[0] == "login":
     args = args[1:]
-    typ("eve"); time.sleep(2)
+    # wake a blanked console first: its first keystroke was swallowed ("eve" arrived as "ve"/"e")
+    v.keyPress("enter"); time.sleep(3)
+    typ("eve"); time.sleep(5)   # VM cham: go mat khau truoc khi hien "Password:" se hong
     typ(password("OVS node 5, 8")); time.sleep(4)
 for c in args:
     if c == "CAPS":

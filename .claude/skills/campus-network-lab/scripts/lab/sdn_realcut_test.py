@@ -44,8 +44,15 @@ class Api(object):
         _, o, _ = self.c.exec_command(cmd, timeout=t)
         return o.read().decode(errors="replace")
 
-    def get(self, path):
-        return json.loads(self.run("curl -s -m 10 '%s%s'" % (CTL, path)) or "null")
+    def get(self, path, tries=4):
+        # controller khung (23/10/2026: /campus/health tra rong giua chung -> script chet):
+        # thu lai vai lan truoc khi bo
+        for _ in range(tries):
+            d = json.loads(self.run("curl -s -m 10 '%s%s'" % (CTL, path)) or "null")
+            if d is not None:
+                return d
+            time.sleep(1)
+        return None
 
     def post(self, path, body):
         data = json.dumps(body).replace("'", "")
@@ -57,6 +64,8 @@ class Api(object):
 
     def healthy(self):
         s = self.get("/noc/summary")
+        if s is None:
+            return False
         return s["switches_up"] == s["switches_total"] and s["links_up"] == s["links_total"]
 
 

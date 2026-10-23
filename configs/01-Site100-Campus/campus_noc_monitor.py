@@ -1202,35 +1202,45 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Campus SDN Console</title>
 <style>
-:root{--bg:#0b1220;--panel:#111a2e;--panel2:#0e1627;--border:#22304d;--text:#d3ddf3;--muted:#7f8db0;
---accent:#3aa0ff;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--idle:#64748b}
-*{box-sizing:border-box}body{margin:0;font-family:'Segoe UI',system-ui,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);background:#0d1628}
-header h1{margin:0;font-size:17px}header .sub{color:var(--muted);font-size:12px}
-nav{display:flex;gap:4px;padding:0 20px;border-bottom:1px solid var(--border);background:#0d1628;flex-wrap:wrap}
-nav button{background:none;border:0;color:var(--muted);padding:11px 14px;cursor:pointer;font-size:13px;border-bottom:2px solid transparent}
+/* Giao dien diu mat (23/10/2026): nen than chi am thay vi xanh-den, chu khong trang tuyet doi,
+   mau trang thai giam bao hoa; to hon, thoang hon; co che do sang (nut goc phai). */
+:root{--bg:#1b1e23;--panel:#23272e;--panel2:#1f2329;--plot:#1f2329;--border:#323842;--grid:#3a414c;
+--text:#d6d9de;--text2:#b9bec7;--muted:#8b929e;--accent:#6ea8dc;--ok:#7fbf8e;--warn:#d9a95b;--bad:#d27a72;--idle:#7c8592;
+--hdr:#20242a;--btn:#2b3038}
+:root[data-theme=light]{--bg:#eef0f3;--panel:#fafbfc;--panel2:#f3f5f7;--plot:#f7f8fa;--border:#d9dde3;--grid:#e1e4e9;
+--text:#2b3038;--text2:#444b55;--muted:#6b7280;--accent:#3f7fb8;--ok:#3f8f58;--warn:#a87526;--bad:#b4544b;--idle:#8a929c;
+--hdr:#f7f8fa;--btn:#eceff3}
+*{box-sizing:border-box}body{margin:0;font-family:'Segoe UI',system-ui,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14.5px;line-height:1.5}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--hdr)}
+header h1{margin:0;font-size:17px;font-weight:600}header .sub{color:var(--muted);font-size:12.5px}
+nav{display:flex;gap:2px;padding:0 24px;border-bottom:1px solid var(--border);background:var(--hdr);flex-wrap:wrap;position:sticky;top:0;z-index:5}
+nav button{background:none;border:0;color:var(--muted);padding:11px 14px;cursor:pointer;font-size:13.5px;border-bottom:2px solid transparent}
+nav button:hover{color:var(--text)}
 nav button.on{color:var(--text);border-bottom-color:var(--accent)}nav button .soon{font-size:10px;color:var(--idle)}
-main{padding:18px 20px}.tab{display:none}.tab.on{display:block}
-.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:1fr 1fr}
+main{padding:20px 24px;max-width:1500px;margin:0 auto}.tab{display:none}.tab.on{display:block}
+.grid{display:grid;gap:16px}.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:1fr 1fr}
 @media(max-width:900px){.g4,.g2{grid-template-columns:1fr 1fr}}
-.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px}
-.card h2{margin:0 0 10px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
-.kpi .v{font-size:24px;font-weight:700;margin-top:4px}.kpi .s{font-size:11px;color:var(--muted);margin-top:3px}
-table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--border)}
-th{color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
-.b{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700}
-.b-ok{background:rgba(34,197,94,.15);color:var(--ok)}.b-warn{background:rgba(245,158,11,.15);color:var(--warn)}
-.b-bad{background:rgba(239,68,68,.15);color:var(--bad)}.b-idle{background:rgba(100,116,139,.2);color:#a8b3c9}.b-acc{background:rgba(58,160,255,.15);color:var(--accent)}
-button.act{background:#1b2a47;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px}
-button.act:hover{border-color:var(--accent)}button.red{border-color:rgba(239,68,68,.5)}button.green{border-color:rgba(34,197,94,.5)}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:13px;color:var(--text2);font-weight:600;letter-spacing:.2px}
+.kpi .v{font-size:26px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+tbody tr:hover,table tr:hover td{background:rgba(127,140,160,.06)}
+th{color:var(--muted);font-size:12px;font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+.b{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600}
+.b-ok{background:rgba(127,191,142,0.16);color:var(--ok)}.b-warn{background:rgba(217,169,91,0.16);color:var(--warn)}
+.b-bad{background:rgba(210,122,114,0.16);color:var(--bad)}.b-idle{background:rgba(124,133,146,0.18);color:var(--muted)}.b-acc{background:rgba(110,168,220,0.16);color:var(--accent)}
+button.act{background:var(--btn);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 11px;cursor:pointer;font-size:12.5px}
+button.act:hover{border-color:var(--accent)}button.red{border-color:rgba(210,122,114,0.55)}button.green{border-color:rgba(127,191,142,0.55)}
 input,select{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px}
-canvas{width:100%;display:block}.muted{color:var(--muted)}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+pre{background:var(--panel2)!important}
+canvas{width:100%;display:block;border-radius:6px}.muted{color:var(--muted)}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 svg text{fill:var(--text);font-size:12px}.legend span{margin-right:14px;font-size:12px;color:var(--muted)}
 .legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:5px}
-#toast{position:fixed;right:16px;bottom:16px;background:#1b2a47;border:1px solid var(--border);padding:10px 14px;border-radius:8px;display:none}
+#toast{position:fixed;right:16px;bottom:16px;background:var(--btn);border:1px solid var(--border);padding:10px 14px;border-radius:8px;display:none}
+#theme{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;margin-left:12px}
 </style></head><body>
 <header><div><h1>Campus SDN Console &mdash; Site 100</h1><div class="sub">Ryu OpenFlow 1.3 &middot; Dist-SW1/2 + Access-SW1..4 &middot; goc cay: <b id="hdr-root">-</b> &middot; phien ban cay <b id="hdr-ver">-</b></div></div>
-<div class="sub" id="hdr-time"></div></header>
+<div class="sub"><span id="hdr-time"></span><button id="theme" onclick="toggleTheme()">Sang / Toi</button></div></header>
 <nav id="nav"></nav>
 <main>
 <section class="tab" id="t-overview">
@@ -1361,6 +1371,9 @@ svg text{fill:var(--text);font-size:12px}.legend span{margin-right:14px;font-siz
 const TABS=[['overview','Tong quan'],['topo','Topology'],['recovery','Khoi phuc'],['traffic','Luu luong'],
  ['vlan','VLAN'],['policy','Chinh sach'],['load','Tai thiet bi'],['perf','Hieu nang'],['health','Suc khoe'],['scen','Kich ban']];
 const SOON={};
+try{if(localStorage.getItem('theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}
+function toggleTheme(){const r=document.documentElement,l=r.dataset.theme!=='light';
+ if(l)r.dataset.theme='light';else delete r.dataset.theme;try{localStorage.setItem('theme',l?'light':'dark')}catch(e){}refresh()}
 let cur=localStorage.getItem('tab')||'overview';
 const nav=document.getElementById('nav');
 TABS.forEach(([id,l])=>{const b=document.createElement('button');b.id='nb-'+id;
@@ -1375,35 +1388,46 @@ function mbps(b){return (b/1e6).toFixed(b<1e6?3:2)}
 function fmt(v,d){return v==null?'-':(+v).toFixed(d==null?1:d)}
 function tstr(ts){const d=new Date(ts*1000);return d.toLocaleTimeString('vi-VN')}
 // ---- bieu do canvas don gian ----
-function chart(cv,series,opt){opt=opt||{};const dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.height;
- cv.width=W*dpr;cv.height=H*dpr;cv.style.height=H+'px';const g=cv.getContext('2d');g.scale(dpr,dpr);
- const L=46,R=10,T=10,B=22;g.fillStyle='#0e1627';g.fillRect(0,0,W,H);
+// Chieu cao logic lay tu thuoc tinh height BAN DAU (luu vao data-h): truoc day doc lai
+// cv.height (da nhan dpr o lan ve truoc) -> moi lan cap nhat bieu do co/phinh theo dpr,
+// zoom < 100% (dpr < 1) thi nho dan roi bien mat.
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function chart(cv,series,opt){opt=opt||{};const dpr=window.devicePixelRatio||1,W=cv.clientWidth;
+ if(!cv.dataset.h)cv.dataset.h=cv.getAttribute('height')||'190';const H=+cv.dataset.h;
+ if(!W)return;      // tab dang an: clientWidth = 0, ve lai khi tab hien
+ cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.height=H+'px';
+ const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+ const L=48,R=12,T=series.length>1?24:12,B=24;g.fillStyle=css('--plot');g.fillRect(0,0,W,H);
+ g.font='12px Segoe UI, system-ui, sans-serif';
  let xs=[],ys=[];series.forEach(s=>s.pts.forEach(p=>{xs.push(p[0]);if(p[1]!=null)ys.push(p[1])}));
- if(!xs.length){g.fillStyle='#7f8db0';g.fillText('chua co du lieu',L,H/2);return}
+ if(!xs.length){g.fillStyle=css('--muted');g.fillText('chua co du lieu',L,H/2);return}
  let x0=Math.min(...xs),x1=Math.max(...xs);if(x1===x0)x1=x0+1;let y1=Math.max(opt.ymin||0,...ys)*1.15||1,y0=0;
  const X=x=>L+(x-x0)/(x1-x0)*(W-L-R),Y=y=>H-B-(y-y0)/(y1-y0)*(H-T-B);
- g.strokeStyle='#22304d';g.fillStyle='#7f8db0';g.font='11px Segoe UI';g.lineWidth=1;
- for(let i=0;i<=4;i++){const yv=y0+(y1-y0)*i/4,yy=Y(yv);g.beginPath();g.moveTo(L,yy);g.lineTo(W-R,yy);g.stroke();g.fillText(yv.toFixed(yv<10?2:0),4,yy+4)}
- if(opt.timeAxis){[x0,(x0+x1)/2,x1].forEach((xv,i)=>{g.fillText(tstr(xv),Math.min(X(xv)-(i?24:0),W-60),H-6)})}
- series.forEach(s=>{g.strokeStyle=s.color;g.fillStyle=s.color;g.lineWidth=1.6;
-  if(s.bar){const bw=Math.max(3,(W-L-R)/Math.max(8,s.pts.length)*0.6);s.pts.forEach(p=>{if(p[1]!=null)g.fillRect(X(p[0])-bw/2,Y(p[1]),bw,H-B-Y(p[1]))});return}
-  g.beginPath();let pen=false;s.pts.forEach(p=>{if(p[1]==null){pen=false;if(s.gapMark){g.save();g.fillStyle='rgba(239,68,68,.55)';g.fillRect(X(p[0])-1,T,2,H-T-B);g.restore()}return}
+ g.strokeStyle=css('--grid');g.fillStyle=css('--muted');g.lineWidth=1;g.setLineDash([3,4]);
+ for(let i=0;i<=4;i++){const yv=y0+(y1-y0)*i/4,yy=Math.round(Y(yv))+.5;g.beginPath();g.moveTo(L,yy);g.lineTo(W-R,yy);g.stroke();g.fillText(yv.toFixed(yv<10?2:0),6,yy+4)}
+ g.setLineDash([]);
+ if(opt.timeAxis){[x0,(x0+x1)/2,x1].forEach((xv,i)=>{g.fillText(tstr(xv),Math.min(X(xv)-(i?26:0),W-62),H-7)})}
+ series.forEach(s=>{g.strokeStyle=s.color;g.fillStyle=s.color;g.lineWidth=1.8;g.lineJoin='round';
+  if(s.bar){const bw=Math.max(3,(W-L-R)/Math.max(8,s.pts.length)*0.6);g.globalAlpha=.85;s.pts.forEach(p=>{if(p[1]!=null)g.fillRect(X(p[0])-bw/2,Y(p[1]),bw,H-B-Y(p[1]))});g.globalAlpha=1;return}
+  g.beginPath();let pen=false;s.pts.forEach(p=>{if(p[1]==null){pen=false;if(s.gapMark){g.save();g.fillStyle=css('--bad');g.globalAlpha=.35;g.fillRect(X(p[0])-1,T,2,H-T-B);g.restore()}return}
    const xx=X(p[0]),yy=Y(p[1]);pen?g.lineTo(xx,yy):g.moveTo(xx,yy);pen=true});g.stroke()});
- if(series.length>1){let lx=L+6;series.forEach(s=>{g.fillStyle=s.color;g.fillRect(lx,T+2,10,3);g.fillStyle='#d3ddf3';g.fillText(s.name,lx+14,T+8);lx+=g.measureText(s.name).width+30})}}
-const COLORS=['#3aa0ff','#22c55e','#f59e0b','#a78bfa','#f472b6','#2dd4bf','#ef4444'];
+ if(series.length>1){let lx=L;series.forEach(s=>{g.fillStyle=s.color;g.fillRect(lx,8,12,3);g.fillStyle=css('--text2');g.fillText(s.name,lx+16,13);lx+=g.measureText(s.name).width+32})}}
+// Bang mau diu (do bao hoa vua phai, phan biet duoc voi nguoi mu mau do-xanh luc)
+const COLORS=['#6ea8dc','#7fbf8e','#d9a95b','#a99bd6','#d48fae','#6fbfb5','#d27a72'];
+window.addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(refresh,250)});
 // ---- Topology SVG ----
 const POS={'C1':[300,40],'C2':[600,40],'Dist-SW1':[300,170],'Dist-SW2':[600,170],
  'Access-SW1':[120,310],'Access-SW2':[340,310],'Access-SW3':[560,310],'Access-SW4':[780,310]};
 const NAME={5:'Dist-SW1',8:'Dist-SW2',68:'Access-SW1',66:'Access-SW2',70:'Access-SW3',69:'Access-SW4',C1:'C1',C2:'C2'};
 function drawTopo(t){const s=$('svg-topo');let h='';
  t.links.forEach(l=>{const a=POS[NAME[l.a[0]]],b=POS[NAME[l.b[0]]];if(!a||!b)return;
-  const col=l.test_cut?'#f59e0b':(!l.up?'#ef4444':(l.in_tree?'#22c55e':'#64748b'));
+  const col=l.test_cut?css('--warn'):(!l.up?css('--bad'):(l.in_tree?css('--ok'):css('--idle')));
   const w=l.in_tree?4:2,dash=(!l.up||l.test_cut)?'6 5':'';
   h+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}"><title>${l.id}: ${l.a_name}.${l.a[1]} - ${l.b_name}.${l.b[1]}</title></line>`;
-  const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;h+=`<text x="${mx+4}" y="${my-4}" style="font-size:10px;fill:#7f8db0">${l.id}</text>`});
+  const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;h+=`<text x="${mx+4}" y="${my-4}" style="font-size:10px;fill:var(--muted)">${l.id}</text>`});
  t.nodes.forEach(n=>{const key=n.id==='C1'||n.id==='C2'?n.id:n.name,p=POS[key];if(!p)return;
-  const core=n.role==='Core',col=core?'#3aa0ff':(n.connected?'#22c55e':(n.frozen?'#f59e0b':'#ef4444'));
-  h+=`<rect x="${p[0]-62}" y="${p[1]-17}" width="124" height="34" rx="7" fill="#111a2e" stroke="${col}" stroke-width="2" stroke-dasharray="${n.frozen?'5 4':''}"><title>${n.frozen?'Mat controller - giu nguyen duong cu (dong bang)':(n.connected||core?'':'Mat ket noi controller')}</title></rect>`;
+  const core=n.role==='Core',col=core?css('--accent'):(n.connected?css('--ok'):(n.frozen?css('--warn'):css('--bad')));
+  h+=`<rect x="${p[0]-62}" y="${p[1]-17}" width="124" height="34" rx="7" fill="${css('--panel2')}" stroke="${col}" stroke-width="2" stroke-dasharray="${n.frozen?'5 4':''}"><title>${n.frozen?'Mat controller - giu nguyen duong cu (dong bang)':(n.connected||core?'':'Mat ket noi controller')}</title></rect>`;
   h+=`<text x="${p[0]}" y="${p[1]+4}" text-anchor="middle">${n.name}${core&&t.root===n.name?' (goc)':''}${n.frozen?' *':''}</text>`});
  s.innerHTML=h}
 function linkRows(t){let h='<tr><th>Lien ket</th><th>Dau A</th><th>Dau B</th><th>Trang thai</th><th>Cay</th><th class="num">Probe gan nhat (s)</th><th class="num">On dinh (s)</th><th>Mo phong</th></tr>';

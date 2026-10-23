@@ -278,10 +278,16 @@ class CampusRyuTest(unittest.TestCase):
         self.assertIn('A1-D2', self.app.tree)
         self.assertNotIn('A1-D1', self.app.tree)
         self.assertEqual(self.app.blocked[68], {'ens4'})
-        # Thu tu an toan tren Access-SW1: ADD chan ens4 truoc DELETE_STRICT mo ens5
-        seq = [m for m in self.dps[68].flows() if m.priority == cs.P_BLOCK]
-        self.assertEqual(seq[0].command, ofp.OFPFC_ADD)
-        self.assertEqual(seq[-1].command, ofp.OFPFC_DELETE_STRICT)
+        # Fast-failover (23/10): Access khong co flow DROP uplink; group doi thu tu
+        # sang [ens5, ens4] (uplink cay moi truoc)
+        self.assertEqual([m for m in self.dps[68].flows() if m.priority == cs.P_BLOCK], [])
+        gm = [m for m in self.dps[68].sent if isinstance(m, parser.OFPGroupMod)]
+        self.assertEqual(gm[-1].command, ofp.OFPGC_MODIFY)
+        self.assertEqual([b.watch_port for b in gm[-1].buckets],
+                         [self.pno(68, 'ens5'), self.pno(68, 'ens4')])
+        # moi cong doi trang thai deu la cong Access<->Dist -> khong flow DROP nao
+        self.assertEqual([m for dp in self.dps.values() for m in dp.flows()
+                          if m.priority == cs.P_BLOCK], [])
         # Barrier gui toi cac switch co thay doi; hoan tat khi du reply
         ev = [e for e in self.app.event_log if e['kind'] == 'link_down'][-1]
         self.assertNotIn('done', ev)
@@ -569,8 +575,10 @@ class CampusRyuTest(unittest.TestCase):
         po = [m for m in dp68.sent if isinstance(m, parser.OFPPacketOut)]
         self.assertEqual(len(po), 1)
         outs = [a.port for a in po[0].actions if isinstance(a, parser.OFPActionOutput)]
-        # flood: ens7 (access VLAN 10) + ens4 (uplink thuoc cay), KHONG ens5 (bi chan)
-        self.assertEqual(sorted(outs), sorted([self.pno(68, 'ens7'), self.pno(68, 'ens4')]))
+        grps = [a.group_id for a in po[0].actions if isinstance(a, parser.OFPActionGroup)]
+        # flood: ens7 (access VLAN 10) + uplink QUA group fast-failover (1 lan), khong output thang uplink
+        self.assertEqual(outs, [self.pno(68, 'ens7')])
+        self.assertEqual(grps, [cs.FF_GROUP_ID])
         self.assertTrue(any(isinstance(a, parser.OFPActionPushVlan) for a in po[0].actions))
         # Frame VLAN 99 khong duoc controller flood
         dp68.sent = []
@@ -707,7 +715,9 @@ class CampusRyuTest(unittest.TestCase):
         self.app._packet_in_handler(Ev(PacketIn(dp68, self.pno(68, 'ens7'), p.data)))
         po = [m for m in dp68.sent if isinstance(m, parser.OFPPacketOut)][0]
         outs = [a.port for a in po.actions if isinstance(a, parser.OFPActionOutput)]
-        self.assertEqual(outs, [self.pno(68, 'ens4')])
+        self.assertEqual(outs, [])
+        self.assertEqual([a.group_id for a in po.actions if isinstance(a, parser.OFPActionGroup)],
+                         [cs.FF_GROUP_ID])
         vids = [a.value for a in po.actions if isinstance(a, parser.OFPActionSetField)]
         self.assertEqual(vids, [cs.OFPVID_PRESENT | 50])
         # api_vlans hien thi
@@ -735,7 +745,7 @@ class CampusRyuTest(unittest.TestCase):
         dels = [m for m in f if m.command == ofp.OFPFC_DELETE]
         self.assertTrue(all(m.table_id == ofp.OFPTT_ALL for m in dels))
         # chan cay o bang 0 voi uu tien < 45000 (flow co dinh quan tri cua Access)
-        blk = [m for m in f if m.priority == cs.P_BLOCK and m.command == ofp.OFPFC_ADD]
+        blk = [m for m in self.dps[8].flows() if m.priority == cs.P_BLOCK and m.command == ofp.OFPFC_ADD]
         self.assertTrue(blk and all(m.table_id == 0 for m in blk))
         self.assertLess(cs.P_BLOCK, 45000)
 
@@ -803,8 +813,112 @@ class CampusRyuTest(unittest.TestCase):
         p.add_protocol(vlan.vlan(vid=10, ethertype=0x0806))
         p.add_protocol(arp.arp(src_ip='10.1.10.100', dst_ip='10.1.10.1'))
         p.serialize()
-        self.app._packet_in_handler(Ev(PacketIn(dp8, self.pno(8, 'ens4'), p.data)))
+        self.app._packet_in_handler(Ev(PacketIn(dp8, self.pno(8, 'ens9'), p.data)))   # Core-SW2
         self.assertEqual([m for m in dp8.sent if isinstance(m, parser.OFPPacketOut)], [])
+
+    # ---- fast-failover (23/10/2026) ----
+    def test_ff_group_per_access_follows_tree(self):
+        for d in cs.ACCESS:
+            gm = [m for m in self.dps[d].sent if isinstance(m, parser.OFPGroupMod)]
+            # ket noi: xoa moi group cu roi ADD group FF [ens4 (cay), ens5 (du phong)]
+            self.assertEqual([m.command for m in gm], [ofp.OFPGC_DELETE, ofp.OFPGC_ADD])
+            add = gm[-1]
+            self.assertEqual((add.type, add.group_id), (ofp.OFPGT_FF, cs.FF_GROUP_ID))
+            self.assertEqual([b.watch_port for b in add.buckets],
+                             [self.pno(d, 'ens4'), self.pno(d, 'ens5')])
+            self.assertEqual([b.actions[0].port for b in add.buckets],
+                             [self.pno(d, 'ens4'), self.pno(d, 'ens5')])
+        for d in cs.DIST:
+            self.assertFalse([m for m in self.dps[d].sent if isinstance(m, parser.OFPGroupMod)
+                              and m.command != ofp.OFPGC_DELETE])
+        # cay khong doi -> khong gui lai group
+        self.dps[69].sent = []
+        self.app._recompute('test', time.time(), force=True)
+        self.assertEqual([m for m in self.dps[69].sent if isinstance(m, parser.OFPGroupMod)], [])
+        # A4-D1 chet -> chi Access-SW4 doi thu tu
+        self.app._set_link('A4-D1', False, time.time(), 'test')
+        gm = [m for m in self.dps[69].sent if isinstance(m, parser.OFPGroupMod)]
+        self.assertEqual([b.watch_port for b in gm[-1].buckets],
+                         [self.pno(69, 'ens5'), self.pno(69, 'ens4')])
+
+    def _bcast(self, vid, src):
+        p = packet.Packet()
+        p.add_protocol(ethernet.ethernet(dst='ff:ff:ff:ff:ff:ff', src=src, ethertype=0x8100))
+        p.add_protocol(vlan.vlan(vid=vid, ethertype=0x0806))
+        p.add_protocol(arp.arp(src_mac=src, src_ip='10.1.%d.1' % vid, dst_ip='10.1.%d.100' % vid))
+        p.serialize()
+        return p.data
+
+    def test_ff_access_split_horizon(self):
+        # khung tu uplink du phong (duong fast-failover qua Dist-SW2) duoc nhan nhung
+        # chi ra cong access - KHONG bao gio quay len uplink (chong vong)
+        dp = self.dps[68]
+        for up in ('ens5', 'ens4'):
+            dp.sent = []
+            self.app._packet_in_handler(Ev(PacketIn(dp, self.pno(68, up),
+                                                    self._bcast(10, 'aa:bb:cc:00:00:01'))))
+            po = [m for m in dp.sent if isinstance(m, parser.OFPPacketOut)]
+            self.assertEqual(len(po), 1, up)
+            self.assertFalse([a for a in po[0].actions if isinstance(a, parser.OFPActionGroup)])
+            outs = sorted(a.port for a in po[0].actions if isinstance(a, parser.OFPActionOutput))
+            self.assertEqual(outs, sorted([self.pno(68, 'ens6'), self.pno(68, 'ens7')]))
+        # dich da hoc o phia uplink + khung vao tu uplink -> khong cai flow uplink->uplink
+        dp.sent = []
+        u = packet.Packet()
+        u.add_protocol(ethernet.ethernet(dst='aa:bb:cc:00:00:01', src='aa:bb:cc:00:00:02',
+                                         ethertype=0x8100))
+        u.add_protocol(vlan.vlan(vid=10, ethertype=0x0806))
+        u.add_protocol(arp.arp(src_ip='10.1.10.7', dst_ip='10.1.10.1'))
+        u.serialize()
+        self.app._packet_in_handler(Ev(PacketIn(dp, self.pno(68, 'ens5'), u.data)))
+        self.assertEqual([m for m in dp.flows() if m.table_id == cs.T_FWD and m.priority == cs.P_L2], [])
+
+    def test_ff_learned_flow_uses_group(self):
+        dp = self.dps[68]
+        gw = 'aa:bb:cc:00:00:01'
+        self.app._packet_in_handler(Ev(PacketIn(dp, self.pno(68, 'ens4'), self._bcast(10, gw))))
+        dp.sent = []
+        p = packet.Packet()
+        p.add_protocol(ethernet.ethernet(dst=gw, src='00:50:79:66:68:0e', ethertype=0x0806))
+        p.add_protocol(arp.arp(src_mac='00:50:79:66:68:0e', src_ip='10.1.10.100', dst_ip='10.1.10.1'))
+        p.serialize()
+        self.app._packet_in_handler(Ev(PacketIn(dp, self.pno(68, 'ens6'), p.data)))
+        fl = [m for m in dp.flows() if m.table_id == cs.T_FWD and m.priority == cs.P_L2]
+        self.assertEqual(len(fl), 1)
+        acts = fl[0].instructions[0].actions
+        self.assertIsInstance(acts[-1], parser.OFPActionGroup)
+        self.assertTrue(any(isinstance(a, parser.OFPActionPushVlan) for a in acts))
+
+    def test_ff_dist_accepts_backup_port_without_flooding_down(self):
+        # Dist-SW2 nhan khung tu Access qua cong ngoai cay (Access dang dung uplink du
+        # phong): chuyen len Core (ens10), KHONG flood xuong cac Access ngoai cay
+        dp8 = self.dps[8]
+        net = set()       # trang thai DROP rong tren Dist-SW2 (ADD - DELETE_STRICT)
+        for m in dp8.flows():
+            if m.priority == cs.P_BLOCK:
+                (net.add if m.command == ofp.OFPFC_ADD else net.discard)(m.match['in_port'])
+        dp8.sent = []
+        self.app._packet_in_handler(Ev(PacketIn(dp8, self.pno(8, 'ens7'),
+                                                self._bcast(40, '00:50:79:66:68:11'))))
+        po = [m for m in dp8.sent if isinstance(m, parser.OFPPacketOut)]
+        self.assertEqual(len(po), 1)
+        outs = [a.port for a in po[0].actions if isinstance(a, parser.OFPActionOutput)]
+        self.assertEqual(outs, [self.pno(8, 'ens10')])
+        self.assertEqual(self.app.mac_to_port[8][(40, '00:50:79:66:68:11')], self.pno(8, 'ens7'))
+        # khong co flow DROP tren 4 cong Access cua Dist-SW2, van DROP cong Core-SW2/inter-dist
+        self.assertEqual(net, {self.pno(8, 'ens8'), self.pno(8, 'ens9')})
+
+    def test_ff_reconnect_reinstalls_group(self):
+        dp = self.dps[70]
+        dp.sent = []
+        self.app.switches.pop(70)
+        self.app._port_desc_handler(portdesc(dp))
+        gm = [m for m in dp.sent if isinstance(m, parser.OFPGroupMod)]
+        self.assertEqual([m.command for m in gm], [ofp.OFPGC_DELETE, ofp.OFPGC_ADD])
+        # xoa group sau khi xoa flow cookie 0 (flow tham chieu group)
+        idx = {id(m): i for i, m in enumerate(dp.sent)}
+        del0 = [m for m in dp.flows() if m.command == ofp.OFPFC_DELETE and m.cookie == 0][0]
+        self.assertLess(idx[id(del0)], idx[id(gm[0])])
 
     def test_api_topology_shape(self):
         t = self.app.api_topology()

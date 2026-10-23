@@ -86,6 +86,15 @@ ovs-vsctl --timeout=10 set-controller br0 tcp:10.1.99.10:6653 tcp:10.1.99.10:665
 ovs-vsctl --timeout=10 set Bridge br0 fail_mode=secure
 ovs-vsctl --timeout=10 set Bridge br0 stp_enable=false
 
+# BFD 100 ms x 3 tren lien ket Access<->Dist (23/10/2026): OVS tu bo co LIVE cua
+# cong chet trong ~0,3 s -> group FAST_FAILOVER cua Ryu chuyen uplink khong can
+# controller (cat tap tren host EVE khong lam VM mat carrier). Tuy chon: rong = tat.
+read -r -a campus_bfd_ports <<< "${CAMPUS_BFD_PORTS:-}"
+for campus_port in "${campus_bfd_ports[@]}"; do
+    ovs-vsctl --timeout=10 set Interface "$campus_port" \
+        bfd:enable=true bfd:min_tx=100 bfd:min_rx=100 bfd:decay_min_rx=0
+done
+
 read -r -a campus_bootstrap99_ports <<< "$CAMPUS_BOOTSTRAP99_PORTS"
 
 # Bootstrap VLAN 99 (mgmt/control) tren CAY ACYCLIC — KHONG dung NORMAL.

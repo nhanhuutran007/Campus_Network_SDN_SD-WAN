@@ -141,6 +141,31 @@ DIST_CORE = {8: 'ens10', 5: 'ens9'}     # cong Core-SW1 cua tung Dist
 DIST_CORE2 = {8: 'ens9', 5: 'ens10'}    # cong Core-SW2 (khong mang VLAN 99)
 INTER_DIST = 'ens8'
 
+# FAST-FAILOVER TREN DATA PLANE (23/10/2026)
+#  Truoc day Access mat uplink thi phai cho controller: probe het han (~3 s) roi
+#  tinh lai cay; controller khung trung luc do (VM node 9 tren host dung chung) moi
+#  lan them an han 3,5 s -> A4-D1 gian doan 6-8 s (S2 KHONG DAT).
+#  Nay: BFD 100 ms x 3 tren 8 lien ket Access<->Dist (Campus-OVS-restore.sh) lam
+#  OVS tu bo co LIVE cua cong chet trong ~0,3 s; moi Access day goi len qua 1 group
+#  FAST_FAILOVER [uplink thuoc cay, uplink du phong] -> OVS tu chuyen nhanh, khong
+#  can controller. Controller van tinh lai cay sau do (don dep, dong bo Core).
+#  De goi di qua duong du phong duoc nhan, cong Access<->Dist ngoai cay KHONG con
+#  flow DROP chieu vao (van khong flood ra). Khong vong vi: Access chi gui len qua
+#  group (1 uplink tai 1 thoi diem) va khung vao tu uplink khong bao gio ra uplink
+#  (split-horizon); Dist khong flood xuong cong ngoai cay.
+FAST_FAILOVER = True
+ACCESS_UPLINKS = ('ens4', 'ens5')           # ens4 -> Dist-SW1, ens5 -> Dist-SW2
+FF_GROUP_ID = 1
+
+
+def ff_soft_port(dpid, name):
+    """Cong Access<->Dist: ngoai cay thi van nhan khung (duong fast-failover)."""
+    if not FAST_FAILOVER:
+        return False
+    if dpid in ACCESS:
+        return name in ACCESS_UPLINKS
+    return dpid in (5, 8) and name in _ACC
+
 
 def mgmt_rules(dpid):
     """[(cong vao, VLAN vao, [(cong ra, VLAN ra)])] cho Dist dpid."""
@@ -387,7 +412,8 @@ class CampusSwitch13(_RyuApp):
         self.root = None
         self.tree = set()
         self.parent = {}
-        self.blocked = {}           # dpid -> set(ten cong dang bi DROP)
+        self.blocked = {}           # dpid -> set(ten cong ngoai cay: DROP chieu vao, khong flood ra)
+        self._ff_state = {}         # dpid Access -> thu tu uplink trong group fast-failover da cai
         self.tree_version = 0
         self.event_log = collections.deque(maxlen=500)  # KHONG dung self.events: la hang doi su kien noi bo cua RyuApp
         self._ops = {}              # xid -> op_id ; op_id -> dict
@@ -565,6 +591,9 @@ class CampusSwitch13(_RyuApp):
         self._delete_cookie(dp, CK_TREE)
         self._delete_cookie(dp, CK_TEST)
         self._delete_cookie(dp, CK_POLICY, CK_POLICY_MASK)
+        # Group cua phien truoc: xoa sau khi da xoa flow tham chieu (cookie 0), cai lai trong cay
+        self._ff_state.pop(dpid, None)
+        dp.send_msg(dp.ofproto_parser.OFPGroupMod(dp, ofp.OFPGC_DELETE, 0, ofp.OFPG_ALL, []))
         self._install_policies(dp)
         now = time.time()
         for lid in LINKS:
@@ -594,6 +623,7 @@ class CampusSwitch13(_RyuApp):
         dpid = dp.id
         del self.switches[dpid]
         self.mac_to_port.pop(dpid, None)
+        self._ff_state.pop(dpid, None)
         now = time.time()
         self._event('switch_down', '%s mat ket noi controller' % NODE_NAMES.get(dpid, dpid),
                     dpid=dpid)
@@ -980,10 +1010,13 @@ class CampusSwitch13(_RyuApp):
         want = set(p for p in TRUNK_PORTS.get(dpid, []) if p not in active)
         have = self.blocked.get(dpid, set())
         mods = 0
-        # Chan truoc, mo sau: khong bao gio co khoang thoi gian vong L2
+        # Group fast-failover cua Access doi TRUOC khi mo/chan cong
+        mods += self._apply_ff_group(dp, active)
+        # Chan truoc, mo sau: khong bao gio co khoang thoi gian vong L2.
+        # Cong fast-failover (ff_soft_port) khong co flow DROP: chi bi loai khoi flood.
         for name in sorted(want - have):
             pno = n2n.get(name)
-            if pno is None:
+            if pno is None or ff_soft_port(dpid, name):
                 continue
             self._add_flow(dp, P_BLOCK, parser.OFPMatch(
                 in_port=pno, vlan_vid=(OFPVID_PRESENT, OFPVID_PRESENT)), [],
@@ -991,7 +1024,7 @@ class CampusSwitch13(_RyuApp):
             mods += 1
         for name in sorted(have - want):
             pno = n2n.get(name)
-            if pno is None:
+            if pno is None or ff_soft_port(dpid, name):
                 continue
             self._del_strict(dp, P_BLOCK, parser.OFPMatch(
                 in_port=pno, vlan_vid=(OFPVID_PRESENT, OFPVID_PRESENT)))
@@ -1007,6 +1040,42 @@ class CampusSwitch13(_RyuApp):
         op['mods'] += mods
         if mods:
             self._barrier(dp, op_id)
+
+    def _ff_order(self, dpid, active):
+        """Thu tu uplink cho group: uplink thuoc cay truoc, du phong sau."""
+        n2n = self.port_no.get(dpid, {})
+        ups = [p for p in ACCESS_UPLINKS if p in n2n]
+        return tuple(sorted(ups, key=lambda p: p not in active))
+
+    def _apply_ff_group(self, dp, active):
+        """Access: group FAST_FAILOVER [uplink cay, uplink du phong]. Tra ve so ban tin."""
+        dpid = dp.id
+        if not FAST_FAILOVER or dpid not in ACCESS:
+            return 0
+        order = self._ff_order(dpid, active)
+        if not order or not any(p in active for p in order):
+            return 0        # khong co uplink trong cay (Access mo coi): giu group cu
+        if self._ff_state.get(dpid) == order:
+            return 0
+        parser = dp.ofproto_parser
+        ofp = dp.ofproto
+        n2n = self.port_no[dpid]
+        buckets = [parser.OFPBucket(weight=0, watch_port=n2n[p], watch_group=ofp.OFPG_ANY,
+                                    actions=[parser.OFPActionOutput(n2n[p])])
+                   for p in order]
+        cmd = ofp.OFPGC_MODIFY if dpid in self._ff_state else ofp.OFPGC_ADD
+        dp.send_msg(parser.OFPGroupMod(dp, cmd, ofp.OFPGT_FF, FF_GROUP_ID, buckets))
+        self._ff_state[dpid] = order
+        return 1
+
+    def _uplink_action(self, dp, pno):
+        """Access gui len uplink -> qua group fast-failover (neu da cai)."""
+        dpid = dp.id
+        if dpid in self._ff_state:
+            names = self.port_no.get(dpid, {})
+            if any(names.get(p) == pno for p in ACCESS_UPLINKS):
+                return dp.ofproto_parser.OFPActionGroup(FF_GROUP_ID)
+        return dp.ofproto_parser.OFPActionOutput(pno)
 
     # ----------------------------------------------------------------
     #  Thong bao vi tri MAC (RARP) sau khi cay doi
@@ -1107,10 +1176,15 @@ class CampusSwitch13(_RyuApp):
             vlan = access.get(in_port, 0)
         if vlan == 0 or vlan == MGMT_VLAN or vlan not in self.data_vlans:
             return      # VLAN 99 do guard/bootstrap lo; VLAN la -> bo
-        if in_port in trunk:
-            name = next((k for k, v in n2n.items() if v == in_port), None)
-            if name in self.blocked.get(dpid, set()):
-                return  # canh ngoai cay (flow DROP chua kip cai)
+        in_name = next((k for k, v in n2n.items() if v == in_port), None)
+        if in_port in trunk and in_name in self.blocked.get(dpid, set()) \
+                and not ff_soft_port(dpid, in_name):
+            return  # canh ngoai cay (flow DROP chua kip cai)
+        # Access: khung vao tu uplink khong bao gio ra uplink (split-horizon) -> duong
+        # fast-failover qua Dist kia khong tao vong
+        uplinks = set(n2n[p] for p in ACCESS_UPLINKS if p in n2n) \
+            if (FAST_FAILOVER and dpid in ACCESS) else set()
+        from_up = in_port in uplinks
         src, dst = eth.src, eth.dst
         table = self.mac_to_port.setdefault(dpid, {})
         table[(vlan, src)] = in_port
@@ -1118,8 +1192,12 @@ class CampusSwitch13(_RyuApp):
             self.hosts[(vlan, src)] = (dpid, in_port, time.time())
 
         def egress(ports):
-            acts, cur = [], tagged
+            acts, cur, up_done = [], tagged, False
             for p in ports:
+                if p in uplinks:
+                    if from_up or up_done:
+                        continue    # split-horizon / 1 lan qua group cho ca 2 uplink
+                    up_done = True
                 if p in access:
                     if cur:
                         acts.append(parser.OFPActionPopVlan())
@@ -1129,11 +1207,12 @@ class CampusSwitch13(_RyuApp):
                         acts.append(parser.OFPActionPushVlan(0x8100))
                         acts.append(parser.OFPActionSetField(vlan_vid=OFPVID_PRESENT | vlan))
                         cur = True
-                acts.append(parser.OFPActionOutput(p))
+                acts.append(self._uplink_action(dp, p) if p in uplinks
+                            else parser.OFPActionOutput(p))
             return acts
 
         out = table.get((vlan, dst))
-        if out is not None and out != in_port:
+        if out is not None and out != in_port and not (from_up and out in uplinks):
             acts = egress([out])
             m = {'in_port': in_port, 'eth_dst': dst}
             if tagged:
