@@ -1,6 +1,6 @@
 # Bảng theo dõi tiến độ đồ án — Campus Network SDN + SD-WAN
 
-> Bảng đề xuất dựa trên tiến độ thực tế (cập nhật tới **23/09/2026**, phần SDN tới **10/10/2026** — xem mục "Tình trạng" bên dưới).
+> Bảng đề xuất dựa trên tiến độ thực tế (cập nhật tới **23/09/2026**, phần SDN tới **23/10/2026** — xem mục "Tình trạng" bên dưới).
 > Cột **(4) Nội dung nhóm tự điền** để trống cho nhóm tự điền trách nhiệm/phân công.
 
 ## Bảng theo dõi
@@ -28,7 +28,7 @@
 | 19 | **Báo cáo & bảo vệ** | Hoàn thiện tài liệu thiết kế + báo cáo tổng hợp | Tổng hợp `campus_network_sdn_sdwan.md` (đã có 2.0–2.4), thêm phần đánh giá/kết luận, so sánh SDN vs SD-WAN, bài học vận hành lab. | | 01/11/2026 | 20/11/2026 | Báo cáo hoàn chỉnh + phụ lục cấu hình từng thiết bị |
 | 20 | **Báo cáo & bảo vệ** | Thuyết trình demo trực tiếp trên lab | Chuẩn bị slide (kiến trúc, thiết kế IP, kết quả từng công nghệ), kịch bản demo sống: mở lab, cho VPC nhận DHCP, ping liên site, cắt WAN xem failover. | | 15/11/2026 | Ngày bảo vệ | Slide + kịch bản demo + buổi bảo vệ thành công |
 
-## Tình trạng cập nhật 23/09/2026 (SDN: 10/10/2026)
+## Tình trạng cập nhật 23/09/2026 (SDN: 23/10/2026)
 
 | # | Hạng mục | Tình trạng | Bằng chứng / ghi chú |
 |---|---|---|---|
@@ -37,13 +37,13 @@
 | 7 | Core/Dist/Access, VRRP, OSPF | ✅ Xong | OSPF FW↔Core đủ route 10.1.x (kiểm `show route` trên FW 23/09) |
 | 8 | ASAv HA + ASDM | ✅ Xong | `show failover`: Primary Active / Secondary Standby Ready; luật mới tự đồng bộ sang Standby |
 | 9 | DHCP-Server end-to-end | ✅ Xong | 8/8 VPC Site 100 nhận IP (20/09) |
-| 10–11 | SDN Ryu + 6 OVS, app L2 | ✅ Xong | 6/6 OVS kết nối Ryu, storm đã dứt. 09–10/10: sửa tự phục hồi (Access mất controller được giữ đường cũ, guard VLAN 99 chỉ ghi đè, ân hạn khi controller khựng); **tắt ONOS** (gây controller khựng tới 9 s); **VLAN 99 thiết kế lại không phụ thuộc STP** (hết RSTP Dispute trên Core-SW1); Campus SDN Console thêm tab **Sức khoẻ** và **Kịch bản**. Chi tiết `configs/01-Site100-Campus/README_NOC.md` |
+| 10–11 | SDN Ryu + 6 OVS, app L2 | ✅ Xong | 6/6 OVS kết nối Ryu, storm đã dứt. 09–10/10: sửa tự phục hồi (Access mất controller được giữ đường cũ, guard VLAN 99 chỉ ghi đè, ân hạn khi controller khựng); **tắt ONOS** (gây controller khựng tới 9 s); **VLAN 99 thiết kế lại không phụ thuộc STP** (hết RSTP Dispute trên Core-SW1); Campus SDN Console thêm tab **Sức khoẻ** và **Kịch bản**. Chi tiết `configs/01-Site100-Campus/README_NOC.md`. **23/10:** thêm **fast-failover trên data plane** cho uplink Access (BFD 100 ms × 3 giữa OVS + OpenFlow group FAST_FAILOVER): mất 1 uplink Access, OVS tự chuyển sang Dist còn lại, không chờ controller (test 33/33 ĐẠT). Campus SDN Console: sửa lỗi biểu đồ co dần rồi biến mất khi cập nhật, giao diện dịu mắt + chế độ Sáng/Tối, mở được từ PC-Management |
 | 12–13 | Controller SD-WAN, PKI, onboard 8 vEdge | ✅ Xong | 8/8 vEdge lên vBond/vSmart/vManage; **BFD 56/56 up** (23/09, sau khi sửa NIC treo trên vEdge2-S100 và thêm default route cho mỗi transport) |
 | 14 | Định tuyến liên site | ✅ Xong | Service VPN 1 trên 8 vEdge, OMP trao route 4 site; ping VPC↔VPC 4 site 12/12 hướng |
 | 14b | Policy SD-WAN | ✅ Xong | SLA class `SLA_REALTIME`/`SLA_BUSINESS`, AAR `AAR_LAN` (ICMP/voice → mpls, web DMZ → biz-internet, mail DMZ → mpls), data policy `DP_BRANCH` (chặn Telnet/SSH chi nhánh → Server Farm/DMZ), control policy ưu tiên vEdge1-S100 |
 | 15–16 | Chi nhánh 200/300/400 | ✅ Xong (còn nhỏ) | 6 vEdge chi nhánh trong fabric; Site 400 đã đổi dây sang `ge0/2`; ACL `SDWAN_IN` trên Brand-FW. Còn: VPC50 (S300) chưa có IP |
 | 17 | Dịch vụ Web/Mail/DNS/Syslog | ✅ Xong phần chính | Từ PC-YTe-S200 (10.2.70.103): DNS `mail`/`MX` đúng; HTTPS → server thấy IP thật (không NAT); gửi mail 587 + đọc IMAP thành công. FW Site 100 siết DMZ theo dịch vụ (`acl-dmz-sdwan.txt`), cổng lạ bị chặn + log. Còn: thử Firefox/Thunderbird GUI, PC S300/S400, kiểm log Nginx trên Kiwi |
-| 18 | Kiểm thử tích hợp | 🟡 Đang làm | Đã có: DHCP, ping liên site, BFD, web/mail qua SD-WAN. **SDN (10/10): 6/6 kịch bản cắt link tự động ĐẠT** (S1–S6: gián đoạn ≤ 3,5 s khi cắt, ≤ 0,3 s khi khôi phục; cắt D2-C1 0 gói), cắt thật bằng hạ tap trên host ĐẠT 3/3, tắt hẳn Dist-SW2 chỉ mất 0–5 gói. Còn: failover FW-HA, cắt 1 màu WAN xem AAR/BFD chuyển đường, đợt BFD rớt đồng loạt 22–23/09 (chưa rõ nguyên nhân, đã tự hết) |
+| 18 | Kiểm thử tích hợp | 🟡 Đang làm | Đã có: DHCP, ping liên site, BFD, web/mail qua SD-WAN. **SDN (10/10): 6/6 kịch bản cắt link tự động ĐẠT** (S1–S6: gián đoạn ≤ 3,5 s khi cắt, ≤ 0,3 s khi khôi phục; cắt D2-C1 0 gói), cắt thật bằng hạ tap trên host ĐẠT 3/3, tắt hẳn Dist-SW2 chỉ mất 0–5 gói. **23/10 (SDN, đo lại đủ 5 mục tiêu):** hiệu năng 0% mất gói (cùng VLAN ~0,9 ms, khác VLAN trung vị 4 ms); chính sách áp 12–18 ms cho 4 Access; thêm VLAN 9 ms qua SDN so với ~36 s/Core cấu hình tay; tải controller 8–15% CPU; cắt thật S1–S6: trước fast-failover 5/6 ĐẠT (S2 A4-D1 gián đoạn 6–8 s), sau fast-failover S2 chỉ mất 1–2 gói (~0,2 s, đo bằng ping từ PC), giảm ~75–93%. Hạn chế: hỏng kép và link Dist–Core vẫn chờ controller (~2–3,7 s); số đo có nhiễu do controller khựng 3–4 lần/phút. Log `log/sdn-eval/*20261023*`. Còn: failover FW-HA, cắt 1 màu WAN xem AAR/BFD chuyển đường, đợt BFD rớt đồng loạt 22–23/09 (chưa rõ nguyên nhân, đã tự hết) |
 | 19 | Báo cáo | ⬜ Chưa bắt đầu | Tư liệu sẵn: `project-status.md`, các bài học (storm in-band, NIC e1000 treo, `.local`/mDNS trên Ubuntu) |
 | 20 | Slide + demo | ⬜ Chưa bắt đầu | Kịch bản demo có thể dùng PC Linux mỗi site để minh hoạ web/mail qua SD-WAN |
 
