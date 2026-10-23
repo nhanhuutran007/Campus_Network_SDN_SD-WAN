@@ -8,9 +8,11 @@ vManage (CA), vSmart, vBond tren CONTROLLER-LAN 10.9.0.0/24 - giong mot trien kh
 that, noi khong co hypervisor de console vao. Chay tren may lab Win 10.9.0.20.
 
 Mo hinh "staging" site 900 (CA enterprise SDWAN-Lab-RootCA giu nguyen):
-  0. Ky thuat vien cam vEdge vao Switch32 (VLAN 10), dan Day-0 tren console
-     cua thiet bi (lenh --day0 in san cau hinh, IP cap tu dong khong trung)
-  1. Tool SSH vEdge (vpn 0, allow-service sshd) -> doc system-ip/host-name/org
+  0. Ky thuat vien go tren console vEdge moi CHI vai lenh bat SSH (IP vpn 0 +
+     allow-service + route, web "Tao lenh bat SSH" in san, IP cap khong trung), cam
+     day vao Switch32 (VLAN 10)
+  1. Tool SSH vEdge -> chua co system thi tu commit host-name, system-ip
+     10.200.90.N (N = octet cuoi IP - 99), site 900, org, vbond qua SSH
   2. CSR -> vEdge scp len vManage -> SSH vManage, vshell, ky openssl bang CA cu
      -> vEdge scp cert + root CA ve -> cai root chain roi cai cert
   3. request vedge add tren vManage + vSmart + vBond (SSH tung controller)
@@ -132,6 +134,44 @@ def day0_config(hostname=None, wan_if='ge0/0'):
     return e, ['config'] + ob.base_config(e) + ['commit and-quit']
 
 
+def ssh_bootstrap(hostname=None, wan_if='ge0/0'):
+    """Lenh TOI THIEU go tren console vEdge moi: chi IP vpn 0 + allow-service + route de may Win
+    SSH vao duoc. Phan con lai (host-name, system-ip, org, vbond, cert) tool day qua SSH."""
+    e, _ = day0_config(hostname, wan_if)
+    full = ob.base_config(e)
+    return e, ['config'] + full[full.index('vpn 0'):] + ['commit and-quit']
+
+
+def ensure_system(con, ip, opts, log, step):
+    """Doc system cua vEdge; chua co (vEdge moi chi go lenh bat SSH) thi tu commit host-name,
+    system-ip 10.200.90.N (N = octet cuoi IP - 99), site-id, organization-name, vbond qua SSH."""
+    s = running_system(con)
+    if s['org'] == ob.ORG and s['system_ip'] and s['vbond']:
+        log('  [{}] {} system-ip {} site {} org "{}" vbond {} (da co)\n'.format(
+            step, s['hostname'], s['system_ip'], s['site_id'], s['org'], s['vbond']), 'info')
+        return s
+    n = int(ip.rsplit('.', 1)[1]) - 99
+    if not 1 <= n <= 99:
+        raise OnboardError('IP {} ngoai dai 10.9.0.100-198 - khong suy ra duoc system-ip'.format(ip))
+    e = {'hostname': opts.get('hostname') or ob.default_hostname(n), 'system_ip': '10.200.90.{}'.format(n),
+         'site_id': ob.SITE_ID, 'vpn0_ip': ip, 'wan_if': 'ge0/0'}
+    other = [v.get('hostname') for v in ob.load_registry().values()
+             if v.get('system_ip') == e['system_ip'] and v.get('vpn0_ip') != ip]
+    if opts.get('vm') is not None:
+        other += [d.get('host-name') for d in opts['vm'].devices() if d.get('system-ip') == e['system_ip']]
+    if other:
+        raise OnboardError('system-ip {} dang thuoc {} - doi IP vEdge'.format(e['system_ip'], other[0]))
+    log('  [{}] vEdge chua co system -> cau hinh qua SSH: {} / system-ip {} / site {} / org {} / vbond {}\n'.format(
+        step, e['hostname'], e['system_ip'], ob.SITE_ID, ob.ORG, ob.VBOND_IP), 'info')
+    full = ob.base_config(e)
+    con.commit(full[:full.index('vpn 0')])
+    s = running_system(con)
+    if s['org'] != ob.ORG or s['system_ip'] != e['system_ip']:
+        raise OnboardError('commit system xong nhung doc lai chua dung: {}'.format(s))
+    log('      Commit complete - {} system-ip {}\n'.format(s['hostname'], s['system_ip']), 'ok')
+    return s
+
+
 def day0(a):
     e, lines = day0_config(a.hostname, a.wan_if)
     print('! Day-0 cho vEdge moi - cam {} vao Switch32 (access VLAN {}), dang nhap console thiet bi,'
@@ -155,12 +195,7 @@ def certsign(ip, opts, log=log, stop=None):
     try:
         con.login(opts['vedge_user'], [opts['vedge_pw']])
         con.cli('screen-length 0', 10)
-        s = running_system(con)
-        log('  [1/6] {} system-ip {} site {} org "{}" vbond {}\n'.format(
-            s['hostname'], s['system_ip'], s['site_id'], s['org'], s['vbond']), 'info')
-        if s['org'] != ob.ORG or not s['system_ip'] or not s['vbond']:
-            raise OnboardError('Day-0 chua du (can organization-name {}, system-ip, vbond) - '
-                               'xem "python sdwan_certsign.py --day0"'.format(ob.ORG))
+        s = ensure_system(con, ip, opts, log, '1/6')
         reg = ob.load_registry()
         key = next((k for k, v in reg.items() if v.get('system_ip') == s['system_ip']), s['hostname'])
         e = dict(reg.get(key, {}))
@@ -276,11 +311,7 @@ def activate(ip, uuid, opts, log=log, stop=None):
     try:
         con.login(opts['vedge_user'], [opts['vedge_pw']])
         con.cli('screen-length 0', 10)
-        s = running_system(con)
-        log('  [1/5] {} system-ip {} site {} org "{}" vbond {}\n'.format(
-            s['hostname'], s['system_ip'], s['site_id'], s['org'], s['vbond']), 'info')
-        if s['org'] != ob.ORG or not s['system_ip'] or not s['vbond']:
-            raise OnboardError('Day-0 chua du (can organization-name {}, system-ip, vbond)'.format(ob.ORG))
+        s = ensure_system(con, ip, opts, log, '1/5')
         clash = [d.get('host-name') for d in vm.devices()
                  if d.get('system-ip') == s['system_ip'] and d.get('uuid') != uuid]
         if clash:
@@ -297,16 +328,17 @@ def activate(ip, uuid, opts, log=log, stop=None):
             log('  [2/5] Da kich hoat voi muc nay (cert Valid) - chi kiem tra control\n', 'ok')
         else:
             step = 'root-chain'
-            if p['chain'] != 'Installed':
-                log('  [2/5] Cai root chain CA enterprise (de vEdge tin cert vBond/vSmart)\n', 'info')
-                ob._scp(con, 'admin@{}:{}/root-ca.pem'.format(ob.VMANAGE_IP, ob.CA_DIR), '/home/admin/root-ca.pem',
-                        opts['vm_pw'])
-                out = con.cli('request root-cert-chain install /home/admin/root-ca.pem', 90,
-                              answers=[[r'\[yes,no\]', 'yes', 2]])
-                if re.search(r'error|fail', out, re.I):
-                    raise OnboardError('cai root chain loi: {!r}'.format(ob._last_line(out)))
-            else:
-                log('  [2/5] Root chain da Installed\n', 'ok')
+            # luon cai lai: chain "Installed" nhung sai CA van gay CRTVERFL voi vBond
+            log('  [2/5] Cai root chain cua vManage ({}) de vEdge tin cert vBond/vSmart\n'.format(ob.ROOT_BUNDLE), 'info')
+            ob.install_root_chain(con, opts)
+
+            # sau decommission vBond can nhan danh sach co token moi, neu khong vEdge xac thuc that bai
+            try:
+                vm.post('certificate/vedge/list?action=push', {})
+                log('      Send to Controllers: day WAN Edge List (token moi) xuong vBond/vSmart\n', 'info')
+                time.sleep(5)
+            except Exception as ex:
+                log('      (Send to Controllers loi: {})\n'.format(str(ex)[:120]), 'err')
 
             step = 'activate'
             otp = otp_of(vm, entry)

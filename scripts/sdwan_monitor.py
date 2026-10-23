@@ -23,8 +23,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from campus_ping_tool import (
-    HOST_IP, SITE_VEDGES, LOG_DIR, HAS_MPL,
-    PingResult, ChartEngine, ping_host, site_of_ip, CYAN, PURPLE, RED, YELLOW, GREEN,
+    HOST_IP, SITE_VEDGES, SITES, WAN_IFACE, LOG_DIR, HAS_MPL,
+    PingResult, ChartEngine, ping_host, site_of_ip, CYAN, PURPLE, RED, YELLOW, GREEN, ORANGE,
 )
 
 VMANAGE_DEFAULT = '10.9.0.10'
@@ -344,35 +344,35 @@ def ping_loop_job(ctx, vm, src, dst_name, dst_ip, timeout):
     log('[DUNG ping lien tuc]\n', 'info')
 
 
-# Tuyen do: (site nguon, host dich). Nguon la vEdge cua site do (vpn 1).
-INTRA_ROUTES = [(100, 'PC-CNTT-S100-1'), (100, 'PC-TTK-S100-1'), (100, 'PC-Luat-S100-1'),
-                (100, 'WebServer'), (100, 'DHCP-Server'),
-                (200, 'PC-NongNghiep-S200-1'), (200, 'PC-YTe-S200'),
-                (300, 'PC-DuLich-S300-1'), (300, 'PC-TaiChinh-S300'),
-                (400, 'PC-ThuySan-S400-1'), (400, 'PC-LuHanh-S400')]
-INTER_ROUTES = [(100, 'PC-NongNghiep-S200-1'), (100, 'PC-TaiChinh-S300'), (100, 'PC-LuHanh-S400-2'),
-                (200, 'PC-CNTT-S100-1'), (200, 'PC-TaiChinh-S300'), (200, 'PC-LuHanh-S400-2'),
-                (300, 'PC-CNTT-S100-1'), (300, 'PC-LuHanh-S400-2'),
-                (400, 'PC-CNTT-S100-1'), (400, 'WebServer')]
-CASE_NAMES = ['Ping noi bo tung site (vEdge -> host cung site)',
-              'Ping lien chi nhanh qua overlay SD-WAN',
-              'Bieu do Avg Latency', 'Bieu do Avg Loss (%)', 'Bieu do Avg Jitter', 'Dashboard tong hop (PNG)']
+# =========================================================
+#  SO SANH CAMPUS CHINH - CHI NHANH: Delay / Jitter / Packet Loss / Throughput
+#  Moi site do 2 loai duong (nguon = vEdge cua site, vpn 1):
+#    LAN : vEdge -> host cung site (chat luong mang noi bo)
+#    WAN : chi nhanh -> Campus chinh, Campus chinh -> chi nhanh (qua overlay SD-WAN)
+#  Throughput: doc bo dem cong WAN (vpn 0) moi vEdge cua tung site cung luc, theo chu ky.
+# =========================================================
+LAN_ROUTES = [(100, 'PC-CNTT-S100-1'), (100, 'PC-TTK-S100-1'), (100, 'PC-Luat-S100-1'),
+              (100, 'WebServer'), (100, 'DHCP-Server'),
+              (200, 'PC-NongNghiep-S200-1'), (200, 'PC-YTe-S200'),
+              (300, 'PC-DuLich-S300-1'), (300, 'PC-TaiChinh-S300'),
+              (400, 'PC-ThuySan-S400-1'), (400, 'PC-LuHanh-S400')]
+WAN_ROUTES = [(100, 'PC-NongNghiep-S200-1'), (100, 'PC-TaiChinh-S300'), (100, 'PC-LuHanh-S400-2'),
+              (200, 'PC-CNTT-S100-1'), (200, 'WebServer'),
+              (300, 'PC-CNTT-S100-1'), (300, 'WebServer'),
+              (400, 'PC-CNTT-S100-1'), (400, 'WebServer')]
+SITE_IDS = sorted(SITE_VEDGES)
+SITE_LABEL = {sd['site_id']: 'S{} {}'.format(sd['site_id'], sn.split(' - ', 1)[-1]) for sn, sd in SITES.items()}
+CASE_NAMES = ['Delay (Avg RTT) - Campus chinh vs chi nhanh',
+              'Jitter - Campus chinh vs chi nhanh',
+              'Packet Loss - Campus chinh vs chi nhanh',
+              'Throughput WAN - Campus chinh vs chi nhanh',
+              'Tong hop 4 tieu chi (dashboard PNG + CSV)']
+# nguong danh gia (giong chu thich tren web): (tot, trung binh)
+GRADE = {'delay': (50, 150), 'jitter': (10, 30), 'loss': (0, 5)}
+METRIC = {'delay': ('Delay (Avg RTT)', 'ms'), 'jitter': ('Jitter', 'ms'), 'loss': ('Packet Loss', '%')}
 
 
-def _save_case_csv(ctx, name, data):
-    path = os.path.join(LOG_DIR, '{}.csv'.format(name))
-    with open(path, 'w', newline='', encoding='utf-8') as f:
-        w = csv.writer(f)
-        w.writerow(['Tuyen_Duong', 'Nguon_vEdge', 'Dich_IP', 'Avg_Latency_ms', 'Avg_Loss_pct',
-                    'Avg_Jitter_ms', 'Min_RTT_ms', 'Max_RTT_ms', 'Thoi_gian'])
-        ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        for r in data:
-            w.writerow([r['label'], r['src'], r['dst'], round(r['latency'], 3), round(r['loss'], 2),
-                        round(r['jitter'], 3), round(r['min'], 3), round(r['max'], 3), ts])
-    ctx._log('  [OK] CSV: {}\n'.format(path), 'ok')
-
-
-def _run_routes(ctx, vm, routes, count):
+def _run_routes(ctx, vm, routes, count, kind):
     data, stop = [], ctx._stop_event
     srcs = {}
     for sid, host in routes:
@@ -383,7 +383,7 @@ def _run_routes(ctx, vm, routes, count):
             srcs[sid] = cands[0] if cands else None
         src, ip = srcs[sid], HOST_IP[host]
         label = '{}>{}'.format(VEDGE_NAMES.get(src, 'S{}'.format(sid)), host)
-        row = {'label': label, 'src': VEDGE_NAMES.get(src, ''), 'dst': ip,
+        row = {'site': sid, 'kind': kind, 'label': label, 'src': VEDGE_NAMES.get(src, ''), 'dst': ip,
                'latency': 0.0, 'loss': 100.0, 'jitter': 0.0, 'min': 0.0, 'max': 0.0}
         try:
             if src is None:
@@ -391,61 +391,272 @@ def _run_routes(ctx, vm, routes, count):
             r = vedge_ping(vm, src, ip, count)
             if r.success:
                 row.update(latency=r.avg_latency, loss=r.loss, jitter=r.jitter, min=r.min_latency, max=r.max_latency)
-                ctx._log('  OK   {:<40} Lat={:7.2f}ms Loss={:5.1f}% Jitter={:6.2f}ms\n'.format(
-                    label, r.avg_latency, r.loss, r.jitter), 'ok')
+                ctx._log('  OK   {} {:<38} Lat={:7.2f}ms Loss={:5.1f}% Jitter={:6.2f}ms\n'.format(
+                    kind, label, r.avg_latency, r.loss, r.jitter), 'ok')
             else:
-                ctx._log('  FAIL {:<40} ({}) khong phan hoi\n'.format(label, ip), 'err')
+                ctx._log('  FAIL {} {:<38} ({}) khong phan hoi\n'.format(kind, label, ip), 'err')
         except Exception as e:
-            ctx._log('  FAIL {:<40} {}\n'.format(label, e), 'err')
+            ctx._log('  FAIL {} {:<38} {}\n'.format(kind, label, e), 'err')
         data.append(row)
         time.sleep(TOOL_GAP)
     return data
 
 
-def cases_job(ctx, vm, cases, count):
+def _mean(v):
+    return sum(v) / len(v) if v else None
+
+
+def site_summary(rows):
+    """{site: {'LAN'|'WAN': {'delay','jitter','loss','ok','n'}}}. Delay/jitter chi tinh tuyen
+    co tra loi; loss tinh tren moi tuyen (tuyen chet = 100%)."""
+    out = {}
+    for sid in SITE_IDS:
+        out[sid] = {}
+        for kind in ('LAN', 'WAN'):
+            rs = [r for r in rows if r['site'] == sid and r['kind'] == kind]
+            ok = [r for r in rs if r['loss'] < 100]
+            out[sid][kind] = {'delay': _mean([r['latency'] for r in ok]), 'jitter': _mean([r['jitter'] for r in ok]),
+                              'loss': _mean([r['loss'] for r in rs]), 'ok': len(ok), 'n': len(rs)}
+    return out
+
+
+def _grade_val(metric, v):
+    if v is None:
+        return 'KHONG DO DUOC', 'err'
+    good, mid = GRADE[metric]
+    if (v <= good) if metric == 'loss' else (v < good):
+        return 'TOT', 'ok'
+    return ('TRUNG BINH', 'info') if v < mid else ('KEM', 'err')
+
+
+def _fmt(v, nd=2):
+    return '--' if v is None else '{:.{}f}'.format(v, nd)
+
+
+def _log_compare(log, summ, metric):
+    name, unit = METRIC[metric]
+    log('  {} ({}) theo site - LAN noi bo / WAN qua SD-WAN, chenh lech WAN so voi Campus chinh:\n'.format(name, unit), 'hdr')
+    log('  {:<22} {:>9} {:>9} {:>12}  {}\n'.format('Site', 'LAN', 'WAN', 'WAN-vs-S100', 'Danh gia WAN'), 'data')
+    base = summ[100]['WAN'][metric]
+    for sid in SITE_IDS:
+        lan, wan = summ[sid]['LAN'][metric], summ[sid]['WAN'][metric]
+        diff = '' if sid == 100 or wan is None or base is None else '{:+.2f}'.format(wan - base)
+        g, tag = _grade_val(metric, wan)
+        log('  {:<22} {:>9} {:>9} {:>12}  {} ({}/{} tuyen)\n'.format(
+            SITE_LABEL[sid], _fmt(lan), _fmt(wan), diff, g, summ[sid]['WAN']['ok'], summ[sid]['WAN']['n']), tag)
+
+
+def _wan_keys(sysip, counters):
+    names = set(WAN_IFACE.get(VEDGE_NAMES.get(sysip, ''), {}).values())
+    return [k for k in counters if k[0] == 0 and (k[1] in names if names else str(k[1]).startswith('ge'))]
+
+
+def site_throughput(ctx, vm, window, interval):
+    """Doc bo dem cong WAN (vpn 0) cua moi vEdge reachable cung luc moi `interval` s trong
+    `window` s -> Mbps RX/TX cua tung site (tong cac vEdge). Chi do traffic DANG chay."""
+    log, stop = ctx._log, ctx._stop_event
+    reach = {d.get('system-ip') for d in vm.vedges() if d.get('reachability') == 'reachable'}
+    edges = {sid: [ip for ip in SITE_VEDGES[sid] if ip in reach] for sid in SITE_IDS}
+    readers = {ip: VManageCounterReader(vm, ip) for ips in edges.values() for ip in ips}
+    for sid in SITE_IDS:
+        if not edges[sid]:
+            log('  [!] {}: khong co vEdge reachable - bo qua throughput\n'.format(SITE_LABEL[sid]), 'err')
+
+    def safe(ip):
+        try:
+            t, c, _ = readers[ip].read()
+            return t, c
+        except Exception as e:
+            log('  [!] doc bo dem {}: {}\n'.format(VEDGE_NAMES.get(ip, ip), str(e)[:100]), 'err')
+            return None
+
+    def read_all():
+        if not readers:
+            return {}
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            return dict(zip(readers, ex.map(safe, readers)))
+
+    samples = {sid: [] for sid in SITE_IDS}
+    prev = {ip: v for ip, v in read_all().items() if v}
+    t0 = time.time()
+    log('  Lay mau moi {}s trong {}s (Mbps = delta octet x 8 / delta t, cong WAN vpn 0)\n'.format(interval, window), 'info')
+    while readers and time.time() - t0 < window and not stop.is_set():
+        stop.wait(interval)
+        cur = {ip: v for ip, v in read_all().items() if v}
+        parts = []
+        for sid in SITE_IDS:
+            rx = tx = 0.0
+            got = False
+            for ip in edges[sid]:
+                a, b = prev.get(ip), cur.get(ip)
+                if not a or not b or b[0] <= a[0]:
+                    continue
+                dt = b[0] - a[0]
+                for k in _wan_keys(ip, b[1]):
+                    if k not in a[1]:
+                        continue
+                    drx, dtx = b[1][k][0] - a[1][k][0], b[1][k][1] - a[1][k][1]
+                    if drx < 0 or dtx < 0:          # vEdge reboot / bo dem reset
+                        continue
+                    rx += drx * 8 / dt / 1e6
+                    tx += dtx * 8 / dt / 1e6
+                    got = True
+            if got:
+                samples[sid].append((rx, tx))
+                parts.append('S{} {:.3f}/{:.3f}'.format(sid, rx, tx))
+        log('  +{:>4.0f}s  RX/TX Mbps: {}\n'.format(time.time() - t0, '  '.join(parts) or '(chua co mau)'), 'data')
+        prev.update(cur)
+    out = {}
+    for sid in SITE_IDS:
+        s = samples[sid]
+        out[sid] = {'rx': _mean([x[0] for x in s]), 'tx': _mean([x[1] for x in s]),
+                    'peak': max((x[0] + x[1] for x in s), default=None), 'n': len(s), 'edges': len(edges[sid])}
+    return out
+
+
+def _log_throughput(log, tp):
+    log('  Throughput WAN theo site (Mbps, trung binh cua cac mau):\n', 'hdr')
+    log('  {:<22} {:>9} {:>9} {:>9} {:>8}\n'.format('Site', 'RX TB', 'TX TB', 'Dinh', 'Mau'), 'data')
+    for sid in SITE_IDS:
+        t = tp[sid]
+        log('  {:<22} {:>9} {:>9} {:>9} {:>8}\n'.format(SITE_LABEL[sid], _fmt(t['rx'], 3), _fmt(t['tx'], 3),
+                                                       _fmt(t['peak'], 3), t['n']), 'ok' if t['n'] else 'err')
+    log('  (Chi phan anh traffic dang chay trong luc do - muon so sanh nang luc thi tao cung muc tai o moi site)\n', 'info')
+
+
+def _grouped(ax, series, title, ylabel, colors):
+    """Cot nhom theo site: series = [(ten, [gia tri theo SITE_IDS])]."""
+    ChartEngine._dark(ax, title)
+    n, w = len(series), 0.8 / len(series)
+    for i, (name, vals) in enumerate(series):
+        xs = [k + (i - (n - 1) / 2) * w for k in range(len(SITE_IDS))]
+        bars = ax.bar(xs, [v or 0 for v in vals], w, label=name, color=colors[i],
+                      edgecolor=ChartEngine.EDGE, linewidth=0.5)
+        for b, v in zip(bars, vals):
+            ax.text(b.get_x() + b.get_width() / 2, b.get_height(), 'n/a' if v is None else '{:.2f}'.format(v),
+                    ha='center', va='bottom', color=ChartEngine.TXT, fontsize=7)
+    ax.set_xticks(range(len(SITE_IDS)))
+    ax.set_xticklabels([SITE_LABEL[s] for s in SITE_IDS], color=ChartEngine.TXT, fontsize=8)
+    ax.set_ylabel(ylabel, color=ChartEngine.TXT)
+    ax.legend(facecolor=ChartEngine.BG_DARK2, edgecolor=ChartEngine.EDGE, labelcolor=ChartEngine.TXT, fontsize=8)
+
+
+def _metric_series(summ, metric):
+    return [('LAN noi bo', [summ[s]['LAN'][metric] for s in SITE_IDS]),
+            ('WAN qua SD-WAN', [summ[s]['WAN'][metric] for s in SITE_IDS])]
+
+
+def _tp_series(tp):
+    return [('RX', [tp[s]['rx'] for s in SITE_IDS]), ('TX', [tp[s]['tx'] for s in SITE_IDS])]
+
+
+def _save_png(path, draw, size=(10, 5)):
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=size)
+    fig.patch.set_facecolor(ChartEngine.BG_DARK)
+    draw(fig)
+    plt.tight_layout()
+    plt.savefig(path, dpi=130, bbox_inches='tight')
+    plt.close('all')
+
+
+def _save_compare_csv(ctx, name, summ=None, tp=None, routes=None):
+    path = os.path.join(LOG_DIR, name + '.csv')
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    r = lambda v, nd=3: '' if v is None else round(v, nd)
+    with open(path, 'w', newline='', encoding='utf-8') as f:
+        w = csv.writer(f)
+        w.writerow(['Site', 'Ten', 'Delay_LAN_ms', 'Delay_WAN_ms', 'Jitter_LAN_ms', 'Jitter_WAN_ms',
+                    'Loss_LAN_pct', 'Loss_WAN_pct', 'Tuyen_WAN_ok', 'Thr_RX_Mbps', 'Thr_TX_Mbps', 'Thr_Dinh_Mbps',
+                    'Thoi_gian'])
+        for sid in SITE_IDS:
+            s = summ[sid] if summ else None
+            t = tp[sid] if tp else None
+            w.writerow([sid, SITE_LABEL[sid]] +
+                       ([r(s['LAN']['delay']), r(s['WAN']['delay']), r(s['LAN']['jitter']), r(s['WAN']['jitter']),
+                         r(s['LAN']['loss'], 2), r(s['WAN']['loss'], 2), '{}/{}'.format(s['WAN']['ok'], s['WAN']['n'])]
+                        if s else [''] * 7) +
+                       ([r(t['rx']), r(t['tx']), r(t['peak'])] if t else [''] * 3) + [ts])
+        if routes:
+            w.writerow([])
+            w.writerow(['Site', 'Loai', 'Tuyen_Duong', 'Nguon_vEdge', 'Dich_IP', 'Avg_Latency_ms', 'Loss_pct',
+                        'Jitter_ms', 'Min_RTT_ms', 'Max_RTT_ms'])
+            for x in routes:
+                w.writerow([x['site'], x['kind'], x['label'], x['src'], x['dst'], round(x['latency'], 3),
+                            round(x['loss'], 2), round(x['jitter'], 3), round(x['min'], 3), round(x['max'], 3)])
+    ctx._log('  [OK] CSV: {}\n'.format(path), 'ok')
+
+
+def cases_job(ctx, vm, cases, count, tp_window=60, tp_interval=10):
     log = ctx._log
-    ctx._set_status('Batch cases {}...'.format(cases), True)
+    ctx._set_status('So sanh site - cases {}...'.format(cases), True)
     log('\n' + '=' * 55 + '\n', 'sep')
-    log('BATCH REPORT (vEdge ping qua vManage API) - Cases: {}\n'.format(cases), 'hdr')
+    log('SO SANH CAMPUS CHINH - CHI NHANH (vManage API) - Cases: {}\n'.format(cases), 'hdr')
+    stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     cache = {}
 
-    def need(key, routes):
-        if key not in cache:
-            cache[key] = _run_routes(ctx, vm, routes, count)
-        return cache[key]
+    def ping_rows():
+        if 'rows' not in cache:
+            log('  Do ping LAN + WAN ({} goi/tuyen)...\n'.format(count), 'info')
+            cache['rows'] = _run_routes(ctx, vm, LAN_ROUTES, count, 'LAN') + \
+                _run_routes(ctx, vm, WAN_ROUTES, count, 'WAN')
+            cache['summ'] = site_summary(cache['rows'])
+        return cache['rows'], cache['summ']
 
-    def bar(data, field, title, ylabel, fname, color, horiz=False):
-        if HAS_MPL and data:
-            ChartEngine.bar_chart([r['label'] for r in data], [r[field] for r in data], title, ylabel,
-                                  os.path.join(LOG_DIR, fname), color=color, horiz=horiz)
-            log('  [OK] PNG: {}\n'.format(fname), 'ok')
+    def throughput():
+        if 'tp' not in cache:
+            ctx._set_status('Do throughput WAN cac site ({}s)...'.format(tp_window), True)
+            cache['tp'] = site_throughput(ctx, vm, tp_window, tp_interval)
+        return cache['tp']
 
+    colors_m, colors_t = (CYAN, PURPLE), (GREEN, ORANGE)
     for c in cases:
         if ctx._stop_event.is_set():
             log('  [i] Dung theo yeu cau.\n', 'info')
             break
         log('\n' + '-' * 40 + '\nCase {} - {}\n'.format(c, CASE_NAMES[c - 1]), 'info')
         try:
-            if c == 1:
-                d = need('intra', INTRA_ROUTES)
-                bar(d, 'latency', 'Case 1 - Avg Latency noi bo tung site (ms)', 'ms', 'case1_intra_latency.png', CYAN)
-                _save_case_csv(ctx, 'case1_intra', d)
-            elif c == 2:
-                d = need('inter', INTER_ROUTES)
-                bar(d, 'latency', 'Case 2 - Avg Latency lien chi nhanh SD-WAN (ms)', 'ms', 'case2_inter_latency.png', PURPLE)
-                _save_case_csv(ctx, 'case2_inter', d)
+            if c in (1, 2, 3):
+                metric = ('delay', 'jitter', 'loss')[c - 1]
+                rows, summ = ping_rows()
+                _log_compare(log, summ, metric)
+                name, unit = METRIC[metric]
+                fname = 'so_sanh_{}_{}'.format(metric, stamp)
+                if HAS_MPL:
+                    _save_png(os.path.join(LOG_DIR, fname + '.png'), lambda fig: _grouped(
+                        fig.add_subplot(111), _metric_series(summ, metric),
+                        'Case {} - {} theo site: Campus chinh vs chi nhanh'.format(c, name), unit, colors_m))
+                    log('  [OK] PNG: {}.png\n'.format(fname), 'ok')
+                _save_compare_csv(ctx, fname, summ=summ, routes=rows)
+            elif c == 4:
+                tp = throughput()
+                _log_throughput(log, tp)
+                fname = 'so_sanh_throughput_{}'.format(stamp)
+                if HAS_MPL:
+                    _save_png(os.path.join(LOG_DIR, fname + '.png'), lambda fig: _grouped(
+                        fig.add_subplot(111), _tp_series(tp),
+                        'Case 4 - Throughput WAN theo site (Mbps, {}s)'.format(tp_window), 'Mbps', colors_t))
+                    log('  [OK] PNG: {}.png\n'.format(fname), 'ok')
+                _save_compare_csv(ctx, fname, tp=tp)
             else:
-                d = need('intra', INTRA_ROUTES) + need('inter', INTER_ROUTES)
-                if c == 3:
-                    bar(d, 'latency', 'Case 3 - Avg Latency toan mang (ms)', 'ms', 'case3_latency.png', CYAN, True)
-                elif c == 4:
-                    bar(d, 'loss', 'Case 4 - Avg Loss % toan mang', '%', 'case4_loss.png', RED)
-                elif c == 5:
-                    bar(d, 'jitter', 'Case 5 - Avg Jitter toan mang (ms)', 'ms', 'case5_jitter.png', YELLOW)
-                elif HAS_MPL:
-                    ChartEngine.dashboard(d, os.path.join(LOG_DIR, 'case6_dashboard.png'))
-                    log('  [OK] PNG: case6_dashboard.png\n', 'ok')
-                _save_case_csv(ctx, 'case{}_{}'.format(c, ['latency', 'loss', 'jitter', 'dashboard'][c - 3]), d)
+                rows, summ = ping_rows()
+                tp = throughput()
+                for m in ('delay', 'jitter', 'loss'):
+                    _log_compare(log, summ, m)
+                _log_throughput(log, tp)
+                fname = 'so_sanh_tong_hop_{}'.format(stamp)
+                if HAS_MPL:
+                    def draw(fig):
+                        fig.suptitle('SO SANH CAMPUS CHINH - CHI NHANH: Delay / Jitter / Packet Loss / Throughput',
+                                     color=CYAN, fontsize=13, fontweight='bold')
+                        for i, m in enumerate(('delay', 'jitter', 'loss')):
+                            _grouped(fig.add_subplot(2, 2, i + 1), _metric_series(summ, m),
+                                     '{} ({})'.format(*METRIC[m]), METRIC[m][1], colors_m)
+                        _grouped(fig.add_subplot(2, 2, 4), _tp_series(tp),
+                                 'Throughput WAN (Mbps, {}s)'.format(tp_window), 'Mbps', colors_t)
+                    _save_png(os.path.join(LOG_DIR, fname + '.png'), draw, size=(16, 10))
+                    log('  [OK] PNG: {}.png\n'.format(fname), 'ok')
+                _save_compare_csv(ctx, fname, summ=summ, tp=tp, routes=rows)
         except Exception as e:
             log('  [!] Loi Case {}: {}\n'.format(c, e), 'err')
     log('\n' + '=' * 55 + '\nHOAN THANH. Bieu do & CSV: {}\n'.format(LOG_DIR), 'ok')
@@ -625,7 +836,10 @@ def failover_job(ctx, vm, opts):
     step = round((pings[-1][0] - pings[0][0]) / max(1, len(pings) - 1), 2) if len(pings) > 1 else None
     log('  ---- Ket qua ----\n', 'hdr')
     log('    RTO: {}\n'.format('{} s'.format(rto) if rto is not None else 'khong xac dinh'), 'ok' if rto is not None else 'err')
+    prr = round((len(sent) - lost) / len(sent) * 100, 2) if sent else None
     log('    Goi mat sau CUT: {}/{} | do phan giai ~{} s/goi\n'.format(lost, len(sent), step), 'info')
+    log('    Packet Recovery Rate: {}\n'.format('{} %'.format(prr) if prr is not None else '--'),
+        'ok' if prr == 100 else 'info')
 
     base_name = 'failover_{}_{}'.format(wname, datetime.now().strftime('%Y%m%d_%H%M%S'))
     path = os.path.join(LOG_DIR, base_name + '.csv')
@@ -640,7 +854,8 @@ def failover_job(ctx, vm, opts):
         for row in bfds:
             w.writerow(row)
         w.writerow([])
-        w.writerow(['watch', wname, 'probe', sname, 'target', target, 'RTO_s', rto, 'lost', lost, 'sent', len(sent)])
+        w.writerow(['watch', wname, 'probe', sname, 'target', target, 'RTO_s', rto, 'lost', lost, 'sent', len(sent),
+                    'PRR_pct', prr])
     log('  [OK] CSV: {}\n'.format(path), 'ok')
     if HAS_MPL:
         png = os.path.join(LOG_DIR, base_name + '.png')

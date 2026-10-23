@@ -31,6 +31,7 @@ from urllib.parse import urlparse, parse_qs, unquote
 import campus_ping_tool as core
 from campus_ping_tool import SITES, HOST_IP, HOST_SITE, WAN_IFACE, SITE_VEDGES, CORE_SITE_ID, LOG_DIR, HAS_MPL
 import sdwan_monitor as mon
+import sdwan_reliability as rel
 from campus_throughput import ThroughputTest
 
 WEB_DIR = os.path.join(core._REPO_DIR, 'web')
@@ -272,10 +273,12 @@ def api_stop(_):
 
 
 def api_cases(d):
-    cases = sorted({int(c) for c in d.get('cases', []) if str(c).isdigit() and 1 <= int(c) <= 6})
+    n = len(mon.CASE_NAMES)
+    cases = sorted({int(c) for c in d.get('cases', []) if str(c).isdigit() and 1 <= int(c) <= n})
     if not cases:
         raise WebError('Chon it nhat 1 Case.')
-    GUI.run_job('Batch Cases', mon.cases_job, GUI, GUI.vmanage(), cases, _int(d, 'count', 1, 50, 5))
+    GUI.run_job('So sanh site', mon.cases_job, GUI, GUI.vmanage(), cases, _int(d, 'count', 1, 50, 5),
+                _int(d, 'tp_window', 20, 900, 60), _int(d, 'tp_interval', 5, 60, 10))
     return {}
 
 
@@ -309,6 +312,31 @@ def api_failover_run(d):
     opts = {'watch': watch, 'probe': probe, 'target': target,
             'wait_cut': _int(d, 'wait_cut', 10, 600, 120), 'duration': _int(d, 'duration', 10, 300, 60)}
     GUI.run_job('Failover Test', mon.failover_job, GUI, GUI.vmanage(), opts)
+    return {}
+
+
+def api_rel_failover(d):
+    since = d.get('since', '').strip()
+    try:
+        since = datetime.strptime(since, '%Y-%m-%d') if since else None
+    except ValueError:
+        raise WebError('Ngay bat dau dang YYYY-MM-DD.')
+    GUI.run_job('Tong hop failover', rel.failover_summary_job, GUI, {'since': since})
+    return {}
+
+
+def api_rel_controller(d):
+    opts = {'probe': _vedge(d, 'probe', 'vEdge do'), 'target': _ip(d.get('target', '').strip(), 'IP dich'),
+            'wait_down': _int(d, 'wait_down', 30, 1800, 300), 'duration': _int(d, 'duration', 60, 3600, 900),
+            'interval': _int(d, 'interval', 3, 30, 5)}
+    GUI.run_job('Controller Recovery', rel.controller_recovery_job, GUI, GUI.vmanage(), opts)
+    return {}
+
+
+def api_rel_availability(d):
+    opts = {'target': _ip(d.get('target', '').strip(), 'IP dich vu'),
+            'duration_s': _int(d, 'minutes', 5, 24 * 60, 60) * 60, 'interval': _int(d, 'interval', 10, 600, 30)}
+    GUI.run_job('Availability', rel.availability_job, GUI, GUI.vmanage(), opts)
     return {}
 
 
@@ -376,19 +404,26 @@ def _cs_opts(d, need_vedge):
             'vm': GUI.vm if GUI.vm and GUI.vm.host == cs.ob.VMANAGE_IP else None}
     if need_vedge:
         if not d.get('vedge_pw'):
-            raise WebError('Nhap mat khau vEdge (da dat luc dan Day-0).')
+            raise WebError('Nhap mat khau vEdge (da dat luc go lenh bat SSH tren console).')
         opts['vedge_pw'] = d['vedge_pw']
+        opts['hostname'] = _hostname(d)
     return cs, opts
 
 
-def api_cs_day0(q):
-    cs = _certsign()
-    hostname, wan_if = q.get('hostname', '').strip(), q.get('wan_if', '').strip() or 'ge0/0'
+def _hostname(d):
+    hostname = d.get('hostname', '').strip()
     if hostname and not re.match(r'^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$', hostname):
         raise WebError('Ten vEdge chi gom chu, so, - va _ (toi da 32 ky tu).')
+    return hostname or None
+
+
+def api_cs_day0(q):
+    """Lenh toi thieu go tren console vEdge moi (IP vpn 0 + SSH); phan con lai tool day qua SSH."""
+    cs = _certsign()
+    wan_if = q.get('wan_if', '').strip() or 'ge0/0'
     if not re.match(r'^ge\d+/\d+$', wan_if):
         raise WebError('Interface WAN dang ge0/0.')
-    e, lines = cs.day0_config(hostname or None, wan_if)
+    e, lines = cs.ssh_bootstrap(_hostname(q), wan_if)
     return {'entry': e, 'config': '\n'.join(lines), 'vlan': cs.ob.CONTROLLER_VLAN}
 
 
@@ -469,8 +504,8 @@ def api_as_activate(d):
     if not any(x['uuid'] == uuid and x['free'] for x in cs.wan_edge_list(vm)):
         raise WebError('Chon 1 muc WAN Edge List dang trong (tokengenerated).')
     if not d.get('vedge_pw'):
-        raise WebError('Nhap mat khau vEdge (da dat luc dan Day-0).')
-    opts = {'vm': vm, 'vm_user': vm.user, 'vm_pw': vm.password, 'vedge_user': d.get('user', '').strip() or 'admin',
+        raise WebError('Nhap mat khau vEdge (da dat luc go lenh bat SSH tren console).')
+    opts = {'vm': vm, 'hostname': _hostname(d), 'vm_user': vm.user, 'vm_pw': vm.password, 'vedge_user': d.get('user', '').strip() or 'admin',
             'vedge_pw': d['vedge_pw'], 'verify_s': _int(d, 'verify', 60, 900, 300)}
 
     def run():
@@ -509,6 +544,9 @@ ROUTES = {
     ('POST', '/api/log/save'): api_log_save,
     ('POST', '/api/failover/run'): api_failover_run,
     ('POST', '/api/vlan/verify'): api_vlan_verify,
+    ('POST', '/api/reliability/failover'): api_rel_failover,
+    ('POST', '/api/reliability/controller'): api_rel_controller,
+    ('POST', '/api/reliability/availability'): api_rel_availability,
     ('POST', '/api/policy/run'): api_policy_run,
     ('GET', '/api/throughput'): api_throughput_state,
     ('POST', '/api/throughput/run'): api_throughput_run,
