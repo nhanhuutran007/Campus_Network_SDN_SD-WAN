@@ -235,23 +235,46 @@ def parse_nping(resp, count):
     return r
 
 
+NPING_STYLES = [
+    {'size': '64', 'df': 'false', 'rapid': 'false'},
+    {'df': 'false', 'rapid': 'false'},
+    {'size': '64'},
+    {},
+]
+_NPING_STYLE = None     # chi so kieu body nping vManage da chap nhan
+
+
 def vedge_ping(vm, sysip, dst, count=5, vpn=1, source=None, probe='icmp', port=None, size=None):
     """vEdge `sysip` ping `dst` trong VPN `vpn` (mac dinh nguon = interface LAN vpn 1)."""
     if source is None:
         source = lan_source(vm, sysip, vpn)[0] if str(vpn) != '0' else ''
-    body = {'host': dst, 'vpn': str(vpn), 'source': source, 'probeType': probe, 'count': str(count),
-            'df': 'false', 'rapid': 'false'}
-    if size:                                 # 20.10: size '' -> HTTP 400 "Invalid data length value"
-        body['size'] = str(size)
+    global _NPING_STYLE
+    base = {'host': dst, 'vpn': str(vpn), 'source': source, 'probeType': probe, 'count': str(count)}
     if port:
-        body['destPort'] = str(port)
-    try:
-        resp = vm.post('device/tools/nping/' + sysip, body, timeout=count * 3 + 30)
-    except VManageError as e:
-        if 'data length' not in str(e).lower() or 'size' in body:
-            raise
-        body['size'] = '64'                  # vManage bat buoc co size -> gui lai voi 64 byte
-        resp = vm.post('device/tools/nping/' + sysip, body, timeout=count * 3 + 30)
+        base['destPort'] = str(port)
+    # 20.10 tra HTTP 400 "Invalid data length value" voi size '' -> thu lan luot cac kieu body,
+    # nho kieu chay duoc de cac lan ping sau (do RTO) chi goi 1 lan
+    styles = [{'size': str(size)}] if size else NPING_STYLES
+    order = list(range(len(styles)))
+    if not size and _NPING_STYLE is not None:
+        order.remove(_NPING_STYLE)
+        order.insert(0, _NPING_STYLE)
+    tried = []
+    for i in order:
+        body = dict(base, **styles[i])
+        try:
+            resp = vm.post('device/tools/nping/' + sysip, body, timeout=count * 3 + 30)
+        except VManageError as e:
+            if 'data length' not in str(e).lower():
+                raise
+            tried.append(json.dumps(body))
+            continue
+        if not size:
+            _NPING_STYLE = i
+        break
+    else:
+        raise VManageError('nping: vManage tu choi moi kieu body ("Invalid data length value"). Da gui: '
+                           + ' | '.join(tried))
     r = parse_nping(resp if isinstance(resp, dict) else {}, count)
     r.raw = '[vManage nping {} vpn {} src {}] -> {}\n{}'.format(
         VEDGE_NAMES.get(sysip, sysip), vpn, source or '-', dst, r.raw)
