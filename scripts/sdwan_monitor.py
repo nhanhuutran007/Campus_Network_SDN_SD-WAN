@@ -747,8 +747,15 @@ def failover_job(ctx, vm, opts):
     log('[FAILOVER] Theo doi {} | do bang nping tu {} -> {}\n'.format(wname, sname, target), 'hdr')
     ctx._set_status('Failover: lay moc ban dau...', True)
 
-    base = vm.bfd(watch)
-    up0 = sum(1 for s in base if s.get('state') == 'up')
+    try:
+        base = vm.bfd(watch)
+    except VManageError as e:
+        if 'not connected' not in str(e).lower():
+            raise
+        log('  [!] {} dang mat ket noi vManage TRUOC khi test (link con bi cat tu lan truoc?). '
+            'no shutdown cong WAN, cho control connection len lai roi chay lai.\n'.format(wname), 'err')
+        return
+    up0 =sum(1 for s in base if s.get('state') == 'up')
     log('  [*] BFD {} ban dau: {}/{} up ({})\n'.format(wname, up0, len(base), ', '.join(sorted(
         {s.get('local-color', '?') for s in base if s.get('state') == 'up'})) or '-'), 'info')
     r0 = vedge_ping(vm, src, target, 3)
