@@ -16,7 +16,7 @@ Hạ tầng mạng của một trường đại học nhiều cơ sở phải ph
 
 \subsection{Phạm vi và phương pháp thực hiện}
 
-Toàn bộ hệ thống được mô phỏng trên một lab EVE-NG gồm 67 node và 100 network. Phạm vi gồm thiết kế logic, cấu hình thiết bị, dịch vụ mạng cơ bản (DHCP, DNS, Web, Mail, Syslog) và kiểm thử chức năng; không bao gồm triển khai trên phần cứng vật lý hay đo hiệu năng ở quy mô sản xuất.
+Toàn bộ hệ thống được mô phỏng trên một lab EVE-NG gồm 72 node và 105 network. Phạm vi gồm thiết kế logic, cấu hình thiết bị, dịch vụ mạng cơ bản (DHCP, DNS, Web, Mail, Syslog) và kiểm thử chức năng; không bao gồm triển khai trên phần cứng vật lý hay đo hiệu năng ở quy mô sản xuất.
 
 Phương pháp thực hiện kết hợp nghiên cứu lý thuyết với triển khai và kiểm chứng trên lab. Mọi cấu hình được lưu trong kho mã nguồn (thư mục \texttt{configs/}, file topology \texttt{.unl}, tài liệu thiết kế) để truy vết. Khi xử lý sự cố, nhóm chẩn đoán theo lớp: vật lý/liên kết, lớp 2, lớp 3, dịch vụ, rồi mới tới ứng dụng, và chỉ kết luận khi có kết quả lệnh \texttt{show} hoặc gói tin bắt được làm bằng chứng.
 
@@ -42,7 +42,7 @@ Bên cạnh đó là các yêu cầu phi chức năng:
 
 \subsection{Kế hoạch tổng thể}
 
-Dự án được chia thành sáu giai đoạn với 20 hạng mục công việc, tổng hợp trong Bảng~\ref{tab:ke_hoach_tong_the}. Mốc báo cáo giữa kỳ (\mocbaocao) nằm ở cuối giai đoạn triển khai và đầu giai đoạn kiểm thử tích hợp.
+Dự án được chia thành sáu giai đoạn với 20 hạng mục công việc, tổng hợp trong Bảng~\ref{tab:ke_hoach_tong_the}. Mốc báo cáo giữa kỳ (\mocbaocao) nằm trong giai đoạn kiểm thử tích hợp: phần triển khai cốt lõi đã xong, khối lượng còn lại chủ yếu là đo kiểm có số liệu và hoàn thiện tài liệu.
 
 \begin{table}[H]
     \centering

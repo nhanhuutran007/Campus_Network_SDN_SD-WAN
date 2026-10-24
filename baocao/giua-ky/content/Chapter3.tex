@@ -230,7 +230,9 @@ Dự phòng được bố trí ở từng tầng để một sự cố đơn l�
         \hline
         WAN Campus chính & Hai vEdge, mỗi vEdge có cả Internet và MPLS & Dự phòng cả thiết bị và đường truyền \\
         \hline
-        WAN chi nhánh 200--400 & Hai vEdge, mỗi vEdge một transport & Mất một vEdge vẫn còn transport kia \\
+        WAN chi nhánh 200--400 & Hai vEdge, mỗi vEdge một transport; Brand-FW dùng IP SLA theo dõi đường qua vEdge1 và chuyển route sang vEdge2 khi mất & Mất một vEdge vẫn còn transport kia \\
+        \hline
+        Uplink Access--Distribution (SDN) & Mỗi Access có hai uplink; BFD giữa các OVS và group OpenFlow \textit{fast-failover} chuyển uplink ngay trên switch & Không chờ controller khi mất một uplink \\
         \hline
         WAN Site 500 & Một vEdge với hai transport & Chỉ dự phòng đường truyền \\
         \hline

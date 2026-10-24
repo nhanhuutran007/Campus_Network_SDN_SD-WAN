@@ -69,7 +69,7 @@ class VManage:
                 pass                               # ban cu khong co token
         return self
 
-    def _request(self, path, body=None, timeout=None, retry=True, method=None):
+    def _request(self, path, body=None, timeout=None, retry=True, method=None, busy=0):
         if self._op is None:
             self.login()
         headers = {'Accept': 'application/json'}
@@ -87,6 +87,9 @@ class VManage:
             if e.code in (401, 403) and retry:
                 self.login()
                 return self._request(path, body, timeout, False, method)
+            if e.code in (502, 503, 504) and body is None and method is None and busy < 3:
+                time.sleep(5)                       # vManage ban tam thoi (host lab tai cao) -> GET thu lai
+                return self._request(path, body, timeout, retry, method, busy + 1)
             msg = e.read().decode('utf-8', 'replace')
             if '<html' in msg.lower():              # trang loi HTML cua vManage -> chi giu <title>
                 t = re.search(r'<title>(.*?)</title>', msg, re.S | re.I)
@@ -237,10 +240,18 @@ def vedge_ping(vm, sysip, dst, count=5, vpn=1, source=None, probe='icmp', port=N
     if source is None:
         source = lan_source(vm, sysip, vpn)[0] if str(vpn) != '0' else ''
     body = {'host': dst, 'vpn': str(vpn), 'source': source, 'probeType': probe, 'count': str(count),
-            'size': str(size or ''), 'df': 'false', 'rapid': 'false'}
+            'df': 'false', 'rapid': 'false'}
+    if size:                                 # 20.10: size '' -> HTTP 400 "Invalid data length value"
+        body['size'] = str(size)
     if port:
         body['destPort'] = str(port)
-    resp = vm.post('device/tools/nping/' + sysip, body, timeout=count * 3 + 30)
+    try:
+        resp = vm.post('device/tools/nping/' + sysip, body, timeout=count * 3 + 30)
+    except VManageError as e:
+        if 'data length' not in str(e).lower() or 'size' in body:
+            raise
+        body['size'] = '64'                  # vManage bat buoc co size -> gui lai voi 64 byte
+        resp = vm.post('device/tools/nping/' + sysip, body, timeout=count * 3 + 30)
     r = parse_nping(resp if isinstance(resp, dict) else {}, count)
     r.raw = '[vManage nping {} vpn {} src {}] -> {}\n{}'.format(
         VEDGE_NAMES.get(sysip, sysip), vpn, source or '-', dst, r.raw)
