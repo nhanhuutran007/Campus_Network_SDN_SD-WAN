@@ -1,0 +1,5 @@
+Site,Ten,Delay_LAN_ms,Delay_WAN_ms,Jitter_LAN_ms,Jitter_WAN_ms,Loss_LAN_pct,Loss_WAN_pct,Tuyen_LAN_ok,Tuyen_WAN_ok,Thr_RX_Mbps,Thr_TX_Mbps,Thr_Dinh_Mbps,Thoi_gian
+100,S100 Campus Chinh,,,,,,,,,0.33,0.213,0.748,2026-10-25 16:45:45
+200,S200 Can Tho,,,,,,,,,0.066,0.1,0.171,2026-10-25 16:45:45
+300,S300 Da Nang,,,,,,,,,0.066,0.101,0.173,2026-10-25 16:45:45
+400,S400 Nha Trang,,,,,,,,,0.066,0.101,0.172,2026-10-25 16:45:45

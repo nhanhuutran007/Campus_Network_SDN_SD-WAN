@@ -1,0 +1,27 @@
+Site,Ten,Delay_LAN_ms,Delay_WAN_ms,Jitter_LAN_ms,Jitter_WAN_ms,Loss_LAN_pct,Loss_WAN_pct,Tuyen_LAN_ok,Tuyen_WAN_ok,Thr_RX_Mbps,Thr_TX_Mbps,Thr_Dinh_Mbps,Thoi_gian
+100,S100 Campus Chinh,6.26,4.002,0.962,0.533,40.0,0.0,3/5,3/3,0.33,0.213,0.748,2026-10-25 16:45:46
+200,S200 Can Tho,2.831,7.556,0.33,5.088,0.0,0.0,2/2,2/2,0.066,0.1,0.171,2026-10-25 16:45:46
+300,S300 Da Nang,2.947,3.8,0.175,0.4,16.66,0.0,2/2,2/2,0.066,0.101,0.173,2026-10-25 16:45:46
+400,S400 Nha Trang,4.301,11.957,0.627,10.325,0.0,0.0,2/2,2/2,0.066,0.101,0.172,2026-10-25 16:45:46
+
+Site,Loai,Tuyen_Duong,Nguon_vEdge,Nguon_IF,Dich_IP,Avg_Latency_ms,Loss_pct,Jitter_ms,Min_RTT_ms,Max_RTT_ms,Ghi_chu
+100,LAN,vEdge1-S100>PC-CNTT-S100-1,vEdge1-S100,ge0/1 (traceroute),10.1.10.100,5.587,0.0,0.853,3.509,7.647,
+100,LAN,vEdge1-S100>PC-TTK-S100-1,vEdge1-S100,ge0/1 (traceroute),10.1.20.100,5.009,0.0,0.862,2.939,7.048,
+100,LAN,vEdge1-S100>PC-Luat-S100-1,vEdge1-S100,ge0/1 (traceroute),10.1.30.100,8.183,0.0,1.172,5.251,11.094,
+100,LAN,vEdge1-S100>WebServer,vEdge1-S100,loopback0,10.1.1.10,,100.0,,,,"mat het goi, da thu nguon ge0/1(10.1.3.14), ge0/0(10.1.3.2), loopback0(10.1.255.1), traceroute"
+100,LAN,vEdge1-S100>DHCP-Server,vEdge1-S100,loopback0,10.1.90.10,,100.0,,,,"mat het goi, da thu nguon ge0/1(10.1.3.14), ge0/0(10.1.3.2), loopback0(10.1.255.1), traceroute"
+200,LAN,vEdge1-S200>PC-NongNghiep-S200-1,vEdge1-S200,ge0/3 (traceroute),10.2.60.100,3.266,0.0,0.277,2.679,3.71,
+200,LAN,vEdge1-S200>PC-YTe-S200,vEdge1-S200,ge0/3 (traceroute),10.2.70.101,2.396,0.0,0.383,1.552,3.116,
+300,LAN,vEdge1-S300>PC-DuLich-S300-1,vEdge1-S300,ge0/2 (traceroute),10.3.80.100,3.062,0.0,0.237,2.559,3.628,
+300,LAN,vEdge1-S300>PC-TaiChinh-S300,vEdge1-S300,ge0/2 (traceroute),10.3.90.100,2.833,33.33,0.114,2.619,2.92,
+400,LAN,vEdge1-S400>PC-ThuySan-S400-1,vEdge1-S400,ge0/2 (traceroute),10.4.50.100,4.61,0.0,1.171,2.547,5.648,
+400,LAN,vEdge1-S400>PC-LuHanh-S400,vEdge1-S400,ge0/2 (traceroute),10.4.60.101,3.993,0.0,0.082,3.839,4.11,
+100,WAN,vEdge1-S100>PC-NongNghiep-S200-1,vEdge1-S100,ge0/1,10.2.60.100,3.953,0.0,0.85,3.072,5.912,
+100,WAN,vEdge1-S100>PC-TaiChinh-S300,vEdge1-S100,ge0/1,10.3.90.100,3.987,0.0,0.45,3.696,4.372,
+100,WAN,vEdge1-S100>PC-LuHanh-S400-2,vEdge1-S100,ge0/1,10.4.60.100,4.067,0.0,0.3,3.58,4.494,
+200,WAN,vEdge1-S200>PC-CNTT-S100-1,vEdge1-S200,ge0/3,10.1.10.100,11.063,0.0,9.4,3.5,24.101,
+200,WAN,vEdge1-S200>WebServer,vEdge1-S200,ge0/3,10.1.1.10,4.049,0.0,0.775,3.438,5.075,
+300,WAN,vEdge1-S300>PC-CNTT-S100-1,vEdge1-S300,ge0/2,10.1.10.100,3.849,0.0,0.375,3.448,4.425,
+300,WAN,vEdge1-S300>WebServer,vEdge1-S300,ge0/2,10.1.1.10,3.752,0.0,0.425,3.36,4.044,
+400,WAN,vEdge1-S400>PC-CNTT-S100-1,vEdge1-S400,ge0/2,10.1.10.100,4.524,0.0,1.15,3.175,6.373,
+400,WAN,vEdge1-S400>WebServer,vEdge1-S400,ge0/2,10.1.1.10,19.389,0.0,19.5,9.58,49.755,
