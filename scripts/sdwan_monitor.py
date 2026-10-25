@@ -487,8 +487,14 @@ def _run_routes(ctx, vm, routes, count, kind):
             r, row['src_if'], tried = vedge_ping_any(vm, src, ip, count)
             if r.success:
                 row.update(latency=r.avg_latency, loss=r.loss, jitter=r.jitter, min=r.min_latency, max=r.max_latency)
-                ctx._log('  OK   {} {:<38} Lat={:7.2f}ms Loss={:5.1f}% Jitter={:6.2f}ms (src {})\n'.format(
-                    kind, label, r.avg_latency, r.loss, r.jitter, row['src_if']), 'ok')
+                if row['src_if'].endswith('(traceroute)'):
+                    # '*' o hop dich chu yeu do Linux gioi han toc do ICMP port-unreachable, khong
+                    # phai mat goi that -> khong dua vao Loss
+                    row['loss'] = None
+                    row['note'] = 'do bang traceroute; {:.0f}% probe "*" khong tinh la loss'.format(r.loss)
+                ctx._log('  OK   {} {:<38} Lat={:7.2f}ms Loss={:>6} Jitter={:6.2f}ms (src {})\n'.format(
+                    kind, label, r.avg_latency, 'n/a' if row['loss'] is None else '{:.1f}%'.format(row['loss']),
+                    r.jitter, row['src_if']), 'ok')
             else:
                 row['note'] = 'mat het goi, da thu nguon ' + ', '.join(tried)
                 ctx._log('  FAIL {} {:<38} ({}) khong phan hoi - {}\n'.format(kind, label, ip, row['note']), 'err')
@@ -508,15 +514,18 @@ def _mean(v):
 
 def site_summary(rows):
     """{site: {'LAN'|'WAN': {'delay','jitter','loss','ok','n'}}}. Delay/jitter chi tinh tuyen
-    co tra loi; loss tinh tren moi tuyen (tuyen chet = 100%)."""
+    co tra loi. Loss: WAN tinh moi tuyen (tuyen chet = 100%); LAN chi tinh tuyen do duoc bang
+    ping - tuyen LAN chet la do cong cu vManage khong do duoc (host van tra loi khi ping qua WAN),
+    tuyen do bang traceroute co loss = None."""
     out = {}
     for sid in SITE_IDS:
         out[sid] = {}
         for kind in ('LAN', 'WAN'):
             rs = [r for r in rows if r['site'] == sid and r['kind'] == kind]
-            ok = [r for r in rs if r['loss'] < 100]
+            ok = [r for r in rs if r['latency'] is not None]
+            losses = [r['loss'] for r in (ok if kind == 'LAN' else rs) if r['loss'] is not None]
             out[sid][kind] = {'delay': _mean([r['latency'] for r in ok]), 'jitter': _mean([r['jitter'] for r in ok]),
-                              'loss': _mean([r['loss'] for r in rs]), 'ok': len(ok), 'n': len(rs)}
+                              'loss': _mean(losses), 'ok': len(ok), 'n': len(rs)}
     return out
 
 
