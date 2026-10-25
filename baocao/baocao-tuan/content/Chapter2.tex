@@ -1,0 +1,70 @@
+\section{CÔNG VIỆC ĐÃ THỰC HIỆN}\label{sec:cong_viec}
+
+\subsection{Fast-failover cho uplink Access trong SDN}
+
+\subsubsection{Vấn đề}
+
+Mỗi Access-SW của Site 100 có hai uplink, một lên Dist-SW1 và một lên Dist-SW2. Ứng dụng Ryu tính một cây chuyển tiếp dữ liệu từ đồ thị liên kết; khi một uplink nằm trên cây bị đứt, controller phải phát hiện liên kết chết rồi cài lại luật trên các switch. Trong các lần cắt link thật, quá trình này mất 6--8~s, phần lớn do controller khựng đúng lúc phát hiện và phải chờ thêm thời gian ân hạn 3,5~s trước khi kết luận liên kết chết.
+
+\subsubsection{Giải pháp}
+
+Nhóm chuyển việc chuyển đường cho uplink Access xuống data plane để switch tự xử lý, không phụ thuộc controller:
+
+\begin{itemize}
+    \item \textbf{BFD giữa các OVS:} bật BFD với chu kỳ 100~ms, hệ số 3 trên 16 cổng Access--Distribution. OVS tự đánh dấu cổng chết sau khoảng 300~ms không nhận được gói BFD.
+    \item \textbf{Group OpenFlow fast-failover:} trên mỗi Access, controller cài một group kiểu \texttt{fast-failover} gồm hai bucket: uplink chính (theo cây) và uplink dự phòng. Mỗi bucket theo dõi trạng thái cổng tương ứng; khi BFD báo cổng chính chết, switch dùng ngay bucket dự phòng.
+    \item \textbf{Mở chiều vào trên cổng dự phòng:} trước đây cổng Access--Distribution ngoài cây bị chặn chiều vào để tránh vòng lặp. Vì Access là nút lá, nhóm bỏ luật chặn chiều vào trên các cổng này để gói trả về qua đường dự phòng không bị hủy.
+    \item Cấu hình BFD được lưu trong file môi trường của từng OVS để tự áp lại sau khi khởi động lại switch.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\linewidth]{image/campuschinh.png}
+    \caption{Sơ đồ Campus chính (Site 100) với hai tầng Distribution và bốn Access do Ryu điều khiển}
+    \label{fig:campus_chinh}
+\end{figure}
+
+\subsubsection{Kiểm thử phần mềm}
+
+Bộ unit test của ứng dụng Ryu được bổ sung các trường hợp cho group fast-failover và việc mở chiều vào trên cổng ngoài cây: 33/33 test ĐẠT, cùng 10/10 test của bộ kiểm tra phụ. Ứng dụng mới được triển khai lên controller sau khi sao lưu bản cũ.
+
+\subsection{Đo kiểm năm mục tiêu SDN}
+
+Nhóm chạy bộ đo trên lab thật ngày 23/10/2026, mỗi mục tiêu lưu log riêng (CSV/JSON) trong kho mã nguồn:
+
+\begin{enumerate}
+    \item \textbf{Cấp phát VLAN mới (MT1):} tạo VLAN qua REST API của controller, so với cấu hình tay bằng CLI trên Core.
+    \item \textbf{Tự phục hồi khi cắt link thật (MT2):} sáu kịch bản S1--S6, gồm cắt một liên kết Access--Distribution, Distribution--Distribution, Distribution--Core và hai trường hợp hỏng kép; mỗi kịch bản giữ trạng thái cắt 25~s rồi nối lại.
+    \item \textbf{Hiệu năng chuyển mạch (MT3):} ping cùng VLAN và khác VLAN giữa các máy trạm, kèm đích Server Farm.
+    \item \textbf{Tải controller (MT4):} đo CPU của controller trong khi tạo lưu lượng.
+    \item \textbf{Chính sách tập trung (MT5):} áp một luật truy cập qua controller và đo thời gian đến khi luật có hiệu lực trên các Access.
+\end{enumerate}
+
+Kết quả chi tiết trình bày ở Chương~\ref{sec:ket_qua}.
+
+\subsection{Campus SDN Console}
+
+Console là giao diện web chạy trên controller, hiển thị sức khỏe kênh điều khiển, topology và cho phép chạy tự động các kịch bản cắt link. Trong tuần, nhóm:
+
+\begin{itemize}
+    \item Sửa lỗi biểu đồ tự co dần sau mỗi lần cập nhật: hàm vẽ đọc lại chiều cao canvas đã nhân với tỉ lệ điểm ảnh của màn hình, nên mỗi lần vẽ chiều cao bị thu nhỏ thêm.
+    \item Thiết kế lại giao diện theo tông màu dịu mắt và thêm nút chuyển chế độ Sáng/Tối.
+    \item Kiểm tra trên Chrome của PC quản trị ở mức thu phóng 90\% và trên trình duyệt không giao diện với hai tỉ lệ điểm ảnh khác nhau: biểu đồ giữ kích thước ổn định.
+\end{itemize}
+
+\subsection{Công cụ đo và vận hành SD-WAN}
+
+Công cụ web chạy trên máy Windows tại Site 900, chỉ lấy dữ liệu qua REST API của vManage và ping trực tiếp. Trong tuần, nhóm bổ sung:
+
+\begin{itemize}
+    \item \textbf{Tab Độ tin cậy:} tổng hợp các lần đo ở tab SD-WAN Failover thành số lần đo, RTO nhỏ nhất/trung bình/lớn nhất và tỉ lệ khôi phục gói (PRR) theo từng vEdge; đo thời gian khôi phục controller khi người thực hiện tắt rồi bật lại vSmart (theo dõi control connection của mọi vEdge và ping liên tục qua overlay để xem OMP graceful restart có giữ được data plane không); đo độ sẵn sàng dài hạn bằng cách cho vEdge mỗi site ping định kỳ Web Server tại Campus chính, tính phần trăm thời gian dùng được, MTTR và MTBF.
+    \item \textbf{Ký chứng thư và onboard vEdge mới:} kỹ thuật viên chỉ cần gõ trên console vài lệnh bật SSH (địa chỉ VPN 0, \texttt{allow-service}, route); công cụ tự SSH vào, cấu hình hostname, system-ip theo dải Site 900, organization, vBond, rồi tạo CSR và ký chứng thư. Công cụ kiểm tra trùng system-ip với thiết bị đã có trước khi cấu hình.
+    \item \textbf{Sửa lỗi API ping của vManage 20.10:} lần chạy thật đầu tiên của tab SD-WAN Failover (24/10) bị vManage trả HTTP 400 ``Invalid data length value''. Công cụ nay thử lần lượt các dạng tham số được chấp nhận và nhớ dạng chạy được cho các lần ping sau, để không làm chậm phép đo RTO.
+\end{itemize}
+
+\subsection{Tài liệu}
+
+\begin{itemize}
+    \item Cập nhật báo cáo giữa kỳ: Chương 4 bổ sung kết quả đo SDN và fast-failover, bảng sự cố; Chương 5 điều chỉnh kế hoạch giai đoạn cuối và rủi ro theo tình hình mới.
+    \item Cập nhật bảng theo dõi tiến độ và ghi chú kỹ thuật về fast-failover, cách đo phục hồi bằng ping data plane.
+\end{itemize}

@@ -31,6 +31,7 @@ description: Trợ lý cho đồ án "Campus Network kết hợp SDN + SD-WAN" t
 | Đồng bộ host 2 theo host 1: tiến độ từng node, script, việc còn lại | [host2-sync.md](references/host2-sync.md) |
 | Cho các site ra Internet (DIA, NAT, DNS forwarder): kế hoạch 7 giai đoạn + tiến độ | [internet-breakout.md](references/internet-breakout.md) |
 | Mất host 1 / không có server: dựng lại lab trên Google Cloud (máy, ngân sách 300 USD, các bước) — chỉ làm khi người dùng yêu cầu | [disaster-recovery-gcp.md](references/disaster-recovery-gcp.md) |
+| Chuyển lab sang server ESXi mới (10.215.26.20) + Tailscale truy cập dự phòng: tạo VM, cài EVE, chép lab — chỉ làm khi người dùng chốt và quản lý cho phép | [migrate-esxi-new-server.md](references/migrate-esxi-new-server.md) |
 
 Chỉ đọc file cần cho tác vụ. Mỗi file có mục lục ở đầu.
 

@@ -1,0 +1,6 @@
+vEdge_bi_cat,So_lan,Lan_co_RTO,RTO_min_s,RTO_TB_s,RTO_max_s,PRR_TB_pct,Goi_mat,Goi_gui
+vEdge1-S200,2,2,7.68,7.96,8.25,76.75,10.0,53.0
+
+Thoi_diem,File,vEdge_bi_cat,vEdge_do,Dich,RTO_s,Goi_mat,Goi_gui,PRR_pct
+2026-10-24 15:05:13,failover_vEdge1-S200_20261024_150513.csv,vEdge1-S200,vEdge1-S100,10.2.70.101,8.25,5.0,38.0,86.84
+2026-10-24 15:21:43,failover_vEdge1-S200_20261024_152143.csv,vEdge1-S200,vEdge1-S100,10.2.70.101,7.68,5.0,15.0,66.67
