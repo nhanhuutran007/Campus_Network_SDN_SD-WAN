@@ -284,9 +284,6 @@ def vedge_ping(vm, sysip, dst, count=5, vpn=1, source=None, probe='icmp', port=N
     return r
 
 
-UDP_PROBE_PORT = 33434      # cong traceroute, host khong mo -> tra ICMP port-unreachable
-
-
 def vedge_ping_any(vm, sysip, dst, count=5, vpn=1):
     """Nhu vedge_ping nhung mat het goi thi thu lan luot cac interface vpn 1 khac lam nguon
     (vd ge0/0 phia FW, ge0/3 phia vEdge cung site) -> (PingResult, interface da dung, cac nguon
@@ -299,18 +296,50 @@ def vedge_ping_any(vm, sysip, dst, count=5, vpn=1):
         if r.success:
             return r, src, tried
         time.sleep(TOOL_GAP)
-    # 25/10/2026: nping ICMP cua vManage toi LAN CUNG site mat 100% o moi site, trong khi
-    # `ping vpn 1 source ge0/0 10.2.60.100` tren console vEdge1-S200 OK 4/4 va traceroute (UDP)
-    # cung OK -> loi o cong cu nping, khong phai mang. Du phong: nping UDP toi cong dong, host
-    # tra ICMP port-unreachable -> van co RTT/loss.
+    # 25/10/2026: nping cua vManage (ca ICMP lan UDP) toi LAN CUNG site mat 100% o moi site,
+    # trong khi `ping vpn 1 source ge0/0 10.2.60.100` tren console vEdge1-S200 OK 4/4 va
+    # traceroute OK -> loi o cong cu nping, khong phai mang. Du phong: API traceroute, lay RTT
+    # 3 probe cua hop co IP = dich (RTT traceroute UDP thuong cao hon ping ICMP).
     try:
-        u = vedge_ping(vm, sysip, dst, count, vpn, source=srcs[0][0], probe='udp', port=UDP_PROBE_PORT)
-        tried.append('{} udp/{}'.format(srcs[0][0], UDP_PROBE_PORT))
-        if u.success:
-            return u, '{} (udp)'.format(srcs[0][0]), tried
+        t = traceroute_probe(vm, sysip, dst, count, vpn)
+        tried.append('traceroute')
+        if t.success:
+            return t, '{} (traceroute)'.format(srcs[0][0]), tried
     except VManageError as e:
-        tried.append('udp loi: {}'.format(str(e)[:60]))
+        tried.append('traceroute loi: {}'.format(str(e)[:60]))
     return r, src, tried
+
+
+def traceroute_probe(vm, sysip, dst, count=6, vpn=1):
+    """Do RTT/loss toi `dst` bang API traceroute: moi lan chay cho 3 probe o hop cuoi; chay
+    toi khi du >= count probe. Probe '*' o hop dich = mat goi."""
+    rtts, sent = [], 0
+    raw = []
+    hop = re.compile(r'^\s*\d+\s+(.*)$')
+    while sent < count:
+        lines = vedge_traceroute(vm, sysip, dst, vpn)
+        raw += lines
+        last = [hop.match(l).group(1) for l in lines if hop.match(l)]
+        if not last:
+            break
+        tail = last[-1]
+        times = [float(x) for x in re.findall(r'([\d.]+)\s*ms', tail)] if dst in tail else []
+        probes = 3
+        sent += probes
+        rtts += times[:probes]
+        time.sleep(TOOL_GAP)
+    r = PingResult()
+    r.raw = '[vManage traceroute {} vpn {}] -> {}\n{}'.format(VEDGE_NAMES.get(sysip, sysip), vpn, dst,
+                                                                '\n'.join(raw[-6:]))
+    if not sent:
+        return r
+    r.loss = round((sent - len(rtts)) / sent * 100, 2)
+    if rtts:
+        r.success = True
+        r.avg_latency = sum(rtts) / len(rtts)
+        r.min_latency, r.max_latency = min(rtts), max(rtts)
+        r.jitter = round(sum(abs(a - b) for a, b in zip(rtts[1:], rtts)) / (len(rtts) - 1), 3) if len(rtts) > 1 else 0.0
+    return r
 
 
 def vedge_traceroute(vm, sysip, dst, vpn=1):
