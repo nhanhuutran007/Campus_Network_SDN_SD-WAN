@@ -284,17 +284,32 @@ def vedge_ping(vm, sysip, dst, count=5, vpn=1, source=None, probe='icmp', port=N
     return r
 
 
+UDP_PROBE_PORT = 33434      # cong traceroute, host khong mo -> tra ICMP port-unreachable
+
+
 def vedge_ping_any(vm, sysip, dst, count=5, vpn=1):
     """Nhu vedge_ping nhung mat het goi thi thu lan luot cac interface vpn 1 khac lam nguon
     (vd ge0/0 phia FW, ge0/3 phia vEdge cung site) -> (PingResult, interface da dung, cac nguon
     da thu) - PingResult co __slots__ nen khong gan them thuoc tinh."""
     r, src, tried = None, '', []
-    for ifname, ip in lan_sources(vm, sysip, vpn):
+    srcs = lan_sources(vm, sysip, vpn)
+    for ifname, ip in srcs:
         r, src = vedge_ping(vm, sysip, dst, count, vpn, source=ifname), ifname
         tried.append('{}({})'.format(ifname, ip))
         if r.success:
-            break
+            return r, src, tried
         time.sleep(TOOL_GAP)
+    # 25/10/2026: nping ICMP cua vManage toi LAN CUNG site mat 100% o moi site, trong khi
+    # `ping vpn 1 source ge0/0 10.2.60.100` tren console vEdge1-S200 OK 4/4 va traceroute (UDP)
+    # cung OK -> loi o cong cu nping, khong phai mang. Du phong: nping UDP toi cong dong, host
+    # tra ICMP port-unreachable -> van co RTT/loss.
+    try:
+        u = vedge_ping(vm, sysip, dst, count, vpn, source=srcs[0][0], probe='udp', port=UDP_PROBE_PORT)
+        tried.append('{} udp/{}'.format(srcs[0][0], UDP_PROBE_PORT))
+        if u.success:
+            return u, '{} (udp)'.format(srcs[0][0]), tried
+    except VManageError as e:
+        tried.append('udp loi: {}'.format(str(e)[:60]))
     return r, src, tried
 
 
