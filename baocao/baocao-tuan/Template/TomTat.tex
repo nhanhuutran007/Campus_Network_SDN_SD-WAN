@@ -1,0 +1,21 @@
+\section*{\fontsize{18pt}{18pt}\selectfont\MakeUppercase{\de}\\TÓM TẮT BÁO CÁO TUẦN}
+
+Báo cáo này tổng hợp công việc nhóm thực hiện trong tuần \tuanbaocao{} của đề tài ``Xây dựng mạng Campus Network sử dụng SDN và SD-WAN''. Tuần này nằm ngay trước mốc giữa kỳ, nên trọng tâm là chuyển phần SDN từ ``đã tự phục hồi'' sang ``có số liệu đo đầy đủ'', đồng thời chuẩn bị công cụ để đo lặp phía SD-WAN trong tuần tiếp theo.
+
+Kết quả chính của tuần:
+
+\begin{itemize}
+    \item \textbf{SDN Site 100 -- fast-failover trên data plane:} BFD chu kỳ 100~ms trên 16 cổng Access--Distribution và group OpenFlow \textit{fast-failover} trên bốn Access. Khi cắt thật một uplink Access, lưu lượng chỉ mất 1--2 gói (khoảng 0,2~s) thay vì gián đoạn 6--8~s như trước.
+    \item \textbf{Đo đủ năm mục tiêu SDN:} hiệu năng chuyển mạch, chính sách tập trung, cấp phát VLAN, tải controller đều ĐẠT; tự phục hồi khi cắt link thật ĐẠT 5/6 kịch bản trước fast-failover, kịch bản còn lại đã được khắc phục bằng fast-failover.
+    \item \textbf{Campus SDN Console:} sửa lỗi biểu đồ tự co dần, thêm giao diện dịu mắt với chế độ Sáng/Tối, kiểm tra trên trình duyệt của PC quản trị.
+    \item \textbf{Công cụ SD-WAN:} bổ sung tab đo độ tin cậy (RTO, tỉ lệ khôi phục gói, thời gian khôi phục controller, độ sẵn sàng), quy trình ký chứng thư/onboard vEdge mới chỉ cần vài lệnh trên console, và sửa lỗi gọi API ping của vManage 20.10.
+    \item \textbf{Tài liệu:} cập nhật Chương 4 và Chương 5 của báo cáo giữa kỳ theo số liệu mới.
+\end{itemize}
+
+Khó khăn lớn nhất là máy chủ EVE-NG dùng chung khiến controller Ryu thỉnh thoảng bị khựng 0,6--1,5~s, làm nhiễu số đo. Nhóm đã giảm ảnh hưởng bằng cách tắt cụm SD-WAN khi đo SDN, ghi lại tải máy chủ cùng mỗi kết quả, và đo thời gian phục hồi bằng ping từ máy trạm thay vì từ controller.
+
+Tuần tới (26/10--01/11), nhóm tập trung đo lặp SD-WAN bằng công cụ web, kiểm thử failover cặp firewall ASAv và VRRP trên Core, bắt đầu hoàn thiện Site 500 và tiếp tục giảm khựng controller SDN.
+
+\textbf{Từ khóa:} SDN, OpenFlow, Ryu, Open vSwitch, fast-failover, BFD, SD-WAN, Cisco Viptela, vManage REST API, EVE-NG.
+
+\newpage

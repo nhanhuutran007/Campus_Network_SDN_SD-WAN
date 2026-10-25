@@ -1,0 +1,60 @@
+\section{KẾT QUẢ ĐO VÀ ĐÁNH GIÁ}\label{sec:ket_qua}
+
+\subsection{Năm mục tiêu SDN}
+
+Bảng~\ref{tab:nam_muc_tieu} tổng hợp kết quả đo ngày 23/10/2026. Trong lúc đo, cụm SD-WAN được tắt để giảm tải máy chủ.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Kết quả đo năm mục tiêu SDN Site 100 (23/10/2026)}
+    \label{tab:nam_muc_tieu}
+    \begin{tabularx}{\textwidth}{|P{3.4cm}|X|P{1.8cm}|}
+        \hline
+        \textbf{Mục tiêu} & \textbf{Kết quả} & \textbf{Đánh giá} \\
+        \hline
+        MT1 -- Cấp phát VLAN & 9~ms qua controller, so với khoảng 36~s cho mỗi Core khi cấu hình tay & ĐẠT \\
+        \hline
+        MT2 -- Tự phục hồi (cắt link thật) & 5/6 kịch bản ĐẠT; kịch bản Access-SW4 -- Dist-SW1 gián đoạn 6,0~s và 8,3~s ở hai lần chạy do controller khựng đúng lúc phát hiện & ĐẠT 5/6 \\
+        \hline
+        MT3 -- Hiệu năng chuyển mạch & 0\% mất gói; cùng VLAN khoảng 0,9~ms; khác VLAN trung vị 4~ms & ĐẠT \\
+        \hline
+        MT4 -- Tải controller & CPU controller 8--15\% trong khi có lưu lượng & ĐẠT \\
+        \hline
+        MT5 -- Chính sách tập trung & Một luật áp xuống 4 Access trong 12--18~ms & ĐẠT (2/3 lần đo đủ điều kiện) \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\subsection{Cắt link thật trước và sau fast-failover}
+
+Sau khi triển khai fast-failover, nhóm đo lại bằng ping từ máy trạm VPC (100 gói/giây) trong khi cắt tap mạng thật của liên kết. Cách đo này phản ánh đúng data plane; bộ ping chạy bên trong controller bị ảnh hưởng bởi các lần khựng nên có lúc báo mất gói dù data plane không đổi.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Thời gian gián đoạn khi cắt link thật}
+    \label{tab:cat_link}
+    \begin{tabularx}{\textwidth}{|P{4.4cm}|P{3.6cm}|X|}
+        \hline
+        \textbf{Kịch bản} & \textbf{Trước fast-failover} & \textbf{Sau fast-failover} \\
+        \hline
+        Access-SW4 -- Dist-SW1 & 6,0--8,3~s & Mất 1--2 gói (khoảng 0,2~s) \\
+        \hline
+        Dist-SW1 -- Dist-SW2 & Không gián đoạn & Chỉ nhiễu nền, không đổi \\
+        \hline
+        Dist-SW1 -- Core-SW1 & Khoảng 3,6~s & Không đổi (vẫn do controller xử lý) \\
+        \hline
+        Hỏng kép: Access-SW4 -- Dist-SW1 và Dist-SW2 -- Core-SW1 & ĐẠT & Khoảng 2~s (phải chờ controller tính lại cây) \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\subsection{Đánh giá}
+
+\begin{itemize}
+    \item Fast-failover giải quyết đúng kịch bản yếu nhất của MT2: lỗi một uplink Access nay được switch xử lý trong khoảng 0,3~s (thời gian BFD phát hiện), không còn phụ thuộc controller. Như vậy cả sáu kịch bản tự phục hồi đều đạt yêu cầu.
+    \item Các lỗi ở tầng Distribution--Core và hỏng kép vẫn cần controller tính lại cây, mất khoảng 2--3,7~s. Đây là giới hạn thiết kế của mô hình một controller; có thể cải thiện bằng group fast-failover cho uplink Distribution trong tuần tới.
+    \item Khi máy ảo Distribution bị máy chủ tạm dừng ngắn, BFD 100~ms có lúc báo flap (khoảng một đợt mỗi hai phút). Nếu ảnh hưởng tới phép đo, có thể nới chu kỳ BFD lên 300~ms, đổi lại thời gian phát hiện khoảng 0,9~s.
+    \item Phía SD-WAN chưa có số liệu mới trong tuần; công cụ đo đã sẵn sàng sau khi sửa lỗi API.
+\end{itemize}

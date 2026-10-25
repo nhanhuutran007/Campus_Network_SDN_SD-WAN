@@ -1,0 +1,33 @@
+\section{KẾ HOẠCH TUẦN TỚI VÀ KẾT LUẬN}\label{sec:ke_hoach}
+
+\subsection{Kế hoạch tuần 26/10/2026 -- 01/11/2026}
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Kế hoạch công việc tuần tới}
+    \label{tab:ke_hoach_tuan}
+    \begin{tabularx}{\textwidth}{|c|X|P{2.4cm}|P{3.8cm}|}
+        \hline
+        \textbf{\#} & \textbf{Công việc} & \textbf{Thời gian} & \textbf{Kết quả cần đạt} \\
+        \hline
+        1 & Đo lặp SD-WAN bằng công cụ web: failover link WAN tại Site 100 và chi nhánh (3--5 lần mỗi kịch bản), thời gian khôi phục khi mất vSmart, bắt đầu theo dõi độ sẵn sàng & 26/10--01/11 (tiếp tục tới 05/11) & Bảng RTO nhỏ nhất/trung bình/lớn nhất, PRR, thời gian khôi phục controller \\
+        \hline
+        2 & Kiểm thử failover cặp firewall ASAv HA và VRRP trên Core & 27/10--31/10 & Biên bản kiểm thử: điều kiện, số gói mất, thời gian chuyển và quay về \\
+        \hline
+        3 & Bắt đầu hoàn thiện Site 500: cấu hình vEdge Site 500, nối switch và máy trạm, thêm site vào chính sách vSmart & 28/10--01/11 (hạn 05/11) & vEdge Site 500 lên fabric; máy trạm nhận DHCP \\
+        \hline
+        4 & SDN: thử group fast-failover cho uplink Distribution, giảm khựng controller & 29/10--01/11 & Gián đoạn khi mất liên kết Distribution--Core dưới 1~s, hoặc ghi rõ giới hạn \\
+        \hline
+        5 & Theo dõi và thu bằng chứng nếu toàn bộ vEdge mất kết nối lần nữa & Liên tục & Log và kết quả \texttt{show} trước khi khởi động lại \\
+        \hline
+        6 & Đưa số liệu tuần này vào bản nháp báo cáo cuối kỳ & 31/10--01/11 & Chương kết quả cập nhật số liệu SDN \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\textbf{Lưu ý vận hành:} các việc 1, 3 và 5 cần bật lại cụm SD-WAN (controller, nhà cung cấp Internet/MPLS, máy đo Site 900). Để tránh nhiễu, nhóm sẽ không chạy đồng thời phép đo SDN và SD-WAN.
+
+\subsection{Kết luận tuần}
+
+Trong tuần \tuanbaocao, nhóm đã hoàn thành mục tiêu chính cho phần SDN: có bộ số liệu đo đủ năm mục tiêu, và kịch bản tự phục hồi yếu nhất (mất uplink Access) được giảm từ 6--8~s xuống còn 1--2 gói nhờ fast-failover trên data plane. Phía SD-WAN, công cụ đo độ tin cậy và quy trình onboard vEdge mới đã sẵn sàng, tạo điều kiện để đo lặp có số liệu trong tuần tới. Phần đo lặp SD-WAN và failover firewall chậm khoảng một tuần so với kế hoạch nhưng vẫn nằm trong khung thời gian trước khi hoàn thiện báo cáo cuối kỳ.
