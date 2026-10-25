@@ -7,11 +7,11 @@ Web server nho (chi thu vien chuan) + giao dien trinh duyet. KHONG dung console
 hay SSH vao host EVE-NG (10.215.28.26): moi so lieu lay tu chinh thiet bi theo
 IP cua no, dung kieu NOC van hanh that:
   * vManage REST API (https://<IP vManage>, mac dinh 10.9.0.10): trang thai
-    thiet bi, BFD, control, bo dem interface, counter policy, OMP route
+    thiet bi, BFD, control, bo dem interface
   * vEdge tu ping / traceroute qua vManage (Monitor > Troubleshooting)
   * ping tu chinh may chay web toi IP thiet bi
 Logic do nam o sdwan_monitor.py. Cac tab chi DO / KIEM CHUNG, khong sua cau
-hinh thiet bi (rieng nut day lai whitelist goi API vManage "Send to Controllers").
+hinh thiet bi.
 Ngoai le: tab "Ky cert vEdge" (sdwan_certsign.py) SSH thang toi IP vEdge / vManage /
 vSmart / vBond tren CONTROLLER-LAN 10.9.0.0/24 de cai cert + whitelist - van khong
 qua host EVE.
@@ -340,33 +340,6 @@ def api_rel_availability(d):
     return {}
 
 
-def api_vlan_verify(d):
-    gw = _ip(d.get('gw', '').strip(), 'Gateway')
-    try:
-        net = ipaddress.ip_network(d.get('net', '').strip(), strict=False)
-    except ValueError:
-        raise WebError('Subnet dang 10.1.50.0/24.')
-    if ipaddress.ip_address(gw) not in net:
-        raise WebError('Gateway {} khong thuoc {}.'.format(gw, net))
-    sites = [int(s) for s in d.get('sites', []) if int(s) in SITE_VEDGES]
-    if not sites:
-        raise WebError('Chon it nhat 1 site de kiem chung.')
-    opts = {'net': net, 'gw': gw, 'sites': sites, 'trace': bool(d.get('trace')),
-            'interval': _int(d, 'interval', 3, 60, 5), 'timeout': _int(d, 'timeout', 10, 900, 180)}
-    GUI.run_job('Kiem chung VLAN', mon.vlan_verify_job, GUI, GUI.vmanage(), opts)
-    return {}
-
-
-def api_policy_run(d):
-    groups = set(d.get('groups', [])) & {'W', 'CP', 'CNT'}
-    if not groups:
-        raise WebError('Tick it nhat 1 nhom kiem tra.')
-    opts = {'groups': groups, 'push': bool(d.get('push')), 'window': _int(d, 'window', 10, 600, 60),
-            'farm': d.get('farm', '10.1.90.10'), 'dmz': d.get('dmz', '10.1.1.10')}
-    GUI.run_job('Chinh sach tap trung', mon.policy_job, GUI, GUI.vmanage(), opts)
-    return {}
-
-
 def api_throughput_run(d):
     vname = d.get('vedge', '')
     if vname not in WAN_IFACE or vname not in mon.NAME_TO_SYSIP:
@@ -543,11 +516,9 @@ ROUTES = {
     ('POST', '/api/log/clear'): api_log_clear,
     ('POST', '/api/log/save'): api_log_save,
     ('POST', '/api/failover/run'): api_failover_run,
-    ('POST', '/api/vlan/verify'): api_vlan_verify,
     ('POST', '/api/reliability/failover'): api_rel_failover,
     ('POST', '/api/reliability/controller'): api_rel_controller,
     ('POST', '/api/reliability/availability'): api_rel_availability,
-    ('POST', '/api/policy/run'): api_policy_run,
     ('GET', '/api/throughput'): api_throughput_state,
     ('POST', '/api/throughput/run'): api_throughput_run,
     ('GET', '/api/certsign/day0'): api_cs_day0,

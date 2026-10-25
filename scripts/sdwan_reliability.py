@@ -11,14 +11,15 @@ sdwan_reliability.py  –  Do DO TIN CAY qua vManage REST API (chi DO, khong tu 
      vSmart song lai, va data plane co mat goi khong (OMP graceful restart).
   3. Availability: theo doi dai han; moi chu ky vEdge cua tung site ping dich vu dao tao o
      campus chinh (mac dinh WebServer 10.1.1.10) -> % thoi gian dung duoc, su co, MTTR/MTBF.
-Packet Recovery Rate = goi nhan / goi gui trong cua so su co x 100 %.
+Packet Recovery Rate = goi nhan / goi gui trong cua so [CUT, RECOVER + AFTER_RECOVER_S] x 100 %.
 """
 import csv, glob, os, re, threading, time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from campus_ping_tool import LOG_DIR, HAS_MPL, ChartEngine, CYAN, GREEN, RED, ORANGE, PURPLE, YELLOW
-from sdwan_monitor import VEDGE_NAMES, SITE_IDS, SITE_LABEL, vedge_ping, site_vedges, _save_png, _mean, _fmt
+from sdwan_monitor import (VEDGE_NAMES, SITE_IDS, SITE_LABEL, AFTER_RECOVER_S, vedge_ping, vedge_ping_any,
+                           site_vedges, _save_png, _mean, _fmt)
 
 
 def _num(v):
@@ -60,7 +61,22 @@ def _read_failover(path):
     d = dict(zip(last[0::2], last[1::2]))
     sent, lost = _num(d.get('sent')), _num(d.get('lost'))
     prr = _num(d.get('PRR_pct'))
-    if prr is None and sent:
+    # tinh lai PRR tu bang ping tho trong cua so [CUT, RECOVER + AFTER_RECOVER_S] -> file cu
+    # (PRR tinh toi luc dung do) va file moi so sanh duoc voi nhau
+    pings, cut, rec = [], None, None
+    for r in rows[1:]:
+        if not r or r[0] == 't_s':
+            break
+        t = _num(r[0])
+        if t is None:
+            break
+        pings.append((t, r[1] == '1'))
+        ev = r[3] if len(r) > 3 else ''
+        cut = t if ev == 'CUT' else cut
+        rec = t if ev == 'RECOVER' else rec
+    if cut is not None and rec is not None:
+        sent, lost, prr = _prr(pings, cut, rec + AFTER_RECOVER_S)
+    elif prr is None and sent:
         prr = round((sent - (lost or 0)) / sent * 100, 2)
     m = re.search(r'_(\d{8}_\d{6})\.csv$', path)
     when = datetime.strptime(m.group(1), '%Y%m%d_%H%M%S') if m else datetime.fromtimestamp(os.path.getmtime(path))
@@ -109,7 +125,7 @@ def failover_summary_job(ctx, opts):
         log('  {:<14} {:>6} {:>8} {:>8} {:>8} {:>8} {:>12}\n'.format(
             s['watch'], '{}/{}'.format(s['n_rto'], s['n']), _fmt(s['min']), _fmt(s['avg']), _fmt(s['max']),
             _fmt(s['prr']), '{:.0f}/{:.0f}'.format(s['lost'], s['sent'])), 'ok')
-    log('  (So lan = lan xac dinh duoc RTO / tong so lan. Do phan giai ~1,2 s/goi.)\n', 'info')
+    log('  (So lan = lan xac dinh duoc RTO / tong so lan. PRR trong cua so CUT -> RECOVER+{}s.)'.format(AFTER_RECOVER_S) + '\n', 'info')
 
     name = 'tin_cay_failover_{}'.format(_stamp())
     with open(os.path.join(LOG_DIR, name + '.csv'), 'w', newline='', encoding='utf-8') as f:
@@ -335,7 +351,7 @@ def availability_job(ctx, vm, opts):
     rows = []                                   # (t, sid, ok, rtt, vedge)
     f = open(path, 'w', newline='', encoding='utf-8')
     w = csv.writer(f)
-    w.writerow(['thoi_diem', 't_s', 'site', 'vedge', 'up', 'rtt_ms'])
+    w.writerow(['thoi_diem', 't_s', 'site', 'vedge', 'up', 'rtt_ms', 'ly_do_down'])
     t0, cycle, prev = time.time(), 0, {}
     try:
         while not stop.is_set() and time.time() - t0 < opts['duration_s']:
@@ -352,21 +368,25 @@ def availability_job(ctx, vm, opts):
                     break
                 cands = [ip for ip in site_vedges(sid) if reach is None or ip in reach]
                 ok, rtt, src = False, None, cands[0] if cands else ''
+                why = '' if src else 'khong co vEdge reachable tren vManage'
                 if src:
                     try:
-                        r = vedge_ping(vm, src, target, 2)
+                        r = vedge_ping_any(vm, src, target, 2)[0]     # thu moi interface vpn 1 lam nguon
                         ok, rtt = r.success, (r.avg_latency if r.success else None)
-                    except Exception:
-                        ok = False
+                        if not ok:
+                            why = '{} ping {} mat het goi'.format(VEDGE_NAMES.get(src, src), target)
+                    except Exception as e:
+                        ok, why = False, '{} loi API: {}'.format(VEDGE_NAMES.get(src, src), str(e)[:120])
                 ts = round(time.time() - t0, 1)
                 rows.append((ts, sid, ok, rtt, VEDGE_NAMES.get(src, '-')))
                 w.writerow([datetime.now().strftime('%Y-%m-%d %H:%M:%S'), ts, sid, VEDGE_NAMES.get(src, '-'),
-                            int(ok), '' if rtt is None else round(rtt, 2)])
+                            int(ok), '' if rtt is None else round(rtt, 2), why])
                 parts.append('S{} {}'.format(sid, '{:.1f}ms'.format(rtt) if ok else 'DOWN'))
                 if prev.get(sid, True) != ok:
                     changed = True
-                    log('  [{}] {} {} tai t={:.0f}s\n'.format('UP' if ok else 'DOWN', SITE_LABEL[sid],
-                                                           'phuc hoi' if ok else 'mat dich vu', ts),
+                    log('  [{}] {} {} tai t={:.0f}s{}\n'.format('UP' if ok else 'DOWN', SITE_LABEL[sid],
+                                                             'phuc hoi' if ok else 'mat dich vu', ts,
+                                                             '' if ok else ' - ' + why),
                         'ok' if ok else 'err')
                 prev[sid] = ok
             f.flush()
@@ -388,25 +408,36 @@ def availability_job(ctx, vm, opts):
     for sid in SITE_IDS:
         s = [r for r in rows if r[1] == sid]
         up = sum(1 for r in s if r[2])
-        incidents, run = [], None             # [(t_bat_dau, so_mau_down)]
+        # chuoi mau DOWN lien tiep: [t_bat_dau, so_mau, da_phuc_hoi, co_UP_truoc_do]
+        incidents, run, seen_up = [], None, False
         for r in s:
             if not r[2]:
-                run = [run[0], run[1] + 1] if run else [r[0], 1]
-            elif run:
-                incidents.append(tuple(run)); run = None
+                run = [run[0], run[1] + 1, False, run[3]] if run else [r[0], 1, False, seen_up]
+            else:
+                if run:
+                    run[2] = True
+                    incidents.append(tuple(run)); run = None
+                seen_up = True
         if run:
             incidents.append(tuple(run))
         avail = up / len(s) * 100 if s else None
         down_s = (len(s) - up) * interval
-        mttr = _mean([n * interval for _, n in incidents])
+        # MTTR chi tinh su co DA phuc hoi; MTBF = thoi gian UP / so lan hong (UP -> DOWN).
+        # Site DOWN suot ca lan do: khong co su co nao ket thuc -> MTTR/MTBF de trong.
+        mttr = _mean([n * interval for _, n, closed, _ in incidents if closed])
+        failures = sum(1 for _, _, _, after_up in incidents if after_up)
         summ[sid] = {'n': len(s), 'up': up, 'avail': avail, 'inc': incidents, 'down_s': down_s, 'mttr': mttr,
-                     'mtbf': (up * interval / len(incidents)) if incidents else None}
+                     'mtbf': (up * interval / failures) if failures else None}
         log('  {:<22} {:>8} {:>12} {:>8} {:>9} {:>9}\n'.format(
             SITE_LABEL[sid], len(s), '{} %'.format(_fmt(avail, 3)) if avail is not None else '--', len(incidents),
             _fmt(mttr, 0), down_s), 'ok' if avail == 100 else 'info' if avail and avail >= 99 else 'err')
-        for t_inc, n in incidents:
-            log('      su co tai t={:.0f}s, ~{} s ({} mau)\n'.format(t_inc, n * interval, n), 'err')
-    log('  (Availability = mau UP / tong mau. Down va MTTR uoc theo so mau x chu ky {} s.)\n'.format(interval), 'info')
+        for t_inc, n, closed, _ in incidents:
+            log('      su co tai t={:.0f}s, ~{} s ({} mau){}\n'.format(
+                t_inc, n * interval, n, '' if closed else ' - CHUA phuc hoi khi ket thuc do'), 'err')
+    log('  (Availability = mau UP / tong mau. Down va MTTR uoc theo so mau x chu ky {} s; MTTR chi tinh su co\n'
+        '   da phuc hoi, MTBF = thoi gian UP / so lan UP->DOWN.)\n'.format(interval), 'info')
+    if cycle < 30:
+        log('  [!] Chi co {} chu ky - qua it de ket luan availability, nen do >= 30 phut.\n'.format(cycle), 'err')
     with open(path, 'a', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
         w.writerow([])
@@ -414,7 +445,7 @@ def availability_job(ctx, vm, opts):
         for sid in SITE_IDS:
             s = summ[sid]
             w.writerow([sid, SITE_LABEL[sid], s['n'], s['up'], s['avail'] and round(s['avail'], 3), len(s['inc']),
-                        s['down_s'], s['mttr'], s['mtbf'] and round(s['mtbf'])])
+                        s['down_s'], s['mttr'], '' if s['mtbf'] is None else round(s['mtbf'])])
     log('  [OK] CSV: {}.csv\n'.format(name), 'ok')
     if HAS_MPL and rows:
         def draw(fig):

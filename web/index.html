@@ -154,9 +154,6 @@ table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px; background: var(--surface2); }
 th:first-child { border-top-left-radius: 8px; } th:last-child { border-top-right-radius: 8px; }
-#vlanRows tr { cursor: pointer; }
-#vlanRows tr:hover { background: var(--surface2); }
-#vlanRows tr.sel { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 tr.deleted td { color: var(--faint); }
 .badge { font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
 .badge.on { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
@@ -262,10 +259,6 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
         <svg class="i" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M21 3v6h-6"/><path d="M12 7v5l3 2"/></svg>Độ tin cậy</button>
       <button data-tab="throughput" data-title="Đo thông lượng" data-sub="Đọc bộ đếm interface vEdge qua vManage theo chu kỳ → RX/TX Mbps">
         <svg class="i" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="m12 18 4-6"/></svg>Thông lượng</button>
-      <button data-tab="vlan" data-title="Kiểm chứng VLAN" data-sub="Sau khi tạo VLAN/SVI trên Core-SW, kiểm tra OMP và đo thời gian chi nhánh ping thông">
-        <svg class="i" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>Kiểm chứng VLAN</button>
-      <button data-tab="policy" data-title="Chính sách tập trung" data-sub="Whitelist, route OMP theo control-policy và counter data-policy / app-route trên vEdge">
-        <svg class="i" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>Chính sách tập trung</button>
       <button data-tab="certsign" data-title="Ký cert vEdge" data-sub="Gõ vài lệnh bật SSH trên console → máy Win cấu hình qua SSH → vManage tự ký (UUID + OTP) hoặc ký tay bằng CA. Không qua host EVE">
         <svg class="i" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.2-8.2M16 7l2 2M19 4l2 2"/></svg>Ký cert vEdge</button>
       <button data-tab="files" data-title="Kết quả" data-sub="Biểu đồ PNG, CSV và log đã lưu trong thư mục log/">
@@ -378,7 +371,7 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
               <label class="field"><span>vEdge đo (site khác)</span><select id="foProbe" data-persist></select><small>Ping đi qua overlay về site bị cắt</small></label>
               <label class="field"><span>IP đích (sau site bị cắt)</span><input type="text" id="foTarget" value="10.2.60.1" data-persist><small>Host/gateway LAN, không dùng system-ip</small></label>
               <label class="field"><span>Chờ cắt tối đa (s)</span><input type="number" id="foWait" value="120" min="10" max="600" data-persist></label>
-              <label class="field"><span>Theo dõi sau cắt (s)</span><input type="number" id="foDuration" value="60" min="10" max="300" data-persist></label>
+              <label class="field"><span>Theo dõi sau cắt tối đa (s)</span><input type="number" id="foDuration" value="60" min="10" max="300" data-persist><small>Thông lại thì chỉ theo dõi thêm 4 s rồi dừng</small></label>
             </div>
             <div class="row"><button class="btn orange solid job" id="foRunBtn">Bắt đầu theo dõi</button></div>
           </div>
@@ -388,7 +381,7 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
         <div class="tab" id="tab-reliability">
           <div class="card">
             <h2>1. Link Failover Time + Packet Recovery Rate</h2>
-            <p class="hint">Mỗi lần đo làm ở tab <b>SD-WAN Failover</b>: bấm Bắt đầu, tự cắt link WAN, tool đo RTO và tỉ lệ gói đến được đích (<b>Packet Recovery Rate</b> = gói nhận / gói gửi sau lúc cắt). Mỗi kịch bản nên lặp 3–5 lần. Sau đó bấm <b>Tổng hợp</b>: tool đọc mọi file <code>log/failover_*.csv</code>, gom theo vEdge bị cắt, tính RTO min / TB / max và PRR trung bình.</p>
+            <p class="hint">Mỗi lần đo làm ở tab <b>SD-WAN Failover</b>: bấm Bắt đầu, tự cắt link WAN, tool đo RTO và tỉ lệ gói đến được đích (<b>Packet Recovery Rate</b> = gói nhận / gói gửi trong cửa sổ từ lúc cắt đến 4 s sau khi thông lại — cố định để các lần đo so sánh được). Mỗi kịch bản nên lặp 3–5 lần. Sau đó bấm <b>Tổng hợp</b>: tool đọc mọi file <code>log/failover_*.csv</code>, gom theo vEdge bị cắt, tính RTO min / TB / max và PRR trung bình.</p>
             <div class="grid">
               <label class="field"><span>Chỉ lấy các lần đo từ ngày</span><input type="date" id="relSince" data-persist><small>Để trống = lấy tất cả</small></label>
             </div>
@@ -446,43 +439,6 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
             <div class="tplegend" id="tpLegend"></div>
             <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Interface</th><th>RX TB</th><th>RX max</th><th>TX TB</th><th>TX max</th><th>Mẫu</th></tr></thead>
               <tbody id="tpRows"><tr><td colspan="6" class="empty">Chưa có dữ liệu</td></tr></tbody></table></div>
-          </div>
-        </div>
-
-        <!-- ============ VLAN ============ -->
-        <div class="tab" id="tab-vlan">
-          <div class="card">
-            <h2>Kiểm chứng VLAN mới qua SD-WAN</h2>
-            <p class="hint">Tool <b>không</b> cấu hình Core-SW. Bạn tự tạo VLAN + SVI (+ OSPF network) trên Core-SW rồi bấm Bắt đầu, hoặc bấm trước rồi mới cấu hình để đo thời gian hội tụ. Với mỗi site chọn bên dưới, tool kiểm tra vEdge có route OMP phủ subnet chưa, sau đó cho vEdge ping gateway mới theo chu kỳ đến khi thông.</p>
-            <div class="grid">
-              <label class="field"><span>Subnet VLAN</span><input type="text" id="vNet" value="10.1.50.0/24" data-persist></label>
-              <label class="field"><span>Gateway (SVI / VRRP VIP)</span><input type="text" id="vGw" value="10.1.50.1" data-persist></label>
-              <label class="field"><span>Chu kỳ ping (s)</span><input type="number" id="vInterval" value="5" min="3" max="60" data-persist></label>
-              <label class="field"><span>Chờ tối đa (s)</span><input type="number" id="vTimeout" value="180" min="10" max="900" data-persist></label>
-            </div>
-            <div class="row" style="gap:22px" id="vSites"></div>
-            <div class="row"><label class="check"><input type="checkbox" id="vTrace" checked data-persist><span>Traceroute từ site đầu tiên sau khi thông</span></label></div>
-            <div class="row"><button class="btn accent solid job" id="vRunBtn">Bắt đầu kiểm chứng</button></div>
-          </div>
-        </div>
-
-        <!-- ============ POLICY ============ -->
-        <div class="tab" id="tab-policy">
-          <div class="card">
-            <h2>Nhóm kiểm tra</h2>
-            <p class="hint">Mọi số liệu đọc từ vManage API. Không sửa policy trên vSmart. Counter chỉ tăng khi có traffic thật. Trong thời gian chờ, hãy tạo traffic từ PC chi nhánh (telnet tới Server Farm, ssh/http tới DMZ, ping liên site).</p>
-            <div class="checks boxed" style="margin-top:10px">
-              <label class="check"><input type="checkbox" class="pGroup" value="W" checked><span><b>W</b> · Whitelist vEdge trên vBond <small>so danh sách valid trên vManage với vBond</small></span></label>
-              <label class="check"><input type="checkbox" class="pGroup" value="CP" checked><span><b>CP</b> · Control-policy PREFER-VE1 <small>vEdge chi nhánh chọn route 10.1.0.0/16 của vEdge1-S100</small></span></label>
-              <label class="check"><input type="checkbox" class="pGroup" value="CNT" checked><span><b>CNT</b> · Counter DP_BRANCH / AAR_LAN <small>chụp counter trước/sau thời gian chờ → counter nào tăng</small></span></label>
-            </div>
-            <div class="grid" style="margin-top:14px">
-              <label class="field"><span>Thời gian chờ counter (s)</span><input type="number" id="pWindow" value="60" min="10" max="600" data-persist></label>
-              <label class="field"><span>IP Server Farm (gợi ý traffic)</span><input type="text" id="pFarm" value="10.1.90.10" data-persist></label>
-              <label class="field"><span>IP DMZ (gợi ý traffic)</span><input type="text" id="pDmz" value="10.1.1.10" data-persist></label>
-            </div>
-            <div class="row"><label class="check"><input type="checkbox" id="pPush"><span>Tự đẩy lại whitelist nếu vBond thiếu <small>(API vManage "Send to Controllers")</small></span></label></div>
-            <div class="row"><button class="btn orange solid job" id="pRunBtn">Chạy kiểm tra chính sách</button></div>
           </div>
         </div>
 
@@ -891,21 +847,6 @@ function tpHover(e) {
   tip.style.top = '10px';
 }
 
-// ---------- VLAN ----------
-function initVlan() {
-  const saved = (store.get('vSitesSel') || '200,300,400').split(',');
-  $('vSites').innerHTML = META.sites.map(s =>
-    `<label class="check"><input type="checkbox" class="vSite" value="${s.site_id}"${saved.includes(String(s.site_id)) ? ' checked' : ''}><span>${esc(s.name)}</span></label>`).join('');
-  $('vSites').addEventListener('change', () =>
-    store.set('vSitesSel', [...document.querySelectorAll('.vSite:checked')].map(c => c.value).join(',')));
-}
-$('vRunBtn').onclick = () => act('/api/vlan/verify', { net: val('vNet'), gw: val('vGw'), interval: num('vInterval'),
-  timeout: num('vTimeout'), trace: on('vTrace'), sites: [...document.querySelectorAll('.vSite:checked')].map(c => +c.value) });
-
-// ---------- Policy ----------
-$('pRunBtn').onclick = () => act('/api/policy/run', { window: num('pWindow'), farm: val('pFarm'), dmz: val('pDmz'),
-  push: on('pPush'), groups: [...document.querySelectorAll('.pGroup:checked')].map(c => c.value) });
-
 // ---------- Ký cert vEdge ----------
 $('csDay0Btn').onclick = async () => {
   const d = await act(`/api/certsign/day0?hostname=${encodeURIComponent(val('csHost'))}&wan_if=${encodeURIComponent(val('csWan'))}`);
@@ -1056,7 +997,7 @@ async function poll() {
   META = await api('/api/meta');
   if (!$('vmHost').value) $('vmHost').value = META.vm_default;
   if (!$('vmUser').value) $('vmUser').value = 'admin';
-  initMeasure(); initFailover(); initReliability(); initThroughput(); initVlan();
+  initMeasure(); initFailover(); initReliability(); initThroughput();
   if (!META.deps.matplotlib) toast('Thiếu matplotlib: pip install matplotlib (không vẽ được PNG)');
   const tab = store.get('tab') || 'overview';
   { const t = document.querySelector(`#tabs [data-tab="${tab}"]`); if (t) t.click(); }

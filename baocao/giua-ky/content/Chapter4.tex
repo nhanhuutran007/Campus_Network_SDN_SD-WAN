@@ -140,7 +140,7 @@ Từ máy trạm Linux tại Site 200, nhóm kiểm tra phân giải DNS bản g
 
 \subsubsection{Công cụ đo kiểm}
 
-Nhóm xây dựng một ứng dụng web chạy trên máy Windows tại Site 900. Ứng dụng chỉ lấy dữ liệu qua REST API của vManage và ping trực tiếp, không đọc qua máy chủ ảo hóa, để giống với cách vận hành thật. Các tab gồm: Tổng quan, Đo lường (độ trễ, jitter, mất gói giữa các site), SD-WAN Failover (đo thời gian khôi phục khi cắt link WAN), Độ tin cậy (tổng hợp RTO, tỉ lệ gói đến đích, thời gian khôi phục controller, độ sẵn sàng), Thông lượng, Kiểm chứng VLAN, Chính sách tập trung và Ký chứng thư vEdge. Tab Chính sách tập trung đã chạy trên lab thật. Ngày 24/10, lần chạy thật đầu tiên của tab SD-WAN Failover phát hiện lỗi khi gọi API ping của vManage; lỗi đã được sửa và đang chờ đo lại.
+Nhóm xây dựng một ứng dụng web chạy trên máy Windows tại Site 900. Ứng dụng chỉ lấy dữ liệu qua REST API của vManage và ping trực tiếp, không đọc qua máy chủ ảo hóa, để giống với cách vận hành thật. Các tab gồm: Tổng quan, Đo lường (độ trễ, jitter, mất gói giữa các site), SD-WAN Failover (đo thời gian khôi phục khi cắt link WAN), Độ tin cậy (tổng hợp RTO, tỉ lệ gói đến đích, thời gian khôi phục controller, độ sẵn sàng), Thông lượng và Ký chứng thư vEdge. Ngày 24/10, lần chạy thật đầu tiên của tab SD-WAN Failover phát hiện lỗi khi gọi API ping của vManage; sau khi sửa, tab đo được thời gian khôi phục khoảng 8,2~s khi cắt đường MPLS của vEdge1-S200 (ping từ Site 100 vào chi nhánh, một lần đo).
 
 \subsection{Vấn đề kỹ thuật đã gặp và cách xử lý}
 

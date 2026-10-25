@@ -10,14 +10,11 @@ REST API cua vManage theo IP cua vManage (mac dinh 10.9.0.10):
   * /device/interface (rx/tx-octets)                              -> thong luong
   * /device/tools/nping, /device/tools/traceroute                 -> vEdge tu
     ping / traceroute trong VPN 1 (giong Monitor > Troubleshooting tren GUI)
-  * /device/policy/*filter, /device/omp/routes/received           -> chinh sach
-  * /system/device/vedges, /device/orchestrator/validvedges       -> whitelist
 Ping "tu may chay web" thi chay lenh ping cua chinh may do toi IP thiet bi.
 
-Cac tab chi DO / KIEM CHUNG, khong sua cau hinh thiet bi (ngoai le duy nhat:
-day lai whitelist vEdge qua API vManage = nut "Send to Controllers").
+Cac tab chi DO / KIEM CHUNG, khong sua cau hinh thiet bi.
 """
-import csv, ipaddress, json, os, re, ssl, threading, time
+import csv, json, os, re, ssl, threading, time
 import http.cookiejar, urllib.error, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -153,13 +150,13 @@ class VManage:
 _SRC_CACHE = {}
 
 
-def lan_source(vm, sysip, vpn=1):
-    """Interface LAN (vpn 1) dang up co IP cua vEdge -> (ifname, ip). Lam nguon cho nping de
-    goi tin di dung duong du lieu that (vpn 1 -> overlay -> site dich)."""
+def lan_sources(vm, sysip, vpn=1):
+    """Moi interface vpn `vpn` co IP cua vEdge, xep uu tien (up, ge*, khong phai loopback)
+    -> [(ifname, ip)]. Phan tu dau la nguon mac dinh cho nping."""
     key = (vm.host, sysip, vpn)
     if key in _SRC_CACHE:
         return _SRC_CACHE[key]
-    best = None
+    found = {}
     for r in vm.interfaces(sysip):
         if str(r.get('vpn-id')) != str(vpn):
             continue
@@ -169,12 +166,18 @@ def lan_source(vm, sysip, vpn=1):
         up = str(r.get('if-oper-status', '')).lower() == 'up'
         name = r.get('ifname', '')
         score = (up, name.startswith('ge'), not name.startswith('loopback'))
-        if best is None or score > best[0]:
-            best = (score, name, ip)
-    if best is None:
+        if name not in found or score > found[name][0]:
+            found[name] = (score, name, ip)
+    if not found:
         raise VManageError('{} khong co interface vpn {} co IP'.format(VEDGE_NAMES.get(sysip, sysip), vpn))
-    _SRC_CACHE[key] = (best[1], best[2])
+    _SRC_CACHE[key] = [(n, ip) for _, n, ip in sorted(found.values(), key=lambda x: (x[0], x[1]), reverse=True)]
     return _SRC_CACHE[key]
+
+
+def lan_source(vm, sysip, vpn=1):
+    """Interface LAN (vpn 1) dang up co IP cua vEdge -> (ifname, ip). Lam nguon cho nping de
+    goi tin di dung duong du lieu that (vpn 1 -> overlay -> site dich)."""
+    return lan_sources(vm, sysip, vpn)[0]
 
 
 def _f(v):
@@ -279,6 +282,20 @@ def vedge_ping(vm, sysip, dst, count=5, vpn=1, source=None, probe='icmp', port=N
     r.raw = '[vManage nping {} vpn {} src {}] -> {}\n{}'.format(
         VEDGE_NAMES.get(sysip, sysip), vpn, source or '-', dst, r.raw)
     return r
+
+
+def vedge_ping_any(vm, sysip, dst, count=5, vpn=1):
+    """Nhu vedge_ping nhung mat het goi thi thu lan luot cac interface vpn 1 khac lam nguon
+    (vd ge0/0 phia FW, ge0/3 phia vEdge cung site) -> (PingResult, interface da dung, cac nguon
+    da thu) - PingResult co __slots__ nen khong gan them thuoc tinh."""
+    r, src, tried = None, '', []
+    for ifname, ip in lan_sources(vm, sysip, vpn):
+        r, src = vedge_ping(vm, sysip, dst, count, vpn, source=ifname), ifname
+        tried.append('{}({})'.format(ifname, ip))
+        if r.success:
+            break
+        time.sleep(TOOL_GAP)
+    return r, src, tried
 
 
 def vedge_traceroute(vm, sysip, dst, vpn=1):
@@ -417,19 +434,24 @@ def _run_routes(ctx, vm, routes, count, kind):
             srcs[sid] = cands[0] if cands else None
         src, ip = srcs[sid], HOST_IP[host]
         label = '{}>{}'.format(VEDGE_NAMES.get(src, 'S{}'.format(sid)), host)
-        row = {'site': sid, 'kind': kind, 'label': label, 'src': VEDGE_NAMES.get(src, ''), 'dst': ip,
-               'latency': 0.0, 'loss': 100.0, 'jitter': 0.0, 'min': 0.0, 'max': 0.0}
+        # tuyen chet: latency/jitter = None (khong phai 0 ms), ly do ghi vao 'note'
+        row = {'site': sid, 'kind': kind, 'label': label, 'src': VEDGE_NAMES.get(src, ''), 'src_if': '',
+               'dst': ip, 'latency': None, 'loss': 100.0, 'jitter': None, 'min': None, 'max': None, 'note': ''}
         try:
             if src is None:
-                raise VManageError('site {} khong co vEdge'.format(sid))
-            r = vedge_ping(vm, src, ip, count)
+                raise VManageError('site {} khong co vEdge reachable'.format(sid))
+            r, row['src_if'], tried = vedge_ping_any(vm, src, ip, count)
             if r.success:
                 row.update(latency=r.avg_latency, loss=r.loss, jitter=r.jitter, min=r.min_latency, max=r.max_latency)
-                ctx._log('  OK   {} {:<38} Lat={:7.2f}ms Loss={:5.1f}% Jitter={:6.2f}ms\n'.format(
-                    kind, label, r.avg_latency, r.loss, r.jitter), 'ok')
+                ctx._log('  OK   {} {:<38} Lat={:7.2f}ms Loss={:5.1f}% Jitter={:6.2f}ms (src {})\n'.format(
+                    kind, label, r.avg_latency, r.loss, r.jitter, row['src_if']), 'ok')
             else:
-                ctx._log('  FAIL {} {:<38} ({}) khong phan hoi\n'.format(kind, label, ip), 'err')
+                row['note'] = 'mat het goi, da thu nguon ' + ', '.join(tried)
+                ctx._log('  FAIL {} {:<38} ({}) khong phan hoi - {}\n'.format(kind, label, ip, row['note']), 'err')
+                for l in [l for l in r.raw.strip().splitlines() if l.strip()][-3:]:
+                    ctx._log('         {}\n'.format(l.strip()[:120]), 'data')
         except Exception as e:
+            row['note'] = str(e)[:150]
             ctx._log('  FAIL {} {:<38} {}\n'.format(kind, label, e), 'err')
         data.append(row)
         time.sleep(TOOL_GAP)
@@ -549,13 +571,15 @@ def site_throughput(ctx, vm, window, interval):
 
 
 def _log_throughput(log, tp):
-    log('  Throughput WAN theo site (Mbps, trung binh cua cac mau):\n', 'hdr')
+    log('  Luu luong WAN thuc te theo site (Mbps, trung binh cua cac mau):\n', 'hdr')
     log('  {:<22} {:>9} {:>9} {:>9} {:>8}\n'.format('Site', 'RX TB', 'TX TB', 'Dinh', 'Mau'), 'data')
     for sid in SITE_IDS:
         t = tp[sid]
         log('  {:<22} {:>9} {:>9} {:>9} {:>8}\n'.format(SITE_LABEL[sid], _fmt(t['rx'], 3), _fmt(t['tx'], 3),
                                                        _fmt(t['peak'], 3), t['n']), 'ok' if t['n'] else 'err')
-    log('  (Chi phan anh traffic dang chay trong luc do - muon so sanh nang luc thi tao cung muc tai o moi site)\n', 'info')
+    log('  (Day la luu luong DANG chay luc do - khong bom tai thi chi la traffic nen BFD/OMP/control, KHONG phai\n'
+        '   throughput/nang luc duong truyen. Muon do throughput: chay iperf/tai cung muc o moi site trong luc do.)\n',
+        'info')
 
 
 def _grouped(ax, series, title, ylabel, colors):
@@ -601,23 +625,25 @@ def _save_compare_csv(ctx, name, summ=None, tp=None, routes=None):
     with open(path, 'w', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
         w.writerow(['Site', 'Ten', 'Delay_LAN_ms', 'Delay_WAN_ms', 'Jitter_LAN_ms', 'Jitter_WAN_ms',
-                    'Loss_LAN_pct', 'Loss_WAN_pct', 'Tuyen_WAN_ok', 'Thr_RX_Mbps', 'Thr_TX_Mbps', 'Thr_Dinh_Mbps',
-                    'Thoi_gian'])
+                    'Loss_LAN_pct', 'Loss_WAN_pct', 'Tuyen_LAN_ok', 'Tuyen_WAN_ok', 'Thr_RX_Mbps', 'Thr_TX_Mbps',
+                    'Thr_Dinh_Mbps', 'Thoi_gian'])
         for sid in SITE_IDS:
             s = summ[sid] if summ else None
             t = tp[sid] if tp else None
             w.writerow([sid, SITE_LABEL[sid]] +
                        ([r(s['LAN']['delay']), r(s['WAN']['delay']), r(s['LAN']['jitter']), r(s['WAN']['jitter']),
-                         r(s['LAN']['loss'], 2), r(s['WAN']['loss'], 2), '{}/{}'.format(s['WAN']['ok'], s['WAN']['n'])]
-                        if s else [''] * 7) +
+                         r(s['LAN']['loss'], 2), r(s['WAN']['loss'], 2), '{}/{}'.format(s['LAN']['ok'], s['LAN']['n']),
+                         '{}/{}'.format(s['WAN']['ok'], s['WAN']['n'])]
+                        if s else [''] * 8) +
                        ([r(t['rx']), r(t['tx']), r(t['peak'])] if t else [''] * 3) + [ts])
         if routes:
             w.writerow([])
-            w.writerow(['Site', 'Loai', 'Tuyen_Duong', 'Nguon_vEdge', 'Dich_IP', 'Avg_Latency_ms', 'Loss_pct',
-                        'Jitter_ms', 'Min_RTT_ms', 'Max_RTT_ms'])
+            w.writerow(['Site', 'Loai', 'Tuyen_Duong', 'Nguon_vEdge', 'Nguon_IF', 'Dich_IP', 'Avg_Latency_ms',
+                        'Loss_pct', 'Jitter_ms', 'Min_RTT_ms', 'Max_RTT_ms', 'Ghi_chu'])
             for x in routes:
-                w.writerow([x['site'], x['kind'], x['label'], x['src'], x['dst'], round(x['latency'], 3),
-                            round(x['loss'], 2), round(x['jitter'], 3), round(x['min'], 3), round(x['max'], 3)])
+                w.writerow([x['site'], x['kind'], x['label'], x['src'], x.get('src_if', ''), x['dst'],
+                            r(x['latency']), r(x['loss'], 2), r(x['jitter']), r(x['min']), r(x['max']),
+                            x.get('note', '')])
     ctx._log('  [OK] CSV: {}\n'.format(path), 'ok')
 
 
@@ -669,7 +695,7 @@ def cases_job(ctx, vm, cases, count, tp_window=60, tp_interval=10):
                 if HAS_MPL:
                     _save_png(os.path.join(LOG_DIR, fname + '.png'), lambda fig: _grouped(
                         fig.add_subplot(111), _tp_series(tp),
-                        'Case 4 - Throughput WAN theo site (Mbps, {}s)'.format(tp_window), 'Mbps', colors_t))
+                        'Case 4 - Luu luong WAN thuc te theo site (Mbps, {}s, khong bom tai)'.format(tp_window), 'Mbps', colors_t))
                     log('  [OK] PNG: {}.png\n'.format(fname), 'ok')
                 _save_compare_csv(ctx, fname, tp=tp)
             else:
@@ -687,7 +713,7 @@ def cases_job(ctx, vm, cases, count, tp_window=60, tp_interval=10):
                             _grouped(fig.add_subplot(2, 2, i + 1), _metric_series(summ, m),
                                      '{} ({})'.format(*METRIC[m]), METRIC[m][1], colors_m)
                         _grouped(fig.add_subplot(2, 2, 4), _tp_series(tp),
-                                 'Throughput WAN (Mbps, {}s)'.format(tp_window), 'Mbps', colors_t)
+                                 'Luu luong WAN thuc te (Mbps, {}s, khong bom tai)'.format(tp_window), 'Mbps', colors_t)
                     _save_png(os.path.join(LOG_DIR, fname + '.png'), draw, size=(16, 10))
                     log('  [OK] PNG: {}.png\n'.format(fname), 'ok')
                 _save_compare_csv(ctx, fname, summ=summ, tp=tp, routes=rows)
@@ -758,6 +784,9 @@ def vedge_detail(vm, sysip):
 # =========================================================
 #  FAILOVER (CHI DO): nguoi lam tu cat link, tool do RTO
 # =========================================================
+AFTER_RECOVER_S = 4     # sau RECOVER chi theo doi them chung nay giay roi dung (khong cho het duration)
+
+
 def failover_job(ctx, vm, opts):
     """opts: watch (sysip vEdge bi cat), probe (sysip vEdge do), target, wait_cut, duration.
     2 luong song song: (1) vEdge do nping 1 goi lien tuc toi target, (2) doc phien BFD cua
@@ -858,6 +887,10 @@ def failover_job(ctx, vm, opts):
                             rec_t, rec_t - cut_t), 'ok')
                 if now - cut_t > opts['duration']:
                     break
+                if rec_t is not None and now - rec_t >= AFTER_RECOVER_S:
+                    log('  [i] Da thong lai, theo doi them {} s on dinh -> ket thuc som.\n'.format(
+                        AFTER_RECOVER_S), 'info')
+                    break
             ctx._set_status('Failover t={:.0f}s{}'.format(now, '' if cut_t is None else
                             ' (sau cat {:.0f}/{}s)'.format(now - cut_t, opts['duration'])), True)
             stop.wait(0.5)
@@ -871,14 +904,18 @@ def failover_job(ctx, vm, opts):
     if not pings:
         log('=' * 55 + '\n\n', 'sep')
         return
-    sent = [p for p in pings if cut_t is None or p[0] >= cut_t]
+    # PRR tinh trong cua so co dinh [CUT, RECOVER + AFTER_RECOVER_S] -> khong phu thuoc do dai
+    # lan do (truoc day tinh toi luc dung -> do cang lau PRR cang cao, khong so sanh duoc)
+    win_end = rec_t + AFTER_RECOVER_S if rec_t is not None else float('inf')
+    sent = [p for p in pings if (cut_t is None or p[0] >= cut_t) and p[0] <= win_end]
     lost = sum(1 for p in sent if not p[1])
     rto = None if cut_t is None or rec_t is None else round(rec_t - cut_t, 2)
     step = round((pings[-1][0] - pings[0][0]) / max(1, len(pings) - 1), 2) if len(pings) > 1 else None
     log('  ---- Ket qua ----\n', 'hdr')
     log('    RTO: {}\n'.format('{} s'.format(rto) if rto is not None else 'khong xac dinh'), 'ok' if rto is not None else 'err')
     prr = round((len(sent) - lost) / len(sent) * 100, 2) if sent else None
-    log('    Goi mat sau CUT: {}/{} | do phan giai ~{} s/goi\n'.format(lost, len(sent), step), 'info')
+    log('    Goi mat trong cua so CUT -> RECOVER+{}s: {}/{} | do phan giai ~{} s/goi (sai so RTO +-{} s)\n'.format(
+        AFTER_RECOVER_S, lost, len(sent), step, step), 'info')
     log('    Packet Recovery Rate: {}\n'.format('{} %'.format(prr) if prr is not None else '--'),
         'ok' if prr == 100 else 'info')
 
@@ -896,7 +933,7 @@ def failover_job(ctx, vm, opts):
             w.writerow(row)
         w.writerow([])
         w.writerow(['watch', wname, 'probe', sname, 'target', target, 'RTO_s', rto, 'lost', lost, 'sent', len(sent),
-                    'PRR_pct', prr])
+                    'PRR_pct', prr, 'step_s', step, 'prr_after_recover_s', AFTER_RECOVER_S])
     log('  [OK] CSV: {}\n'.format(path), 'ok')
     if HAS_MPL:
         png = os.path.join(LOG_DIR, base_name + '.png')
@@ -931,217 +968,3 @@ class VManageCounterReader:
 
     def close(self):
         pass
-
-
-# =========================================================
-#  CHINH SACH TAP TRUNG (doc counter + route + whitelist)
-# =========================================================
-POLICY_COLS = ['timestamp', 'test_id', 'policy', 'check', 'scope', 'value', 'detail', 'result']
-REJOIN_TIMEOUT = 150
-
-
-def _snapshot(vm, edges):
-    d = {}
-    for e in edges:
-        for kind in ('datapolicyfilter', 'approutepolicyfilter'):
-            try:
-                rows = vm.rows('device/policy/{}?deviceId={}'.format(kind, e))
-            except VManageError:
-                continue
-            for r in rows:
-                if r.get('counter-name'):
-                    try:
-                        d[(e, r.get('policy-name', ''), r['counter-name'])] = int(r.get('packets') or 0)
-                    except ValueError:
-                        pass
-    return d
-
-
-def policy_job(ctx, vm, opts):
-    log, stop = ctx._log, ctx._stop_event
-    groups = opts['groups']
-    rows = []
-
-    def rec(tid, pol, check, scope, value, detail, ok):
-        rows.append({'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'test_id': tid, 'policy': pol,
-                     'check': check, 'scope': scope, 'value': value, 'detail': detail,
-                     'result': 'PASS' if ok else ('INFO' if ok is None else 'FAIL')})
-        log('    [{}] {} {} {} = {} {}\n'.format(rows[-1]['result'], tid, '' if scope in ('-', 'all') else scope,
-                                                check, value,
-                                             '({})'.format(detail) if detail else ''),
-            'ok' if ok else ('info' if ok is None else 'err'))
-
-    log('\n' + '=' * 55 + '\n', 'sep')
-    log('[POLICY] Kiem chung chinh sach tap trung (vManage API): {}\n'.format(' '.join(sorted(groups))), 'hdr')
-
-    if 'W' in groups:
-        log('  [W] Doi chieu whitelist vManage <-> vBond...\n', 'info')
-        valid = {r.get('serialNumber'): r.get('host-name') for r in vm.rows('system/device/vedges')
-                 if r.get('validity') == 'valid' and r.get('serialNumber')}
-        vbond = next((d.get('system-ip') for d in vm.devices() if d.get('personality') == 'vbond'), None)
-        if not vbond:
-            rec('W-1', 'whitelist', 'vbond', '-', 0, 'vManage khong thay vBond', False)
-        else:
-            onbond = {r.get('serial-number') for r in vm.rows('device/orchestrator/validvedges?deviceId=' + vbond)}
-            missing = {s: n for s, n in valid.items() if s not in onbond}
-            log('      vManage valid={} | vBond co={} | thieu: {}\n'.format(
-                len(valid), len(onbond), ', '.join(sorted(str(n) for n in missing.values())) or 'khong'), 'info')
-            if not missing:
-                rec('W-1', 'whitelist', 'missing', vbond, 0, '', True)
-            elif not opts.get('push'):
-                rec('W-1', 'whitelist', 'missing', vbond, len(missing), 'bat "Tu day lai" de sua', False)
-            else:
-                log('  [W] Day whitelist tu vManage (Send to Controllers)...\n', 'info')
-                t0 = time.time()
-                vm.post('certificate/vedge/list?action=push', {})
-                pending = {str(n) for n in missing.values()}
-                while pending and time.time() - t0 < REJOIN_TIMEOUT and not stop.is_set():
-                    stop.wait(10)
-                    try:
-                        up = {d.get('host-name') for d in vm.devices() if d.get('reachability') == 'reachable'}
-                    except VManageError as ex:          # vManage ban (503) ngay sau push -> doi tiep
-                        log('      (doi vManage: {})\n'.format(str(ex)[:120]), 'info')
-                        continue
-                    for n in sorted(pending & up):
-                        log('      {} reachable sau {:.0f}s\n'.format(n, time.time() - t0), 'ok')
-                    pending -= up
-                rec('W-1', 'whitelist', 'rejoin_s', vbond, round(time.time() - t0, 1),
-                    'chua len: ' + ','.join(sorted(pending)) if pending else '', not pending)
-
-    if 'CP' in groups:
-        log('  [CP] Route OMP 10.1.0.0/16 tren vEdge chi nhanh (PREFER-VE1)...\n', 'info')
-        for sid in (200, 300, 400):
-            for e in sorted(SITE_VEDGES[sid]):
-                try:
-                    routes = {r.get('originator'): r.get('status', '')
-                              for r in vm.rows('device/omp/routes/received?deviceId=' + e)
-                              if r.get('prefix') == '10.1.0.0/16'}
-                except VManageError as ex:
-                    rec('CP-1', 'PREFER-VE1', 'status', VEDGE_NAMES[e], '-', str(ex)[:80], False)
-                    continue
-                ve1, ve2 = routes.get('10.200.100.1', ''), routes.get('10.200.100.2', '')
-                rec('CP-1', 'PREFER-VE1', 'status', VEDGE_NAMES[e], 've1=[{}] ve2=[{}]'.format(ve1 or '-', ve2 or '-'),
-                    '', 'C' in ve1 and 'C' not in ve2)
-
-    if 'CNT' in groups and not stop.is_set():
-        edges = sorted(ip for sid, d in SITE_VEDGES.items() for ip in d)
-        win = opts['window']
-        log('  [CNT] Chup counter data-policy / app-route tren {} vEdge, cho {} s...\n'.format(len(edges), win), 'info')
-        log('        (trong luc cho, tao traffic THAT tu PC chi nhanh: telnet {} / ssh {} / ping lien site)\n'.format(
-            opts['farm'], opts['dmz']), 'info')
-        before = _snapshot(vm, edges)
-        if not before:
-            log('      [!] Khong doc duoc counter nao (vSmart chua day policy?).\n', 'err')
-        t0 = time.time()
-        while time.time() - t0 < win and not stop.is_set():
-            ctx._set_status('Doc counter policy {:.0f}/{}s'.format(time.time() - t0, win), True)
-            stop.wait(1)
-        after = _snapshot(vm, edges)
-        agg = {}
-        for k, v in after.items():
-            dv = v - before.get(k, 0)
-            a = agg.setdefault((k[1], k[2]), [0, []])
-            a[0] += max(dv, 0)
-            if dv > 0:
-                a[1].append('{}+{}'.format(VEDGE_NAMES.get(k[0], k[0]), dv))
-        for (pol, cnt), (total, parts) in sorted(agg.items()):
-            rec('CNT', pol, cnt, 'all', total, ' '.join(parts), None if total == 0 else True)
-
-    if not rows:
-        log('=' * 55 + '\n\n', 'sep')
-        return
-    path = os.path.join(LOG_DIR, 'policy_{}.csv'.format(datetime.now().strftime('%Y%m%d_%H%M%S')))
-    with open(path, 'w', newline='', encoding='utf-8') as f:
-        w = csv.DictWriter(f, fieldnames=POLICY_COLS)
-        w.writeheader()
-        w.writerows(rows)
-    log('  [OK] CSV: {}\n'.format(path), 'ok')
-    cnt = [r for r in rows if r['test_id'] == 'CNT' and r['value']]
-    if HAS_MPL and cnt:
-        png = path[:-4] + '.png'
-        ChartEngine.bar_chart(['{} {}'.format(r['policy'], r['check']) for r in cnt], [r['value'] for r in cnt],
-                              'Counter chinh sach SD-WAN tang trong {} s'.format(opts['window']), 'goi', png,
-                              horiz=True, color=GREEN)
-        log('  [OK] PNG: {}\n'.format(png), 'ok')
-    log('=' * 55 + '\n\n', 'sep')
-
-
-# =========================================================
-#  KIEM CHUNG VLAN / SUBNET MOI (khong cau hinh Core-SW)
-# =========================================================
-def vlan_verify_job(ctx, vm, opts):
-    """Nguoi quan tri tu tao VLAN/SVI tren Core-SW. Tool tu cac vEdge chi nhanh:
-    (1) xem OMP co route phu subnet do khong, (2) nping toi gateway moi theo chu ky cho den
-    khi thong -> thoi gian hoi tu, (3) traceroute de thay duong di qua vEdge."""
-    log, stop = ctx._log, ctx._stop_event
-    net, gw = opts['net'], opts['gw']
-    log('\n' + '=' * 55 + '\n', 'sep')
-    log('[VLAN] Kiem chung subnet {} (gateway {}) tu cac chi nhanh\n'.format(net, gw), 'hdr')
-    home = site_of_ip(gw)
-    srcs = [ip for sid in opts['sites'] for ip in site_vedges(sid, vm)[:1]]
-    if not srcs:
-        log('  [!] Khong co vEdge nguon.\n', 'err')
-        return
-    rows = []
-    for e in srcs:
-        name = VEDGE_NAMES.get(e, e)
-        try:
-            cover = []
-            for r in vm.rows('device/omp/routes/received?deviceId=' + e):
-                try:
-                    p = ipaddress.ip_network(r.get('prefix', ''), strict=False)
-                except ValueError:
-                    continue
-                if net.subnet_of(p) and 'C' in str(r.get('status', '')):
-                    cover.append((p.prefixlen, str(p), VEDGE_NAMES.get(r.get('originator'), r.get('originator'))))
-            cover.sort(reverse=True)
-            if cover:
-                log('  [OMP] {}: route {} tu {}\n'.format(name, cover[0][1], ', '.join(sorted({c[2] for c in cover
-                    if c[1] == cover[0][1]}))), 'ok')
-            else:
-                log('  [OMP] {}: KHONG co route OMP nao phu {}\n'.format(name, net), 'err')
-            rows.append({'vedge': name, 'omp': cover[0][1] if cover else '', 'reach_s': None})
-        except VManageError as ex:
-            log('  [OMP] {}: loi {}\n'.format(name, ex), 'err')
-            rows.append({'vedge': name, 'omp': '', 'reach_s': None})
-    log('  [*] Ping {} tu {} moi {} s, toi da {} s (tao VLAN tren Core-SW ngay bay gio neu chua tao)...\n'.format(
-        gw, ', '.join(r['vedge'] for r in rows), opts['interval'], opts['timeout']), 'info')
-    t0 = time.time()
-    pending = dict(zip(srcs, rows))
-    while pending and time.time() - t0 < opts['timeout'] and not stop.is_set():
-        for e, row in list(pending.items()):
-            try:
-                r = vedge_ping(vm, e, gw, 2)
-            except VManageError as ex:
-                log('    {} loi: {}\n'.format(row['vedge'], str(ex)[:100]), 'err')
-                continue
-            if r.success:
-                row['reach_s'] = round(time.time() - t0, 1)
-                row['rtt'] = round(r.avg_latency, 2)
-                log('    {} -> {} THONG sau {} s ({:.2f} ms)\n'.format(row['vedge'], gw, row['reach_s'], r.avg_latency), 'ok')
-                pending.pop(e)
-        ctx._set_status('Kiem chung VLAN {:.0f}/{}s'.format(time.time() - t0, opts['timeout']), True)
-        if pending:
-            stop.wait(opts['interval'])
-    for e, row in pending.items():
-        log('    {} -> {} CHUA THONG sau {} s\n'.format(row['vedge'], gw, opts['timeout']), 'err')
-    if opts.get('trace') and srcs and not stop.is_set():
-        e = srcs[0]
-        log('  [TRACE] {} -> {}\n'.format(VEDGE_NAMES.get(e, e), gw), 'info')
-        try:
-            for l in vedge_traceroute(vm, e, gw):
-                log('      {}\n'.format(l), 'data')
-        except VManageError as ex:
-            log('      loi: {}\n'.format(ex), 'err')
-    path = os.path.join(LOG_DIR, 'vlan_verify.csv')
-    new = not os.path.exists(path)
-    with open(path, 'a', newline='', encoding='utf-8') as f:
-        w = csv.writer(f)
-        if new:
-            w.writerow(['timestamp', 'subnet', 'gateway', 'home_site', 'vedge', 'omp_route', 'reach_s', 'rtt_ms'])
-        ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        for row in rows:
-            w.writerow([ts, str(net), gw, home, row['vedge'], row['omp'],
-                        '' if row['reach_s'] is None else row['reach_s'], row.get('rtt', '')])
-    log('  [OK] CSV: {}\n'.format(path), 'ok')
-    log('=' * 55 + '\n\n', 'sep')
