@@ -47,6 +47,8 @@ Nguyên tắc minh bạch: Tailscale và mọi đường truy cập đặt **tro
 
 ## Bước 3: Tailscale trong VM (đường truy cập riêng, minh bạch)
 
+**Trạng thái 25/10/2026: ĐÃ XONG.** Cài trong VM (không cài lên ESXi), `tailscale up --hostname=eve-sdwan-lab --accept-dns=false` và người dùng tự đăng nhập bằng link (không cần auth key) → `100.86.110.39`. Chưa bật subnet router. Thêm người khác (Hào): dùng **Share** máy `eve-sdwan-lab` trong admin console (người nhận dùng tài khoản riêng, chỉ thấy VM này). Nhớ **Disable key expiry** cho VM.
+
 ### Khái niệm (vì sao độc lập với VPN chung)
 
 - Tailscale **không** phải VPN tập trung kiểu nhiều người chui vào một cổng. Nó là mạng riêng (tailnet) gắn với **tài khoản Tailscale của người dùng**. Mỗi máy (laptop người dùng, VM EVE) **tự gọi RA Internet** tới máy điều phối Tailscale, rồi bắt tay **trực tiếp (peer-to-peer)** với nhau (WireGuard, mã hoá đầu-cuối). Khi đã vào tailnet, người dùng gõ thẳng IP Tailscale `100.x.x.x` của VM là tới — **không cần bật VPN dùng chung**. VPN chung bị quản lý tắt/xoá cũng không ảnh hưởng đường này.

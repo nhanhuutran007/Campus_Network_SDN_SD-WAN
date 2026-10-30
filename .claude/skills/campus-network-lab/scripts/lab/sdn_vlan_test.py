@@ -16,7 +16,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "host2-sync"))
-from eve import client  # noqa: E402
+from eve import client, PORT_BASE  # noqa: E402
 
 CTL = os.environ.get("SDN_CTL", "http://10.215.28.71:8080")
 REPO = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", ".."))
@@ -57,7 +57,7 @@ class Lab(object):
                                   % (data, CTL, path)) or "null")
 
     def console(self, node, lines, quiet=1.5):
-        ch = self.c.get_transport().open_channel("direct-tcpip", ("127.0.0.1", 33536 + node), ("127.0.0.1", 0))
+        ch = self.c.get_transport().open_channel("direct-tcpip", ("127.0.0.1", PORT_BASE + node), ("127.0.0.1", 0))
         ch.settimeout(0.2)
         ch.send("\r")
         out = drain(ch, 1.5, 8)
@@ -75,7 +75,7 @@ class Lab(object):
 
 
 def vpc(lab, node, cmds):
-    ch = lab.c.get_transport().open_channel("direct-tcpip", ("127.0.0.1", 33536 + node), ("127.0.0.1", 0))
+    ch = lab.c.get_transport().open_channel("direct-tcpip", ("127.0.0.1", PORT_BASE + node), ("127.0.0.1", 0))
     ch.settimeout(0.2)
     ch.send("\r")
     drain(ch, 1, 5)

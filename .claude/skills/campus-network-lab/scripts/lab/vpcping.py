@@ -1,7 +1,8 @@
 """vpcping.py <vpc_id> <target> <count> <tap[,tap]|none> <cut_at_s> <hold_s> : CHAY TREN HOST 1 (eve.py put roi python3). VPCS ping -i 100 (data plane, khong qua controller) trong khi ha tap that; in so goi mat + cac chuoi mat lien tiep."""
 import socket,sys,time,threading,subprocess,re
 vid,tgt,cnt,tap,cut_at,hold=int(sys.argv[1]),sys.argv[2],int(sys.argv[3]),sys.argv[4],float(sys.argv[5]),float(sys.argv[6])
-s=socket.create_connection(("127.0.0.1",33536+vid),5); s.settimeout(0.3)
+PORT_BASE=int(__import__("os").environ.get("PORT_BASE","32768"))
+s=socket.create_connection(("127.0.0.1",PORT_BASE+vid),5); s.settimeout(0.3)
 def drain(t):
     b=b"";end=time.time()+t
     while time.time()<end:

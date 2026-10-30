@@ -4,7 +4,7 @@ INV inverts letter case (Caps Lock flips on every VNC connect); CTRLC sends Ctrl
 PASS:<tag> types the password of the credentials-file row containing <tag> (eg PASS:node 9)."""
 import os, sys, socket, threading, select, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "host2-sync"))
-from eve import client, password
+from eve import client, password, PORT_BASE
 
 node, out = int(sys.argv[1]), sys.argv[2]
 args = sys.argv[3:]
@@ -18,7 +18,7 @@ lport = srv.getsockname()[1]
 
 def pump():
     c, _ = srv.accept()
-    ch = tr.open_channel("direct-tcpip", ("127.0.0.1", 33536 + node), ("127.0.0.1", 0))
+    ch = tr.open_channel("direct-tcpip", ("127.0.0.1", PORT_BASE + node), ("127.0.0.1", 0))
     while True:
         r, _, _ = select.select([c, ch], [], [], 120)
         if not r:

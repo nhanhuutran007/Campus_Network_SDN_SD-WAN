@@ -3,7 +3,13 @@ Password is read from the local credentials file at runtime, never printed."""
 import os, re, sys, paramiko
 
 CRED = os.path.expanduser(r"~/.claude/campus-lab-credentials.md")
-HOSTS = {"h1": ("10.215.28.26", "EVE host 1"), "h2": ("10.0.227.112", "EVE host 2")}
+HOSTS = {"h1": ("10.215.28.26", "EVE host 1"), "h2": ("10.0.227.112", "EVE host 2"),
+         "h3": ("100.86.110.39", "SDWAN_LAB")}  # Tailscale IP; LAN 10.215.26.50 (EVE_H3=... to override)
+TENANT = {"h1": 6, "h2": 0, "h3": 0}
+# The lab now runs on the new ESXi VM (h3): every script that calls client("h1") goes there.
+# EVE_TARGET=h1 only when the user explicitly asks to touch host 1 (host-sync scripts need it too).
+TARGET = os.environ.get("EVE_TARGET", "h3")
+PORT_BASE = 32768 + 128 * TENANT[TARGET]  # console port = PORT_BASE + node id
 
 
 def password(tag):
@@ -15,6 +21,8 @@ def password(tag):
 
 
 def client(h):
+    if h == "h1":
+        h = TARGET
     ip, tag = HOSTS[h]
     ip = os.environ.get("EVE_" + h.upper(), ip)
     c = paramiko.SSHClient()

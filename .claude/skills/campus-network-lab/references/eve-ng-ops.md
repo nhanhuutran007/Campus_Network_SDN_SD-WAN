@@ -40,7 +40,7 @@ Quy tắc:
 
 ## Chiều đồng bộ và deploy
 
-**Host 1 là nguồn chuẩn.** Đồng bộ **một chiều host 1 → repo**. Cấm đẩy ngược `.unl`/config từ repo lên host 1 khi người dùng chưa cho phép rõ ràng.
+**Từ 25/10/2026 lab triển khai trên server ESXi mới `EVE-NG SDWAN_LAB`, truy cập qua IP Tailscale `100.86.110.39`** (LAN `10.215.26.50`, tenant 0); server này là nguồn chuẩn, đồng bộ một chiều server → repo. **Không đụng host 1 (10.215.28.26) hay host 2 — kể cả SSH chỉ đọc — trừ khi người dùng yêu cầu.** Cấm đẩy ngược `.unl`/config từ repo lên server khi người dùng chưa cho phép rõ ràng. (Phần dưới viết cho host 1 tenant 6; trên server mới: tenant 0, console = 32768 + id, `/opt/unetlab/tmp/0/…`.)
 
 Khi người dùng CÓ yêu cầu Repo → EVE:
 1. Xác nhận host, lab path, tenant, node-id ở môi trường hiện tại.

@@ -1,7 +1,7 @@
 """rd.py <id> ios|vedge "cmd;;cmd" -> console commands on host1 (IOS: enable + terminal length 0; vEdge: login admin, paginate false, exit afterwards)"""
 import os, sys, time, re
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "host2-sync"))
-from eve import client, password
+from eve import client, password, PORT_BASE
 def drain(ch, quiet=2, limit=30):
     buf=""; t0=time.time(); last=time.time()
     while time.time()-t0<limit:
@@ -13,7 +13,7 @@ def drain(ch, quiet=2, limit=30):
         time.sleep(0.1)
     return buf
 nid,kind=int(sys.argv[1]),sys.argv[2]; cmds=sys.argv[3].split(";;")
-s=client("h1"); ch=s.get_transport().open_channel("direct-tcpip",("127.0.0.1",33536+nid),("127.0.0.1",0)); ch.settimeout(0.3)
+s=client("h1"); ch=s.get_transport().open_channel("direct-tcpip",("127.0.0.1",PORT_BASE+nid),("127.0.0.1",0)); ch.settimeout(0.3)
 ch.send("\r"); o=drain(ch,2,10); last=o.strip().splitlines()[-1] if o.strip() else ""
 print("PROMPT:",repr(last))
 if kind=="ios":

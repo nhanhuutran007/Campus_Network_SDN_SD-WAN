@@ -4,12 +4,12 @@ Steps: click:X,Y  dclick:X,Y  key:ctrl-l (vncdotool key names, '-' joins combos)
 Example: vncui.py 73 click:218,585 wait:5 key:ctrl-l "type:http://10.1.99.10:8080/" key:enter wait:8 shot:out.png"""
 import os, sys, socket, threading, select, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "host2-sync"))
-from eve import client
+from eve import client, PORT_BASE
 node = int(sys.argv[1])
 s = client("h1"); tr = s.get_transport()
 srv = socket.socket(); srv.bind(("127.0.0.1", 0)); srv.listen(1); lport = srv.getsockname()[1]
 def pump():
-    c, _ = srv.accept(); ch = tr.open_channel("direct-tcpip", ("127.0.0.1", 33536 + node), ("127.0.0.1", 0))
+    c, _ = srv.accept(); ch = tr.open_channel("direct-tcpip", ("127.0.0.1", PORT_BASE + node), ("127.0.0.1", 0))
     while True:
         r, _, _ = select.select([c, ch], [], [], 900)
         if not r: break

@@ -16,7 +16,7 @@ fi
 # Firewall ens6 (LAN that, 10/2026): REST/GUI Ryu 8080 (ofctl_rest sua duoc flow)
 # va ONOS 8181/8101 KHONG xac thuc -> chi host EVE (CAMPUS_ADMIN_SRC) duoc vao.
 # ens3 (VLAN 99: OVS, PC-Management) khong bi anh huong. Idempotent.
-CAMPUS_ADMIN_SRC="${CAMPUS_ADMIN_SRC:-10.215.28.26}"
+CAMPUS_ADMIN_SRC="${CAMPUS_ADMIN_SRC:-10.215.28.26,10.215.26.50}"  # host 1, server ESXi moi
 if command -v iptables >/dev/null 2>&1; then
     iptables -N CAMPUS_ENS6 2>/dev/null || iptables -F CAMPUS_ENS6
     iptables -A CAMPUS_ENS6 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT

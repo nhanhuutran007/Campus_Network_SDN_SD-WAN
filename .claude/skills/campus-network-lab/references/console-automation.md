@@ -69,6 +69,7 @@ Bảng lệnh kiểm tra nhanh: IOL `show vlan brief` / `show ip route` / `show 
 
 Các node Linux OVS/Windows dùng VNC; SSH tới OVS và node 9 **đóng**. Đường duy nhất là VNC (hoặc serial của node 9), đã rút ra:
 
+- **Chọn server**: mặc định (`EVE_TARGET=h3`) mọi script gọi `client("h1")` đi tới server ESXi mới qua Tailscale `100.86.110.39` (tenant 0; `EVE_H3=10.215.26.50` nếu đi LAN/VPN). Chỉ đặt `EVE_TARGET=h1` khi người dùng yêu cầu đụng host 1 (script host2-sync cũng cần). `eve.py` tự tính `PORT_BASE = 32768 + 128*tenant`; `vpcping.py` (chạy trên server) mặc định `PORT_BASE=32768`.
 - **Script dùng lại (`scripts/lab/`, 04/10/2026)** — đều đọc mật khẩu từ file credentials lúc chạy, đi qua SSH host 1 (direct-tcpip tới `127.0.0.1:33536+id`), PC không cần tới thẳng port console:
   - `asa.py <id> "cmd;;cmd" [quiet]` — ASAv (enable bằng mật khẩu, `terminal pager 0`); `rd.py <id> ios|vedge "cmd;;cmd"` — IOS/IOL (enable, `terminal length 0`) hoặc vEdge (đăng nhập admin, `paginate false`, tự `exit`); `vpc.py <id> "cmd;;cmd"` — VPCS. Lệnh cấu hình dùng được (`configure terminal;;…;;end`), nhớ `write memory` riêng.
   - `vnccap.py <id> out.png` — chụp màn hình VNC; `vnccmd.py <id> out.png [login] [INV] "cmd" … [SUDOPASS]` — gõ lệnh vào console VNC rồi chụp (`login` = eve + mật khẩu OVS; `SUDOPASS` = gõ mật khẩu cho prompt sudo, vd `"sudo -s" SUDOPASS`). Xem ảnh xong **xoá ngay**.
