@@ -1,0 +1,18 @@
+[project]
+name = "campus-netops-bot"
+version = "0.1.0"
+description = "ChatOps/MCP chỉ-đọc cho lab Campus Network SDN + SD-WAN (EVE-NG)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "langchain>=0.1.0",
+    "langchain-mistralai>=0.2.10",
+    "langgraph>=0.0.20",
+    "mcp[cli]>=1.6.0",
+    "netmiko>=4.2.0",
+    "paramiko>=3.4",
+    "pynetbox>=7.4",
+    "python-telegram-bot>=21.1",
+    "pydantic>=2.5.0",
+    "python-dotenv>=1.0.0",
+]

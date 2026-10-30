@@ -1,0 +1,27 @@
+manufacturer: Cisco
+model: Cisco IOS
+slug: cisco-ios
+description: ''
+default_platform: null
+part_number: ''
+u_height: 1.0
+is_full_depth: true
+subdevice_role: null
+airflow: null
+weight: null
+weight_unit: null
+comments: ''
+---
+manufacturer: Cisco
+model: Cisco ISR
+slug: cisco-isr
+description: ''
+default_platform: null
+part_number: ''
+u_height: 1.0
+is_full_depth: true
+subdevice_role: null
+airflow: null
+weight: null
+weight_unit: null
+comments: ''

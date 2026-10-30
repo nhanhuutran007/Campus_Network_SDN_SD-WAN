@@ -1,0 +1,3 @@
+Name,Devices,VMs,Color,VM role,Description,ID,Parent,Config template,Slug,Tags,Created,Last updated,Owner Group,Owner,Comments
+Router,1,0,#9e9e9e,True,,2,,,router,,2026-06-19T19:54:20.145379+00:00,2026-06-19T19:54:20.145410+00:00,,,
+SW,2,0,#9e9e9e,True,,1,,,sw,,2026-06-19T19:08:29.503311+00:00,2026-06-19T19:08:29.503344+00:00,,,
