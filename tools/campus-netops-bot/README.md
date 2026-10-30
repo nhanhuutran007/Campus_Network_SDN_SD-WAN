@@ -209,6 +209,22 @@ Ghi chú khi điền `.env` trên Server 2012 R2: Notepad đời này không hi�
 
 Chế độ console EVE (mặc định khi không đặt `NETOPS_TRANSPORT`) giữ lại làm **công cụ ngoài băng của người quản trị lab**, giống console server. NetOps-Server không dùng chế độ này.
 
+### Nhóm 2 (30/10/2026): quản trị chi nhánh qua overlay SD-WAN
+
+NetOps-Server (10.1.90.10, Site 100) SSH thẳng tới 12 thiết bị chi nhánh. Đường đi: FW-ASAv (inside → outside, không NAT) → vEdge Site 100 → VPN 1 overlay → vEdge chi nhánh → Brand-FW → VLAN 99.
+
+| Thiết bị | IP quản trị | Cấu hình đã thêm (live, `write memory`, đã đồng bộ `configs/`) |
+|---|---|---|
+| Brand-FW-S200/300/400 | `10.x.1.1` (outside1), dự phòng `10.x.1.5` (outside2) | user `netops` (mật khẩu dòng `netops FW`), `aaa authentication ssh console LOCAL`, `aaa authorization exec LOCAL auto-enable`, `ssh 10.1.90.10`/`10.1.99.50` trên outside1+2, khoá RSA 2048 |
+| SwitchBrand-S200/300/400 | `10.x.99.2` | `ip domain-name`, RSA 2048, `ip ssh version 2`, user `netops`, ACL vty `NETOPS_MGMT`, `ip route 0.0.0.0 0.0.0.0 10.x.99.1` |
+| SW-S200-1/2, SW-S300-1/2, SW-S400-1/2 | `10.x.99.11` / `.12` | như SwitchBrand |
+
+- **Vì sao SSH Brand-FW vào `outside1` mà không vào `10.x.99.1`:** ASA chỉ nhận quản trị vào IP của **chính cổng** gói đi vào. Gói từ Site 100 vào qua outside1 (route về 10/8 cũng đi outside1). Khi vEdge1 hỏng, bot tự thử `outside2`.
+- **Bẫy ASA 9.20:** user mới tạo, hoặc vừa bị admin đặt lại mật khẩu bằng CLI, sẽ bị bắt đổi mật khẩu ở lần SSH đầu. Phải SSH tay một lần (từ SwitchBrand cùng site, nới tạm `ssh … vlan99` + kex sha1 vì SSH client IOL cũ) rồi đặt lại đúng mật khẩu. Bot gặp màn này sẽ dừng và báo, không tự đổi.
+- **Bài chẩn đoán `/diag site 200|300|400`:** SD-WAN (2 vEdge qua vManage) → WAN Brand-FW (`show track`, SLA tới vEdge1/vEdge2) → gateway Brand-FW → trunk SwitchBrand → uplink từng SW truy cập → dhcpd → lease. Mất cả 2 vEdge thì dừng ngay, không SSH vô ích.
+- **Phát hiện đầu tiên (30/10):** uplink SW-S400-1/2 đang trunk do DTP tự thoả thuận (`auto`/`n-802.1q`), chưa cấu hình tường minh như thiết kế, nên bài chẩn đoán báo ⚠️.
+- Selftest trên node 72: **23/23 ĐẠT** (SSH 17 thiết bị, Telegram, LLM, Ryu, vManage).
+
 ## Luồng chạy và đường vào lab (chế độ console — công cụ quản trị lab)
 
 ```
@@ -253,7 +269,7 @@ File credentials (`CAMPUS_CRED_FILE`) là bảng Markdown `| thiết bị | tài
 ## Chạy
 
 ```bash
-python -m unittest discover -s tests -v                          # kiểm thử offline (48 test)
+python -m unittest discover -s tests -v                          # kiểm thử offline (71 test)
 python scripts/smoke_console.py vEdge1-S300 "show bfd sessions"  # thử live một lệnh, không cần LLM
 python main.py                                                   # chat trên terminal
 python telegram_bot.py                                           # Telegram ChatOps
@@ -261,7 +277,7 @@ npx @modelcontextprotocol/inspector python mcp_cisco_server.py   # MCP Inspector
 python scripts/export_netbox.py                                  # CSV import NetBox (không có mật khẩu)
 ```
 
-Lệnh Telegram: `/devices 300`, `/show Core-SW1 show vrrp brief`, `/ping vEdge1-S300 100.64.30.2 0`, `/diag vEdge2-S200`, `/diag dhcp 300`, `/diag sdn`, `/alarms 24`, `/health`, `/sdn`, `/flows Dist-SW1`, `/change`, `/changes`, `/undo`, `/compliance`, `/backup`, `/drift`. Lần đầu nhắn `/start`, bot sẽ trả về `chat_id` để bạn điền vào `.env`.
+Lệnh Telegram: `/devices 300`, `/show Core-SW1 show vrrp brief`, `/ping vEdge1-S300 100.64.30.2 0`, `/diag vEdge2-S200`, `/diag dhcp 300`, `/diag site 300`, `/diag sdn`, `/alarms 24`, `/health`, `/sdn`, `/flows Dist-SW1`, `/change`, `/changes`, `/undo`, `/compliance`, `/backup`, `/drift`. Lần đầu nhắn `/start`, bot sẽ trả về `chat_id` để bạn điền vào `.env`.
 
 Bot cần đi tới server EVE (`EVE_HOST`): IP Tailscale `100.86.110.39` hoặc LAN `10.215.26.50`. Muốn chạy 24/7 thì đặt bot trên chính VM EVE, hoặc một máy trong tailnet có Internet để gọi Telegram/LLM.
 

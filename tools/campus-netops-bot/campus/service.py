@@ -275,6 +275,39 @@ def diagnose_dhcp(site: str) -> Result:
                          "chẩn đoán vEdge-S500).")
 
 
+BRANCH_ACCESS = {"200": ("SW-S200-1", "SW-S200-2"), "300": ("SW-S300-1", "SW-S300-2"),
+                 "400": ("SW-S400-1", "SW-S400-2")}
+
+
+def diagnose_branch(site: str) -> Result:
+    """Sức khoẻ một chi nhánh từ Site 100 qua overlay: SD-WAN (vManage) → WAN Brand-FW → gateway → L2 → DHCP."""
+    s = site.strip().upper().removeprefix("SITE").strip()
+    if s not in BRANCH:
+        return Result(False, "Chẩn đoán chi nhánh hỗ trợ site 200, 300, 400.")
+    fw, sw = BRANCH[s]
+    a1, a2 = BRANCH_ACCESS[s]
+    title = f"Chẩn đoán chi nhánh Site {s} qua SD-WAN (vManage → Brand-FW → SwitchBrand → SW truy cập → DHCP)"
+    steps = [
+        ("WAN Brand-FW (track SLA)", fw, "show track", dg.asa_tracks),
+        ("L3 Gateway Brand-FW", fw, "show interface ip brief", dg.asa_gateways(s)),
+        ("L2 Trunk SwitchBrand", sw, "show interfaces trunk", dg.ios_trunk),
+        (f"L2 Uplink {a1}", a1, "show interfaces trunk", dg.trunk(f"L2 Uplink {a1}")),
+        (f"L2 Uplink {a2}", a2, "show interfaces trunk", dg.trunk(f"L2 Uplink {a2}")),
+        ("Dịch vụ: dhcpd", fw, "show dhcpd state", dg.asa_dhcpd_state),
+        ("Ứng dụng: lease", fw, "show dhcpd binding", dg.asa_dhcpd_binding),
+    ]
+    try:
+        edges = dg.sdwan_edges(s, vmanage().devices())
+    except (LabApiError, CredentialError) as e:
+        edges = dg.Check("SD-WAN: 2 vEdge (vManage)", dg.WARN, f"không đọc được vManage: {str(e)[:80]}")
+    if edges.status == dg.FAIL:
+        # mất cả hai vEdge thì mọi thiết bị phía sau đều không SSH tới được — dừng ở lớp overlay
+        return Result(True, dg.Report(title, dg.stop_after_fail([edges], [x[0] for x in steps])).render())
+    rep = _execute(title, steps)
+    rep.checks = [edges] + rep.checks
+    return Result(True, rep.render())
+
+
 def sdn_health() -> Result:
     try:
         return Result(True, dg.sdn_report(ryu().health()).render())
@@ -336,7 +369,7 @@ def vmanage_alarms(hours: int = 1) -> Result:
 
 
 def diagnose(target: str) -> Result:
-    """Chọn bài chẩn đoán theo đích: 'sdn', 'fw', 'dhcp 200' / 'site 300', hoặc tên vEdge."""
+    """Chọn bài chẩn đoán theo đích: 'sdn', 'fw', 'dhcp 200', 'site 300' / 'branch 300' (chi nhánh), hoặc tên vEdge."""
     t = target.strip().lower()
     if t in ("sdn", "ryu", "ovs"):
         return sdn_health()
@@ -345,6 +378,9 @@ def diagnose(target: str) -> Result:
     dev = inventory.resolve(target)
     if dev and dev.platform == "asa" and dev.site == "100":
         return diagnose_fw(dev.name)
+    m = re.match(r"^(?:site|branch|chi nhánh|cn)\s*([234]00)$", t)
+    if m:
+        return diagnose_branch(m.group(1))
     m = re.match(r"^(?:dhcp|site)\s*(\d{3})$", t)
     if m:
         return diagnose_dhcp(m.group(1))

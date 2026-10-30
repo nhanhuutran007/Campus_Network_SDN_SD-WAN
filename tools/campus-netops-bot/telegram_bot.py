@@ -3,7 +3,7 @@
 Chỉ chat_id trong TELEGRAM_ALLOWED_CHAT_IDS được dùng bot.
 Lệnh trực tiếp (không qua LLM):
   /devices [site]        /show <thiết bị> <lệnh show>     /ping <thiết bị> <đích> [vpn]
-  /diag <vEdge|fw|sdn|dhcp 100>   /dhcp [scope]   /alarms [giờ]   /health   /sdn   /flows <OVS>
+  /diag <vEdge|fw|sdn|dhcp 100|site 200>   /dhcp [scope]   /alarms [giờ]   /health   /sdn   /flows <OVS>
   /change <thiết bị> + các dòng lệnh   /approve /cancel /undo <id>   /changes
   /compliance [site|thiết bị]   /backup [site|thiết bị]   /drift <thiết bị>
 Tin nhắn thường → LangGraph agent.
@@ -94,6 +94,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/show &lt;thiết bị&gt; &lt;lệnh show&gt;\n"
         "/ping &lt;thiết bị&gt; &lt;đích&gt; [vpn]\n"
         "/diag &lt;vEdge | fw | sdn | dhcp 100&gt; — chẩn đoán theo lớp (vEdge qua vManage API)\n"
+        "/diag site 200|300|400 — sức khoẻ chi nhánh qua SD-WAN (vEdge → Brand-FW → switch → DHCP)\n"
         "/dhcp [scope] — scope/lease trên DHCP-Server, vd /dhcp 10.1.10.0\n"
         "/alarms [giờ] — alarm vManage (đã lọc cpu/memory)\n"
         "/health — vManage + SDN tổng quan\n"
@@ -133,7 +134,7 @@ async def diag(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not allowed(update):
         return
     if not context.args:
-        await update.message.reply_text("Cú pháp: /diag vEdge1-S300 | /diag sdn | /diag dhcp 200")
+        await update.message.reply_text("Cú pháp: /diag vEdge1-S300 | /diag sdn | /diag fw | /diag dhcp 200 | /diag site 300")
         return
     await _run(update, "🩺 Đang chẩn đoán theo lớp...", service.diagnose, " ".join(context.args))
 

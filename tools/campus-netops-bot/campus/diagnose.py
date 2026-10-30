@@ -43,7 +43,7 @@ class Report:
         if first:
             out.append(f"\nKết luận: lỗi đầu tiên ở lớp **{first.layer}** — xử lý lớp này trước, các lớp sau phụ thuộc vào nó.")
         elif self.status == WARN:
-            out.append("\nKết luận: hoạt động nhưng có cảnh báo (mất dự phòng).")
+            out.append("\nKết luận: hoạt động nhưng có cảnh báo (mất dự phòng hoặc lệch thiết kế) — xem các dòng ⚠️.")
         else:
             out.append("\nKết luận: mọi lớp đều bình thường.")
         return "\n".join(out)
@@ -160,10 +160,17 @@ def run_layers(title: str, outputs: list[str], steps) -> Report:
 
 # ------------------------------------------------------------------ DHCP chi nhánh (Brand-FW)
 def ios_trunk(out: str) -> Check:
-    rows = re.findall(r"^(\S+)\s+on\s+802\.1q\s+(trunking)", out, re.M | re.I)
+    # "on 802.1q" = cấu hình tường minh; "auto/desirable n-802.1q" = DTP tự thoả thuận (vẫn chạy, lệch thiết kế)
+    rows = re.findall(r"^(\S+)\s+(on|auto|desirable)\s+(n-)?802\.1q\s+trunking", out, re.M | re.I)
     if not rows:
         return Check("L2 Trunk SwitchBrand", FAIL, "không có cổng trunk 802.1q", out.splitlines()[:6],
                      "IOL: `switchport trunk encapsulation dot1q` phải đứng TRƯỚC `switchport mode trunk`.")
+    dtp = [r[0] for r in rows if r[1].lower() != "on"]
+    if dtp:
+        return Check("L2 Trunk SwitchBrand", WARN, f"trunk {', '.join(r[0] for r in rows)} — {', '.join(dtp)} do DTP "
+                     "tự thoả thuận", [l for l in out.splitlines() if "trunking" in l and l.split()[0] in dtp][:4],
+                     "Thiết kế yêu cầu trunk tường minh: `switchport trunk encapsulation dot1q` + `switchport mode trunk` "
+                     "(+ `switchport nonegotiate`) ở cả hai đầu.")
     return Check("L2 Trunk SwitchBrand", OK, "trunk: " + ", ".join(r[0] for r in rows))
 
 
@@ -197,6 +204,58 @@ def asa_dhcpd_binding(out: str) -> Check:
         return Check("Ứng dụng: lease", WARN, "chưa có lease nào", [],
                      "dhcpd bật mà không có lease → PC chưa xin (VPCS: `ip dhcp`) hoặc VLAN access sai trên SW.")
     return Check("Ứng dụng: lease", OK, f"{len(leases)} lease: " + ", ".join(l[0] for l in leases[:6]))
+
+
+# ------------------------------------------------------------------ Chi nhánh qua SD-WAN (nhóm 2)
+def sdwan_edges(site: str, rows: list[dict]) -> Check:
+    """Hai vEdge của site theo vManage: cả hai mất = chi nhánh mất overlay; mất một = mất dự phòng."""
+    layer = "SD-WAN: 2 vEdge (vManage)"
+    edges = [r for r in rows if str(r.get("site-id")) == site and r.get("host-name", "").lower().startswith("vedge")]
+    if not edges:
+        return Check(layer, FAIL, f"vManage không có vEdge nào site-id {site}", [],
+                     "vEdge chưa onboard hoặc sai `system site-id`.")
+    ev = [f"{r.get('host-name')} {r.get('system-ip')} {r.get('reachability')} BFD "
+          f"{r.get('bfdSessionsUp', '?')}/{r.get('bfdSessions', '?')}" for r in edges]
+    up = [r for r in edges if r.get("reachability") == "reachable"]
+    if not up:
+        return Check(layer, FAIL, f"0/{len(edges)} vEdge reachable — chi nhánh mất overlay", ev,
+                     "Chẩn đoán từng vEdge: /diag vEdge1-S" + site + " (lớp WAN/BGP/control).")
+    bfd_down = [r for r in up if str(r.get("bfdSessionsUp")) in ("0", "None")]
+    if len(up) < len(edges) or bfd_down:
+        return Check(layer, WARN, f"{len(up)}/{len(edges)} vEdge reachable"
+                     + (f", {len(bfd_down)} vEdge không có BFD up" if bfd_down else "") + " — mất dự phòng", ev,
+                     "Chi nhánh còn chạy trên một vEdge; chẩn đoán vEdge lỗi bằng /diag <tên vEdge>.")
+    return Check(layer, OK, "; ".join(ev))
+
+
+TRACK_WAN = {"1": "outside1 → vEdge1", "2": "outside2 → vEdge2"}
+
+
+def asa_tracks(out: str) -> Check:
+    """`show track` của Brand-FW: track 1/2 (SLA monitor) quyết định route qua vEdge1/vEdge2."""
+    layer = "WAN Brand-FW (track SLA)"
+    rows = re.findall(r"^Track (\d+)\s*\n(?:.*\n)*?\s*Reachability is (Up|Down)", out, re.M)
+    if not rows:
+        return Check(layer, FAIL, "không có track SLA", out.splitlines()[:6],
+                     "Brand-FW cần `sla monitor` + `track` cho 2 đường WAN (route ... track 1/2).")
+    ev = [f"track {n} ({TRACK_WAN.get(n, '?')}): {st}" for n, st in rows]
+    down = [n for n, st in rows if st != "Up"]
+    if len(down) == len(rows):
+        return Check(layer, FAIL, "mọi đường WAN của Brand-FW đều Down", ev,
+                     "Kiểm link Brand-FW ↔ vEdge (outside1/outside2) và vEdge có route tới đích SLA.")
+    if down:
+        return Check(layer, WARN, f"{len(down)}/{len(rows)} đường WAN Down — đang chạy đường còn lại", ev,
+                     "Route có `track` đã tự chuyển; kiểm vEdge phía đường Down.")
+    return Check(layer, OK, ", ".join(ev))
+
+
+def trunk(layer: str):
+    """ios_trunk với tên lớp riêng (dùng cho từng switch truy cập)."""
+    def parse(out: str) -> Check:
+        c = ios_trunk(out)
+        c.layer = layer
+        return c
+    return parse
 
 
 # ------------------------------------------------------------------ DHCP Site 100 (Core + relay)

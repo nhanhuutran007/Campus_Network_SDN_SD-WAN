@@ -5,9 +5,10 @@
 **Mô phỏng hạ tầng mạng đại học đa cơ sở trên EVE-NG — Campus LAN do SDN điều khiển, kết nối liên chi nhánh bằng SD-WAN overlay**
 
 ![Platform](https://img.shields.io/badge/Platform-EVE--NG-blue)
-![SDN](https://img.shields.io/badge/SDN-Ryu%20%7C%20ONOS%20%7C%20OpenFlow%201.3-green)
+![SDN](https://img.shields.io/badge/SDN-Ryu%20%7C%20OpenFlow%201.3-green)
 ![SD-WAN](https://img.shields.io/badge/SD--WAN-Cisco%20Viptela%2020.10-orange)
 ![Security](https://img.shields.io/badge/Security-Cisco%20ASAv%20HA-red)
+![NetOps](https://img.shields.io/badge/NetOps-Telegram%20ChatOps%20%2B%20AI-blueviolet)
 ![Status](https://img.shields.io/badge/Status-%C4%90ang%20ho%C3%A0n%20thi%E1%BB%87n-yellow)
 
 </div>
@@ -40,6 +41,7 @@ Hạ tầng mạng của trường đại học phải phục vụ đồng thờ
 - **Campus chính (Site 100)** theo mô hình 3 lớp Core – Distribution – Access; lớp Distribution/Access là **Open vSwitch do SDN Controller điều khiển** qua OpenFlow 1.3.
 - **3 chi nhánh** (Cần Thơ, Đà Nẵng, Nha Trang) theo mô hình *Firewall-as-Core* gọn nhẹ.
 - **SD-WAN Cisco Viptela** kết nối các cơ sở qua 2 đường truyền **Internet** và **MPLS**, có SLA, định tuyến theo ứng dụng (AAR) và chính sách dữ liệu tập trung.
+- **Campus NetOps Bot**: vận hành mạng qua Telegram (ChatOps) với AI agent, quản trị in-band thiết bị Site 100 và chi nhánh qua overlay SD-WAN.
 
 ### Mục tiêu
 
@@ -48,6 +50,7 @@ Hạ tầng mạng của trường đại học phải phục vụ đồng thờ
 3. Quản lý tập trung lớp chuyển mạch Campus bằng SDN Controller.
 4. Kết nối đa cơ sở bằng SD-WAN overlay mã hoá IPsec, chọn đường theo SLA.
 5. Kiểm thử chức năng: DHCP, định tuyến liên VLAN và liên site, failover, dịch vụ nội bộ.
+6. Tự động hoá vận hành: chẩn đoán theo lớp, cảnh báo chủ động, thay đổi cấu hình có duyệt và tự rollback.
 
 ### Phạm vi
 
@@ -59,14 +62,15 @@ Hạ tầng mạng của trường đại học phải phục vụ đồng thờ
 
 | Nhóm | Tính năng |
 |---|---|
-| **SDN Campus** | Ryu (OpenFlow 1.3) điều khiển 6 OVS: học MAC theo VLAN, chống vòng L2 bằng cây chuyển tiếp do controller tính (OVS không chạy STP), tự chuyển sang đường dự phòng khi một Distribution switch hỏng |
-| **Giám sát SDN** | App NOC trên Ryu thu PortStats (băng thông, tắc nghẽn, REST `/noc/*`, dashboard); ONOS 2.7 chạy song song làm GUI topology |
+| **SDN Campus** | Ryu (OpenFlow 1.3) điều khiển 6 OVS: học MAC theo VLAN, chống vòng L2 bằng cây chuyển tiếp do controller tính (OVS không chạy STP), tự chuyển sang đường dự phòng khi một Distribution switch hỏng; **fast-failover trên data plane** (BFD + OpenFlow group FAST_FAILOVER) cho uplink Access, mất 1 uplink chỉ mất 1–2 gói |
+| **Giám sát SDN** | Campus SDN Console trên Ryu: topology, đo tải (PortStats/TableStats, CPU Core qua SNMP), tab Sức khoẻ và Kịch bản kiểm thử S1–S6 tự chạy |
 | **SD-WAN** | vManage / vSmart / vBond, 9 vEdge, 2 màu TLOC (`biz-internet`, `mpls`), BFD full-mesh, service VPN 1, SLA class + AAR + data policy |
 | **Underlay WAN** | eBGP giữa vEdge và nhà cung cấp (Internet AS 64511, MPLS AS 64512) |
 | **Dự phòng** | VRRP trên Core-SW1/2, ASAv Active/Standby failover, 2 vEdge và 2 transport mỗi site, Access dual-home lên 2 Distribution |
 | **Bảo mật** | ASAv phân vùng inside/DMZ/Server Farm, OSPF Area 0 giữa FW và Core, VLAN quản trị 99 tách biệt, ASDM |
 | **Dịch vụ** | DHCP (Windows Server 2012 R2 + relay), DNS `campus.internal`, Web HTTPS (Nginx), Mail (hMailServer), Syslog (Kiwi) |
-| **Công cụ** | `scripts/campus_ping_tool.py`: đo latency/loss/jitter, batch report, kiểm thử failover SD-WAN và quản lý VLAN tự động |
+| **Công cụ đo** | `scripts/campus_ping_tool.py`, `campus_web.py`, `sdwan_reliability.py`: đo latency/loss/jitter/throughput, so sánh Campus chính với chi nhánh, RTO/PRR khi failover, availability |
+| **NetOps / ChatOps** | Bot Telegram chạy trong topo (DHCP-Server Site 100): `/diag` chẩn đoán theo lớp (vEdge qua vManage API, FW HA, SDN, DHCP, cả chi nhánh), cảnh báo vManage/Ryu, `/change` có duyệt + tự rollback, `/compliance`, `/backup`, `/drift`; hỏi đáp tự nhiên qua LLM (LangGraph) — chi tiết [`tools/campus-netops-bot/`](tools/campus-netops-bot/README.md) |
 
 ---
 
@@ -93,8 +97,8 @@ flowchart TB
         CORE["Core-SW1 / Core-SW2<br/>VRRP · OSPF"]
         DIST["Dist-SW1 / Dist-SW2<br/>OVS"]
         ACC["Access-SW1..4<br/>OVS"]
-        CTRL["SDN Controller<br/>Ryu + ONOS"]
-        SRV["Server Farm / DMZ"]
+        CTRL["SDN Controller<br/>Ryu"]
+        SRV["Server Farm / DMZ<br/>NetOps Bot"]
         VE100 --- FW --- CORE --- DIST --- ACC
         CORE --- SRV
         CTRL -. OpenFlow .- DIST
@@ -111,6 +115,7 @@ flowchart TB
     VE100 === INET & MPLS
     VEB === INET & MPLS
     S900 --- INET & MPLS
+    SRV -. SSH in-band qua overlay .- BFW
 ```
 
 ### Các site
@@ -121,7 +126,7 @@ flowchart TB
 | **200** | Chi nhánh Cần Thơ | Brand-FW (ASAv), SwitchBrand, SW55/56, 2 vEdge |
 | **300** | Chi nhánh Đà Nẵng | Brand-FW (ASAv), SwitchBrand, SW58/59, 2 vEdge |
 | **400** | Chi nhánh Nha Trang | Brand-FW (ASAv), SwitchBrand, SW57/60, 2 vEdge |
-| **500** | Chi nhánh mới (đang triển khai) | vEdge65, SW-S500, VPC11/12 — WAN Internet + MPLS, AS 65040 |
+| **500** | Chi nhánh mới | vEdge Site 500 (đã lên fabric), SW-S500, VPC11/12 — WAN Internet + MPLS, AS 65040; LAN đang triển khai |
 | **900** | SD-WAN Controllers | vManage, vSmart, vBond, Switch32 (LAN controller) |
 | **SP** | Nhà cung cấp | Router Internet, router MPLS |
 
@@ -131,7 +136,7 @@ Campus chính và chi nhánh cố ý dùng hai kiến trúc khác nhau. Campus c
 
 ## Quy hoạch địa chỉ
 
-**Quy ước:** `10.<site>.<vlan>.0/24`, trong đó octet thứ hai là site (1 = Campus chính, 2 = Cần Thơ, 3 = Đà Nẵng, 4 = Nha Trang, 9 = Controller). Gateway luôn là `.1`, máy chủ dùng `.10`/`.11`, DHCP cấp dải `.100–.199`.
+**Quy ước:** `10.<site>.<vlan>.0/24`, trong đó octet thứ hai là site (1 = Campus chính, 2 = Cần Thơ, 3 = Đà Nẵng, 4 = Nha Trang, 5 = Site 500, 9 = Controller). Gateway luôn là `.1`, máy chủ dùng `.10`/`.11`, DHCP cấp dải `.100–.199`.
 
 ### Campus chính (Site 100)
 
@@ -153,7 +158,7 @@ Campus chính và chi nhánh cố ý dùng hai kiến trúc khác nhau. Campus c
 | 300 Đà Nẵng | 80 Du lịch, 90 Tài chính | `10.3.80.0/24`, `10.3.90.0/24` |
 | 400 Nha Trang | 50 Thủy sản, 60 Lữ hành | `10.4.50.0/24`, `10.4.60.0/24` |
 
-Mỗi chi nhánh có thêm VLAN 99 để quản trị.
+Mỗi chi nhánh có thêm VLAN 99 để quản trị (`10.<site>.99.0/24`: Brand-FW `.1`, SwitchBrand `.2`, switch phòng ban `.11`/`.12`), quản trị in-band từ Site 100 qua overlay SD-WAN.
 
 ### WAN và SD-WAN
 
@@ -161,9 +166,9 @@ Mỗi chi nhánh có thêm VLAN 99 để quản trị.
 |---|---|
 | Transport Internet | `203.0.113.0/24` (màu `biz-internet`) |
 | Transport MPLS | `100.64.x.x/30` (màu `mpls`) |
-| System-IP vEdge | `10.200.<site>.x` (site 300/400/900 dùng octet `30`/`40`/`90`) |
+| System-IP vEdge | `10.200.<site>.x` (site 300/400/500/900 dùng octet `30`/`40`/`50`/`90`) |
 | Controller LAN | `10.9.0.0/24`: vManage `.10`, vSmart `.11`, vBond `.12` |
-| BGP ASN | Internet 64511, MPLS 64512; Site 100/200/300/400 = 65000/65010/65020/65030 |
+| BGP ASN | Internet 64511, MPLS 64512; Site 100/200/300/400/500 = 65000/65010/65020/65030/65040 |
 
 Bảng đầy đủ nằm trong [`campus_network_sdn_sdwan.md`](campus_network_sdn_sdwan.md) và [`configs/README.md`](configs/README.md).
 
@@ -174,7 +179,7 @@ Bảng đầy đủ nằm trong [`campus_network_sdn_sdwan.md`](campus_network_s
 | Thành phần | Công nghệ / phiên bản |
 |---|---|
 | Nền tảng mô phỏng | EVE-NG |
-| SDN Controller | Ryu (OpenFlow 1.3), ONOS 2.7.0 |
+| SDN Controller | Ryu (OpenFlow 1.3); ONOS 2.7.0 đã thử chạy song song rồi dừng (làm controller khựng) |
 | Switch SDN | Open vSwitch trên Ubuntu |
 | SD-WAN | Cisco Viptela 20.10.1 (vManage, vSmart, vBond, vEdge) |
 | Firewall | Cisco ASAv (failover Active/Standby, ASDM 7.20) |
@@ -182,6 +187,7 @@ Bảng đầy đủ nằm trong [`campus_network_sdn_sdwan.md`](campus_network_s
 | Giao thức | OSPF Area 0, eBGP, VRRP, 802.1Q, OMP, BFD, IPsec, DTLS |
 | Dịch vụ | Windows Server 2012 R2 (DHCP, DNS), Nginx, hMailServer, Kiwi Syslog |
 | Công cụ & tài liệu | Python 3 (Tkinter, matplotlib, paramiko), Bash, systemd, LaTeX |
+| NetOps Bot | Python 3.11, python-telegram-bot, LangGraph + LangChain, Paramiko (SSH in-band), REST vManage/Ryu, LLM qua API chuẩn OpenAI (OpenRouter; đổi được sang Google AI Studio) |
 
 ---
 
@@ -205,8 +211,12 @@ Bảng đầy đủ nằm trong [`campus_network_sdn_sdwan.md`](campus_network_s
 │   ├── campus_web.py                 #   giao diện web giám sát (dùng web/index.html)
 │   ├── campus_throughput.py          #   đo throughput
 │   ├── sdwan_monitor.py              #   đọc API vManage
+│   ├── sdwan_reliability.py          #   độ tin cậy SD-WAN: RTO/PRR failover, availability
 │   ├── sdwan_onboard.py, sdwan_certsign.py, sdwan_autosign_check.py  # onboard/ký cert vEdge
 │   └── sdn_controller_startup.sh     #   script khởi động SDN Controller
+├── tools/
+│   └── campus-netops-bot/            # NetOps Bot: Telegram ChatOps + AI agent, chẩn đoán, thay đổi có duyệt,
+│                                     #   bộ cài offline cho Windows Server (chạy trên DHCP-Server Site 100)
 ├── web/                              # Giao diện của campus_web.py
 ├── log/                              # Kết quả đo (CSV/PNG/JSON), log/sdn-eval: số liệu đánh giá SDN
 ├── docs/
@@ -219,6 +229,7 @@ Bảng đầy đủ nằm trong [`campus_network_sdn_sdwan.md`](campus_network_s
 └── baocao/
     ├── cuoi-ky/                      # Báo cáo đồ án cuối kỳ (LaTeX)
     ├── giua-ky/                      # Báo cáo giữa kỳ (LaTeX)
+    ├── baocao-tuan/                  # Báo cáo tiến độ tuần (LaTeX + PDF)
     └── slide-tuan/                   # Slide báo cáo tiến độ hằng tuần
 ```
 
@@ -251,8 +262,9 @@ pip install matplotlib paramiko numpy
    1. Service Provider (Internet, MPLS) → Switch32/Switch61 → vManage, vSmart, vBond → các vEdge.
    2. Site 100: Core-SW1/2 → FW-ASAv → Server Farm/DMZ → SDN Controller → Dist/Access → PC.
    3. Chi nhánh: Brand-FW → SwitchBrand/SW → PC.
-4. **SDN:** controller chạy `campus-ryu.service` (OpenFlow `6653`, REST `8080`) và ONOS (`6654`, GUI `8181`). OVS tự khôi phục cấu hình qua `campus-ovs-restore.service`.
+4. **SDN:** controller chạy `campus-ryu.service` (OpenFlow `6653`, REST + Campus SDN Console `8080`). OVS tự khôi phục cấu hình qua `campus-ovs-restore.service`.
 5. **SD-WAN:** onboard vEdge (CSR → ký cert → whitelist trên cả 3 controller) theo [`docs/huong-dan/cách ký và add vedge.md`](docs/huong-dan/cách%20ký%20và%20add%20vedge.md).
+6. **NetOps Bot (tuỳ chọn):** đóng gói bằng `tools/campus-netops-bot/scripts/build_windows_bundle.py`, chép vào `C:\netops` trên DHCP-Server, điền `.env` (token Telegram, API key LLM), chạy `install.ps1`, kiểm bằng `scripts/selftest.py`. Thiết bị cần user `netops` + SSH in-band (đã có trong `configs/`). Chi tiết [`tools/campus-netops-bot/README.md`](tools/campus-netops-bot/README.md).
 
 ---
 
@@ -268,6 +280,8 @@ pip install matplotlib paramiko numpy
 | Liên site | Ping VPC giữa Site 200/300/400 | Thông qua overlay |
 | Failover WAN | `scripts/campus_ping_tool.py` → SD-WAN Failover Test | Đo RTO khi tắt một màu WAN |
 | Dịch vụ | `https://www.campus.internal`, gửi/nhận mail | Truy cập được từ PC các site |
+| Độ tin cậy SD-WAN | `scripts/sdwan_reliability.py` | RTO/PRR khi cắt vEdge (24/10: RTO trung bình 7,96 s), availability từng site |
+| NetOps Bot | `scripts\selftest.py` trên DHCP-Server; `/diag site 300` trên Telegram | Selftest đạt hết (30/10: 23/23); chẩn đoán dừng ở lớp lỗi đầu tiên kèm bằng chứng |
 
 ---
 
@@ -275,14 +289,16 @@ pip install matplotlib paramiko numpy
 
 - [x] Thiết kế topology, quy hoạch IP/VLAN/ASN
 - [x] Core IOL, FW-ASAv HA + ASDM, OSPF FW ↔ Core, DMZ, Server Farm
-- [x] SDN Campus: Ryu điều khiển 6 OVS, chống vòng L2, failover, tự khôi phục sau reboot
+- [x] SDN Campus: Ryu điều khiển 6 OVS, chống vòng L2, failover, tự khôi phục sau reboot, fast-failover data plane, Campus SDN Console
 - [x] DHCP Campus end-to-end qua relay
-- [x] ONOS chạy song song Ryu làm GUI và giám sát
 - [x] SD-WAN: 3 controller, PKI, vEdge onboard, BGP underlay, BFD full-mesh
 - [x] Service VPN 1, SLA/AAR/data policy, liên thông chi nhánh
-- [x] Dịch vụ Web / Mail / DNS / Syslog
-- [ ] Ma trận kiểm thử tích hợp đầy đủ (FW failover, mất controller, cold-start toàn lab)
-- [ ] Hoàn thiện báo cáo, slide và video demo
+- [x] Dịch vụ Web / Mail / DNS / Syslog; Internet có kiểm soát cho 4 site
+- [x] Đo hiệu năng và độ tin cậy: so sánh Campus chính ↔ chi nhánh, RTO/PRR failover SD-WAN, 5 mục tiêu SDN
+- [x] Campus NetOps Bot: ChatOps Telegram + AI agent, chẩn đoán theo lớp, thay đổi có duyệt + rollback, quản trị in-band Site 100 và chi nhánh
+- [ ] Site 500: LAN (switch + PC)
+- [ ] Ma trận kiểm thử tích hợp đầy đủ (FW failover, cắt 1 màu WAN xem AAR, mất controller, cold-start toàn lab)
+- [ ] Hoàn thiện báo cáo cuối kỳ, slide và video demo (đã có báo cáo giữa kỳ + báo cáo tuần)
 
 Chi tiết xem [`docs/tien-do/BangTheoDoiTienDo.md`](docs/tien-do/BangTheoDoiTienDo.md).
 
@@ -295,6 +311,8 @@ Chi tiết xem [`docs/tien-do/BangTheoDoiTienDo.md`](docs/tien-do/BangTheoDoiTie
 | [`campus_network_sdn_sdwan.md`](campus_network_sdn_sdwan.md) | Thiết kế chi tiết, bảng IP/VLAN/link |
 | [`configs/README.md`](configs/README.md) | Ánh xạ node-id, cách nạp config, thứ tự khởi động |
 | [`configs/01-Site100-Campus/README_NOC.md`](configs/01-Site100-Campus/README_NOC.md) | App giám sát NOC trên Ryu |
+| [`tools/campus-netops-bot/README.md`](tools/campus-netops-bot/README.md) | NetOps Bot: kiến trúc, lệnh Telegram, triển khai trên DHCP-Server, quản trị chi nhánh qua SD-WAN |
+| [`docs/tien-do/BangTheoDoiTienDo.md`](docs/tien-do/BangTheoDoiTienDo.md) | Bảng theo dõi tiến độ (cập nhật 30/10/2026) |
 | [`docs/huong-dan/Giai_thich_Tunnel_SD-WAN.md`](docs/huong-dan/Giai_thich_Tunnel_SD-WAN.md) | Cơ chế tunnel, TLOC, BFD trong SD-WAN |
 | [`docs/huong-dan/`](docs/huong-dan/) | Hướng dẫn cài OVS, ký cert vEdge, xem GUI vManage |
 | [`baocao/cuoi-ky/main.pdf`](baocao/cuoi-ky/main.pdf) | Báo cáo đồ án |

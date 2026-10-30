@@ -9,7 +9,7 @@
 | Tài liệu thiết kế (nguồn sự thật cho báo cáo) | `campus_network_sdn_sdwan.md` | Mermaid topo 1.1–1.6, bảng IP 2.0–2.5, VLAN/DHCP 2.4, SDN 2.7 |
 | Báo cáo LaTeX | `baocao/cuoi-ky/` (`main.tex`, `content/Chapter1–5.tex`, `config/preamble.tex`, `tailieuthamkhao.bib`, `appendix.tex`) | `pdflatex` + `babel[vietnamese]` (MiKTeX); Chương 3 (mô hình đề xuất) lớn nhất, Chương 4 triển khai/kiểm thử/đánh giá, Chương 5 kết luận |
 | Slide báo cáo tiến độ | `baocao/slide-tuan/` (`report.tex`/`report.pdf`, kịch bản `kich-ban-thuyet-trinh.md`) | `SlideTrinhBayDA/` cũ đã bị người dùng xoá 03/10/2026 — không tạo lại |
-| Bảng theo dõi tiến độ | `docs/tien-do/BangTheoDoiTienDo.md` (20 hạng mục, cập nhật tới 05/09/2026) + `docs/tien-do/Template_Timeline_Tong_quan_08-08_den_21-11-2026.xlsx` | Cột "nhóm tự điền" (4) **để trống có chủ đích** — không điền thay |
+| Bảng theo dõi tiến độ | `docs/tien-do/BangTheoDoiTienDo.md` (21 hạng mục — thêm #21 NetOps Bot; cập nhật tới 30/10/2026) + `docs/tien-do/Template_Timeline_Tong_quan_08-08_den_21-11-2026.xlsx` | Cột "nhóm tự điền" (4) **để trống có chủ đích** — không điền thay |
 | Giải thích tunnel SD-WAN | `docs/huong-dan/Giai_thich_Tunnel_SD-WAN.md` | Tài liệu giải thích cho phần lý thuyết |
 | Hướng dẫn vận hành | `docs/huong-dan/` | Ryu/OVS, ký/add vEdge, phục hồi vEdge S100, xem GUI vManager |
 | README/đề tài | `README.md`, `docs/de-tai/detai.md` | Tổng quan đề tài, người thực hiện |

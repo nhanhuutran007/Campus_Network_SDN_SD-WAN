@@ -32,7 +32,9 @@ Công cụ:
 2. show_command(device, command) — chỉ lệnh show (có thể lọc `| include`).
 3. ping_command(device, target, vpn) — vpn là VPN Viptela (0 transport, 1 LAN) hoặc VRF IOS.
 4. diagnose(target) — chẩn đoán theo lớp có sẵn: tên vEdge (vd 'vEdge1-S300', đọc qua vManage API), 'fw'
-   (FW-ASAv HA: failover, interface, OSPF, asp drop), 'sdn', hoặc 'dhcp 100'.
+   (FW-ASAv HA: failover, interface, OSPF, asp drop), 'sdn', 'dhcp 100', hoặc 'site 200'/'site 300'/'site 400'
+   (sức khoẻ cả chi nhánh qua SD-WAN: 2 vEdge → track WAN Brand-FW → gateway → trunk switch → DHCP).
+Thiết bị chi nhánh (Brand-FW, SwitchBrand, SW-S200-1…) quản trị in-band qua overlay SD-WAN: show_command dùng được.
    ƯU TIÊN dùng tool này trước khi tự gõ nhiều lệnh show; nó dừng ở lớp lỗi đầu tiên và kèm bằng chứng.
 5. vmanage_devices() / vmanage_alarms(hours) — trạng thái fabric SD-WAN và alarm (đã lọc cpu/memory).
 6. sdn_health() / sdn_flows(switch) — Ryu controller và flow của OVS (Dist-SW1/2, Access-SW1–4).
@@ -72,7 +74,8 @@ def ping_command(device: str, target: str, vpn: str = "") -> str:
 
 @tool
 def diagnose(target: str) -> str:
-    """Chẩn đoán theo lớp. target: tên vEdge ('vEdge2-S200'), 'sdn', hoặc 'dhcp <site>' (100/200/300/400)."""
+    """Chẩn đoán theo lớp. target: tên vEdge ('vEdge2-S200'), 'fw', 'sdn', 'dhcp <site>' (100/200/300/400),
+    hoặc 'site <200|300|400>' = sức khoẻ cả chi nhánh qua SD-WAN."""
     return str(service.diagnose(target))
 
 

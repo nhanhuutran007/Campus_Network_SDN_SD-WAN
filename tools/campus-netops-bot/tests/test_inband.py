@@ -22,7 +22,10 @@ class TestInband(unittest.TestCase):
 
     def test_scope_is_only_devices_with_mgmt_ip(self):
         scoped = sorted(d.name for d in inventory.DEVICES if service.in_scope(d))
-        self.assertEqual(scoped, ["Core-SW1", "Core-SW2", "FW-ASAv-Active", "FW-ASAv-Standby", "SwitchServerFarm"])
+        branch = [f"{p}-S{s}" for s in (200, 300, 400) for p in ("Brand-FW", "SwitchBrand")] + \
+                 [f"SW-S{s}-{i}" for s in (200, 300, 400) for i in (1, 2)]
+        self.assertEqual(scoped, sorted(["Core-SW1", "Core-SW2", "FW-ASAv-Active", "FW-ASAv-Standby",
+                                         "SwitchServerFarm"] + branch))     # nhóm 2: chi nhánh qua SD-WAN
         self.assertIsInstance(service.console(), SshTransport)
 
     def test_out_of_scope_is_refused_without_network(self):

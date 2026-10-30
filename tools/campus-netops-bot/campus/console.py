@@ -324,13 +324,20 @@ class SshTransport:
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
             user, pw = self.creds.get(self.fw_cred_tag if device.platform == "asa" else self.cred_tag)
-            try:
-                client.connect(device.mgmt_ip, username=user, password=pw, timeout=15, banner_timeout=20,
-                               auth_timeout=20, look_for_keys=False, allow_agent=False)
-            except paramiko.AuthenticationException:
-                raise ConsoleError(f"SSH {device.name} ({device.mgmt_ip}): sai tài khoản netops.") from None
-            except Exception as e:
-                raise ConsoleError(f"SSH {device.name} ({device.mgmt_ip}) không kết nối được: {type(e).__name__}") from None
+            # IP chính rồi IP dự phòng (Brand-FW: outside2 khi đường vEdge1 hỏng); sai mật khẩu thì dừng ngay
+            ips = [ip for ip in (device.mgmt_ip, device.mgmt_alt) if ip]
+            errors = []
+            for ip in ips:
+                try:
+                    client.connect(ip, username=user, password=pw, timeout=15, banner_timeout=20,
+                                   auth_timeout=20, look_for_keys=False, allow_agent=False)
+                    break
+                except paramiko.AuthenticationException:
+                    raise ConsoleError(f"SSH {device.name} ({ip}): sai tài khoản netops.") from None
+                except Exception as e:
+                    errors.append(f"{ip}: {type(e).__name__}")
+            else:
+                raise ConsoleError(f"SSH {device.name} không kết nối được ({'; '.join(errors)})")
             ch = client.invoke_shell(width=511, height=0)
             ch.settimeout(0.3)
             s = Session(ch, device, self.creds)

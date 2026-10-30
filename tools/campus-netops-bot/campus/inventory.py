@@ -30,6 +30,7 @@ class Device:
     aliases: tuple = field(default_factory=tuple)
     note: str = ""
     mgmt_ip: str = ""           # IP quản trị in-band (SSH từ NetOps-Server); rỗng = ngoài phạm vi SSH
+    mgmt_alt: str = ""          # IP dự phòng khi đường chính không tới được (Brand-FW: outside2 qua vEdge2)
 
     @property
     def managed(self) -> bool:
@@ -67,18 +68,20 @@ DEVICES: list[Device] = [
     _D("Syslog-Server", 25, "100", "server", "windows", "", "Syslog-Server"),
     _D("PC-Management", 73, "100", "pc", "windows", "", "PC-Management"),
     # --- Site 200 Cần Thơ / 300 Đà Nẵng / 400 Nha Trang ---
-    _D("Brand-FW-S200", 37, "200", "firewall", "asa", FW, "Brand-FW"),
-    _D("Brand-FW-S300", 39, "300", "firewall", "asa", FW, "Brand-FW"),
-    _D("Brand-FW-S400", 38, "400", "firewall", "asa", FW, "Brand-FW"),
-    _D("SwitchBrand-S200", 63, "200", "switch", "ios", "", "SwitchBrand"),
-    _D("SwitchBrand-S300", 62, "300", "switch", "ios", "", "SwitchBrand"),
-    _D("SwitchBrand-S400", 75, "400", "switch", "ios", "", "SwitchBrand"),   # server 25/10: id 75 (repo .unl cũ: 64)
-    _D("SW-S200-1", 55, "200", "switch", "ios", "", "SW"),
-    _D("SW-S200-2", 56, "200", "switch", "ios", "", "SW"),
-    _D("SW-S300-1", 58, "300", "switch", "ios", "", "SW"),
-    _D("SW-S300-2", 59, "300", "switch", "ios", "", "SW"),
-    _D("SW-S400-1", 57, "400", "switch", "ios", "", "SW"),
-    _D("SW-S400-2", 60, "400", "switch", "ios", "", "SW"),
+    # Nhóm 2 (30/10): quản trị in-band qua overlay SD-WAN (VPN 1). Brand-FW: SSH vào outside1 (route về 10/8 đi
+    # outside1 → vEdge1, ASA trả gói quản trị ra đúng cổng nhận) và outside2 dự phòng; switch: SVI VLAN 99.
+    _D("Brand-FW-S200", 37, "200", "firewall", "asa", FW, "Brand-FW", mgmt_ip="10.2.1.1", mgmt_alt="10.2.1.5"),
+    _D("Brand-FW-S300", 39, "300", "firewall", "asa", FW, "Brand-FW", mgmt_ip="10.3.1.1", mgmt_alt="10.3.1.5"),
+    _D("Brand-FW-S400", 38, "400", "firewall", "asa", FW, "Brand-FW", mgmt_ip="10.4.1.1", mgmt_alt="10.4.1.5"),
+    _D("SwitchBrand-S200", 63, "200", "switch", "ios", "", "SwitchBrand", mgmt_ip="10.2.99.2"),
+    _D("SwitchBrand-S300", 62, "300", "switch", "ios", "", "SwitchBrand", mgmt_ip="10.3.99.2"),
+    _D("SwitchBrand-S400", 75, "400", "switch", "ios", "", "SwitchBrand", mgmt_ip="10.4.99.2"),   # server 25/10: id 75 (repo .unl cũ: 64)
+    _D("SW-S200-1", 55, "200", "switch", "ios", "", "SW", mgmt_ip="10.2.99.11"),
+    _D("SW-S200-2", 56, "200", "switch", "ios", "", "SW", mgmt_ip="10.2.99.12"),
+    _D("SW-S300-1", 58, "300", "switch", "ios", "", "SW", mgmt_ip="10.3.99.11"),
+    _D("SW-S300-2", 59, "300", "switch", "ios", "", "SW", mgmt_ip="10.3.99.12"),
+    _D("SW-S400-1", 57, "400", "switch", "ios", "", "SW", mgmt_ip="10.4.99.12"),
+    _D("SW-S400-2", 60, "400", "switch", "ios", "", "SW", mgmt_ip="10.4.99.11"),
     _D("vEdge1-S200", 29, "200", "vedge", "viptela", VEBR, "vEdge1"),
     _D("vEdge2-S200", 42, "200", "vedge", "viptela", VEBR, "vEdge2"),
     _D("vEdge1-S300", 30, "300", "vedge", "viptela", VEBR, "vEdge1"),
