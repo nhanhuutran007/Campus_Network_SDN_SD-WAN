@@ -19,7 +19,7 @@ Tuần tới là tuần cuối của giai đoạn kiểm thử tích hợp (hạ
         \hline
         3 & Đo lại tuyến LAN Site 100 theo cách đo mới; đo độ sẵn sàng đủ nhiều ngày & 04/11--08/11 & Bảng so sánh đủ 5/5 tuyến; availability, MTTR, MTBF \\
         \hline
-        4 & Site 500: nối switch và máy trạm, cấp DHCP, thêm vào chính sách SD-WAN & 05/11--07/11 & Máy trạm Site 500 nhận IP, thông với Campus chính \\
+        4 & Site 500: kiểm thử tích hợp như ba chi nhánh (Web/Mail/DNS, Internet), đưa vào NetOps Bot & 05/11--07/11 & Biên bản kiểm thử Site 500 ĐẠT \\
         \hline
         5 & NetOps Bot: rollback cho ASA; kịch bản demo sửa trunk Site 400 bằng \texttt{/change}; kịch bản demo chẩn đoán khi cắt link & 02/11--07/11 & Kịch bản demo chạy được từ đầu đến cuối trên Telegram \\
         \hline
@@ -34,4 +34,4 @@ Tuần tới là tuần cuối của giai đoạn kiểm thử tích hợp (hạ
 
 \subsection{Kết luận tuần}
 
-Trong tuần \tuanbaocao, nhóm đã có bộ số liệu SD-WAN đầu tiên (failover link WAN, so sánh hiệu năng Campus chính -- chi nhánh), kiểm thử tích hợp đạt cho toàn bộ hệ thống 70 thiết bị, và sửa hai lỗi định tuyến làm mất Internet. Kết quả nổi bật là Campus NetOps Bot: chạy trong topology, quản trị in-band cả Campus chính lẫn ba chi nhánh qua overlay SD-WAN, chẩn đoán theo lớp, thay đổi cấu hình có duyệt và tự rollback, đạt selftest 23/23. Các việc chậm so với kế hoạch (failover firewall, đo lặp SD-WAN đủ số lần, Site 500 LAN, báo cáo cuối kỳ) được đưa lên đầu kế hoạch tuần tới và vẫn nằm trong khung thời gian trước hạn kiểm thử 10/11.
+Trong tuần \tuanbaocao, nhóm đã có bộ số liệu SD-WAN đầu tiên (failover link WAN, so sánh hiệu năng Campus chính -- chi nhánh), kiểm thử tích hợp đạt cho toàn bộ hệ thống 70 thiết bị, và sửa hai lỗi định tuyến làm mất Internet. Kết quả nổi bật là Campus NetOps Bot: chạy trong topology, quản trị in-band cả Campus chính lẫn ba chi nhánh qua overlay SD-WAN, chẩn đoán theo lớp, thay đổi cấu hình có duyệt và tự rollback, đạt selftest 23/23. Các việc chậm so với kế hoạch (failover firewall, đo lặp SD-WAN đủ số lần, báo cáo cuối kỳ) được đưa lên đầu kế hoạch tuần tới và vẫn nằm trong khung thời gian trước hạn kiểm thử 10/11.

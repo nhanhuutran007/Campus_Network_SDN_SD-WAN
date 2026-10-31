@@ -45,7 +45,7 @@
 ## Slide 5 — Mục tiêu của tuần và mức độ hoàn thành (≈ 1 phút)
 
 **Nói:**
-> Tuần trước nhóm em đặt ra sáu việc. Kết quả là: **theo dõi vEdge** đã hoàn thành; **đo lặp SD-WAN** và **Site 500** mới làm được một phần — đã có số liệu failover đầu tiên và hai vEdge Site 500 đã lên fabric. Còn **failover firewall**, **fast-failover cho Distribution** và **bản nháp báo cáo cuối kỳ** thì chưa làm.
+> Tuần trước nhóm em đặt ra sáu việc. Kết quả là: **theo dõi vEdge** đã hoàn thành; **Site 500** đã hoàn thành: hai vEdge lên fabric, Brand-FW-S500 làm firewall-as-core, switch SW-S500 và máy trạm nhận IP qua DHCP. **Đo lặp SD-WAN** mới làm được một phần — đã có số liệu failover đầu tiên. Còn **failover firewall**, **fast-failover cho Distribution** và **bản nháp báo cáo cuối kỳ** thì chưa làm.
 >
 > Lý do là trong tuần nhóm em phát sinh thêm ba việc: kiểm thử tích hợp bật toàn bộ 70 node, sửa hai lỗi làm mất Internet phát hiện trong lúc kiểm thử, và xây dựng NetOps Bot. Các việc chưa làm em đã đưa lên đầu kế hoạch tuần tới.
 
@@ -59,7 +59,7 @@
 ## Slide 6 — Tổng quan tiến độ theo hạng mục (≈ 40 giây)
 
 **Nói:**
-> Nhìn tổng thể: phần thiết kế, hạ tầng campus, chi nhánh, SD-WAN và SDN đã hoàn thành. Đang làm có bốn hạng mục: **Site 500** — vEdge xong, còn switch và máy trạm; **kiểm thử tích hợp** — phần chức năng đạt, còn kịch bản sự cố; **NetOps Bot** là hạng mục mới; và **báo cáo, demo**.
+> Nhìn tổng thể: phần thiết kế, hạ tầng campus, chi nhánh, SD-WAN và SDN đã hoàn thành. Site 500 nay cũng đã xong: hai vEdge, Brand-FW-S500, switch và máy trạm nhận DHCP. Đang làm có ba hạng mục: **kiểm thử tích hợp** — phần chức năng đạt, còn kịch bản sự cố; **NetOps Bot** là hạng mục mới; và **báo cáo, demo**.
 
 ---
 
@@ -184,14 +184,14 @@
 ## Slide 16 — Vấn đề còn tồn tại (≈ 45 giây)
 
 **Nói:**
-> Những việc còn tồn tại: chưa kiểm thử sự cố firewall HA, VRRP và cắt một màu WAN; đo lặp SD-WAN mới 2 lần ở một site; Site 500 còn switch, máy trạm và DHCP; SDN khi mất liên kết Distribution–Core vẫn gián đoạn 2 đến 3,7 giây vì chưa có fast-failover cho tầng này; NetOps Bot chưa có rollback cho ASA; và báo cáo cuối kỳ chưa bắt đầu bản nháp.
+> Những việc còn tồn tại: chưa kiểm thử sự cố firewall HA, VRRP và cắt một màu WAN; đo lặp SD-WAN mới 2 lần ở một site; Site 500 đã xong LAN nhưng chưa kiểm thử tích hợp Web, Mail, DNS và Internet như ba chi nhánh; SDN khi mất liên kết Distribution–Core vẫn gián đoạn 2 đến 3,7 giây vì chưa có fast-failover cho tầng này; NetOps Bot chưa có rollback cho ASA; và báo cáo cuối kỳ chưa bắt đầu bản nháp.
 
 ---
 
 ## Slide 17 — Kế hoạch tuần tới 02/11 – 08/11 (≈ 1 phút)
 
 **Nói:**
-> Tuần tới nhóm em ưu tiên kiểm thử sự cố vì hạn kiểm thử tích hợp là 10/11. Cụ thể: một, failover firewall HA và VRRP; hai, cắt một màu WAN xem BFD và AAR chuyển đường, đo lặp failover 3–5 lần mỗi site, đo khôi phục khi mất vSmart; ba, hoàn thiện LAN Site 500; bốn, nếu kịp thì thử fast-failover cho uplink Distribution–Core.
+> Tuần tới nhóm em ưu tiên kiểm thử sự cố vì hạn kiểm thử tích hợp là 10/11. Cụ thể: một, failover firewall HA và VRRP; hai, cắt một màu WAN xem BFD và AAR chuyển đường, đo lặp failover 3–5 lần mỗi site, đo khôi phục khi mất vSmart; ba, kiểm thử tích hợp Site 500 và đưa vào NetOps Bot; bốn, nếu kịp thì thử fast-failover cho uplink Distribution–Core.
 >
 > Phần NetOps và báo cáo: thêm rollback cho ASA và hoàn thiện kịch bản demo sửa trunk Site 400; đo lại tuyến LAN Site 100 theo cách mới; và bắt đầu viết chương kết quả và chương NetOps Bot của báo cáo cuối kỳ.
 

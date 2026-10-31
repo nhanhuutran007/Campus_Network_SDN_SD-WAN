@@ -109,7 +109,7 @@
         \midrule
         Đo lặp SD-WAN: failover link WAN, khôi phục controller, độ sẵn sàng & \partly \\
         Kiểm thử failover cặp FW-ASAv HA và VRRP trên Core & \todo \\
-        Hoàn thiện Site 500 (vEdge, switch, máy trạm, chính sách) & \partly{} (vEdge xong) \\
+        Hoàn thiện Site 500 (vEdge, switch, máy trạm, chính sách) & \done \\
         SDN: fast-failover cho uplink Distribution & \todo \\
         Theo dõi, thu bằng chứng khi vEdge mất kết nối & \done \\
         Đưa số liệu vào bản nháp báo cáo cuối kỳ & \todo \\
@@ -136,7 +136,7 @@
         Chi nhánh 200/300/400   & Brand-FW, DHCP, SwitchBrand, VPC              & \done \\
         SD-WAN                  & Controllers, PKI, vEdge, BFD, chính sách vSmart & \done \\
         SDN campus chính        & Ryu, Console, 5 mục tiêu, fast-failover        & \done \\
-        Site 500                & \textbf{2/2 vEdge lên fabric}; còn switch + máy trạm & \doing \\
+        Site 500                & 2 vEdge, Brand-FW, SW-S500, máy trạm nhận DHCP & \done \\
         Kiểm thử tích hợp       & Chức năng toàn hệ thống ĐẠT; còn kịch bản sự cố & \doing \\
         \textbf{NetOps Bot (mới)} & Telegram + AI agent, quản trị in-band        & \doing \\
         Báo cáo \& demo         & Báo cáo tuần, bảng tiến độ; báo cáo cuối kỳ, slide bảo vệ & \doing \\
@@ -393,7 +393,7 @@
         \begin{itemize}
             \item \textbf{Kiểm thử sự cố:} chưa failover cặp FW-ASAv HA, VRRP; chưa cắt 1 màu WAN để xem BFD/AAR chuyển đường.
             \item \textbf{Đo lặp SD-WAN:} failover link WAN mới 2 lần tại 1 site; chưa đo khôi phục khi mất vSmart.
-            \item \textbf{Site 500:} vEdge đã lên fabric; còn switch, máy trạm và DHCP.
+            \item \textbf{Site 500:} LAN đã xong; chưa kiểm thử tích hợp (Web/Mail/DNS, Internet) như 3 chi nhánh.
             \item \textbf{SDN:} mất liên kết Distribution -- Core vẫn gián đoạn 2--3,7\,s (chưa có fast-failover).
             \item \textbf{NetOps Bot:} chưa có rollback cho ASA; trunk Site 400 chưa sửa (để demo).
             \item \textbf{Báo cáo cuối kỳ:} chưa bắt đầu bản nháp.
@@ -414,7 +414,7 @@
                 \begin{enumerate}
                     \item Failover cặp FW-ASAv HA và VRRP Core-SW1/2: số gói mất, thời gian chuyển và quay về.
                     \item Cắt 1 màu WAN xem BFD/AAR chuyển đường; đo lặp failover 3--5 lần/site; đo khôi phục khi mất vSmart.
-                    \item Site 500: switch, máy trạm, DHCP, thông với Campus chính.
+                    \item Site 500: kiểm thử tích hợp như 3 chi nhánh; đưa vào NetOps Bot.
                     \item SDN: thử fast-failover cho uplink Distribution -- Core (nếu kịp).
                 \end{enumerate}
             \end{block}
