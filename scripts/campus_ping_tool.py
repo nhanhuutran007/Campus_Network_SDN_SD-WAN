@@ -236,6 +236,15 @@ SITES = {
             'Brand-FW-NT':       {'subnet':'10.4.1.0/30', 'gateway':'10.4.1.1', 'hosts':{'BrandFW-NT':'10.4.1.1'}},
         },
     },
+    # 30/10/2026: vEdge1-S500 (MPLS) + vEdge2-S500 (Internet) -> Brand-FW-S500 (ASAv) -> SW-S500.
+    # IP PC la DHCP tu ASA (pool .100-.199) - doi neu ASA cap lai khac.
+    'Site 500 - Campus Test': {
+        'site_id': 500, 'color': PURPLE,
+        'vlans': {
+            'VLAN 10 - User':     {'subnet':'10.5.10.0/24','gateway':'10.5.10.1','hosts':{'VPC11':'10.5.10.100','PC-Linux-S500':'10.5.10.101'}},
+            'Brand-FW-S500':      {'subnet':'10.5.1.0/30', 'gateway':'10.5.1.1', 'hosts':{'BrandFW-S500':'10.5.1.1'}},
+        },
+    },
 }
 
 HOST_IP   = {}
@@ -260,12 +269,15 @@ VPC_NODE_IDS = {
     # Site 200 / 300 / 400
     'PC-NongNghiep-S200-1': 43, 'PC-NongNghiep-S200-2': 44, 'PC-ThuySan-S400-2': 45, 'PC-YTe-S200-2': 46,
     'PC-TaiChinh-S300-2': 48, 'PC-LuHanh-S400-2': 49, 'PC-DuLich-S300-1': 50, 'PC-ThuySan-S400-1': 51, 'PC-DuLich-S300-2': 54,
+    # Site 500
+    'VPC11': 11,
 }
 # PC Linux (Ubuntu 18.04, DHCP) - ten dung nhu tren EVE. Console la Linux can
 # dang nhap, KHONG phai VPCS -> khong dung lam nguon ping VPCS / Failover /
 # Policy; chi la host dich (ping tu host EVE hoac tu VPC khac).
 LINUX_PC_NODE_IDS = {
     'PC-HanhChinh-S100': 18, 'PC-YTe-S200': 47, 'PC-TaiChinh-S300': 53, 'PC-LuHanh-S400': 52,
+    'PC-Linux-S500': 64,      # node "Linux" tren EVE, dia nhan ban tu PC-YTe-S200
 }
 EVE_CONSOLE_BASE = 33536
 
@@ -280,7 +292,7 @@ VEDGE_NODE_IDS = {
     'vEdge1-S200': 29, 'vEdge2-S200': 42,
     'vEdge1-S300': 30, 'vEdge2-S300': 40,
     'vEdge1-S400': 31, 'vEdge2-S400': 41,
-    'vEdge65': 65,
+    'vEdge1-S500': 65, 'vEdge2-S500': 23,     # node 65 = vEdge65 cu, node 23 = vEdge-Test tren EVE
 }
 
 # Interface WAN <-> mau (color) cua tung vEdge, doc truc tiep tu
@@ -296,6 +308,8 @@ WAN_IFACE = {
     'vEdge2-S300': {'biz-internet': 'ge0/0'},
     'vEdge1-S400': {'mpls': 'ge0/0'},
     'vEdge2-S400': {'biz-internet': 'ge0/0'},
+    'vEdge1-S500': {'mpls': 'ge0/1'},
+    'vEdge2-S500': {'biz-internet': 'ge0/0'},
 }
 
 # =========================================================
@@ -317,6 +331,7 @@ SITE_VEDGES = {
     200: {'10.200.200.1': 'vEdge1-S200', '10.200.200.2': 'vEdge2-S200'},
     300: {'10.200.30.1': 'vEdge1-S300', '10.200.30.2': 'vEdge2-S300'},
     400: {'10.200.40.1': 'vEdge1-S400', '10.200.40.2': 'vEdge2-S400'},
+    500: {'10.200.50.1': 'vEdge1-S500', '10.200.50.2': 'vEdge2-S500'},
 }
 
 # IP mat LAN (vpn 1) cua vEdge -> nhan dien hop vEdge trong traceroute
@@ -325,6 +340,7 @@ VEDGE_LAN_IPS = {
     '10.2.1.2': 'vEdge1-S200', '10.2.2.1': 'vEdge1-S200', '10.2.1.6': 'vEdge2-S200', '10.2.2.2': 'vEdge2-S200',
     '10.3.1.2': 'vEdge1-S300', '10.3.2.1': 'vEdge1-S300', '10.3.1.6': 'vEdge2-S300', '10.3.2.2': 'vEdge2-S300',
     '10.4.1.2': 'vEdge1-S400', '10.4.2.1': 'vEdge1-S400', '10.4.1.6': 'vEdge2-S400', '10.4.2.2': 'vEdge2-S400',
+    '10.5.1.2': 'vEdge1-S500', '10.5.1.6': 'vEdge2-S500',     # S500 khong co link vEdge1<->vEdge2
 }
 
 
@@ -2659,7 +2675,7 @@ class VlanTab(tk.Frame):
 POLICY_CSV  = 'case_policy.csv'
 POLICY_COLS = ['timestamp', 'test_id', 'policy', 'test', 'src_host', 'target',
                'check', 'delta', 'detail', 'result']
-IP_SITE = {1: 100, 2: 200, 3: 300, 4: 400}     # octet thu 2 cua 10.X.0.0/16 -> site-id
+IP_SITE = {1: 100, 2: 200, 3: 300, 4: 400, 5: 500}     # octet thu 2 cua 10.X.0.0/16 -> site-id
 VEDGE_REJOIN_TIMEOUT = 150                      # giay cho vEdge len lai sau khi day whitelist
 
 

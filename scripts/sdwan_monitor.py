@@ -450,11 +450,13 @@ LAN_ROUTES = [(100, 'PC-CNTT-S100-1'), (100, 'PC-TTK-S100-1'), (100, 'PC-Luat-S1
               (100, 'WebServer'), (100, 'DHCP-Server'),
               (200, 'PC-NongNghiep-S200-1'), (200, 'PC-YTe-S200'),
               (300, 'PC-DuLich-S300-1'), (300, 'PC-TaiChinh-S300'),
-              (400, 'PC-ThuySan-S400-1'), (400, 'PC-LuHanh-S400')]
-WAN_ROUTES = [(100, 'PC-NongNghiep-S200-1'), (100, 'PC-TaiChinh-S300'), (100, 'PC-LuHanh-S400-2'),
+              (400, 'PC-ThuySan-S400-1'), (400, 'PC-LuHanh-S400'),
+              (500, 'VPC11'), (500, 'PC-Linux-S500')]
+WAN_ROUTES = [(100, 'PC-NongNghiep-S200-1'), (100, 'PC-TaiChinh-S300'), (100, 'PC-LuHanh-S400-2'), (100, 'VPC11'),
               (200, 'PC-CNTT-S100-1'), (200, 'WebServer'),
               (300, 'PC-CNTT-S100-1'), (300, 'WebServer'),
-              (400, 'PC-CNTT-S100-1'), (400, 'WebServer')]
+              (400, 'PC-CNTT-S100-1'), (400, 'WebServer'),
+              (500, 'PC-CNTT-S100-1'), (500, 'WebServer')]
 SITE_IDS = sorted(SITE_VEDGES)
 SITE_LABEL = {sd['site_id']: 'S{} {}'.format(sd['site_id'], sn.split(' - ', 1)[-1]) for sn, sd in SITES.items()}
 CASE_NAMES = ['Delay (Avg RTT) - Campus chinh vs chi nhanh',
