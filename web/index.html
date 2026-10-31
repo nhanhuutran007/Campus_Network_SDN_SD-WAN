@@ -344,7 +344,7 @@ code { font: 12px var(--mono); background: var(--surface2); padding: 1px 5px; bo
 
           <div class="card">
             <h2>So sánh Campus chính – chi nhánh <span class="tag">Delay · Jitter · Loss · Throughput</span></h2>
-            <p class="hint">Mỗi site (S100 Campus chính, S200 Cần Thơ, S300 Đà Nẵng, S400 Nha Trang) đo 2 loại đường, nguồn là vEdge của site, ping qua vManage:
+            <p class="hint">Mỗi site (S100 Campus chính, S200 Cần Thơ, S300 Đà Nẵng, S400 Nha Trang, S500 Campus Test) đo 2 loại đường, nguồn là vEdge của site, ping qua vManage:
               <b>LAN nội bộ</b> (vEdge → host cùng site) và <b>WAN qua SD-WAN</b> (chi nhánh → PC-CNTT và WebServer ở campus chính; campus chính → mỗi chi nhánh).
               Log in bảng theo site, kèm chênh lệch WAN so với campus chính và đánh giá Tốt / Trung bình / Kém.
               <b>Throughput</b>: đọc bộ đếm cổng WAN (vpn 0) của mọi vEdge ở mỗi site cùng lúc, theo chu kỳ. Số đo chỉ phản ánh traffic đang chạy trong lúc đo, nên muốn so sánh năng lực thì phải tạo cùng mức tải ở mọi site (ví dụ một PC mỗi site chạy <code>ping 10.1.1.10 -l 1400 -t</code>).
