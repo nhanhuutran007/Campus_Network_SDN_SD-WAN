@@ -37,7 +37,11 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | SwitchDMZ | 7 | iol |
 | Dist-SW2 | 8 | linux (OVS script) |
 | SDN_CONTROLLER | 9 | linux (OVS script) |
-| SW-S500 (Site 500, chưa có thư mục config) | 10 | iol (config="0", đang mặc định) |
+| SW-S500 (Site 500) | 10 | iol (config="0"; cấu hình tay, file `07-Site500/SW-S500`) |
+| VPC11 (Site 500, DHCP VLAN 10) | 11 | vpcs |
+| vEdge2-S500 (tên node `vEdge-Test`) | 23 | vtedge (config="0", NIC e1000) |
+| Linux (Site 500) | 64 | linux (config="0") |
+| Brand-FW-S500 (tên node `ASAv`) | 67 | asav (config="0") |
 | VPC11 / VPC12 (Site 500) | 11, 12 | vpcs (config="0") |
 | Mail-Server | 13 | win (cấu hình tay) |
 | PC-CNTT-S100-1 (thư mục VPC14, VLAN10) | 14 | vpcs |
@@ -75,13 +79,15 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | Switch61 | 61 | iol |
 | SwitchBrand-S300 | 62 | iol |
 | SwitchBrand-S200 | 63 | iol |
-| SwitchBrand-S400 | 64 | iol |
+| SwitchBrand-S400 (đổi id 64 → 75 ngày 31/10/2026) | 75 | iol |
 | vEdge65 (Site 500 từ 03/10/2026) | 65 | vtedge |
 | Access-SW2 | 66 | linux (OVS script) |
 | Access-SW1 | 68 | linux (OVS script) |
 | Access-SW4 | 69 | linux (OVS script) |
 | Access-SW3 | 70 | linux (OVS script) |
 | PC-Management | 73 | win (cấu hình tay) |
+| SW-WAN-Edge1 (Site 100, VLAN 103 FW-OUTSIDE ↔ vEdge1) | 76 | iol (thêm 31/10/2026) |
+| SW-WAN-Edge2 (Site 100, VLAN 104 FW-OUTSIDE2 ↔ vEdge2) | 77 | iol (thêm 31/10/2026) |
 
 ## 3. Cách nạp config vào EVE-NG
 

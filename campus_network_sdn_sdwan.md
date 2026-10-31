@@ -323,7 +323,7 @@ graph TB
         subgraph CORE["CORE LAYER<br/>OSPF Area 0"]
             CSW1["Core-SW1<br/>L3 Switch<br/>Loopback: 10.1.0.1<br/>Mgmt: 10.1.99.1"]
             CSW2["Core-SW2<br/>L3 Switch<br/>Loopback: 10.1.0.2<br/>Mgmt: 10.1.99.2"]
-            CSW1 <-->|"EtherChannel Po10<br/>10.1.0.4/30"| CSW2
+            CSW1 <-->|"Po10 trunk VLAN 100-102<br/>VLAN 100: 10.1.0.4/30"| CSW2
         end
 
         subgraph FWHA["SECURITY ZONE — FIREWALL HA"]
@@ -624,10 +624,12 @@ graph TB
 | 10.1.90.0/24 | 90 | Server Farm | DHCP + Syslog Server |
 | 10.1.99.0/24 | 99 | Management | IP quản lý switch/FW — switch .1/.2 (Core), .10 (SDN controller), .11/.12 (Dist), .21–.24 (Access), .31 (DMZ), .32 (Farm), **.33/.34 (FW ASDM, failover mgmt)**, **.50 (PC-Management)** |
 | 10.1.1.0/28 | — | DMZ | Web, Mail |
-| 10.1.2.0/30, .4/30, .8/30, .12/30 | — | FW Inside ↔ Core | 4 link /30 |
-| 10.1.3.0/30, .4/30, .8/30, .12/30 | — | FW Outside ↔ vEdge | 4 link /30 |
+| 10.1.2.0/29 | 101 FW-INSIDE | FW Inside ↔ Core (transit VLAN trải 2 Core qua Po10) | FW .1 (standby .4), Core-SW1 .2, Core-SW2 .3 |
+| 10.1.2.8/29 | 102 FW-INSIDE2 | FW Inside2 ↔ Core (OSPF cost 20 — dự phòng) | FW .9 (standby .12), Core-SW2 .10, Core-SW1 .11 |
+| 10.1.3.0/29 | 103 FW-OUTSIDE | FW Outside ↔ vEdge1 qua SW-WAN-Edge1 | FW .1 (standby .4), vEdge1 .2 — OSPF area 0 (hello 2/dead 8) FW↔vEdge, default route `track 1` (SLA ping .2) |
+| 10.1.3.8/29 | 104 FW-OUTSIDE2 | FW Outside2 ↔ vEdge2 qua SW-WAN-Edge2 | FW .9 (standby .12), vEdge2 .10 — OSPF area 0 FW↔vEdge, default route dự phòng (metric 2) |
 | 10.1.255.0/29 | — | Failover FW-A ↔ FW-S | Dây Gi0/5 — LAN-FO `failover interface ip failover 10.1.255.1 255.255.255.248 standby 10.1.255.2` khai giống hệt trên CẢ 2 unit (ASA tự gán IP theo vai trò: primary dùng .1, secondary dùng .2) |
-| 10.1.0.4/30 | — | Core-SW1 ↔ Core-SW2 (Po10) | 10.1.0.5 / 10.1.0.6 |
+| 10.1.0.4/30 | 100 CORE-TRANSIT | Core-SW1 ↔ Core-SW2 (SVI Vlan100 trên Po10 trunk) | 10.1.0.5 / 10.1.0.6 |
 | — | 99 (dùng chung) | SDN Control plane / Management — SDN_CONTROLLER 10.1.99.10 ↔ các switch 10.1.99.11/.12/.21–.24 | Chạy trên VLAN 99 MANAGEMENT, dùng link uplink sẵn có (không có link riêng) |
 
 #### 2.1.2. Chi nhánh — Site 200 / 300 / 400
@@ -698,20 +700,20 @@ graph TB
 
 | # | Đầu A (Thiết bị — Cổng = IP) | Đầu B (Thiết bị — Cổng = IP) | Mạng con | Ghi chú |
 |---|---|---|---|---|
-| 1 | FW-ASAv-Active — Gi0/0 = 10.1.2.1/30 | Core-SW1 — E1/0 = 10.1.2.2/30 | 10.1.2.0/30 | FW Inside 1 → Core1 (OSPF) |
-| 2 | FW-ASAv-Active — Gi0/1 = 10.1.2.5/30 | Core-SW2 — E0/3 = 10.1.2.6/30 | 10.1.2.4/30 | FW Inside 2 → Core2 |
-| 3 | FW-ASAv-Standby — Gi0/0 = 10.1.2.9/30 | Core-SW2 — E1/0 = 10.1.2.10/30 | 10.1.2.8/30 | FW Inside 3 → Core2 |
-| 4 | FW-ASAv-Standby — Gi0/1 = 10.1.2.13/30 | Core-SW1 — E0/3 = 10.1.2.14/30 | 10.1.2.12/30 | FW Inside 4 → Core1 |
-| 5 | FW-ASAv-Active — Gi0/2 = 10.1.3.1/30 | vEdge1-S100 — ge0/0 = 10.1.3.2/30 | 10.1.3.0/30 | FW Outside 1 → vEdge1 (VPN 1) |
-| 6 | FW-ASAv-Active — Gi0/3 = 10.1.3.5/30 | vEdge2-S100 — ge0/1 = 10.1.3.6/30 | 10.1.3.4/30 | FW Outside 2 → vEdge2 |
-| 7 | FW-ASAv-Standby — Gi0/2 = 10.1.3.9/30 | vEdge2-S100 — ge0/0 = 10.1.3.10/30 | 10.1.3.8/30 | FW Outside 3 → vEdge2 |
-| 8 | FW-ASAv-Standby — Gi0/3 = 10.1.3.13/30 | vEdge1-S100 — ge0/1 = 10.1.3.14/30 | 10.1.3.12/30 | FW Outside 4 → vEdge1 |
+| 1 | FW-ASAv-Active — Gi0/0 = 10.1.2.1/29 | Core-SW1 — E1/0 (access VLAN 101) | 10.1.2.0/29 | FW Inside → Core1; SVI Core1 .2, Core2 .3; standby IP .4 |
+| 2 | FW-ASAv-Active — Gi0/1 = 10.1.2.9/29 | Core-SW2 — E0/3 (access VLAN 102) | 10.1.2.8/29 | FW Inside2 → Core2 (OSPF cost 20); SVI Core2 .10, Core1 .11; standby .12 |
+| 3 | FW-ASAv-Standby — Gi0/0 (standby 10.1.2.4) | Core-SW2 — E1/0 (access VLAN 101) | 10.1.2.0/29 | Cùng VLAN 101 với Active (qua Po10 trunk) — failover giữ nguyên IP |
+| 4 | FW-ASAv-Standby — Gi0/1 (standby 10.1.2.12) | Core-SW1 — E0/3 (access VLAN 102) | 10.1.2.8/29 | Cùng VLAN 102 với Active |
+| 5 | FW-ASAv-Active — Gi0/2 = 10.1.3.1/29 | SW-WAN-Edge1 — e0/0 (VLAN 103) | 10.1.3.0/29 | FW Outside → vEdge1 (ge0/0 = 10.1.3.2/29, nối SW-WAN-Edge1 e0/2) |
+| 6 | FW-ASAv-Active — Gi0/3 = 10.1.3.9/29 | SW-WAN-Edge2 — e0/0 (VLAN 104) | 10.1.3.8/29 | FW Outside2 → vEdge2 (ge0/1 = 10.1.3.10/29, nối SW-WAN-Edge2 e0/2) |
+| 7 | FW-ASAv-Standby — Gi0/2 (standby 10.1.3.4) | SW-WAN-Edge1 — e0/1 (VLAN 103) | 10.1.3.0/29 | Cùng VLAN 103 với Active và vEdge1 |
+| 8 | FW-ASAv-Standby — Gi0/3 (standby 10.1.3.12) | SW-WAN-Edge2 — e0/1 (VLAN 104) | 10.1.3.8/29 | Cùng VLAN 104 với Active và vEdge2 |
 | 9 | FW-ASAv-Active — Gi0/4 = 10.1.1.1/28 | SwitchDMZ — e0/2 = — | 10.1.1.0/28 | Interface DMZ (gateway DMZ) |
-| 10 | FW-ASAv-Standby — Gi0/4 = 10.1.1.2/28 | SwitchDMZ — e0/3 = — | 10.1.1.0/28 | Interface DMZ (dự phòng) |
+| 10 | FW-ASAv-Standby — Gi0/4 (standby 10.1.1.14) | SwitchDMZ — e0/3 = — | 10.1.1.0/28 | Interface DMZ (dự phòng) |
 | 11 | Web-Server — e0 = 10.1.1.10/28 (gw 10.1.1.1) | SwitchDMZ — e0/0 = — | 10.1.1.0/28 | Access DMZ |
 | 12 | Mail-Server — e0 = 10.1.1.11/28 (gw 10.1.1.1) | SwitchDMZ — e0/1 = — | 10.1.1.0/28 | Access DMZ |
 | 13 | FW-ASAv-Active — Gi0/5 (Failover) | FW-ASAv-Standby — Gi0/5 (Failover) | LAN-FO: `failover interface ip failover 10.1.255.1 255.255.255.248 standby 10.1.255.2` (giống hệt 2 unit) | Dây Failover/HA-Sync — ASA tự gán IP theo vai trò (primary .1 / secondary .2) |
-| 14 | Core-SW1 — Po10 (E0/0+E0/1) = 10.1.0.5/30 | Core-SW2 — Po10 (E0/0+E0/1) = 10.1.0.6/30 | 10.1.0.4/30 | EtherChannel giữa 2 Core |
+| 14 | Core-SW1 — Po10 (E0/0+E0/1) trunk VLAN 10,20,30,40,100–102 | Core-SW2 — Po10 (E0/0+E0/1) trunk VLAN 10,20,30,40,100–102 | VLAN 100 = 10.1.0.4/30 | EtherChannel LACP giữa 2 Core; mang transit VLAN của FW và VLAN 10–40 để 2 Core trao đổi hello VRRP (cây Ryu chỉ lên Core-SW1, cổng Core-SW2 bị chặn nên không tạo vòng) |
 | 15 | Core-SW1 — E1/1 = — | SwitchServerFarm — e0/0 = — | Trunk (90,99) | L2 trunk → Server Farm |
 | 16 | Core-SW2 — E1/1 = — | SwitchServerFarm — e0/3 = — | Trunk (90,99) | L2 trunk → Server Farm |
 | 17 | DHCP-Server — e0 = 10.1.90.10/24 | SwitchServerFarm — e1/1 = — | 10.1.90.0/24 | Access VLAN 90 (dây EVE cắm tại cổng E1/1 — id 17) |
@@ -897,22 +899,24 @@ Thêm trên host 1 bằng GUI EVE: vEdge65 (node 65, chuyển từ Site 900) + S
 
 | Thành phần | Interface | IP Address | Subnet | VLAN | Vai trò |
 |---|---|---|---|---|---|
-| **FW-ASAv-Active** | Gi0/0 | 10.1.2.1 | /30 | — | Inside 1 → Core-SW1 |
-| **FW-ASAv-Active** | Gi0/1 | 10.1.2.5 | /30 | — | Inside 2 → Core-SW2 |
-| **FW-ASAv-Active** | Gi0/2 | 10.1.3.1 | /30 | — | Outside 1 → vEdge1 |
-| **FW-ASAv-Active** | Gi0/3 | 10.1.3.5 | /30 | — | Outside 2 → vEdge2 |
-| **FW-ASAv-Active** | Gi0/4 | 10.1.1.1 | /28 | — | DMZ (gateway DMZ) |
+| **FW-ASAv-Active** | Gi0/0 | 10.1.2.1 (standby .4) | /29 | 101 | Inside → Core-SW1 |
+| **FW-ASAv-Active** | Gi0/1 | 10.1.2.9 (standby .12) | /29 | 102 | Inside2 → Core-SW2 (OSPF cost 20) |
+| **FW-ASAv-Active** | Gi0/2 | 10.1.3.1 (standby .4) | /29 | 103 | Outside → SW-WAN-Edge1 → vEdge1 |
+| **FW-ASAv-Active** | Gi0/3 | 10.1.3.9 (standby .12) | /29 | 104 | Outside2 → SW-WAN-Edge2 → vEdge2 |
+| **FW-ASAv-Active** | Gi0/4 | 10.1.1.1 (standby .14) | /28 | — | DMZ (gateway DMZ) |
 | **FW-ASAv-Active** | Mgmt | 10.1.99.41 | /24 | 99 | Quản lý riêng |
 | **FW-ASAv-Active** | Gi0/5 | — (Failover) | — | — | Dây Failover ↔ FW-Standby (HA Sync) |
-| **FW-ASAv-Standby** | Gi0/0 | 10.1.2.9 | /30 | — | Inside 1 → Core-SW2 |
-| **FW-ASAv-Standby** | Gi0/1 | 10.1.2.13 | /30 | — | Inside 2 → Core-SW1 |
-| **FW-ASAv-Standby** | Gi0/2 | 10.1.3.9 | /30 | — | Outside 1 → vEdge2 |
-| **FW-ASAv-Standby** | Gi0/3 | 10.1.3.13 | /30 | — | Outside 2 → vEdge1 |
-| **FW-ASAv-Standby** | Gi0/4 | 10.1.1.2 | /28 | — | DMZ (dự phòng) |
+| **FW-ASAv-Standby** | Gi0/0 | 10.1.2.4 (standby) | /29 | 101 | Inside → Core-SW2 |
+| **FW-ASAv-Standby** | Gi0/1 | 10.1.2.12 (standby) | /29 | 102 | Inside2 → Core-SW1 |
+| **FW-ASAv-Standby** | Gi0/2 | 10.1.3.4 (standby) | /29 | 103 | Outside → SW-WAN-Edge1 |
+| **FW-ASAv-Standby** | Gi0/3 | 10.1.3.12 (standby) | /29 | 104 | Outside2 → SW-WAN-Edge2 |
+| **FW-ASAv-Standby** | Gi0/4 | 10.1.1.14 (standby) | /28 | — | DMZ (dự phòng) |
 | **FW-ASAv-Standby** | Mgmt | 10.1.99.42 | /24 | 99 | Quản lý riêng |
 | **FW-ASAv-Standby** | Gi0/5 | — (Failover) | — | — | Dây Failover ↔ FW-Active (HA Sync) |
 | **Core-SW1** | Loopback0 | 10.1.0.1 | /32 | — | OSPF Router-ID |
-| **Core-SW1** | Po10 | 10.1.0.5 | /30 | — | EtherChannel ↔ Core-SW2 |
+| **Core-SW1** | Vlan100 (Po10 trunk) | 10.1.0.5 | /30 | 100 | Core transit ↔ Core-SW2 |
+| **Core-SW1** | Vlan101 SVI | 10.1.2.2 | /29 | 101 | FW-INSIDE |
+| **Core-SW1** | Vlan102 SVI | 10.1.2.11 | /29 | 102 | FW-INSIDE2 (OSPF cost 20) |
 | **Core-SW1** | VLAN10 SVI | 10.1.10.2 | /24 | 10 | VRRP Active (VIP 10.1.10.1) |
 | **Core-SW1** | VLAN20 SVI | 10.1.20.2 | /24 | 20 | VRRP Active (VIP 10.1.20.1) |
 | **Core-SW1** | VLAN30 SVI | 10.1.30.2 | /24 | 30 | VRRP Active (VIP 10.1.30.1) |
@@ -920,7 +924,9 @@ Thêm trên host 1 bằng GUI EVE: vEdge65 (node 65, chuyển từ Site 900) + S
 | **Core-SW1** | VLAN90 SVI | 10.1.90.2 | /24 | 90 | VRRP Active (VIP 10.1.90.1) |
 | **Core-SW1** | VLAN99 SVI | 10.1.99.1 | /24 | 99 | Quản lý Core1 |
 | **Core-SW2** | Loopback0 | 10.1.0.2 | /32 | — | OSPF Router-ID |
-| **Core-SW2** | Po10 | 10.1.0.6 | /30 | — | EtherChannel ↔ Core-SW1 |
+| **Core-SW2** | Vlan100 (Po10 trunk) | 10.1.0.6 | /30 | 100 | Core transit ↔ Core-SW1 |
+| **Core-SW2** | Vlan101 SVI | 10.1.2.3 | /29 | 101 | FW-INSIDE |
+| **Core-SW2** | Vlan102 SVI | 10.1.2.10 | /29 | 102 | FW-INSIDE2 (OSPF cost 20) |
 | **Core-SW2** | VLAN10 SVI | 10.1.10.3 | /24 | 10 | VRRP Standby (VIP 10.1.10.1) |
 | **Core-SW2** | VLAN20 SVI | 10.1.20.3 | /24 | 20 | VRRP Standby (VIP 10.1.20.1) |
 | **Core-SW2** | VLAN30 SVI | 10.1.30.3 | /24 | 30 | VRRP Standby (VIP 10.1.30.1) |
@@ -933,13 +939,11 @@ Thêm trên host 1 bằng GUI EVE: vEdge65 (node 65, chuyển từ Site 900) + S
 | **Access-SW2** | SVI (Mgmt) | 10.1.99.22 | /24 | 99 | Access VLAN 20 — TTK (dpid 66, controller 10.1.99.10) |
 | **Access-SW3** | SVI (Mgmt) | 10.1.99.23 | /24 | 99 | Access VLAN 30 — Luật (dpid 70, controller 10.1.99.10) |
 | **Access-SW4** | SVI (Mgmt) | 10.1.99.24 | /24 | 99 | Access VLAN 40 — Hành chính (dpid 69, controller 10.1.99.10) |
-| **vEdge1-S100** | ge0/0 | 10.1.3.2 | /30 | — | VPN 1 → FW-Active Outside |
-| **vEdge1-S100** | ge0/1 | 10.1.3.14 | /30 | — | VPN 1 → FW-Standby Outside |
+| **vEdge1-S100** | ge0/0 | 10.1.3.2 | /29 | 103 | VPN 1 → SW-WAN-Edge1 → FW Outside |
 | **vEdge1-S100** | ge0/2 | 100.64.100.1 | /30 | — | VPN 0 → MPLS (TLOC) |
 | **vEdge1-S100** | ge0/3 | 203.0.113.1 | /30 | — | VPN 0 → Internet (TLOC) |
 | **vEdge1-S100** | System-IP | 10.200.100.1 | /32 | — | OMP |
-| **vEdge2-S100** | ge0/0 | 10.1.3.10 | /30 | — | VPN 1 → FW-Standby Outside |
-| **vEdge2-S100** | ge0/1 | 10.1.3.6 | /30 | — | VPN 1 → FW-Active Outside |
+| **vEdge2-S100** | ge0/1 | 10.1.3.10 | /29 | 104 | VPN 1 → SW-WAN-Edge2 → FW Outside2 |
 | **vEdge2-S100** | ge0/2 | 203.0.113.5 | /30 | — | VPN 0 → Internet (TLOC) |
 | **vEdge2-S100** | ge0/3 | 100.64.100.5 | /30 | — | VPN 0 → MPLS (TLOC) |
 | **vEdge2-S100** | System-IP | 10.200.100.2 | /32 | — | OMP |

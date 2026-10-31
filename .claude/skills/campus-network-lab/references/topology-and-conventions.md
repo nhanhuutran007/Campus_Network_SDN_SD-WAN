@@ -1,6 +1,6 @@
 # Kiến trúc, quy ước và node-id
 
-Nguồn đã đối chiếu ngày 2026-09-20: `Campus Network SDN SD-WAN.unl` (70 node, 103 network, 47 config nhúng — cập nhật 03/10/2026 sau khi thêm Site 500), `configs/README.md`, `campus_network_sdn_sdwan.md`. Khi nghi ngờ, chạy `python .claude/skills/campus-network-lab/scripts/unl_tool.py nodes`.
+Nguồn đã đối chiếu ngày 2026-09-20: `Campus Network SDN SD-WAN.unl` (74 node, 107 network, 49 config nhúng — cập nhật 31/10/2026: Site 500 của Hào + SW-WAN-Edge1/2), `configs/README.md`, `campus_network_sdn_sdwan.md`. Khi nghi ngờ, chạy `python .claude/skills/campus-network-lab/scripts/unl_tool.py nodes`.
 
 ## Mục lục
 - Kiến trúc tổng thể
@@ -91,7 +91,7 @@ DPID OVS = node-id dạng hex 16 chữ số: Dist-SW1 `…05`, Dist-SW2 `…08`,
 6. **FW HA** chạy: Active = Primary, Standby = Secondary, config tự replicate; chỉ FW-Active chạy OSPF với Core. ASDM qua Management0/0 trong VLAN 99 (`.33/.34`), cần `crypto key generate rsa modulus 2048` ở config-mode **trên từng unit**, và JRE 8 32-bit trên PC Win7.
 7. **Underlay SP = BGP** (quyết định 15/08/2026, "thực tế & chuyên nghiệp"). `default-originate` phải đặt **trong address-family** (IOS).
 8. **Ryu quản lý toàn bộ L2 campus**: giữ `tag=/trunks=` của OVS, `protocols=OpenFlow13`, `fail_mode=secure`, `stp_enable=false` (STP của OVS chặn frame trước pipeline), controller `tcp:10.1.99.10:6653`.
-9. `config="1"` đúng **47 node** (danh sách trong `unl_tool.py`); Windows/vtmgmt/vtsmart/vtbond/Linux-OVS giữ `config="0"` (cấu hình tay). Không tái tạo `.unl.bak`.
+9. `config="1"` đúng **49 node** (danh sách trong `unl_tool.py`); Windows/vtmgmt/vtsmart/vtbond/Linux-OVS giữ `config="0"` (cấu hình tay). Không tái tạo `.unl.bak`.
 10. Nhãn IP/cổng thiết bị trên canvas (textobject 27–33, 76, 100–146) được sinh lại 28/09/2026 từ liên kết `.unl` + IP trong `configs/` (tên cổng theo EVE: IOL `e0/0`, ASA/vIOS `Gi0/x`, vEdge `ge0/x`, OVS `e1..e7`); nhãn IP tĩnh của VPC đã xoá — không khôi phục. Core không có Loopback (10.1.0.1/.2 chỉ là OSPF router-id).
 
 ## Image IOL: đừng đoán theo tên
