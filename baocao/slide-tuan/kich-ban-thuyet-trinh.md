@@ -1,187 +1,224 @@
-# Kịch bản thuyết trình — Báo cáo tiến độ tuần 05/10 – 11/10/2026
+# Kịch bản thuyết trình — Báo cáo tiến độ tuần 26/10 – 01/11/2026
 
 **Đề tài:** Xây dựng mạng Campus Network sử dụng SDN và SD-WAN
 **Nhóm:** Trần Hữu Nhân (52300235) — Nguyễn Nhật Hào (52300198)
-**Slide:** `report.pdf` (18 slide) · **Thời lượng dự kiến:** 15–17 phút + hỏi đáp
+**Slide:** `report.pdf` (19 slide) · **Thời lượng dự kiến:** 13–15 phút + hỏi đáp
 
 > Cách dùng: phần **Nói** là lời thoại gợi ý, đọc tự nhiên, không cần thuộc từng chữ.
 > Phần **Nhấn mạnh** là ý phải nói được dù quên lời. Phần **Nếu thầy hỏi** chuẩn bị sẵn câu trả lời ngắn.
-> Gợi ý chia người: **Nhân** nói slide 1–10 (mở đầu, mục tiêu, SDN), **Hào** nói slide 11–18 (SD-WAN, Site 900, cảnh báo, tài liệu, việc còn lại, kế hoạch, khó khăn). Có thể đổi theo phần mỗi bạn trực tiếp làm.
+> Gợi ý chia người: một bạn nói slide 1–12 (mục tiêu, SD-WAN, kiểm thử tích hợp, lỗi định tuyến), bạn còn lại nói slide 13–19 (NetOps Bot, việc còn lại, kế hoạch, khó khăn). Có thể đổi theo phần mỗi bạn trực tiếp làm.
 
 ---
 
 ## Slide 1 — Trang bìa (≈ 30 giây)
 
 **Nói:**
-> Em chào thầy. Nhóm em gồm hai thành viên là Trần Hữu Nhân và Nguyễn Nhật Hào. Hôm nay nhóm em xin báo cáo tiến độ tuần từ 05/10 đến 11/10/2026 của đề tài **"Xây dựng mạng Campus Network sử dụng SDN và SD-WAN"**.
+> Em chào thầy. Nhóm em gồm hai thành viên là Trần Hữu Nhân và Nguyễn Nhật Hào. Hôm nay nhóm em xin báo cáo tiến độ tuần từ 26/10 đến 01/11/2026 của đề tài **"Xây dựng mạng Campus Network sử dụng SDN và SD-WAN"**.
 
 ---
 
 ## Slide 2 — Nội dung báo cáo (≈ 20 giây)
 
 **Nói:**
-> Bài báo cáo gồm năm phần: **mục tiêu**, **kết quả thực hiện trong tuần**, **công việc chưa hoàn thành**, **kế hoạch tuần tới** và **những khó khăn** nhóm gặp phải.
+> Bài báo cáo gồm năm phần: **mục tiêu**, **kết quả thực hiện trong tuần**, **công việc chưa hoàn thành**, **kế hoạch tuần tới** và **khó khăn** nhóm gặp phải.
 
 ---
 
 ## Slide 3 — Mục tiêu đề tài (≈ 45 giây)
 
 **Nói:**
-> Mục tiêu tổng quát vẫn là mô hình mạng Campus **đa cơ sở** trên **EVE-NG**: **SDN** điều khiển tập trung mạng LAN campus chính, **SD-WAN** kết nối các cơ sở qua **Internet** và **MPLS**. So với tuần trước, nhóm nhấn mạnh thêm hai yêu cầu: mạng SDN phải **tự phục hồi** khi mất liên kết, và hệ thống SD-WAN phải **tự cảnh báo** khi có sự cố.
+> Nhắc lại mục tiêu tổng quát: nhóm em xây dựng mạng campus nhiều cơ sở trên EVE-NG. Campus chính dùng **SDN** — controller Ryu điều khiển sáu switch Open vSwitch; các cơ sở nối với nhau bằng **SD-WAN** Cisco Viptela qua hai đường Internet và MPLS. Kèm theo là firewall ASAv chạy HA, DMZ, Server Farm và các dịch vụ DNS, DHCP, Web, Mail.
+>
+> So với các tuần trước, nhóm em bổ sung thêm một mục tiêu mới là **vận hành tự động**: một bot quản trị mạng qua Telegram, em sẽ trình bày ở phần sau.
+
+**Nhấn mạnh:** mục tiêu mới "NetOps Bot" là phần mở rộng, không thay thế các mục tiêu cũ.
 
 ---
 
 ## Slide 4 — Topology tổng thể (≈ 30 giây)
 
 **Nói:**
-> Topology không đổi so với tuần trước: **70 node, 103 network**, gồm Campus chính, ba chi nhánh, Site 500 mở rộng, Site 900 đặt controller SD-WAN và hai nhà cung cấp chạy BGP.
+> Đây là topology hiện tại trên EVE-NG, gồm 70 node: Campus chính Site 100, ba chi nhánh Cần Thơ, Đà Nẵng, Nha Trang, Site 500 mở rộng và Site 900 chứa ba controller SD-WAN. Hai nhà cung cấp Internet và MPLS chạy BGP.
 
 ---
 
-## Slide 5 — Mục tiêu của tuần và mức độ hoàn thành (≈ 1 phút 30 giây)
+## Slide 5 — Mục tiêu của tuần và mức độ hoàn thành (≈ 1 phút)
 
 **Nói:**
-> Tuần trước nhóm đặt ra bảy nhiệm vụ. Bốn nhiệm vụ đã **hoàn thành**: bỏ điểm lỗi đơn của kênh quản trị VLAN 99, sửa định tuyến bất đối xứng VLAN 99 trên tường lửa, quyết định về ONOS — nhóm đã **tắt** ONOS — và cập nhật báo cáo Chương 4, 5.
-> Hai việc **chưa làm**: cấu hình Site 500 và hai phép thử Internet còn thiếu. Kịch bản demo đang soạn.
-> Ngoài kế hoạch, tuần này phát sinh thêm: kiểm thử khởi động nguội và cắt link thật, hai tab mới trên Console, sửa vEdge1 Site 300, cho Site 900 ra Internet có kiểm soát và làm cảnh báo email.
+> Tuần trước nhóm em đặt ra sáu việc. Kết quả là: **theo dõi vEdge** đã hoàn thành; **đo lặp SD-WAN** và **Site 500** mới làm được một phần — đã có số liệu failover đầu tiên và hai vEdge Site 500 đã lên fabric. Còn **failover firewall**, **fast-failover cho Distribution** và **bản nháp báo cáo cuối kỳ** thì chưa làm.
+>
+> Lý do là trong tuần nhóm em phát sinh thêm ba việc: kiểm thử tích hợp bật toàn bộ 70 node, sửa hai lỗi làm mất Internet phát hiện trong lúc kiểm thử, và xây dựng NetOps Bot. Các việc chưa làm em đã đưa lên đầu kế hoạch tuần tới.
 
-**Nhấn mạnh:** Site 500 chậm vì nhóm ưu tiên làm SDN tự phục hồi cho chắc trước.
+**Nhấn mạnh:** nói thẳng phần chưa làm và lý do, trước khi thầy hỏi.
+
+**Nếu thầy hỏi "sao không làm failover firewall như kế hoạch?":**
+> Dạ, khi bật toàn hệ thống để kiểm thử thì phát hiện mất Internet ở nhiều site, nhóm em ưu tiên sửa lỗi đó trước vì nếu không thì các phép đo sau đều sai. Failover firewall là việc số 1 của tuần tới.
 
 ---
 
-## Slide 6 — Tổng quan tiến độ theo hạng mục (≈ 45 giây)
+## Slide 6 — Tổng quan tiến độ theo hạng mục (≈ 40 giây)
 
 **Nói:**
-> Hầu hết hạng mục đã hoàn thành. Hai hạng mục mới chuyển sang hoàn thành tuần này là **tự phục hồi SDN S1–S6** và **giám sát, cảnh báo**. Còn đang làm là Site 500 và phần báo cáo, demo.
+> Nhìn tổng thể: phần thiết kế, hạ tầng campus, chi nhánh, SD-WAN và SDN đã hoàn thành. Đang làm có bốn hạng mục: **Site 500** — vEdge xong, còn switch và máy trạm; **kiểm thử tích hợp** — phần chức năng đạt, còn kịch bản sự cố; **NetOps Bot** là hạng mục mới; và **báo cáo, demo**.
 
 ---
 
-## Slide 7 — SDN: kiểm thử khởi động nguội & cắt link thật (≈ 2 phút)
+## Slide 7 — SD-WAN: trạng thái fabric trên vManage (≈ 45 giây)
 
 **Nói:**
-> Tuần trước nhóm mới thử bằng mô phỏng. Tuần này nhóm cắt **thật** — hạ giao diện ảo trên máy chủ EVE-NG, giống như rút dây — và bật lại cả campus cùng lúc.
-> Hai ca lộ lỗi nặng: cắt kép A4-D1 + D2-C1 thì mạng **kẹt** ở 9/13 link, Dist-SW2 mất controller **vĩnh viễn**; tắt hẳn Dist-SW2 thì **bốn VLAN mất 100% khoảng 3,5 phút**.
-> Nguyên nhân chung: controller coi switch **mất kết nối** là switch **chết**, trong khi OVS ở chế độ `secure` vẫn chạy bằng flow cũ. Nhóm sửa bốn chỗ như trên slide; sau sửa, tắt hẳn Dist-SW2 chỉ mất **0–5 gói**.
+> Đây là ảnh chụp giao diện vManage ngày 31/10. Cả **10 vEdge**, trong đó có **hai vEdge của Site 500**, và ba controller đều ở trạng thái reachable, health xanh. Cột BFD cho thấy các phiên BFD đều lên đủ: Site 100 là 16 trên 16, mỗi vEdge chi nhánh 10 trên 10.
 
-**Nếu thầy hỏi "đóng băng" là gì:** Access mất kết nối controller vẫn được giữ trong cây trên đúng link cũ, controller không chặn cổng xuống nó nữa.
+**Nếu thầy hỏi "vManage báo 14 thiết bị, sao chỉ thấy 13 dòng?":**
+> Dạ, có một dòng là vEdge đã khai trong danh sách nhưng chưa đăng ký nên không có tên, nhóm em lọc theo "vEdge" để ảnh gọn. 13 thiết bị đang dùng thì đều reachable.
+
+**Nếu thầy hỏi "icon cảnh báo màu cam ở vManage là gì?":**
+> Dạ, đó là cảnh báo về sức khỏe của chính máy vManage; vManage vẫn reachable và giữ kết nối với controller nên không ảnh hưởng tới fabric. Giao diện cũng đang nhắc tài khoản cơ sở dữ liệu cấu hình còn để mặc định, nhóm em sẽ đổi.
 
 ---
 
-## Slide 8 — SDN: tìm nguyên nhân controller bị khựng (≈ 1 phút 30 giây)
+## Slide 8 — SD-WAN: các tunnel IPsec (≈ 30 giây)
 
 **Nói:**
-> Có hiện tượng controller **khựng** theo cụm, mỗi 5–15 phút một lần, mỗi lần tới 9 giây. Nhóm ghi CPU từng tiến trình mỗi nửa giây và thấy trong cụm khựng, máy ảo 2 vCPU **không còn CPU rảnh**, tiến trình **java của ONOS** chiếm hơn một vCPU, Ryu bị đói CPU.
-> Vì ONOS chỉ dùng để xem topology mà Console đã làm được, nhóm **tắt ONOS** và ưu tiên CPU cho Ryu. RAM của controller giảm từ 1,3 GB còn 179 MB.
+> Trang Tunnels cho thấy **124 tunnel IPsec** giữa các vEdge qua hai màu biz-internet và MPLS, kể cả các tunnel tới Site 500. Mất gói trung bình gần như bằng 0.
 
-**Nhấn mạnh:** quyết định về ONOS dựa trên số đo, không phải cảm tính.
+**Nếu thầy hỏi "sao latency trên vManage ~40 ms mà đo được 4–12 ms?":**
+> Dạ, số trên vManage là latency của gói BFD đo bên trong vEdge, có cả thời gian xử lý của máy ảo. Số 4–12 ms ở slide sau là ping thật qua overlay. Nhóm em dùng số ping để so sánh giữa các site.
 
 ---
 
-## Slide 9 — SDN: kênh quản trị VLAN 99 không phụ thuộc STP (≈ 2 phút)
+## Slide 9 — Đo failover link WAN tại Site 200 (≈ 1 phút)
 
 **Nói:**
-> Hai kịch bản S4, S5 vẫn không đạt. Nhóm theo dõi STP trên Core-SW1 trong lúc cắt link và thấy: khung VLAN 99 đi **vòng qua khối OVS** rồi quay về Core, nên Core **nghe chính BPDU của nó**. Khi khôi phục, cổng Et1/2 rơi vào trạng thái **Dispute** của RSTP khoảng 8 giây — cả 6 OVS mất controller.
-> Cách sửa là thiết kế lại luật flow cho VLAN 99: khung từ cổng Core **không bao giờ** đi ra cổng Core khác. Khi đó hai cổng của Core đều forwarding, STP chỉ còn là lưới an toàn; mỗi switch có **nhiều đường quản trị cùng lúc**. Nhóm **không phải sửa Core-SW1** hay script OVS, chỉ đổi flow do controller cài.
+> Đây là kết quả đo độ tin cậy đầu tiên. Công cụ web ở Site 900 ping liên tục qua overlay, rồi nhóm em cắt uplink của vEdge 1 Site 200. Sau hai lần đo, thời gian khôi phục RTO từ **7,68 đến 8,25 giây**, trung bình **7,96 giây**; tỉ lệ khôi phục gói khoảng **77%**.
+>
+> Con số khoảng 8 giây khớp với BFD mặc định của Viptela: gửi hello mỗi 1 giây, mất 7 lần liên tiếp mới kết luận tunnel chết. So với SDN ở campus chính có fast-failover dưới 0,3 giây thì SD-WAN đang chậm hơn nhiều.
+>
+> Hai lần đo là chưa đủ, tuần tới nhóm em đo 3–5 lần mỗi site và thử giảm chu kỳ BFD để so sánh.
 
-**Nếu thầy hỏi vì sao không cho Core-SW2 vào VLAN 99:** đã thử, hai router cùng VLAN với OVS flood tĩnh gây bão khoảng 40.000 gói/giây.
+**Nhấn mạnh:** 8 s = BFD 1 s × 7; mới 2 lần nên chưa kết luận.
+
+**Nếu thầy hỏi "PRR là gì?":**
+> Dạ, PRR là tỉ lệ gói ping trả lời được trong suốt cửa sổ đo, kể cả lúc đang chuyển đường. 77% nghĩa là khoảng 23% gói bị mất trong thời gian chuyển đường.
+
+**Nếu thầy hỏi "giảm BFD có hại gì không?":**
+> Dạ, chu kỳ ngắn thì phát hiện nhanh hơn nhưng dễ báo nhầm khi máy ảo bị khựng, nên nhóm em sẽ đo cả số lần báo nhầm để chọn mức cân bằng.
 
 ---
 
-## Slide 10 — SDN: kết quả 6 kịch bản tự phục hồi (≈ 1 phút 30 giây)
+## Slide 10 — So sánh hiệu năng Campus chính và chi nhánh (≈ 1 phút)
 
 **Nói:**
-> Tab **Kịch bản** trên Console chạy tự động sáu kịch bản cắt link và tự kết luận đạt hay không. Sau khi sửa, **cả 6/6 đều đạt**: gián đoạn khi cắt tối đa 3,5 giây, khi khôi phục gần như bằng 0, không switch nào mất controller. S4 và S5 trước đây không đạt nay đạt. Cắt thật cũng đạt cả ba ca.
-> Tab **Sức khoẻ** mới cho thấy trạng thái kênh điều khiển từng switch và vai trò STP của Core-SW1 đọc qua SNMP.
+> Nhóm em đo delay, jitter, mất gói theo hai loại đường: LAN trong từng site, và WAN qua SD-WAN. Kết quả: đường WAN **không mất gói ở cả bốn site**, delay từ 3,8 đến 12 ms. Site 400 Nha Trang có delay và jitter cao nhất vì có vài mẫu ping vọt lên 25–50 ms, cần đo lặp để xem do tải máy ảo hay do đường đi.
+>
+> Riêng Site 100 chỉ đo được 3 trên 5 tuyến LAN: hai tuyến tới Web Server và DHCP-Server mất hết gói. Nguyên nhân là firewall Site 100 chặn ICMP từ vùng SD-WAN vào Server Farm và DMZ — đúng chính sách bảo mật. Nhóm em sẽ đổi cách đo chứ không mở firewall chỉ để đo.
 
-**Nhấn mạnh:** gián đoạn khi cắt chủ yếu là **thời gian phát hiện** (thăm dò mỗi 0,5–1 giây); controller hội tụ chỉ vài mili giây.
+**Nhấn mạnh:** mất gói ở 2 tuyến LAN Site 100 là do chính sách, không phải lỗi mạng.
 
 ---
 
-## Slide 11 — SD-WAN: hai sự cố đã sửa (≈ 1 phút 30 giây)
+## Slide 11 — Kiểm thử tích hợp toàn hệ thống (≈ 1 phút)
 
 **Nói:**
-> Thứ nhất, VLAN 99 Campus chính không ping được chi nhánh. Lý do là cổng Management của tường lửa nằm thẳng trong mạng 10.1.99.0/24 nên gói trả về đi ra cổng management, tường lửa huỷ vì không khớp phiên. Nhóm sửa theo chuẩn **quản trị ngoài băng**: đặt `management-only` và thêm tuyến 10.1.99.0/24 qua Core-SW1. Kết quả thông tới cả ba chi nhánh, ASDM vẫn chạy, VLAN 99 vẫn không ra được Internet.
-> Thứ hai, vEdge1 Site 300 mất fabric từ 08/10. Cấu hình không sai — **card mạng ảo bị treo chiều nhận**. Tắt bật lại cổng là mọi thứ lên lại.
+> Ngày 25/10 nhóm em bật đồng thời cả 70 node và kiểm tra từng cụm: SDN 6/6 switch, 13/13 liên kết, 7/7 máy trạm nhận DHCP; firewall HA Active và Standby Ready; SD-WAN 12/12 thiết bị, 92/92 phiên BFD; chi nhánh 9/9 VPC và 3 PC Linux nhận DHCP và truy cập được Web, Mail, DNS ở campus chính; cả bốn site ra Internet. Ngày 30/10 thêm kiểm tra quản trị in-band tới 12 thiết bị chi nhánh.
+>
+> Như vậy toàn bộ kiểm thử **chức năng** đã đạt; tuần tới chuyển sang kiểm thử **sự cố**.
 
 ---
 
-## Slide 12 — Site 900 ra Internet có kiểm soát (≈ 1 phút)
+## Slide 12 — Hai lỗi định tuyến làm mất Internet (≈ 1 phút 15 giây)
 
 **Nói:**
-> Tuần trước Site 900 bị chặn Internet hoàn toàn. Nhưng trong doanh nghiệp, controller cần DNS, NTP, HTTPS. Nên nhóm đổi sang **có kiểm soát**: ACL trên Switch32 chỉ cho DNS, NTP, HTTPS và ping ra ngoài, mọi thứ khác bị chặn và ghi log. Nhóm áp ACL **trước** rồi mới mở NAT, để không có thời điểm nào mở toàn bộ.
-> Kiểm chứng từ vManage: DNS, HTTPS, ping đều qua; HTTP và SSH bị chặn; fabric SD-WAN không bị ảnh hưởng.
+> Trong lúc kiểm thử, nhóm em gặp hai lỗi.
+>
+> Lỗi thứ nhất: khi Site 500 lên fabric thì **mọi site mất Internet**. Lần theo BGP trên router Internet thì thấy router này nhận default route từ vEdge Site 500, nên đường ra Internet của các site bị kéo sai hướng. Nhóm em thêm bộ lọc BGP chặn default route đi vào từ neighbor Site 500; sau đó cả bốn site ra Internet lại, Site 500 vẫn trong fabric.
+>
+> Lỗi thứ hai: Site 100 mất Internet. Core-SW1 và Core-SW2 quảng bá OSPF cùng cost nên firewall có hai đường bằng nhau, nhưng ASA không chia tải qua hai interface khác nhau, nên gói chiều về đi vào sai interface bị drop. Nhóm em đặt cost 10 trên các SVI của Core-SW2 để chỉ còn một đường ưu tiên.
+
+**Nhấn mạnh:** cả hai lỗi chỉ lộ ra khi bật **toàn bộ** hệ thống — đó là lý do cần kiểm thử tích hợp.
+
+**Nếu thầy hỏi "vậy Core-SW2 còn dự phòng không?":**
+> Dạ còn. Cost 10 chỉ làm đường qua Core-SW2 kém ưu tiên hơn; khi Core-SW1 hỏng, OSPF tự chuyển sang Core-SW2.
 
 ---
 
-## Slide 13 — Cảnh báo sự cố qua email (≈ 2 phút)
+## Slide 13 — Campus NetOps Bot: kiến trúc in-band (≈ 1 phút 15 giây)
 
 **Nói:**
-> vManage được cấu hình tự gửi thư qua Gmail khi có alarm Critical hoặc Major. Phía mạng chỉ cần mở **đúng một luồng** SMTP 587 cho riêng vManage và khai DNS cho vManage.
-> Demo: tắt cổng Internet của vEdge2 Site 200 — khoảng 20 giây sau có thư BFD down, 35 giây có thư mất kết nối điều khiển, 70 giây có thư OMP down; bật lại cổng có thư Interface State Change.
-> Lần đầu thư không gửi được, Gmail báo sai tài khoản. Nhóm kiểm tra bộ đếm ACL thấy vManage vẫn kết nối được 587, rồi thử đăng nhập Gmail riêng thấy mật khẩu ứng dụng vẫn đúng — vậy lỗi là do nhập trên giao diện. Nhập lại thì gửi được.
+> Phần mới của tuần là **Campus NetOps Bot** — trợ lý vận hành mạng qua Telegram. Quản trị viên nhắn lệnh hoặc hỏi bằng ngôn ngữ tự nhiên; bot dùng LangGraph và một mô hình ngôn ngữ lớn để chọn công cụ phù hợp: SSH tới switch và firewall, đọc REST API của vManage và Ryu, hoặc đọc DHCP.
+>
+> Điểm khác là bot được cài **ngay trong topology**, trên DHCP-Server của Site 100, và quản trị theo kiểu **in-band**: đi qua chính mạng dữ liệu. Như vậy bot cũng là một "người dùng" của mạng — mạng hỏng thì bot biết đầu tiên.
+>
+> Về an toàn: bot chỉ trả lời các chat được cho phép, mặc định chỉ chạy lệnh đọc, tự che mật khẩu trong kết quả, và dùng tài khoản `netops` riêng; mỗi thiết bị chỉ cho SSH từ hai địa chỉ quản trị.
 
-**Nếu thầy hỏi vManage chết thì sao:** đúng là khi đó không có thư; tuần tới nhóm làm phương án B — Console đọc alarm qua API của vManage.
+**Nếu thầy hỏi "AI có thể tự ý đổi cấu hình không?":**
+> Dạ không. AI chỉ được gọi các công cụ đọc. Mọi thay đổi phải qua lệnh `/change` và phải có người bấm duyệt trên Telegram.
+
+**Nếu thầy hỏi "dùng LLM nào?":**
+> Dạ, bot gọi LLM qua API chuẩn OpenAI nên đổi nhà cung cấp chỉ cần sửa file cấu hình; hiện nhóm em dùng một model miễn phí qua OpenRouter.
 
 ---
 
-## Slide 14 — Tài liệu & báo cáo (≈ 1 phút)
+## Slide 14 — Ba giai đoạn đã triển khai (≈ 1 phút)
 
 **Nói:**
-> Nhóm đối chiếu toàn bộ tệp cấu hình với cấu hình đang chạy và phát hiện hai chỗ lệch: System-IP thật của vManage, vBond là 10.9.3.x, và tường lửa Standby đang lưu bản cũ.
-> Báo cáo LaTeX được cập nhật: Chương 3–4 viết lại phần SDN theo controller v2, thêm DIA, Site 900, cảnh báo email. Bảng tổng hợp nay có **29 kịch bản: 25 đạt, 2 đạt một phần, 1 chưa đạt, 1 chưa nghiệm thu**. Nhóm cũng bỏ 17 ảnh không liên quan hoặc lỗi thời.
+> Bot được làm theo ba giai đoạn. **Giai đoạn 1** chỉ đọc: danh mục 47 thiết bị khớp topology, lệnh `/show`, `/health` và hỏi đáp tự nhiên. **Giai đoạn 2** cảnh báo và chẩn đoán: bot tự nhắn khi vEdge mất kết nối hoặc OVS rời controller; lệnh `/diag` chẩn đoán **theo lớp** và dừng ở lớp đầu tiên sai. **Giai đoạn 3** thay đổi có kiểm soát: `/change` phải được duyệt, và nếu thiết bị mất kết nối sau khi áp thì **tự rollback**; thêm kiểm tra tuân thủ, sao lưu và so sánh cấu hình.
+>
+> Ví dụ `/diag site 400` kiểm tra lần lượt vEdge, WAN của Brand-FW, gateway, trunk rồi DHCP. Chính lệnh này đã phát hiện một **lệch thiết kế có thật**: uplink của hai switch phòng ban Site 400 lên trunk nhờ DTP tự thỏa thuận chứ không cấu hình tường minh. Nhóm em giữ lại lỗi này để demo: bot phát hiện, sửa bằng `/change`, rồi tự rollback nếu có sự cố.
+
+**Nhấn mạnh:** bot tìm ra lỗi thật mà nhóm chưa biết.
+
+**Nếu thầy hỏi "rollback làm thế nào?":**
+> Dạ, với switch IOS bot dùng `configure replace` về bản cấu hình đã lưu; với vEdge Viptela dùng `commit confirmed` — nếu không xác nhận trong thời gian quy định thì thiết bị tự quay về.
 
 ---
 
-## Slide 15 — Vấn đề còn tồn tại (≈ 1 phút)
+## Slide 15 — Mở rộng ra chi nhánh và kiểm thử (≈ 45 giây)
 
 **Nói:**
-> Còn tồn tại: Site 500 chưa cấu hình phía vEdge và LAN; ba phép thử chưa làm — PC Site 100 ra Internet, cắt Internet ở S300/S400 và Mail từ VLAN 40; tường lửa Standby cần ghép HA để đồng bộ; cảnh báo phụ thuộc vManage và chưa có thư phục hồi; controller SDN vẫn là điểm lỗi đơn; controller SD-WAN chưa có NTP.
+> Để bot quản trị được chi nhánh qua overlay SD-WAN, nhóm em cấu hình thêm 12 thiết bị: Brand-FW, SwitchBrand và hai switch phòng ban ở mỗi site. Switch có tài khoản `netops`, SSH v2 và ACL chỉ cho hai IP quản trị; Brand-FW xác thực SSH bằng tài khoản cục bộ.
+>
+> Kết quả: từ Site 100 ping được 15/15 IP quản trị chi nhánh; bộ selftest chạy trên chính DHCP-Server đạt **23/23**; có 71 unit test; chẩn đoán qua vManage cho 8/8 vEdge đạt cả 6 lớp; và lệnh lẫn câu hỏi tự nhiên trên Telegram đều chạy thật.
 
 ---
 
-## Slide 16 — Nhiệm vụ tuần tới 12/10 – 18/10 (≈ 1 phút 30 giây)
+## Slide 16 — Vấn đề còn tồn tại (≈ 45 giây)
 
 **Nói:**
-> Ưu tiên số một là **Site 500**: cấu hình vEdge, chứng thư, whitelist, switch và DHCP, rồi kiểm BFD, OMP, ping liên site và ra Internet. Sau đó bật đủ Site 100 để ghép HA tường lửa và làm các phép thử còn thiếu, hoàn tất ma trận DIA ở S300/S400, bật thư phục hồi và làm phương án B cho cảnh báo.
-> Về báo cáo: chụp ảnh minh chứng mới cho Console, thư cảnh báo, Alarms trên vManage; hoàn thiện và chạy thử kịch bản demo có bấm giờ; rà soát báo cáo bản cuối.
+> Những việc còn tồn tại: chưa kiểm thử sự cố firewall HA, VRRP và cắt một màu WAN; đo lặp SD-WAN mới 2 lần ở một site; Site 500 còn switch, máy trạm và DHCP; SDN khi mất liên kết Distribution–Core vẫn gián đoạn 2 đến 3,7 giây vì chưa có fast-failover cho tầng này; NetOps Bot chưa có rollback cho ASA; và báo cáo cuối kỳ chưa bắt đầu bản nháp.
 
 ---
 
-## Slide 17 — Khó khăn gặp phải trong tuần (≈ 1 phút 30 giây)
+## Slide 17 — Kế hoạch tuần tới 02/11 – 08/11 (≈ 1 phút)
 
 **Nói:**
-> Khó khăn lớn nhất tuần này là các lỗi **chập chờn, không để lại dấu vết rõ**: controller khựng vài phút một lần, card mạng ảo treo không có log trên thiết bị, STP Dispute chỉ xuất hiện trong vài giây lúc khôi phục. Cách nhóm xử lý là **đo liên tục** — CPU từng tiến trình, trạng thái STP mỗi 2,5 giây, bộ đếm giao diện — thay vì đoán.
-> Ngoài ra là tài nguyên máy chủ: khi không thử Site 100 nhóm phải tắt để đủ RAM cho cụm SD-WAN.
+> Tuần tới nhóm em ưu tiên kiểm thử sự cố vì hạn kiểm thử tích hợp là 10/11. Cụ thể: một, failover firewall HA và VRRP; hai, cắt một màu WAN xem BFD và AAR chuyển đường, đo lặp failover 3–5 lần mỗi site, đo khôi phục khi mất vSmart; ba, hoàn thiện LAN Site 500; bốn, nếu kịp thì thử fast-failover cho uplink Distribution–Core.
+>
+> Phần NetOps và báo cáo: thêm rollback cho ASA và hoàn thiện kịch bản demo sửa trunk Site 400; đo lại tuyến LAN Site 100 theo cách mới; và bắt đầu viết chương kết quả và chương NetOps Bot của báo cáo cuối kỳ.
 
 ---
 
-## Slide 18 — Kết thúc (≈ 15 giây)
+## Slide 18 — Khó khăn (≈ 1 phút)
 
 **Nói:**
-> Trên đây là toàn bộ báo cáo tiến độ tuần này của nhóm em. Em xin cảm ơn thầy đã lắng nghe, và nhóm em rất mong nhận được góp ý của thầy ạ.
+> Khó khăn chính trong tuần:
+> - Có những lỗi **chỉ lộ ra khi bật toàn hệ thống**, như việc Site 500 làm mất Internet mọi site.
+> - **Hành vi riêng của ASA**: không chia tải qua hai interface khác nhau; tài khoản mới bị bắt đổi mật khẩu ở lần SSH đầu và đăng nhập console không xóa được yêu cầu này; ASA còn cấm mật khẩu có chuỗi ký tự liên tiếp.
+> - SSH client trên switch IOL đời cũ chỉ hỗ trợ SHA-1, phải tạm nới thuật toán trên ASA rồi trả lại.
+> - LLM miễn phí bị giới hạn tần suất, nhóm em chuyển sang API chuẩn OpenAI, thêm cơ chế thử lại và model dự phòng.
+> - Triển khai trên Windows Server 2012 R2 là hệ điều hành cũ nên phải đóng gói bộ cài offline; có lần một lỗi cú pháp khi chép mã làm bot khởi động lại liên tục, nên nhóm em thêm test kiểm cú pháp trước khi triển khai.
+> - Cuối cùng, chính sách firewall chặn ICMP làm sai số đo tuyến LAN Site 100.
 
 ---
 
-## Phụ lục A — Thuật ngữ nhanh
+## Slide 19 — Cảm ơn (≈ 10 giây)
 
-| Thuật ngữ | Giải thích một câu |
-|---|---|
-| SDN | Tách phần điều khiển (controller) khỏi phần chuyển tiếp (switch), quản lý mạng tập trung bằng phần mềm. |
-| OpenFlow 1.3 | Giao thức controller dùng để cài flow (luật khớp + hành động) xuống switch. |
-| OVS | Open vSwitch — switch ảo hỗ trợ OpenFlow. |
-| Ryu | Controller SDN viết bằng Python. |
-| `fail_mode=secure` | Switch mất controller vẫn giữ flow cũ, không tự học MAC. |
-| Probe | Gói thăm dò controller tự gửi trên từng liên kết để biết link còn sống. |
-| RSTP Dispute | Cổng nhận BPDU mâu thuẫn với vai trò của mình nên tạm chặn, chờ hết thời gian forward-delay. |
-| SD-WAN | WAN định nghĩa bằng phần mềm: overlay trên nhiều đường truyền, chọn đường theo chính sách/SLA. |
-| vManage / vSmart / vBond | Quản trị + alarm / control plane (OMP) / điều phối & xác thực. |
-| BFD | Kiểm tra sống và đo chất lượng từng tunnel. |
-| DIA | Direct Internet Access — site ra Internet ngay tại chỗ, không vòng qua campus chính. |
-| `management-only` | Cổng quản trị của ASA chỉ phục vụ quản trị, không chuyển tiếp dữ liệu (quản trị ngoài băng). |
-| SMTP 587 / mật khẩu ứng dụng | Cổng gửi thư có xác thực + STARTTLS / mật khẩu riêng Gmail cấp cho ứng dụng. |
+**Nói:**
+> Phần báo cáo của nhóm em đến đây là hết. Em cảm ơn thầy đã lắng nghe, nhóm em xin nhận câu hỏi và góp ý của thầy.
 
-## Phụ lục B — Lưu ý trước khi báo cáo
+---
 
-- Slide tuần này không có ảnh chụp mới của Console/vManage (Site 100 đang tắt để tiết kiệm RAM); số liệu lấy từ kết quả đo và nhật ký ngày 09–11/10. Nếu thầy muốn xem trực tiếp, cần bật Site 100 theo thứ tự: SDN controller → Dist-SW1/2 → Access → máy trạm.
-- Thư cảnh báo nằm trong hộp thư nhận của nhóm — nên mở sẵn để cho thầy xem khi nói slide 13.
-- Không đọc thông tin tài khoản Gmail/mật khẩu ứng dụng khi trình bày.
+## Chuẩn bị thêm trước buổi báo cáo
+
+- Mở sẵn `report.pdf` và `../baocao-tuan/main.pdf` (báo cáo tuần bản chữ) phòng khi thầy hỏi chi tiết.
+- Nếu lab còn bật: mở sẵn Telegram, sẵn sàng gõ `/diag site 400` để demo bot phát hiện lỗi trunk Site 400 (khoảng 30 giây).
+- Số liệu cần nhớ: RTO **7,96 s** (7,68–8,25 s), PRR **76,75%**; delay WAN **3,8–12 ms**, mất gói WAN **0%**; selftest **23/23**; **10/10 vEdge**, **124 tunnel**.

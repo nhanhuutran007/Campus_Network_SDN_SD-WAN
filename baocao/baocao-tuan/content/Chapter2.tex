@@ -1,70 +1,76 @@
 \section{CÔNG VIỆC ĐÃ THỰC HIỆN}\label{sec:cong_viec}
 
-\subsection{Fast-failover cho uplink Access trong SDN}
+\subsection{Đo kiểm SD-WAN bằng công cụ web}
 
-\subsubsection{Vấn đề}
-
-Mỗi Access-SW của Site 100 có hai uplink, một lên Dist-SW1 và một lên Dist-SW2. Ứng dụng Ryu tính một cây chuyển tiếp dữ liệu từ đồ thị liên kết; khi một uplink nằm trên cây bị đứt, controller phải phát hiện liên kết chết rồi cài lại luật trên các switch. Trong các lần cắt link thật, quá trình này mất 6--8~s, phần lớn do controller khựng đúng lúc phát hiện và phải chờ thêm thời gian ân hạn 3,5~s trước khi kết luận liên kết chết.
-
-\subsubsection{Giải pháp}
-
-Nhóm chuyển việc chuyển đường cho uplink Access xuống data plane để switch tự xử lý, không phụ thuộc controller:
+Công cụ đo chạy trên máy Windows tại Site 900, lấy dữ liệu qua REST API của vManage và lệnh ping trên vEdge. Trong tuần, nhóm chạy thật ba nhóm phép đo:
 
 \begin{itemize}
-    \item \textbf{BFD giữa các OVS:} bật BFD với chu kỳ 100~ms, hệ số 3 trên 16 cổng Access--Distribution. OVS tự đánh dấu cổng chết sau khoảng 300~ms không nhận được gói BFD.
-    \item \textbf{Group OpenFlow fast-failover:} trên mỗi Access, controller cài một group kiểu \texttt{fast-failover} gồm hai bucket: uplink chính (theo cây) và uplink dự phòng. Mỗi bucket theo dõi trạng thái cổng tương ứng; khi BFD báo cổng chính chết, switch dùng ngay bucket dự phòng.
-    \item \textbf{Mở chiều vào trên cổng dự phòng:} trước đây cổng Access--Distribution ngoài cây bị chặn chiều vào để tránh vòng lặp. Vì Access là nút lá, nhóm bỏ luật chặn chiều vào trên các cổng này để gói trả về qua đường dự phòng không bị hủy.
-    \item Cấu hình BFD được lưu trong file môi trường của từng OVS để tự áp lại sau khi khởi động lại switch.
+    \item \textbf{Failover link WAN (độ tin cậy):} cắt uplink vEdge 1 Site 200 trong khi ping liên tục qua overlay, đo thời gian khôi phục (RTO) và tỉ lệ khôi phục gói (PRR). Chạy 2 lần ngày 24/10.
+    \item \textbf{Độ sẵn sàng dài hạn:} vEdge mỗi site ping định kỳ Web Server tại Campus chính, ghi phần trăm thời gian dùng được, MTTR và MTBF. Bắt đầu thu từ 24/10.
+    \item \textbf{So sánh hiệu năng Campus chính -- chi nhánh:} đo delay, jitter, mất gói theo hai loại đường (LAN nội bộ site và WAN qua SD-WAN) cho cả bốn site, ngày 25/10.
 \end{itemize}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\linewidth]{image/campuschinh.png}
-    \caption{Sơ đồ Campus chính (Site 100) với hai tầng Distribution và bốn Access do Ryu điều khiển}
-    \label{fig:campus_chinh}
-\end{figure}
+Kết quả trình bày ở Chương~\ref{sec:ket_qua}; mọi lần đo đều lưu CSV và biểu đồ trong thư mục \texttt{log/} của kho mã nguồn.
 
-\subsubsection{Kiểm thử phần mềm}
+\subsection{Kiểm thử tích hợp toàn hệ thống}
 
-Bộ unit test của ứng dụng Ryu được bổ sung các trường hợp cho group fast-failover và việc mở chiều vào trên cổng ngoài cây: 33/33 test ĐẠT, cùng 10/10 test của bộ kiểm tra phụ. Ứng dụng mới được triển khai lên controller sau khi sao lưu bản cũ.
+Ngày 25/10, nhóm bật đồng thời toàn bộ 70 thiết bị (SDN, SD-WAN, firewall, dịch vụ, máy trạm) và kiểm tra theo từng cụm:
 
-\subsection{Đo kiểm năm mục tiêu SDN}
+\begin{itemize}
+    \item \textbf{SDN Site 100:} 6/6 OVS kết nối Ryu, 13/13 liên kết được phát hiện; 7/7 máy trạm nhận DHCP và thông liên VLAN.
+    \item \textbf{Firewall:} cặp ASAv ở trạng thái Active / Standby Ready.
+    \item \textbf{SD-WAN:} 12/12 thiết bị reachable trên vManage (gồm vEdge Site 500), 92/92 phiên BFD up.
+    \item \textbf{Chi nhánh:} 9/9 VPC và 3 PC Linux nhận DHCP, truy cập được DHCP/DNS, Web (HTTP/HTTPS) và Mail (SMTP/IMAP) tại Campus chính qua SD-WAN.
+    \item \textbf{Internet:} cả bốn site ra Internet; cảnh báo qua email (SMTP 587) gửi được từ Site 900.
+\end{itemize}
 
-Nhóm chạy bộ đo trên lab thật ngày 23/10/2026, mỗi mục tiêu lưu log riêng (CSV/JSON) trong kho mã nguồn:
+Trong lúc kiểm thử, nhóm phát hiện và sửa hai lỗi định tuyến (chi tiết ở Chương~\ref{sec:kho_khan}): vEdge Site 500 kéo default route của mọi site từ MPLS sang Internet làm các site mất Internet, và Site 100 mất Internet do firewall không chia tải qua hai interface khác nhau.
+
+\subsection{Campus NetOps Bot -- trợ lý vận hành mạng qua Telegram}
+
+\subsubsection{Mục tiêu và kiến trúc}
+
+Bot giúp quản trị viên kiểm tra, chẩn đoán và thay đổi cấu hình mạng bằng tin nhắn Telegram, kể cả câu hỏi bằng ngôn ngữ tự nhiên. Điểm khác so với công cụ chạy ngoài lab là bot được cài \textbf{ngay trong topology}, trên DHCP-Server của Site 100 (Windows Server 2012 R2, VLAN Server Farm), và quản trị thiết bị theo kiểu \textbf{in-band}: SSH tới thiết bị qua chính mạng dữ liệu, đọc REST API của vManage và Ryu. Như vậy bot cũng là một ``người dùng'' của mạng: nếu mạng hỏng thì bot là thứ đầu tiên phát hiện.
+
+Các thành phần chính:
+
+\begin{itemize}
+    \item \textbf{Lớp truy cập thiết bị:} SSH (Netmiko) tới switch IOS/IOL, firewall ASAv và Brand-FW; REST API vManage cho vEdge; REST API Ryu cho SDN; PowerShell tại chỗ cho DHCP.
+    \item \textbf{AI agent:} LangGraph điều phối các công cụ trên, gọi LLM qua API chuẩn OpenAI nên đổi nhà cung cấp chỉ cần sửa file cấu hình.
+    \item \textbf{Rào an toàn:} chỉ trả lời chat được cho phép; mặc định chỉ chạy lệnh đọc (\texttt{show}, \texttt{ping}, \texttt{traceroute}); che mật khẩu, khóa bí mật trong mọi kết quả trả về; bot dùng tài khoản \texttt{netops} riêng, mỗi thiết bị chỉ cho SSH từ DHCP-Server và PC quản trị.
+\end{itemize}
+
+\subsubsection{Ba giai đoạn đã triển khai}
 
 \begin{enumerate}
-    \item \textbf{Cấp phát VLAN mới (MT1):} tạo VLAN qua REST API của controller, so với cấu hình tay bằng CLI trên Core.
-    \item \textbf{Tự phục hồi khi cắt link thật (MT2):} sáu kịch bản S1--S6, gồm cắt một liên kết Access--Distribution, Distribution--Distribution, Distribution--Core và hai trường hợp hỏng kép; mỗi kịch bản giữ trạng thái cắt 25~s rồi nối lại.
-    \item \textbf{Hiệu năng chuyển mạch (MT3):} ping cùng VLAN và khác VLAN giữa các máy trạm, kèm đích Server Farm.
-    \item \textbf{Tải controller (MT4):} đo CPU của controller trong khi tạo lưu lượng.
-    \item \textbf{Chính sách tập trung (MT5):} áp một luật truy cập qua controller và đo thời gian đến khi luật có hiệu lực trên các Access.
+    \item \textbf{Giai đoạn 1 -- chỉ đọc:} danh mục 47 thiết bị khớp topology, lệnh \texttt{/show}, \texttt{/health}, hỏi đáp tự nhiên.
+    \item \textbf{Giai đoạn 2 -- cảnh báo và chẩn đoán:} bot theo dõi vManage và Ryu, tự gửi cảnh báo lên Telegram khi vEdge mất kết nối hoặc OVS rời controller. Lệnh \texttt{/diag} chẩn đoán \textbf{theo lớp} và dừng ở lớp đầu tiên sai: vEdge (6 lớp, từ quản lý tới control connection, BFD, OMP), firewall (HA, interface, OSPF, default route, gói bị drop), DHCP Site 100 (scope, lease), và chi nhánh \texttt{/diag site 200|300|400} (vEdge $\rightarrow$ WAN Brand-FW $\rightarrow$ gateway $\rightarrow$ trunk $\rightarrow$ DHCP).
+    \item \textbf{Giai đoạn 3 -- thay đổi có kiểm soát:} \texttt{/change} chỉ áp cấu hình sau khi quản trị viên bấm duyệt trên Telegram, và tự rollback nếu thiết bị mất kết nối sau khi áp (IOS dùng \texttt{configure replace}, Viptela dùng \texttt{commit confirmed}); \texttt{/compliance} kiểm tra cấu hình theo chuẩn, \texttt{/backup} sao lưu, \texttt{/drift} so cấu hình đang chạy với bản lưu trong kho mã nguồn.
 \end{enumerate}
 
-Kết quả chi tiết trình bày ở Chương~\ref{sec:ket_qua}.
+\subsubsection{Mở rộng quản trị in-band ra chi nhánh}
 
-\subsection{Campus SDN Console}
-
-Console là giao diện web chạy trên controller, hiển thị sức khỏe kênh điều khiển, topology và cho phép chạy tự động các kịch bản cắt link. Trong tuần, nhóm:
+Để bot quản trị được các chi nhánh qua overlay SD-WAN, nhóm cấu hình thêm trên 12 thiết bị (Brand-FW, SwitchBrand và hai switch phòng ban mỗi site 200/300/400):
 
 \begin{itemize}
-    \item Sửa lỗi biểu đồ tự co dần sau mỗi lần cập nhật: hàm vẽ đọc lại chiều cao canvas đã nhân với tỉ lệ điểm ảnh của màn hình, nên mỗi lần vẽ chiều cao bị thu nhỏ thêm.
-    \item Thiết kế lại giao diện theo tông màu dịu mắt và thêm nút chuyển chế độ Sáng/Tối.
-    \item Kiểm tra trên Chrome của PC quản trị ở mức thu phóng 90\% và trên trình duyệt không giao diện với hai tỉ lệ điểm ảnh khác nhau: biểu đồ giữ kích thước ổn định.
+    \item Switch: tài khoản \texttt{netops}, SSH v2 với khóa RSA, ACL chỉ cho phép SSH từ DHCP-Server và PC quản trị Site 100, default route về Brand-FW.
+    \item Brand-FW: xác thực SSH bằng tài khoản cục bộ (AAA LOCAL) kèm tự vào chế độ đặc quyền, chỉ nhận SSH từ hai địa chỉ quản trị trên các interface WAN.
+    \item Cấu hình được lưu trên thiết bị và đồng bộ về thư mục \texttt{configs/} trong kho mã nguồn.
 \end{itemize}
 
-\subsection{Công cụ đo và vận hành SD-WAN}
+Kết quả: từ Core-SW1 Site 100 ping được 15/15 địa chỉ quản trị chi nhánh; bot SSH được tới cả 12 thiết bị và chạy \texttt{/diag site} cho ba chi nhánh.
 
-Công cụ web chạy trên máy Windows tại Site 900, chỉ lấy dữ liệu qua REST API của vManage và ping trực tiếp. Trong tuần, nhóm bổ sung:
+\subsubsection{Kiểm thử}
 
 \begin{itemize}
-    \item \textbf{Tab Độ tin cậy:} tổng hợp các lần đo ở tab SD-WAN Failover thành số lần đo, RTO nhỏ nhất/trung bình/lớn nhất và tỉ lệ khôi phục gói (PRR) theo từng vEdge; đo thời gian khôi phục controller khi người thực hiện tắt rồi bật lại vSmart (theo dõi control connection của mọi vEdge và ping liên tục qua overlay để xem OMP graceful restart có giữ được data plane không); đo độ sẵn sàng dài hạn bằng cách cho vEdge mỗi site ping định kỳ Web Server tại Campus chính, tính phần trăm thời gian dùng được, MTTR và MTBF.
-    \item \textbf{Ký chứng thư và onboard vEdge mới:} kỹ thuật viên chỉ cần gõ trên console vài lệnh bật SSH (địa chỉ VPN 0, \texttt{allow-service}, route); công cụ tự SSH vào, cấu hình hostname, system-ip theo dải Site 900, organization, vBond, rồi tạo CSR và ký chứng thư. Công cụ kiểm tra trùng system-ip với thiết bị đã có trước khi cấu hình.
-    \item \textbf{Sửa lỗi API ping của vManage 20.10:} lần chạy thật đầu tiên của tab SD-WAN Failover (24/10) bị vManage trả HTTP 400 ``Invalid data length value''. Công cụ nay thử lần lượt các dạng tham số được chấp nhận và nhớ dạng chạy được cho các lần ping sau, để không làm chậm phép đo RTO.
+    \item 71 unit test cho các nhóm chức năng, cộng kiểm tra cú pháp toàn bộ mã nguồn.
+    \item Bộ selftest chạy trên chính DHCP-Server: \textbf{23/23 ĐẠT} (DNS, HTTPS tới Telegram và LLM, SSH tới thiết bị Site 100 và chi nhánh, Ryu 6/6 switch, vManage).
+    \item Chạy thật trên Telegram: các lệnh trực tiếp và câu hỏi tự nhiên đều trả lời đúng; chẩn đoán vEdge qua vManage cho kết quả 8/8 vEdge đạt cả 6 lớp.
 \end{itemize}
 
 \subsection{Tài liệu}
 
 \begin{itemize}
-    \item Cập nhật báo cáo giữa kỳ: Chương 4 bổ sung kết quả đo SDN và fast-failover, bảng sự cố; Chương 5 điều chỉnh kế hoạch giai đoạn cuối và rủi ro theo tình hình mới.
-    \item Cập nhật bảng theo dõi tiến độ và ghi chú kỹ thuật về fast-failover, cách đo phục hồi bằng ping data plane.
+    \item Cập nhật bảng theo dõi tiến độ tới 30/10, thêm hạng mục 21 ``Vận hành và tự động hóa (NetOps)''.
+    \item Cập nhật README dự án: NetOps Bot, fast-failover SDN, Site 500; hướng dẫn cài đặt NetOps Bot (bộ cài offline cho Windows Server 2012 R2).
 \end{itemize}

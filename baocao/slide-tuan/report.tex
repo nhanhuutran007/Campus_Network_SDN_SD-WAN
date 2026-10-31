@@ -8,6 +8,8 @@
 \usepackage{xcolor}
 \usepackage{tcolorbox}
 \tcbuselibrary{skins}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta}
 
 \definecolor{primaryDark}{RGB}{0, 51, 102}
 \definecolor{primaryLight}{RGB}{0, 85, 150}
@@ -43,12 +45,13 @@
 \newcommand{\done}{\textcolor{doneGreen}{\textbf{Hoàn thành}}}
 \newcommand{\doing}{\textcolor{orange}{\textbf{Đang làm}}}
 \newcommand{\todo}{\textcolor{alertRed}{\textbf{Chưa làm}}}
+\newcommand{\partly}{\textcolor{orange}{\textbf{Một phần}}}
 
 \title[SDN \& SD-WAN Campus]{\texorpdfstring{XÂY DỰNG MẠNG CAMPUS NETWORK\\SỬ DỤNG SDN VÀ SD-WAN}{XÂY DỰNG MẠNG CAMPUS NETWORK SỬ DỤNG SDN VÀ SD-WAN}}
-\subtitle{Báo cáo tiến độ tuần 05/10 -- 11/10/2026 -- Dự án Công nghệ Thông tin}
+\subtitle{Báo cáo tiến độ tuần 26/10 -- 01/11/2026 -- Dự án Công nghệ Thông tin}
 \author[Trần Hữu Nhân -- Nguyễn Nhật Hào]{Trần Hữu Nhân -- 52300235\\Nguyễn Nhật Hào -- 52300198}
 \institute[TDTU]{Khoa Công nghệ Thông tin -- Trường Đại học Tôn Đức Thắng}
-\date{11/10/2026}
+\date{01/11/2026}
 
 \begin{document}
 
@@ -74,43 +77,44 @@
         \textbf{SDN} (điều khiển tập trung mạng LAN campus chính) và
         \textbf{SD-WAN} (kết nối thông minh giữa các cơ sở qua Internet và MPLS).
     \end{block}
-    \vspace{0.3cm}
+    \vspace{0.15cm}
+    \small
     \begin{itemize}
         \item Thiết kế kiến trúc phân cấp Core -- Distribution -- Access, dự phòng VRRP.
         \item Quy hoạch VLAN, IP, DHCP cho Site 100 (Campus chính), 3 chi nhánh
               Cần Thơ (200), Đà Nẵng (300), Nha Trang (400) và Site 500 (mở rộng).
-        \item Quản lý tập trung 6 switch OVS bằng Ryu Controller qua OpenFlow 1.3, \textbf{tự phục hồi}
-              khi mất liên kết, đánh giá theo 5 mục tiêu.
+        \item Quản lý tập trung 6 switch OVS bằng Ryu Controller qua OpenFlow 1.3, tự phục hồi
+              và \textbf{fast-failover} khi mất liên kết.
         \item Fabric Cisco SD-WAN (vManage/vSmart/vBond -- Site 900), underlay BGP
-              2 nhà cung cấp, \textbf{cảnh báo sự cố qua email}.
-        \item Bảo mật và dịch vụ: FW-ASAv HA, DMZ, Server Farm, DNS/DHCP, Syslog, ra Internet có kiểm soát.
+              2 nhà cung cấp, \textbf{đo độ tin cậy} failover.
+        \item Bảo mật và dịch vụ: FW-ASAv HA, DMZ, Server Farm, DNS/DHCP, Web/Mail, ra Internet có kiểm soát.
+        \item \textbf{Vận hành tự động (mới):} NetOps Bot quản trị mạng qua Telegram.
     \end{itemize}
 \end{frame}
 
 \begin{frame}{Topology tổng thể trên EVE-NG}
     \centering
-    \includegraphics[height=0.82\textheight]{topo_tongthe.jpg}
+    \includegraphics[height=0.78\textheight]{topo_tongthe.jpg}
 
     \scriptsize Campus chính Site 100 (SDN + FW-ASAv HA), chi nhánh 200/300/400, Site 500 (mở rộng),
     Site 900 (SD-WAN controller), nhà cung cấp Internet/MPLS chạy BGP -- 70 node, 103 network.
 \end{frame}
 
-\begin{frame}{Mục tiêu của tuần (05/10 -- 11/10) và mức độ hoàn thành}
+\begin{frame}{Mục tiêu của tuần (26/10 -- 01/11) và mức độ hoàn thành}
     \centering
     \small
     \begin{tabular}{@{}p{0.70\textwidth}c@{}}
         \toprule
         \textbf{Nhiệm vụ đặt ra tuần trước} & \textbf{Trạng thái} \\
         \midrule
-        Bỏ điểm lỗi đơn của kênh quản trị VLAN 99, kiểm lại kịch bản khôi phục SDN & \done \\
-        Sửa định tuyến bất đối xứng VLAN 99 Site 100 $\leftrightarrow$ chi nhánh trên FW-ASAv & \done \\
-        Quyết định số phận ONOS (chuyển hẳn hay gỡ) & \done{} (đã tắt) \\
-        Đưa số liệu SDN + ma trận DIA vào Chương 4, cập nhật Chương 5, thay ảnh topology & \done \\
-        Cấu hình Site 500 (vEdge, SW-S500, VPC) và đưa vào fabric & \todo \\
-        Kiểm thử PC Site 100 ra Internet qua OVS; cắt biz-internet tại S300/S400 & \todo \\
-        Soạn kịch bản demo bảo vệ & \doing \\
+        Đo lặp SD-WAN: failover link WAN, khôi phục controller, độ sẵn sàng & \partly \\
+        Kiểm thử failover cặp FW-ASAv HA và VRRP trên Core & \todo \\
+        Hoàn thiện Site 500 (vEdge, switch, máy trạm, chính sách) & \partly{} (vEdge xong) \\
+        SDN: fast-failover cho uplink Distribution & \todo \\
+        Theo dõi, thu bằng chứng khi vEdge mất kết nối & \done \\
+        Đưa số liệu vào bản nháp báo cáo cuối kỳ & \todo \\
         \midrule
-        \multicolumn{2}{@{}p{0.86\textwidth}@{}}{\textbf{Phát sinh thêm trong tuần:} kiểm thử khởi động nguội + cắt link thật; tab Sức khoẻ/Kịch bản; sửa vEdge1 Site 300 mất fabric; Site 900 ra Internet có kiểm soát; cảnh báo email vManage.} \\
+        \multicolumn{2}{@{}p{0.86\textwidth}@{}}{\textbf{Phát sinh thêm trong tuần:} kiểm thử tích hợp toàn hệ thống 70 node; sửa 2 lỗi làm mất Internet; \textbf{Campus NetOps Bot} (Telegram + AI agent) chạy thật, quản trị in-band Site 100 và 3 chi nhánh.} \\
         \bottomrule
     \end{tabular}
 \end{frame}
@@ -131,246 +135,250 @@
         Hạ tầng campus L2/L3    & Core/Dist/Access, VRRP, FW-ASAv HA, ASDM       & \done \\
         Chi nhánh 200/300/400   & Brand-FW, DHCP, SwitchBrand, VPC              & \done \\
         SD-WAN                  & Controllers, PKI, vEdge, BFD, chính sách vSmart & \done \\
-        SDN campus chính        & Ryu v2, Console, 5 mục tiêu, \textbf{tự phục hồi S1--S6} & \done \\
-        Ra Internet (DIA)       & NAT, DNS forwarder, dự phòng MPLS, ACL, Site 900 & \done \\
-        Giám sát \& cảnh báo    & Console Sức khoẻ/Kịch bản, \textbf{email vManage} & \done \\
-        Site 500                & vEdge Site 500, SW-S500, VPC11/12              & \doing \\
-        Báo cáo \& demo         & Chương 1--5 (cập nhật 11/10), slide, kịch bản bảo vệ & \doing \\
+        SDN campus chính        & Ryu, Console, 5 mục tiêu, fast-failover        & \done \\
+        Site 500                & \textbf{2/2 vEdge lên fabric}; còn switch + máy trạm & \doing \\
+        Kiểm thử tích hợp       & Chức năng toàn hệ thống ĐẠT; còn kịch bản sự cố & \doing \\
+        \textbf{NetOps Bot (mới)} & Telegram + AI agent, quản trị in-band        & \doing \\
+        Báo cáo \& demo         & Báo cáo tuần, bảng tiến độ; báo cáo cuối kỳ, slide bảo vệ & \doing \\
         \bottomrule
     \end{tabular}
 \end{frame}
 
-\begin{frame}{SDN -- Kiểm thử khởi động nguội \& cắt link thật (09/10)}
-    \footnotesize
-    Cắt \textbf{thật} = hạ giao diện ảo trên máy chủ EVE-NG (như rút dây); ping 0,1\,s từ controller tới 4 VLAN.
-    \vspace{0.15cm}
-
+\begin{frame}{SD-WAN -- Trạng thái fabric trên vManage (31/10)}
     \centering
-    \begin{tabular}{@{}p{0.30\textwidth}p{0.30\textwidth}p{0.32\textwidth}@{}}
+    \includegraphics[height=0.74\textheight]{vmanage_devices.png}
+
+    \vspace{0.15cm}
+    \footnotesize \textbf{10/10 vEdge} (gồm \textbf{2 vEdge Site 500}) và 3 controller đều reachable, \textcolor{doneGreen}{\textbf{BFD đủ}} trên mọi vEdge
+    (Site 100: 16/16, chi nhánh: 10/10).
+\end{frame}
+
+\begin{frame}{SD-WAN -- Các tunnel IPsec giữa các site}
+    \centering
+    \includegraphics[height=0.76\textheight]{vmanage_tunnels.png}
+
+    \vspace{0.1cm}
+    \footnotesize 124 tunnel SD-WAN qua 2 màu \texttt{biz-internet} và \texttt{mpls}, gồm cả tunnel tới Site 500; mất gói trung bình $\approx$ 0\,\%.
+\end{frame}
+
+\begin{frame}{SD-WAN -- Đo failover link WAN tại Site 200 (24/10)}
+    \begin{columns}[T]
+        \begin{column}{0.58\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{tincay_failover.png}
+
+            \scriptsize Công cụ web tại Site 900: ping liên tục qua overlay trong lúc cắt uplink vEdge 1 Site 200.
+        \end{column}
+        \begin{column}{0.42\textwidth}
+            \begin{block}{Kết quả (2 lần đo)}
+                \small
+                \begin{itemize}
+                    \item RTO: \textbf{7,68 -- 8,25\,s}, trung bình \textbf{7,96\,s}.
+                    \item Tỉ lệ khôi phục gói (PRR): \textbf{76,75\,\%}.
+                \end{itemize}
+            \end{block}
+            \begin{alertblock}{Nhận xét}
+                \small
+                \begin{itemize}
+                    \item $\approx$ 8\,s khớp BFD mặc định (hello 1\,s $\times$ 7).
+                    \item Chậm hơn nhiều so với SDN fast-failover ($<$ 0,3\,s).
+                    \item Mới 2 lần $\Rightarrow$ tuần tới đo đủ 3--5 lần, thử BFD ngắn hơn.
+                \end{itemize}
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{SD-WAN -- So sánh hiệu năng Campus chính và chi nhánh (25/10)}
+    \begin{columns}[T]
+        \begin{column}{0.55\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{sosanh_delay.png}
+
+            \scriptsize Delay trung bình: LAN nội bộ site và WAN qua SD-WAN.
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \centering
+            \footnotesize
+            \begin{tabular}{@{}lccc@{}}
+                \toprule
+                \textbf{Site} & \textbf{Delay WAN} & \textbf{Jitter WAN} & \textbf{Mất gói} \\
+                \midrule
+                100 & 4,0\,ms  & 0,5\,ms  & 0\,\% \\
+                200 & 7,6\,ms  & 5,1\,ms  & 0\,\% \\
+                300 & 3,8\,ms  & 0,4\,ms  & 0\,\% \\
+                400 & 12,0\,ms & 10,3\,ms & 0\,\% \\
+                \bottomrule
+            \end{tabular}
+            \vspace{0.2cm}
+
+            \begin{block}{Nhận xét}
+                \scriptsize
+                \begin{itemize}
+                    \item WAN qua SD-WAN \textbf{không mất gói} ở cả 4 site.
+                    \item Site 400 jitter cao do vài mẫu RTT vọt 25--50\,ms $\Rightarrow$ cần đo lặp.
+                    \item Site 100 chỉ đo được 3/5 tuyến LAN: FW chặn ICMP vào Server Farm/DMZ
+                          (đúng chính sách) $\Rightarrow$ đổi cách đo.
+                \end{itemize}
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Kiểm thử tích hợp toàn hệ thống (bật đủ 70 node)}
+    \centering
+    \small
+    \begin{tabular}{@{}p{0.22\textwidth}p{0.58\textwidth}c@{}}
         \toprule
-        \textbf{Tình huống} & \textbf{Trước khi sửa} & \textbf{Sau khi sửa} \\
+        \textbf{Cụm} & \textbf{Kết quả} & \textbf{Đánh giá} \\
         \midrule
-        Đứt A4-D1 / 4 uplink A*-D1 & mất 1,8 / 2,0\,s & 1,8 / 1,9\,s \\
-        Đứt A4-D1 + D2-C1 & VLAN 40 mất 13,8\,s; \alert{kẹt 9/13 link, Dist-SW2 mất controller vĩnh viễn} & tự về 13/13 \\
-        Tắt hẳn Dist-SW2 & \alert{4 VLAN mất 100\,\% $\sim$3,5 phút} & \textbf{0--5 gói}; Access nối lại sau $\sim$11\,s \\
+        SDN Site 100      & 6/6 OVS, 13/13 liên kết; 7/7 máy trạm nhận DHCP, thông liên VLAN & \done \\
+        Firewall HA       & FW-ASAv Active / Standby Ready & \done \\
+        SD-WAN            & 12/12 thiết bị reachable, BFD 92/92 & \done \\
+        Chi nhánh         & 9/9 VPC + 3 PC Linux nhận DHCP; tới Web/Mail/DNS Site 100 (TCP 80, 443, 25, 143, 587) & \done \\
+        Internet          & 4/4 site ra Internet (sau khi sửa lỗi Site 500) & \done \\
+        Quản trị in-band  & Từ Site 100 ping 15/15 IP quản trị chi nhánh; SSH 12/12 thiết bị & \done \\
         \bottomrule
     \end{tabular}
-    \vspace{0.2cm}
+    \vspace{0.3cm}
 
-    \begin{exampleblock}{4 lỗi đã sửa trong Ryu app (unit test đạt)}
-        \footnotesize
-        \begin{enumerate}
-            \item Access mất controller $\neq$ Access chết: ``đóng băng'' làm lá trên link cha cũ (OVS \texttt{secure} vẫn chạy flow cũ).
-            \item Access có thêm đường quản trị dự phòng qua Dist-SW1.
-            \item Flow bảo vệ VLAN 99 chỉ \emph{ghi đè}, không xoá trước rồi cài lại.
-            \item Ân hạn khi chính controller bị khựng, tránh báo link Core chết giả.
-        \end{enumerate}
+    \footnotesize Đã đạt toàn bộ kiểm thử \textbf{chức năng}; tuần tới chuyển sang kiểm thử \textbf{sự cố} (failover FW, cắt 1 màu WAN).
+\end{frame}
+
+\begin{frame}{Hai lỗi định tuyến làm mất Internet đã sửa}
+    \begin{columns}[T]
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Mọi site mất Internet khi Site 500 lên fabric}
+                \small
+                \begin{itemize}
+                    \item Router Internet nhận \textbf{default route} từ vEdge Site 500 qua BGP
+                          $\Rightarrow$ đường ra Internet của các site bị kéo sai hướng.
+                    \item Sửa: bộ lọc BGP chặn default route đi vào từ neighbor Site 500.
+                    \item Kết quả: 4/4 site ra Internet lại, Site 500 vẫn trong fabric.
+                \end{itemize}
+            \end{block}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{block}{Site 100 mất Internet (chiều về bị drop)}
+                \small
+                \begin{itemize}
+                    \item Core-SW1 và Core-SW2 quảng bá OSPF cùng cost; ASA \textbf{không chia tải qua 2 interface khác nhau}
+                          $\Rightarrow$ gói chiều về vào sai interface bị drop.
+                    \item Sửa: \texttt{ip ospf cost 10} trên các SVI của Core-SW2; SwitchServerFarm dùng default route.
+                    \item Kết quả: máy trạm Site 100 ra Internet bình thường.
+                \end{itemize}
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Campus NetOps Bot -- Kiến trúc in-band}
+    \begin{columns}[T]
+        \begin{column}{0.55\textwidth}
+            \centering
+            \begin{tikzpicture}[
+                box/.style={draw=primaryDark, fill=lightGrayBg, rounded corners=2pt, align=center,
+                            font=\scriptsize, minimum height=0.75cm, text width=2.3cm},
+                bot/.style={box, fill=primaryDark!12, text width=3.0cm, minimum height=1.1cm},
+                arr/.style={-{Stealth[length=4pt]}, thick, accentTeal}]
+                \node[box] (tg) {Quản trị viên\\Telegram};
+                \node[bot, below=0.45cm of tg] (bot) {\textbf{NetOps Bot}\\LangGraph + LLM\\(DHCP-Server Site 100)};
+                \node[box, below left=0.6cm and -0.9cm of bot] (s100) {Site 100\\Core, FW-ASAv\\(SSH in-band)};
+                \node[box, below right=0.6cm and -0.9cm of bot] (br) {Chi nhánh 200/300/400\\Brand-FW, switch\\(SSH qua SD-WAN)};
+                \node[box, left=0.35cm of bot, text width=1.6cm] (vm) {vManage\\REST API};
+                \node[box, right=0.35cm of bot, text width=1.6cm] (ryu) {Ryu\\REST API};
+                \draw[arr, <->] (tg) -- (bot);
+                \draw[arr] (bot) -- (s100);
+                \draw[arr] (bot) -- (br);
+                \draw[arr] (bot) -- (vm);
+                \draw[arr] (bot) -- (ryu);
+            \end{tikzpicture}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \begin{block}{Ý tưởng}
+                \small
+                \begin{itemize}
+                    \item Bot cài \textbf{ngay trong topology}: là một ``người dùng'' của mạng, mạng hỏng thì bot biết đầu tiên.
+                    \item Hỏi bằng lệnh hoặc \textbf{ngôn ngữ tự nhiên}; AI agent tự chọn công cụ (SSH, REST, DHCP).
+                \end{itemize}
+            \end{block}
+            \begin{exampleblock}{Rào an toàn}
+                \small
+                \begin{itemize}
+                    \item Chỉ trả lời chat được cho phép; mặc định chỉ lệnh đọc.
+                    \item Che mật khẩu/khóa trong kết quả.
+                    \item Tài khoản \texttt{netops} riêng, thiết bị chỉ nhận SSH từ 2 IP quản trị.
+                \end{itemize}
+            \end{exampleblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Campus NetOps Bot -- Ba giai đoạn đã triển khai}
+    \begin{columns}[T]
+        \begin{column}{0.33\textwidth}
+            \begin{block}{GĐ1 -- Chỉ đọc}
+                \small
+                \begin{itemize}
+                    \item Danh mục 47 thiết bị khớp topology.
+                    \item \texttt{/show}, \texttt{/health}.
+                    \item Hỏi đáp tự nhiên qua AI agent.
+                \end{itemize}
+            \end{block}
+        \end{column}
+        \begin{column}{0.33\textwidth}
+            \begin{block}{GĐ2 -- Chẩn đoán}
+                \small
+                \begin{itemize}
+                    \item Tự báo Telegram khi vEdge mất kết nối, OVS rời controller.
+                    \item \texttt{/diag} \textbf{theo lớp}, dừng ở lớp đầu tiên sai: vEdge (6 lớp), FW, DHCP, chi nhánh.
+                \end{itemize}
+            \end{block}
+        \end{column}
+        \begin{column}{0.33\textwidth}
+            \begin{block}{GĐ3 -- Thay đổi}
+                \small
+                \begin{itemize}
+                    \item \texttt{/change}: duyệt trên Telegram rồi mới áp, \textbf{tự rollback} nếu mất kết nối.
+                    \item \texttt{/compliance}, \texttt{/backup}, \texttt{/drift}.
+                \end{itemize}
+            \end{block}
+        \end{column}
+    \end{columns}
+    \vspace{0.3cm}
+
+    \begin{exampleblock}{Ví dụ: \texttt{/diag site 400}}
+        \small
+        vEdge $\rightarrow$ WAN Brand-FW $\rightarrow$ gateway $\rightarrow$ trunk $\rightarrow$ DHCP.
+        Bot phát hiện \textbf{lệch thiết kế có thật}: uplink 2 switch phòng ban Site 400 lên trunk nhờ DTP tự thỏa thuận,
+        không cấu hình tường minh $\Rightarrow$ giữ lại làm kịch bản demo sửa bằng \texttt{/change}.
     \end{exampleblock}
 \end{frame}
 
-\begin{frame}{SDN -- Tìm nguyên nhân controller bị khựng}
+\begin{frame}{Campus NetOps Bot -- Mở rộng ra chi nhánh \& kiểm thử}
     \begin{columns}[T]
         \begin{column}{0.5\textwidth}
-            \begin{alertblock}{Hiện tượng}
+            \begin{block}{Quản trị chi nhánh qua overlay SD-WAN}
                 \small
                 \begin{itemize}
-                    \item Controller khựng theo cụm mỗi 5--15 phút, mỗi lần 0,5--9,1\,s.
-                    \item Có cụm làm cả 6 OVS mất kết nối rồi nối lại.
+                    \item 12 thiết bị (Brand-FW, SwitchBrand, 2 switch phòng ban $\times$ 3 site).
+                    \item Switch: user \texttt{netops}, SSH v2, ACL chỉ cho 2 IP quản trị, default route về Brand-FW.
+                    \item Brand-FW: AAA LOCAL + tự vào chế độ đặc quyền; SSH chỉ từ 2 IP quản trị.
+                    \item Cấu hình lưu trên thiết bị và đồng bộ về kho mã nguồn.
                 \end{itemize}
-            \end{alertblock}
-            \begin{block}{Cách đo}
-                \small
-                Ghi \texttt{/proc/<pid>/stat} mỗi 0,5\,s trên máy controller (2 vCPU) trong một cụm:
-                CPU rảnh về \textbf{0 suốt $\sim$18\,s}; \texttt{java} (ONOS) chiếm $>$ 1 vCPU, Ryu chỉ còn 5--50 tick.
             \end{block}
         \end{column}
         \begin{column}{0.5\textwidth}
-            \begin{exampleblock}{Xử lý}
+            \begin{exampleblock}{Kết quả kiểm thử}
                 \small
                 \begin{itemize}
-                    \item \textbf{Tắt ONOS} (chỉ dùng để xem topology, Console đã thay thế).
-                    \item Ưu tiên CPU cho dịch vụ Ryu (\texttt{CPUShares}).
-                    \item RAM controller: 1,3\,GB $\rightarrow$ 179\,MB.
-                    \item \texttt{/boot nofail} cho 6 OVS + controller: khởi động đồng loạt không còn vào chế độ khẩn cấp.
+                    \item Ping \textbf{15/15} IP quản trị chi nhánh từ Site 100.
+                    \item Selftest trên DHCP-Server: \textbf{23/23 ĐẠT}.
+                    \item \textbf{71} unit test + kiểm cú pháp toàn bộ mã nguồn.
+                    \item Chẩn đoán vEdge qua vManage: \textbf{8/8 vEdge đạt cả 6 lớp}.
+                    \item Lệnh và câu hỏi tự nhiên trên Telegram chạy thật.
                 \end{itemize}
             \end{exampleblock}
-            \vspace{0.1cm}
-            \scriptsize Còn ghi nhận hiếm một lần khựng 4,9\,s sau loạt cắt thật (nghi tài nguyên máy chủ).
-        \end{column}
-    \end{columns}
-\end{frame}
-
-\begin{frame}{SDN -- Kênh quản trị VLAN 99 không phụ thuộc STP}
-    \begin{columns}[T]
-        \begin{column}{0.46\textwidth}
-            \begin{alertblock}{Gốc lỗi kịch bản S4/S5}
-                \small
-                Khung VLAN 99 đi vòng Core-SW1 Et1/2 $\rightarrow$ Dist-SW2 $\rightarrow$ inter-dist
-                $\rightarrow$ Dist-SW1 $\rightarrow$ Et0/2: Core nghe \emph{chính BPDU của nó}.
-                Khi khôi phục, Et1/2 rơi vào \textbf{RSTP Dispute} $\sim$8\,s $\Rightarrow$ 6 OVS mất controller.
-            \end{alertblock}
-        \end{column}
-        \begin{column}{0.54\textwidth}
-            \begin{exampleblock}{Thiết kế mới (chỉ đổi flow do controller cài)}
-                \small
-                \begin{itemize}
-                    \item Khung vào từ cổng Core \textbf{không bao giờ} ra cổng Core khác $\Rightarrow$
-                          Et1/2 và Et0/2 đều Desg FWD, STP chỉ là lưới an toàn.
-                    \item Mỗi Access tới 4 đường, mỗi Dist 2 đường quản trị \emph{đồng thời}.
-                    \item Hai chiều trên inter-dist phân biệt bằng mã VLAN nội bộ.
-                    \item Chống phản xạ: drop khung có MAC nguồn là MAC quản trị OVS.
-                    \item Không sửa Core-SW1, không sửa script OVS.
-                \end{itemize}
-            \end{exampleblock}
-        \end{column}
-    \end{columns}
-    \vspace{0.15cm}
-    \centering\scriptsize Unit test: không vòng, không phản xạ, mọi OVS vẫn tới Core khi mất \emph{bất kỳ} 1 liên kết hoặc 1 Dist. Live: $\sim$100--170\,pps trên Et0/2, Et1/2 (không bão).
-\end{frame}
-
-\begin{frame}{SDN -- Kết quả 6 kịch bản tự phục hồi (tab Kịch bản của Console)}
-    \centering
-    \footnotesize
-    \begin{tabular}{@{}lcccl@{}}
-        \toprule
-        \textbf{Kịch bản (giữ 15\,s)} & \textbf{Khi cắt} & \textbf{Khi khôi phục} & \textbf{Về đủ 13/13} & \textbf{Trước khi sửa} \\
-        \midrule
-        S1 D1-C1           & 3,3\,s & 0,3\,s & 1,5\,s & Đạt \\
-        S2 A4-D1           & 2,1\,s & 0      & 1,5\,s & Đạt \\
-        S3 D1-D2           & \textbf{0} & 0  & 1,5\,s & Đạt \\
-        S4 D2-C1           & \textbf{0} & \textbf{0} & 2,0\,s & \alert{Không đạt (10,9\,s)} \\
-        S5 A4-D1 + D2-C1   & 3,4\,s & \textbf{0} & 2,0\,s & \alert{Không đạt (15\,s + 10,3\,s)} \\
-        S6 D1-C1 + D1-C2   & 3,5\,s & 0,3\,s & 1,5\,s & Đạt \\
-        \bottomrule
-    \end{tabular}
-    \vspace{0.25cm}
-
-    \begin{block}{Kết luận}
-        \small
-        \textbf{6/6 ĐẠT} (tiêu chí: khi cắt $\le$ 5\,s, khi khôi phục $\le$ 3\,s, về đủ 13/13 + 6/6); không switch nào mất controller.
-        Cắt \textbf{thật} 3/3 đạt: D2-C1 \textbf{0 gói}; A4-D1 + D2-C1 mất 3,2\,s, khôi phục 0,2\,s; D1-C1 mất 2,8--3,1\,s.
-        Tab mới \textbf{Sức khoẻ}: trạng thái kênh điều khiển, đường quản trị đang dùng, role STP VLAN 99 của Core-SW1 (SNMP).
-    \end{block}
-\end{frame}
-
-\begin{frame}{SD-WAN -- Hai sự cố đã sửa}
-    \begin{columns}[T]
-        \begin{column}{0.5\textwidth}
-            \begin{block}{VLAN 99 Site 100 $\leftrightarrow$ chi nhánh không thông}
-                \small
-                \begin{itemize}
-                    \item Nguyên nhân: Management0/0 của FW-ASAv nối trực tiếp \texttt{10.1.99.0/24}
-                          $\Rightarrow$ gói trả về đi ra \texttt{management}, ASA huỷ (bất đối xứng).
-                    \item Sửa theo chuẩn quản trị ngoài băng: \texttt{management-only}
-                          + \texttt{route inside 10.1.99.0/24} qua Core-SW1.
-                    \item Kết quả: VLAN 99 $\rightarrow$ S200 10/10, S300 5/5, S400 5/5; ASDM vẫn chạy;
-                          VLAN 99 ra Internet vẫn bị chặn.
-                \end{itemize}
-            \end{block}
-        \end{column}
-        \begin{column}{0.5\textwidth}
-            \begin{block}{vEdge1 Site 300 mất fabric từ 08/10}
-                \small
-                \begin{itemize}
-                    \item Không phải lỗi cấu hình: card mạng ảo ge0/0 \textbf{treo chiều nhận}
-                          (bộ đếm drop của giao diện ảo tăng liên tục).
-                    \item \texttt{shutdown}/\texttt{no shutdown} ge0/0 $\Rightarrow$ BGP Established,
-                          kết nối điều khiển, OMP, BFD tới mọi site và DIA có lại.
-                    \item Đã rà soát toàn bộ giao diện ảo: không còn cổng nào treo.
-                \end{itemize}
-            \end{block}
-        \end{column}
-    \end{columns}
-\end{frame}
-
-\begin{frame}{Site 900 -- Ra Internet có kiểm soát (giống doanh nghiệp)}
-    \begin{columns}[T]
-        \begin{column}{0.5\textwidth}
-            \begin{exampleblock}{Triển khai}
-                \small
-                \begin{itemize}
-                    \item Controller cần DNS, NTP, HTTPS (PnP, license, cập nhật) $\Rightarrow$ đổi từ ``chặn hẳn'' sang ``có kiểm soát''.
-                    \item Switch32: ACL \texttt{SITE900\_EGRESS} chiều vào SVI controller -- fabric/nội bộ tự do;
-                          ra Internet chỉ DNS, NTP, HTTPS, ping; \texttt{deny ... log}.
-                    \item Router Internet: NAT thêm \texttt{10.9.0.0/24}.
-                    \item Áp ACL \textbf{trước}, mở NAT \textbf{sau} để không có lúc mở toàn bộ.
-                \end{itemize}
-            \end{exampleblock}
-        \end{column}
-        \begin{column}{0.5\textwidth}
-            \begin{block}{Kiểm chứng từ vManage}
-                \small
-                \begin{itemize}
-                    \item Ping 8.8.8.8 3/3; DNS UDP/TCP OK; HTTPS 443 OK (HTTP 301).
-                    \item HTTP 80, SSH 22, SMTP (khi chưa mở) bị chặn đúng thiết kế.
-                    \item vSmart giữ nguyên 14 kết nối điều khiển + 9 OMP peer trước/sau.
-                    \item NTP: gói trả lời về tới controller nhưng \texttt{allow-service ntp} đang tắt
-                          $\Rightarrow$ mạng không chặn; chưa khai \texttt{ntp server}.
-                \end{itemize}
-            \end{block}
-        \end{column}
-    \end{columns}
-\end{frame}
-
-\begin{frame}{SD-WAN -- Cảnh báo sự cố qua email (vManage $\rightarrow$ Gmail SMTP 587)}
-    \begin{columns}[T]
-        \begin{column}{0.48\textwidth}
-            \begin{block}{Triển khai}
-                \small
-                \begin{itemize}
-                    \item Switch32: mở \textbf{riêng} vManage gửi SMTP 587 (thêm 1 dòng ACL).
-                    \item vManage: DNS 8.8.8.8/1.1.1.1 $\Rightarrow$ phân giải \texttt{smtp.gmail.com},
-                          nhận được banner \texttt{220 ESMTP}.
-                    \item Luật \texttt{SDWAN-DOWN-ALERT}: Critical + Major; BFD/Control/OMP Node/Site Down,
-                          Interface State Change.
-                    \item Lỗi lần đầu \texttt{535 Username and Password not accepted}: mạng vẫn thông
-                          (bộ đếm ACL 587 tăng) $\Rightarrow$ sai thông tin nhập trên GUI; sửa xong gửi được.
-                \end{itemize}
-            \end{block}
-        \end{column}
-        \begin{column}{0.52\textwidth}
-            \begin{exampleblock}{Demo: tắt cổng Internet của vEdge2 Site 200}
-                \footnotesize
-                \centering
-                \begin{tabular}{@{}lc@{}}
-                    \toprule
-                    \textbf{Sự kiện} & \textbf{Thư sau} \\
-                    \midrule
-                    All BFD sessions down      & $\sim$20\,s \\
-                    All Control connections down & $\sim$35\,s \\
-                    All OMP sessions down      & $\sim$70\,s \\
-                    Interface State Change (bật lại) & ngay \\
-                    \bottomrule
-                \end{tabular}
-            \end{exampleblock}
-            \scriptsize Bật lại cổng: vEdge phục hồi 3 control + 8 BFD. Chưa có thư phục hồi cho BFD/Control/OMP
-            (luật chỉ chọn Critical/Major).
-        \end{column}
-    \end{columns}
-\end{frame}
-
-\begin{frame}{Tài liệu \& báo cáo}
-    \begin{columns}[T]
-        \begin{column}{0.5\textwidth}
-            \begin{block}{Đối chiếu cấu hình}
-                \small
-                \begin{itemize}
-                    \item Đối chiếu toàn bộ tệp cấu hình lưu trữ với cấu hình đang chạy của từng thiết bị.
-                    \item Phát hiện: System-IP thật của vManage/vBond là \texttt{10.9.3.10}/\texttt{.12}
-                          (tài liệu cũ ghi 10.9.0.x); FW-ASAv-Standby đang lưu bản cấu hình cũ.
-                \end{itemize}
-            \end{block}
-        \end{column}
-        \begin{column}{0.5\textwidth}
-            \begin{block}{Báo cáo LaTeX (cập nhật 11/10)}
-                \small
-                \begin{itemize}
-                    \item Chương 3--4 viết lại phần SDN theo controller v2, thêm DIA, Site 900, cảnh báo email.
-                    \item Bảng tổng hợp: \textbf{29 kịch bản} -- 25 Đạt, 2 Đạt một phần, 1 Chưa đạt, 1 Chưa nghiệm thu.
-                    \item Ảnh: bỏ 17 ảnh không liên quan/lỗi thời; thêm topology hiện hành và 5 ảnh minh chứng.
-                    \item Bổ sung danh mục viết tắt (55 mục), phụ lục mã Ryu v2.
-                \end{itemize}
-            \end{block}
         \end{column}
     \end{columns}
 \end{frame}
@@ -383,14 +391,12 @@
 \begin{frame}{Vấn đề còn tồn tại}
     \begin{alertblock}{Chưa xử lý xong}
         \begin{itemize}
-            \item \textbf{Site 500:} vEdge Site 500 chưa cấu hình (system-ip 10.200.50.1, site-id 500, 2 TLOC, BGP 65040);
-                  SW-S500 và VPC chưa cấu hình. Phía nhà cung cấp và chính sách vSmart (site 100--500) đã sẵn sàng.
-            \item \textbf{Chưa kiểm thử:} PC Site 100 (sau OVS/Ryu) ra Internet; cắt biz-internet tại S300/S400;
-                  Mail từ VLAN 40 Site 100 (lỗi cũ, chưa thử lại sau các bản sửa).
-            \item \textbf{FW-ASAv-Standby} chạy bản lưu cũ $\Rightarrow$ cần ghép HA để đồng bộ lại từ Active.
-            \item \textbf{Cảnh báo phụ thuộc vManage:} vManage hỏng thì không có thư; chưa có thư phục hồi.
-            \item Controller SDN vẫn là điểm lỗi đơn; hiếm khi còn khựng vài giây.
-            \item Controller SD-WAN chưa khai NTP server.
+            \item \textbf{Kiểm thử sự cố:} chưa failover cặp FW-ASAv HA, VRRP; chưa cắt 1 màu WAN để xem BFD/AAR chuyển đường.
+            \item \textbf{Đo lặp SD-WAN:} failover link WAN mới 2 lần tại 1 site; chưa đo khôi phục khi mất vSmart.
+            \item \textbf{Site 500:} vEdge đã lên fabric; còn switch, máy trạm và DHCP.
+            \item \textbf{SDN:} mất liên kết Distribution -- Core vẫn gián đoạn 2--3,7\,s (chưa có fast-failover).
+            \item \textbf{NetOps Bot:} chưa có rollback cho ASA; trunk Site 400 chưa sửa (để demo).
+            \item \textbf{Báo cáo cuối kỳ:} chưa bắt đầu bản nháp.
         \end{itemize}
     \end{alertblock}
 \end{frame}
@@ -400,38 +406,33 @@
 % ============================================================
 \section{Kế hoạch tuần tới}
 
-\begin{frame}{Nhiệm vụ tuần tới (12/10 -- 18/10/2026)}
+\begin{frame}{Nhiệm vụ tuần tới (02/11 -- 08/11/2026)}
     \begin{columns}[T]
         \begin{column}{0.5\textwidth}
             \begin{block}{Kỹ thuật}
                 \small
                 \begin{enumerate}
-                    \item \textbf{Site 500:} cấu hình vEdge (system-ip, site-id, 2 TLOC, BGP 65040), PKI và whitelist,
-                          SW-S500 + DHCP cho VPC11/12; kiểm BFD/OMP, ping liên site, DIA.
-                    \item Bật đủ Site 100: ghép HA FW-ASAv (đồng bộ Standby), thử PC sau OVS ra Internet,
-                          thử lại Mail từ VLAN 40.
-                    \item Cắt biz-internet tại S300/S400 để hoàn tất ma trận DIA.
-                    \item Cảnh báo: bật thư phục hồi; \textbf{kế hoạch B} -- Console đọc alarm qua API vManage
-                          để báo cả khi vManage hỏng.
-                    \item NTP cho controller SD-WAN; gỡ địa chỉ controller ONOS cũ khỏi 6 OVS.
+                    \item Failover cặp FW-ASAv HA và VRRP Core-SW1/2: số gói mất, thời gian chuyển và quay về.
+                    \item Cắt 1 màu WAN xem BFD/AAR chuyển đường; đo lặp failover 3--5 lần/site; đo khôi phục khi mất vSmart.
+                    \item Site 500: switch, máy trạm, DHCP, thông với Campus chính.
+                    \item SDN: thử fast-failover cho uplink Distribution -- Core (nếu kịp).
                 \end{enumerate}
             \end{block}
         \end{column}
         \begin{column}{0.5\textwidth}
-            \begin{block}{Báo cáo \& demo}
+            \begin{block}{NetOps \& báo cáo}
                 \small
                 \begin{enumerate}
-                    \setcounter{enumi}{5}
-                    \item Chụp ảnh minh chứng mới: Console (Sức khoẻ, Kịch bản), thư cảnh báo, Alarms trên vManage;
-                          đưa vào Chương 4.
-                    \item Hoàn thiện kịch bản demo bảo vệ: DHCP $\rightarrow$ thêm VLAN/chính sách trên Console
-                          $\rightarrow$ chạy kịch bản S1--S6 $\rightarrow$ cắt 1 màu WAN + nhận thư cảnh báo
-                          $\rightarrow$ ra Internet; chạy thử có bấm giờ.
-                    \item Rà soát báo cáo bản cuối và cập nhật bảng theo dõi tiến độ.
+                    \setcounter{enumi}{4}
+                    \item NetOps Bot: rollback cho ASA; kịch bản demo ``phát hiện -- sửa trunk Site 400 bằng \texttt{/change} -- tự rollback''.
+                    \item Đo lại tuyến LAN Site 100 theo cách mới; theo dõi độ sẵn sàng nhiều ngày.
+                    \item Bắt đầu báo cáo cuối kỳ: chương kết quả (SDN, SD-WAN, tích hợp) và chương NetOps Bot.
                 \end{enumerate}
             \end{block}
         \end{column}
     \end{columns}
+    \vspace{0.2cm}
+    \centering\footnotesize Hạn kiểm thử tích hợp: \textbf{10/11/2026}. Đo SDN và SD-WAN không chạy đồng thời để tránh nhiễu.
 \end{frame}
 
 % ============================================================
@@ -442,16 +443,17 @@
 \begin{frame}{Khó khăn gặp phải trong tuần}
     \small
     \begin{itemize}
-        \item \textbf{Lỗi chập chờn khó tái hiện:} controller khựng theo cụm vài phút một lần; phải đo CPU
-              theo từng tiến trình mỗi 0,5\,s mới thấy ONOS là thủ phạm.
-        \item \textbf{SDN tương tác ngầm với STP:} kênh VLAN 99 đi vòng qua OVS khiến Core-SW1 nghe BPDU của
-              chính nó, gây RSTP Dispute -- chỉ thấy khi theo dõi trạng thái STP liên tục trong lúc cắt link.
-        \item \textbf{Thiết bị ảo hỏng âm thầm:} card mạng ảo treo chiều nhận (vEdge1 Site 300) không có log lỗi
-              trên thiết bị, chỉ phát hiện qua bộ đếm drop của giao diện ảo.
-        \item \textbf{Khởi động nguội cả campus:} 19 máy ảo cùng boot làm CPU chậm, một Access vào chế độ khẩn cấp.
-        \item \textbf{Cảnh báo email:} Gmail báo sai tài khoản dù mạng thông -- phải tách bạch bằng bộ đếm ACL,
-              log của vManage và thử đăng nhập SMTP độc lập.
-        \item \textbf{Tài nguyên máy chủ EVE-NG:} phải tắt Site 100 khi không kiểm thử để đủ RAM cho cụm SD-WAN.
+        \item \textbf{Lỗi chỉ lộ ra khi bật toàn hệ thống:} Site 500 lên fabric làm \emph{mọi} site mất Internet --
+              phải lần theo BGP trên router Internet mới thấy default route đi sai hướng.
+        \item \textbf{Hành vi riêng của ASA:} không chia tải qua 2 interface khác nhau; tài khoản mới bị bắt đổi mật khẩu
+              ở lần SSH đầu (đăng nhập console không xóa được cờ này); cấm mật khẩu có chuỗi ký tự liên tiếp.
+        \item \textbf{SSH cũ trên IOL:} client chỉ hỗ trợ SHA-1, phải tạm nới thuật toán trên ASA rồi trả lại.
+        \item \textbf{LLM miễn phí bị giới hạn tần suất (HTTP 429):} chuyển sang API chuẩn OpenAI, thêm thử lại
+              và model dự phòng; đổi nhà cung cấp chỉ cần sửa file cấu hình.
+        \item \textbf{Triển khai trên Windows Server 2012 R2:} hệ điều hành cũ,
+              phải đóng gói bộ cài offline (Python 3.11 + thư viện); một lỗi cú pháp khi chép mã làm bot khởi động lại liên tục
+              $\Rightarrow$ thêm test kiểm cú pháp trước khi triển khai.
+        \item \textbf{Đo hiệu năng:} chính sách firewall chặn ICMP làm sai số đo tuyến LAN Site 100.
     \end{itemize}
 \end{frame}
 

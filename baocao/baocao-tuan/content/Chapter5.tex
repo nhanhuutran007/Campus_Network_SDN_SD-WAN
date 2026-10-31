@@ -1,33 +1,37 @@
 \section{KẾ HOẠCH TUẦN TỚI VÀ KẾT LUẬN}\label{sec:ke_hoach}
 
-\subsection{Kế hoạch tuần 26/10/2026 -- 01/11/2026}
+\subsection{Kế hoạch tuần 02/11/2026 -- 08/11/2026}
+
+Tuần tới là tuần cuối của giai đoạn kiểm thử tích hợp (hạn 10/11), nên ưu tiên các kịch bản sự cố còn thiếu và bắt đầu viết báo cáo cuối kỳ.
 
 \begin{table}[H]
     \centering
     \small
     \caption{Kế hoạch công việc tuần tới}
     \label{tab:ke_hoach_tuan}
-    \begin{tabularx}{\textwidth}{|c|X|P{2.4cm}|P{3.8cm}|}
+    \begin{tabularx}{\textwidth}{|c|X|P{2.2cm}|P{4.0cm}|}
         \hline
         \textbf{\#} & \textbf{Công việc} & \textbf{Thời gian} & \textbf{Kết quả cần đạt} \\
         \hline
-        1 & Đo lặp SD-WAN bằng công cụ web: failover link WAN tại Site 100 và chi nhánh (3--5 lần mỗi kịch bản), thời gian khôi phục khi mất vSmart, bắt đầu theo dõi độ sẵn sàng & 26/10--01/11 (tiếp tục tới 05/11) & Bảng RTO nhỏ nhất/trung bình/lớn nhất, PRR, thời gian khôi phục controller \\
+        1 & Kiểm thử failover cặp firewall ASAv HA và VRRP trên Core-SW1/2 (tắt Active, cắt interface, quay về) & 02/11--03/11 & Biên bản: số gói mất, thời gian chuyển và quay về \\
         \hline
-        2 & Kiểm thử failover cặp firewall ASAv HA và VRRP trên Core & 27/10--31/10 & Biên bản kiểm thử: điều kiện, số gói mất, thời gian chuyển và quay về \\
+        2 & SD-WAN: cắt một màu WAN (Internet hoặc MPLS) xem BFD/AAR chuyển đường; đo lặp failover link WAN 3--5 lần cho Site 100 và các chi nhánh; đo khôi phục khi mất vSmart & 03/11--06/11 & Bảng RTO nhỏ nhất/trung bình/lớn nhất, PRR; so sánh BFD mặc định với chu kỳ ngắn hơn \\
         \hline
-        3 & Bắt đầu hoàn thiện Site 500: cấu hình vEdge Site 500, nối switch và máy trạm, thêm site vào chính sách vSmart & 28/10--01/11 (hạn 05/11) & vEdge Site 500 lên fabric; máy trạm nhận DHCP \\
+        3 & Đo lại tuyến LAN Site 100 theo cách đo mới; đo độ sẵn sàng đủ nhiều ngày & 04/11--08/11 & Bảng so sánh đủ 5/5 tuyến; availability, MTTR, MTBF \\
         \hline
-        4 & SDN: thử group fast-failover cho uplink Distribution, giảm khựng controller & 29/10--01/11 & Gián đoạn khi mất liên kết Distribution--Core dưới 1~s, hoặc ghi rõ giới hạn \\
+        4 & Site 500: nối switch và máy trạm, cấp DHCP, thêm vào chính sách SD-WAN & 05/11--07/11 & Máy trạm Site 500 nhận IP, thông với Campus chính \\
         \hline
-        5 & Theo dõi và thu bằng chứng nếu toàn bộ vEdge mất kết nối lần nữa & Liên tục & Log và kết quả \texttt{show} trước khi khởi động lại \\
+        5 & NetOps Bot: rollback cho ASA; kịch bản demo sửa trunk Site 400 bằng \texttt{/change}; kịch bản demo chẩn đoán khi cắt link & 02/11--07/11 & Kịch bản demo chạy được từ đầu đến cuối trên Telegram \\
         \hline
-        6 & Đưa số liệu tuần này vào bản nháp báo cáo cuối kỳ & 31/10--01/11 & Chương kết quả cập nhật số liệu SDN \\
+        6 & SDN: thử fast-failover cho uplink Distribution -- Core (nếu kịp) & 06/11--08/11 & Gián đoạn dưới 1~s, hoặc ghi rõ giới hạn \\
+        \hline
+        7 & Bắt đầu báo cáo cuối kỳ: chương kết quả (SDN, SD-WAN, kiểm thử tích hợp) và chương NetOps Bot & 01/11--08/11 & Bản nháp hai chương \\
         \hline
     \end{tabularx}
 \end{table}
 
-\textbf{Lưu ý vận hành:} các việc 1, 3 và 5 cần bật lại cụm SD-WAN (controller, nhà cung cấp Internet/MPLS, máy đo Site 900). Để tránh nhiễu, nhóm sẽ không chạy đồng thời phép đo SDN và SD-WAN.
+\textbf{Lưu ý:} phép đo SDN và SD-WAN không chạy đồng thời để tránh nhiễu số liệu; mỗi kịch bản sự cố đều chụp trạng thái trước và sau làm bằng chứng.
 
 \subsection{Kết luận tuần}
 
-Trong tuần \tuanbaocao, nhóm đã hoàn thành mục tiêu chính cho phần SDN: có bộ số liệu đo đủ năm mục tiêu, và kịch bản tự phục hồi yếu nhất (mất uplink Access) được giảm từ 6--8~s xuống còn 1--2 gói nhờ fast-failover trên data plane. Phía SD-WAN, công cụ đo độ tin cậy và quy trình onboard vEdge mới đã sẵn sàng, tạo điều kiện để đo lặp có số liệu trong tuần tới. Phần đo lặp SD-WAN và failover firewall chậm khoảng một tuần so với kế hoạch nhưng vẫn nằm trong khung thời gian trước khi hoàn thiện báo cáo cuối kỳ.
+Trong tuần \tuanbaocao, nhóm đã có bộ số liệu SD-WAN đầu tiên (failover link WAN, so sánh hiệu năng Campus chính -- chi nhánh), kiểm thử tích hợp đạt cho toàn bộ hệ thống 70 thiết bị, và sửa hai lỗi định tuyến làm mất Internet. Kết quả nổi bật là Campus NetOps Bot: chạy trong topology, quản trị in-band cả Campus chính lẫn ba chi nhánh qua overlay SD-WAN, chẩn đoán theo lớp, thay đổi cấu hình có duyệt và tự rollback, đạt selftest 23/23. Các việc chậm so với kế hoạch (failover firewall, đo lặp SD-WAN đủ số lần, Site 500 LAN, báo cáo cuối kỳ) được đưa lên đầu kế hoạch tuần tới và vẫn nằm trong khung thời gian trước hạn kiểm thử 10/11.

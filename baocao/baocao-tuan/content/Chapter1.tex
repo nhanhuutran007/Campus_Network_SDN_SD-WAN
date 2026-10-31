@@ -2,43 +2,51 @@
 
 \subsection{Bối cảnh}
 
-Đề tài mô phỏng một hệ thống mạng gồm Campus chính (Site 100), ba cơ sở Cần Thơ, Đà Nẵng, Nha Trang (Site 200, 300, 400), một chi nhánh mới theo mô hình mạng phẳng (Site 500, đang triển khai) và vùng điều khiển SD-WAN (Site 900) trên EVE-NG. Tại Site 100, bộ điều khiển Ryu quản lý sáu switch Open vSwitch (Dist-SW1/2, Access-SW1--4) bằng OpenFlow 1.3 qua VLAN quản trị 99. Các site liên kết với nhau bằng Cisco SD-WAN (Viptela 20.10.1) qua hai transport Internet và MPLS.
+Đề tài mô phỏng một hệ thống mạng gồm Campus chính (Site 100), ba cơ sở Cần Thơ, Đà Nẵng, Nha Trang (Site 200, 300, 400), chi nhánh mới Site 500 và vùng điều khiển SD-WAN (Site 900) trên EVE-NG. Tại Site 100, bộ điều khiển Ryu quản lý sáu switch Open vSwitch bằng OpenFlow 1.3 qua VLAN quản trị 99. Các site liên kết với nhau bằng Cisco SD-WAN (Viptela 20.10.1) qua hai transport Internet và MPLS.
 
-Đầu tuần \tuanbaocao, phần SDN đã có cơ chế tự phục hồi khi mất liên kết, nhưng còn một điểm yếu: mất một uplink Access làm lưu lượng gián đoạn 6--8~s vì phải chờ controller phát hiện và tính lại cây chuyển tiếp. Phía SD-WAN, fabric đã ổn định (8/8 vEdge, BFD đầy đủ) nhưng mới đo failover một lần cho mỗi site, chưa có số liệu lặp lại.
+Kết thúc tuần trước, phần SDN đã có đủ số liệu năm mục tiêu và cơ chế fast-failover cho uplink Access; phía SD-WAN đã có công cụ đo độ tin cậy nhưng chưa có số liệu đo lặp. Tuần này nhóm thu số liệu SD-WAN đầu tiên, kiểm thử tích hợp toàn hệ thống, và bắt đầu một hạng mục mới: \textbf{Campus NetOps Bot} -- trợ lý vận hành mạng qua Telegram, chạy ngay trong topology và quản trị thiết bị theo kiểu in-band.
 
 \subsection{Mục tiêu đặt ra cho tuần}
 
+Theo kế hoạch đã trình bày ở báo cáo tuần trước:
+
 \begin{enumerate}
-    \item Giảm thời gian gián đoạn khi mất uplink Access của SDN xuống dưới 1~s, không phụ thuộc controller.
-    \item Đo đủ năm mục tiêu đánh giá SDN (hiệu năng, chính sách, cấp phát VLAN, tải controller, tự phục hồi) trên lab thật, có log lưu lại.
-    \item Chuẩn bị công cụ đo độ tin cậy SD-WAN qua vManage REST API để đo lặp trong tuần tiếp theo.
-    \item Cập nhật báo cáo giữa kỳ với số liệu mới.
+    \item Đo lặp SD-WAN: failover link WAN, thời gian khôi phục khi mất vSmart, độ sẵn sàng.
+    \item Kiểm thử failover cặp firewall ASAv HA và VRRP trên Core.
+    \item Bắt đầu hoàn thiện Site 500 (vEdge, switch, máy trạm, chính sách).
+    \item SDN: thử fast-failover cho uplink Distribution.
+    \item Theo dõi và thu bằng chứng nếu vEdge mất kết nối.
+    \item Đưa số liệu vào bản nháp báo cáo cuối kỳ.
 \end{enumerate}
 
-\subsection{Đối chiếu kế hoạch và thực tế}
+Trong tuần, nhóm bổ sung mục tiêu mới: xây dựng công cụ vận hành tự động (NetOps Bot) để phục vụ chẩn đoán lỗi và phần demo khi bảo vệ.
 
-Bảng~\ref{tab:doi_chieu} so sánh các đầu việc dự kiến cho giai đoạn này với kết quả cuối tuần.
+\subsection{Đối chiếu kế hoạch và thực tế}
 
 \begin{table}[H]
     \centering
     \small
     \caption{Đối chiếu kế hoạch tuần và kết quả thực tế}
     \label{tab:doi_chieu}
-    \begin{tabularx}{\textwidth}{|c|X|P{2.6cm}|P{4.2cm}|}
+    \begin{tabularx}{\textwidth}{|c|X|P{2.4cm}|P{4.6cm}|}
         \hline
         \textbf{\#} & \textbf{Đầu việc theo kế hoạch} & \textbf{Trạng thái} & \textbf{Ghi chú} \\
         \hline
-        1 & Kiểm thử SDN khi mất liên kết và mất controller & Hoàn thành & Đo đủ 5 mục tiêu; thêm fast-failover cho uplink Access \\
+        1 & Đo lặp SD-WAN & Hoàn thành một phần & Có RTO/PRR cho vEdge 1 Site 200 (2 lần), so sánh hiệu năng Campus chính -- chi nhánh, bắt đầu đo độ sẵn sàng; chưa đủ 3--5 lần mỗi kịch bản \\
         \hline
-        2 & Rút ngắn gián đoạn khi mất uplink Access & Hoàn thành & 6--8~s xuống còn 1--2 gói \\
+        2 & Failover firewall HA và VRRP & Chưa thực hiện & Mới kiểm tra trạng thái HA (Active/Standby Ready); dời sang tuần tới \\
         \hline
-        3 & Đo lặp failover SD-WAN và AAR & Đang thực hiện & Công cụ đo đã xong, lần chạy thật đầu tiên phát hiện lỗi API và đã sửa; chuyển sang tuần tới \\
+        3 & Hoàn thiện Site 500 & Hoàn thành một phần & vEdge Site 500 đã reachable trên vManage, sửa lỗi Site 500 làm mất Internet các site; còn LAN (switch, máy trạm) \\
         \hline
-        4 & Kiểm thử failover firewall HA & Chưa thực hiện & Dời sang tuần tới do ưu tiên phần SDN \\
+        4 & Fast-failover uplink Distribution & Chưa thực hiện & Ưu tiên cho NetOps Bot \\
         \hline
-        5 & Cập nhật báo cáo giữa kỳ & Hoàn thành & Chương 4, Chương 5 và phần tóm tắt \\
+        5 & Theo dõi vEdge mất kết nối & Hoàn thành & 12/12 thiết bị SD-WAN reachable, BFD 92/92; NetOps Bot nay tự cảnh báo khi vEdge mất kết nối \\
+        \hline
+        6 & Bản nháp báo cáo cuối kỳ & Chưa thực hiện & Bảng tiến độ và README đã cập nhật \\
+        \hline
+        7 & \textit{(Phát sinh)} Campus NetOps Bot & Hoàn thành giai đoạn 1--3 & Chạy thật trên Telegram, quản trị in-band Site 100 và 3 chi nhánh, selftest 23/23 \\
         \hline
     \end{tabularx}
 \end{table}
 
-Phần SDN vượt kế hoạch (có thêm fast-failover). Phần đo lặp SD-WAN và failover firewall chậm khoảng một tuần, chủ yếu vì máy chủ không đủ tài nguyên để chạy đồng thời cụm SDN và cụm SD-WAN khi đo.
+Nhóm hoàn thành phần đo SD-WAN đầu tiên và kiểm thử tích hợp toàn hệ thống, nhưng dồn thời gian cuối tuần cho NetOps Bot nên failover firewall, fast-failover Distribution và báo cáo cuối kỳ chưa làm. Các việc này được đưa lên đầu kế hoạch tuần tới (Chương~\ref{sec:ke_hoach}).

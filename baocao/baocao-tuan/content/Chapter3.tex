@@ -1,51 +1,94 @@
 \section{KẾT QUẢ ĐO VÀ ĐÁNH GIÁ}\label{sec:ket_qua}
 
-\subsection{Năm mục tiêu SDN}
+\subsection{Failover link WAN tại Site 200}
 
-Bảng~\ref{tab:nam_muc_tieu} tổng hợp kết quả đo ngày 23/10/2026. Trong lúc đo, cụm SD-WAN được tắt để giảm tải máy chủ.
+Cắt uplink của vEdge 1 Site 200 trong khi ping liên tục qua overlay tới Campus chính, hai lần ngày 24/10/2026:
 
 \begin{table}[H]
     \centering
     \small
-    \caption{Kết quả đo năm mục tiêu SDN Site 100 (23/10/2026)}
-    \label{tab:nam_muc_tieu}
-    \begin{tabularx}{\textwidth}{|P{3.4cm}|X|P{1.8cm}|}
+    \caption{Kết quả failover link WAN vEdge 1 Site 200 (24/10/2026)}
+    \label{tab:failover_s200}
+    \begin{tabularx}{\textwidth}{|X|P{2.4cm}|P{2.4cm}|P{2.4cm}|}
         \hline
-        \textbf{Mục tiêu} & \textbf{Kết quả} & \textbf{Đánh giá} \\
+        \textbf{Chỉ số} & \textbf{Nhỏ nhất} & \textbf{Trung bình} & \textbf{Lớn nhất} \\
         \hline
-        MT1 -- Cấp phát VLAN & 9~ms qua controller, so với khoảng 36~s cho mỗi Core khi cấu hình tay & ĐẠT \\
+        Thời gian khôi phục (RTO) & 7,68~s & 7,96~s & 8,25~s \\
         \hline
-        MT2 -- Tự phục hồi (cắt link thật) & 5/6 kịch bản ĐẠT; kịch bản Access-SW4 -- Dist-SW1 gián đoạn 6,0~s và 8,3~s ở hai lần chạy do controller khựng đúng lúc phát hiện & ĐẠT 5/6 \\
-        \hline
-        MT3 -- Hiệu năng chuyển mạch & 0\% mất gói; cùng VLAN khoảng 0,9~ms; khác VLAN trung vị 4~ms & ĐẠT \\
-        \hline
-        MT4 -- Tải controller & CPU controller 8--15\% trong khi có lưu lượng & ĐẠT \\
-        \hline
-        MT5 -- Chính sách tập trung & Một luật áp xuống 4 Access trong 12--18~ms & ĐẠT (2/3 lần đo đủ điều kiện) \\
+        Tỉ lệ khôi phục gói (PRR) & \multicolumn{3}{c|}{76,75\% (trung bình 2 lần)} \\
         \hline
     \end{tabularx}
 \end{table}
 
-\subsection{Cắt link thật trước và sau fast-failover}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{image/tincay_failover.png}
+    \caption{RTO và PRR khi cắt uplink vEdge 1 Site 200}
+    \label{fig:tincay_failover}
+\end{figure}
 
-Sau khi triển khai fast-failover, nhóm đo lại bằng ping từ máy trạm VPC (100 gói/giây) trong khi cắt tap mạng thật của liên kết. Cách đo này phản ánh đúng data plane; bộ ping chạy bên trong controller bị ảnh hưởng bởi các lần khựng nên có lúc báo mất gói dù data plane không đổi.
+RTO khoảng 8~s phù hợp với tham số BFD mặc định của Viptela (hello 1~s, hệ số 7): phải mất khoảng 7~s để BFD kết luận tunnel chết rồi lưu lượng mới chuyển sang tunnel còn lại. Mới có hai lần đo nên chưa đủ để kết luận; tuần tới sẽ đo đủ 3--5 lần và thử giảm chu kỳ BFD để so sánh.
+
+\subsection{So sánh hiệu năng Campus chính và chi nhánh}
+
+Đo từ vEdge 1 của mỗi site tới các máy trạm trong site (LAN) và tới máy trạm, Web Server ở site khác qua SD-WAN (WAN), ngày 25/10/2026:
 
 \begin{table}[H]
     \centering
     \small
-    \caption{Thời gian gián đoạn khi cắt link thật}
-    \label{tab:cat_link}
-    \begin{tabularx}{\textwidth}{|P{4.4cm}|P{3.6cm}|X|}
+    \caption{Delay, jitter và mất gói theo site (25/10/2026)}
+    \label{tab:so_sanh}
+    \begin{tabularx}{\textwidth}{|X|P{1.6cm}|P{1.6cm}|P{1.6cm}|P{1.6cm}|P{1.6cm}|}
         \hline
-        \textbf{Kịch bản} & \textbf{Trước fast-failover} & \textbf{Sau fast-failover} \\
+        \textbf{Site} & \textbf{Delay LAN (ms)} & \textbf{Delay WAN (ms)} & \textbf{Jitter WAN (ms)} & \textbf{Mất gói WAN} & \textbf{Tuyến LAN đo được} \\
         \hline
-        Access-SW4 -- Dist-SW1 & 6,0--8,3~s & Mất 1--2 gói (khoảng 0,2~s) \\
+        Site 100 -- Campus chính & 6,26 & 4,00 & 0,53 & 0\% & 3/5 \\
         \hline
-        Dist-SW1 -- Dist-SW2 & Không gián đoạn & Chỉ nhiễu nền, không đổi \\
+        Site 200 -- Cần Thơ & 2,83 & 7,56 & 5,09 & 0\% & 2/2 \\
         \hline
-        Dist-SW1 -- Core-SW1 & Khoảng 3,6~s & Không đổi (vẫn do controller xử lý) \\
+        Site 300 -- Đà Nẵng & 2,95 & 3,80 & 0,40 & 0\% & 2/2 \\
         \hline
-        Hỏng kép: Access-SW4 -- Dist-SW1 và Dist-SW2 -- Core-SW1 & ĐẠT & Khoảng 2~s (phải chờ controller tính lại cây) \\
+        Site 400 -- Nha Trang & 4,30 & 11,96 & 10,33 & 0\% & 2/2 \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{image/sosanh_delay.png}
+    \caption{Delay trung bình LAN và WAN theo site}
+    \label{fig:sosanh_delay}
+\end{figure}
+
+\textbf{Nhận xét:}
+\begin{itemize}
+    \item Đường WAN qua SD-WAN \textbf{không mất gói} ở cả bốn site; delay WAN 3,8--12~ms.
+    \item Site 400 có delay và jitter WAN cao nhất (12~ms, 10,3~ms), kế đến Site 200 (jitter 5,1~ms). Nguyên nhân là một vài mẫu RTT vọt lên 25--50~ms; cần đo lặp để xem có phải do tải máy ảo hay do đường đi.
+    \item Site 100 chỉ đo được 3/5 tuyến LAN: hai tuyến từ vEdge Site 100 tới Web Server và DHCP-Server mất hết gói. Nhiều khả năng do chính sách firewall Site 100 chặn ICMP từ vùng SD-WAN vào Server Farm/DMZ (đúng thiết kế), nên cần đổi cách đo (dùng nguồn được phép hoặc đo TCP) thay vì coi là lỗi mạng.
+\end{itemize}
+
+\subsection{Kiểm thử tích hợp}
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Kết quả kiểm thử tích hợp toàn hệ thống (25/10/2026)}
+    \label{tab:tich_hop}
+    \begin{tabularx}{\textwidth}{|P{3.6cm}|X|P{1.6cm}|}
+        \hline
+        \textbf{Cụm} & \textbf{Kết quả} & \textbf{Đánh giá} \\
+        \hline
+        SDN Site 100 & 6/6 OVS, 13/13 liên kết; 7/7 máy trạm nhận DHCP, thông liên VLAN & ĐẠT \\
+        \hline
+        Firewall HA & Active / Standby Ready & ĐẠT \\
+        \hline
+        SD-WAN & 12/12 thiết bị reachable, BFD 92/92 & ĐẠT \\
+        \hline
+        Chi nhánh 200/300/400 & 9/9 VPC + 3 PC Linux nhận DHCP; tới Web/Mail/DNS Site 100 (TCP 80, 443, 25, 143, 587) & ĐẠT \\
+        \hline
+        Internet & 4/4 site ra Internet (sau khi sửa bộ lọc BGP Site 500) & ĐẠT \\
+        \hline
+        Quản trị in-band chi nhánh (30/10) & Ping 15/15 địa chỉ quản trị; SSH 12/12 thiết bị & ĐẠT \\
         \hline
     \end{tabularx}
 \end{table}
@@ -53,8 +96,7 @@ Sau khi triển khai fast-failover, nhóm đo lại bằng ping từ máy trạm
 \subsection{Đánh giá}
 
 \begin{itemize}
-    \item Fast-failover giải quyết đúng kịch bản yếu nhất của MT2: lỗi một uplink Access nay được switch xử lý trong khoảng 0,3~s (thời gian BFD phát hiện), không còn phụ thuộc controller. Như vậy cả sáu kịch bản tự phục hồi đều đạt yêu cầu.
-    \item Các lỗi ở tầng Distribution--Core và hỏng kép vẫn cần controller tính lại cây, mất khoảng 2--3,7~s. Đây là giới hạn thiết kế của mô hình một controller; có thể cải thiện bằng group fast-failover cho uplink Distribution trong tuần tới.
-    \item Khi máy ảo Distribution bị máy chủ tạm dừng ngắn, BFD 100~ms có lúc báo flap (khoảng một đợt mỗi hai phút). Nếu ảnh hưởng tới phép đo, có thể nới chu kỳ BFD lên 300~ms, đổi lại thời gian phát hiện khoảng 0,9~s.
-    \item Phía SD-WAN chưa có số liệu mới trong tuần; công cụ đo đã sẵn sàng sau khi sửa lỗi API.
+    \item Hệ thống chạy đồng thời đủ các cụm và đạt toàn bộ kiểm thử chức năng; đây là nền để chuyển sang kiểm thử sự cố (failover firewall, cắt một màu WAN) trong tuần tới.
+    \item Số liệu SD-WAN mới là bước đầu: RTO khoảng 8~s và PRR 76,75\% cho thấy failover dựa vào BFD mặc định khá chậm so với SDN (fast-failover dưới 0,3~s). Đây là điểm sẽ phân tích trong báo cáo cuối kỳ.
+    \item NetOps Bot đã chẩn đoán đúng một lệch thiết kế có thật: uplink của hai switch phòng ban Site 400 đang lên trunk nhờ DTP tự thỏa thuận chứ không cấu hình tường minh. Lỗi này được giữ lại để làm kịch bản demo ``phát hiện -- sửa bằng \texttt{/change} -- tự rollback''.
 \end{itemize}

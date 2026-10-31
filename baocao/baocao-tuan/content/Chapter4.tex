@@ -1,6 +1,6 @@
 \section{KHÓ KHĂN VÀ CÁCH XỬ LÝ}\label{sec:kho_khan}
 
-Bảng~\ref{tab:kho_khan} tổng hợp các vấn đề gặp trong tuần. Mỗi vấn đề được chẩn đoán theo lớp và có bằng chứng (log, kết quả đo) trước khi sửa.
+Bảng~\ref{tab:kho_khan} tổng hợp các vấn đề gặp trong tuần. Mỗi vấn đề được chẩn đoán theo lớp và có bằng chứng (kết quả \texttt{show}, log) trước khi sửa.
 
 \begingroup
 \small
@@ -18,20 +18,20 @@ Bảng~\ref{tab:kho_khan} tổng hợp các vấn đề gặp trong tuần. Mỗ
     \endhead
     \hline
     \endfoot
-    Controller Ryu khựng, nhiều switch báo mất kết nối điều khiển & Máy chủ EVE-NG dùng chung tải rất cao khi chạy cùng lúc cụm SDN và cụm SD-WAN & Tắt mềm cụm SD-WAN khi đo SDN: tải máy chủ giảm mạnh, hết hiện tượng kết nối lại, tỉ lệ kiểm tra sức khỏe không đạt giảm từ 23\% xuống 7--10\% \\
+    Mọi site mất Internet khi vEdge Site 500 lên fabric & Router Internet nhận default route từ Site 500 qua BGP, kéo đường ra Internet của các site sai hướng & Thêm bộ lọc BGP chặn default route đi vào từ neighbor Site 500; 4/4 site ra Internet lại \\
     \hline
-    Controller vẫn khựng 2--3 lần mỗi phút, mỗi lần 0,6--1,5~s & Tiến trình Ryu không bị treo; CPU ảo của máy ảo controller được đánh thức muộn do máy chủ dùng chung & Ghim CPU cho máy ảo controller (giảm nhẹ); đưa phần chuyển đường quan trọng xuống data plane bằng fast-failover. Tinh chỉnh toàn máy chủ cần xin phép trước \\
+    Site 100 mất Internet (chiều về bị firewall drop) & Core-SW1 và Core-SW2 quảng bá route OSPF cùng cost; ASA không chia tải qua hai interface khác nhau nên gói chiều về vào sai interface bị drop & Đặt \texttt{ip ospf cost 10} trên các SVI của Core-SW2 để chỉ còn một đường ưu tiên; SwitchServerFarm dùng default route thay cho \texttt{ip default-gateway} \\
     \hline
-    Mất một uplink Access gián đoạn 6--8~s & Thời gian ân hạn 3,5~s cho mỗi lần controller khựng đẩy việc kết luận liên kết chết lùi lại & BFD + group OpenFlow fast-failover; còn 1--2 gói \\
+    Bot không SSH được vào firewall Active (Standby vẫn được) & Tài khoản \texttt{netops} trên Active mang cờ ``người dùng mới'', ASA 9.20 bắt đổi mật khẩu ở lần SSH đầu; đăng nhập qua console không xóa được cờ này & SSH thật một lần từ Core-SW1 để qua màn đổi mật khẩu (tạm nới thuật toán SSH vì client IOL chỉ hỗ trợ SHA-1, rồi trả lại); bot nhận diện màn này và dừng thay vì gõ tiếp \\
     \hline
-    Bộ ping trong controller báo mất gói khi data plane vẫn thông & Bộ ping chạy cùng tiến trình controller nên bị ảnh hưởng bởi các lần khựng & Đo phục hồi bằng ping từ máy trạm VPC trong khi cắt tap thật \\
+    Firewall không nhận mật khẩu theo quy ước chung & ASA 9.20 cấm chuỗi ký tự liên tiếp/lặp trong mật khẩu & Dùng mật khẩu riêng cho tài khoản \texttt{netops} trên firewall, lưu ngoài kho mã nguồn \\
     \hline
-    Sai số khi đo hiệu năng & Đích mặc định là một máy trạm đang tắt & Đổi đích sang máy chủ ở Server Farm \\
+    LLM trả lỗi giới hạn tần suất (HTTP 429), bot không trả lời câu hỏi tự nhiên & Gói miễn phí của nhà cung cấp LLM ban đầu không cấp lượt gọi & Chuyển sang API chuẩn OpenAI qua OpenRouter (model miễn phí), thêm cơ chế thử lại và model dự phòng; đổi nhà cung cấp chỉ cần sửa file cấu hình \\
     \hline
-    Biểu đồ trên Console co dần sau mỗi lần cập nhật & Hàm vẽ đọc lại chiều cao canvas đã nhân tỉ lệ điểm ảnh & Tách kích thước hiển thị khỏi kích thước canvas; kiểm tra ở nhiều tỉ lệ \\
+    Bot khởi động lại liên tục sau một lần cập nhật & Một chuỗi ký tự có \texttt{\textbackslash n} bị chuyển thành xuống dòng thật khi chép mã, gây lỗi cú pháp & Sửa mã, thêm bộ test kiểm tra cú pháp toàn bộ file trước khi triển khai \\
     \hline
-    API ping của vManage trả HTTP 400 ``Invalid data length value'' & vManage 20.10 chỉ chấp nhận một số tổ hợp tham số kích thước gói & Thử lần lượt các dạng tham số và nhớ dạng chạy được \\
+    Uplink hai switch phòng ban Site 400 lên trunk ``tự nhiên'' & DTP tự thỏa thuận (\texttt{dynamic auto}), không cấu hình trunk tường minh như thiết kế & Bot đã phát hiện và cảnh báo; giữ lại làm kịch bản demo \texttt{/change}, sửa trong tuần tới \\
     \hline
-    Các switch OVS khởi động rất chậm (khoảng 10 phút) & Tải máy chủ cao khi bật lại lab & Bật theo thứ tự đã kiểm chứng: dịch vụ nền, controller, Distribution, Access rồi mới tới máy trạm \\
+    Hai tuyến LAN Site 100 mất hết gói khi đo hiệu năng & Firewall Site 100 chặn ICMP từ vùng SD-WAN vào Server Farm/DMZ (đúng chính sách) & Đổi cách đo trong tuần tới; không mở chính sách firewall chỉ để đo \\
 \end{longtable}
 \endgroup
