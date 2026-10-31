@@ -33,5 +33,11 @@ Bảng~\ref{tab:kho_khan} tổng hợp các vấn đề gặp trong tuần. Mỗ
     Uplink hai switch phòng ban Site 400 lên trunk ``tự nhiên'' & DTP tự thỏa thuận (\texttt{dynamic auto}), không cấu hình trunk tường minh như thiết kế & Bot đã phát hiện và cảnh báo; giữ lại làm kịch bản demo \texttt{/change}, sửa trong tuần tới \\
     \hline
     Hai tuyến LAN Site 100 mất hết gói khi đo hiệu năng & Firewall Site 100 chặn ICMP từ vùng SD-WAN vào Server Farm/DMZ (đúng chính sách) & Đổi cách đo trong tuần tới; không mở chính sách firewall chỉ để đo \\
+    \hline
+    Site 500 chậm gấp khoảng 5 lần các chi nhánh khác (delay LAN 18,6~ms) & Hai vEdge Site 500 chỉ có 1 vCPU: lõi điều khiển và lõi chuyển tiếp dữ liệu dùng chung, mỗi gói chậm thêm khoảng 16~ms (vEdge 2 vCPU chỉ 0,8~ms) & Nâng hai vEdge lên 2 vCPU, đổi card mạng vEdge 2 sang virtio; delay LAN còn 3,0~ms. vEdge 2 các site 100--400 vẫn 1 vCPU, sẽ nâng tiếp \\
+    \hline
+    Khởi động lại vEdge suýt bị ghi đè cấu hình cũ & Node trên EVE-NG bật chế độ nạp startup-config, nên mỗi lần khởi động EVE tự đẩy file cấu hình cũ (system-ip, site 900 từ tháng 8) vào vEdge & Dừng tiến trình nạp trước khi vEdge khởi động xong, tắt chế độ này cho vEdge 1 Site 500; kiểm tra cấu hình còn nguyên. Các vEdge khác vẫn bật chế độ này nên phải tắt trước khi khởi động lại \\
+    \hline
+    Lần đo ngay sau khi khởi động lại vEdge báo WAN Site 500 mất 40--60\% gói & Đo khi vEdge mới khởi động khoảng 15 phút, mỗi tuyến chỉ 5 gói & Kiểm tra trực tiếp: BFD 10/10 phiên up liên tục, ping 20 gói mất 0\%; đo lại sau đó mất 0\%. Quy ước: chờ vEdge ổn định trước khi đo \\
 \end{longtable}
 \endgroup
