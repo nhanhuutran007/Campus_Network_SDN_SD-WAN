@@ -1,16 +1,16 @@
 \section*{\fontsize{18pt}{18pt}\selectfont\MakeUppercase{\de}\\TÓM TẮT BÁO CÁO TUẦN}
 
-Báo cáo này tổng hợp công việc nhóm thực hiện trong tuần \tuanbaocao{} của đề tài ``Xây dựng mạng Campus Network sử dụng SDN và SD-WAN''. Sau khi phần SDN đã có đủ số liệu ở tuần trước, trọng tâm tuần này là thu số liệu SD-WAN đầu tiên, kiểm thử tích hợp toàn hệ thống và xây dựng công cụ vận hành mạng tự động.
+Báo cáo này tổng hợp công việc nhóm thực hiện trong tuần \tuanbaocao{} của đề tài ``Xây dựng mạng Campus Network sử dụng SDN và SD-WAN''. Sau khi phần SDN đã có đủ số liệu ở tuần trước, trọng tâm tuần này là thu số liệu SD-WAN đầu tiên, kiểm thử chức năng toàn hệ thống, thiết kế lại firewall HA Site 100 và xây dựng công cụ vận hành mạng tự động. Báo cáo cũng đối chiếu tiến độ với nội dung, mục tiêu và tiêu chí đánh giá trong đề cương nhiệm vụ.
 
 Kết quả chính của tuần:
 
 \begin{itemize}
-    \item \textbf{Đo kiểm SD-WAN:} failover link WAN tại Site 200 có RTO trung bình 7,96~s (7,68--8,25~s), PRR 76,75\%; so sánh hiệu năng bốn site cho thấy đường WAN qua SD-WAN không mất gói, delay 3,8--12~ms, jitter cao nhất ở Site 400.
-    \item \textbf{Kiểm thử tích hợp toàn hệ thống (70 thiết bị):} SDN 6/6 OVS, firewall HA Active/Standby, SD-WAN 12/12 thiết bị và BFD 92/92, DHCP và truy cập Web/Mail/DNS từ cả ba chi nhánh, Internet 4/4 site -- đều ĐẠT.
-    \item \textbf{Sửa hai lỗi định tuyến:} default route từ Site 500 làm mọi site mất Internet (thêm bộ lọc BGP), và Site 100 mất Internet do firewall không chia tải qua hai interface (điều chỉnh cost OSPF).
+    \item \textbf{Đo kiểm SD-WAN:} failover link WAN tại Site 200 có RTO trung bình 7,96~s (7,68--8,25~s), PRR 76,75\%, đúng với BFD mặc định (mất 7 gói hello); so sánh hiệu năng năm site cho thấy đường WAN qua SD-WAN không mất gói; Site 500 hết chậm sau khi nâng vEdge lên 2 vCPU (delay LAN 18,6 $\rightarrow$ 3,0~ms).
+    \item \textbf{Firewall HA Site 100:} thiết kế lại với transit VLAN, hai switch SW-WAN-Edge và OSPF giữa firewall với vEdge; chuyển chủ động dưới 1~s, rút cáp inside 11~s, hỏng một switch WAN 19~s (trước đó liên site không tự phục hồi), tắt hẳn firewall Active 21~s; sửa VRRP split-brain.
+    \item \textbf{Kiểm thử chức năng toàn hệ thống:} SDN 6/6 OVS, firewall HA, SD-WAN 12/12 thiết bị và BFD 92/92, DHCP và truy cập Web/Mail/DNS từ cả ba chi nhánh, Internet 4/4 site -- đều ĐẠT.
     \item \textbf{Campus NetOps Bot:} trợ lý vận hành qua Telegram, cài ngay trong topology và quản trị in-band Site 100 cùng 12 thiết bị chi nhánh qua overlay SD-WAN; chẩn đoán theo lớp, cảnh báo chủ động, thay đổi cấu hình có duyệt và tự rollback, hỏi đáp tự nhiên qua AI agent; selftest 23/23 ĐẠT.
 \end{itemize}
 
-Phần chưa làm theo kế hoạch: failover firewall HA, đo lặp SD-WAN đủ số lần và bản nháp báo cáo cuối kỳ. Tuần tới (02/11--08/11), nhóm tập trung vào các kịch bản sự cố còn lại (firewall, cắt một màu WAN), kiểm thử tích hợp Site 500, kịch bản demo NetOps Bot và bắt đầu viết báo cáo cuối kỳ.
+Phần chưa làm theo kế hoạch: fast-failover Distribution, đo lặp SD-WAN đủ số lần và bản nháp báo cáo cuối kỳ. Tuần tới (02/11--08/11), nhóm tập trung đo các chỉ số theo tiêu chí đề cương: thời gian khôi phục, hiệu năng liên VLAN và liên cơ sở, tải trên Core và Distribution, thời gian mở rộng, quản lý chính sách tập trung và độ sẵn sàng.
 
 \textbf{Từ khóa:} SD-WAN, Cisco Viptela, BFD, failover, SDN, Ryu, NetOps, ChatOps, Telegram, AI agent, EVE-NG.

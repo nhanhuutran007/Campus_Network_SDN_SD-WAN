@@ -18,13 +18,27 @@ Ngày 25/10, nhóm bật đồng thời toàn bộ 70 thiết bị (SDN, SD-WAN,
 
 \begin{itemize}
     \item \textbf{SDN Site 100:} 6/6 OVS kết nối Ryu, 13/13 liên kết được phát hiện; 7/7 máy trạm nhận DHCP và thông liên VLAN.
-    \item \textbf{Firewall:} cặp ASAv ở trạng thái Active / Standby Ready.
+    \item \textbf{Firewall:} cặp ASAv ở trạng thái Active / Standby Ready; sau khi thiết kế lại (mục~\ref{sec:fw_ha}) tự failover ở cả bốn kịch bản sự cố.
     \item \textbf{SD-WAN:} 12/12 thiết bị reachable trên vManage (gồm vEdge Site 500), 92/92 phiên BFD up.
     \item \textbf{Chi nhánh:} 9/9 VPC và 3 PC Linux nhận DHCP, truy cập được DHCP/DNS, Web (HTTP/HTTPS) và Mail (SMTP/IMAP) tại Campus chính qua SD-WAN.
     \item \textbf{Internet:} cả bốn site ra Internet; cảnh báo qua email (SMTP 587) gửi được từ Site 900.
 \end{itemize}
 
 Trong lúc kiểm thử, nhóm phát hiện và sửa hai lỗi định tuyến (chi tiết ở Chương~\ref{sec:kho_khan}): vEdge Site 500 kéo default route của mọi site từ MPLS sang Internet làm các site mất Internet, và Site 100 mất Internet do firewall không chia tải qua hai interface khác nhau.
+
+\subsection{Thiết kế lại Firewall HA Site 100}\label{sec:fw_ha}
+
+Khi chuẩn bị kiểm thử failover, nhóm phát hiện cách nối dây cũ đặt FW-Standby khác segment với FW-Active, nên cặp HA thực chất chưa thể chuyển đổi. Ngày 31/10, cặp firewall được thiết kế lại theo kiểu doanh nghiệp:
+
+\begin{itemize}
+    \item \textbf{Phía inside:} firewall nối hai Core qua hai VLAN transit 101 (\texttt{10.1.2.0/29}) và 102 (\texttt{10.1.2.8/29}, OSPF cost cao hơn làm đường dự phòng); Port-channel giữa hai Core chuyển thành trunk mang VLAN 100--102.
+    \item \textbf{Phía outside:} thêm hai switch SW-WAN-Edge1 (VLAN 103, nối vEdge 1) và SW-WAN-Edge2 (VLAN 104, nối vEdge 2), mỗi firewall nối cả hai switch nên không còn điểm hỏng đơn giữa firewall và vEdge.
+    \item \textbf{Định tuyến:} OSPF area 0 giữa firewall và hai vEdge Site 100 (hello 2~s, dead 8~s) thay cho route tĩnh trên vEdge; default route của firewall theo dõi bằng IP SLA.
+    \item \textbf{Phát hiện lỗi nhanh hơn:} firewall kiểm tra unit và interface mỗi 1~s, hold time 5~s; 6/6 interface được giám sát.
+    \item \textbf{Sửa VRRP split-brain:} gói VRRP giữa hai Core bị chặn trên cây OVS nên cả hai cùng làm Master; đưa VLAN 10--40 lên trunk trực tiếp giữa hai Core, Core-SW2 trở về Backup ở cả năm VLAN.
+\end{itemize}
+
+Kết quả đo bốn kịch bản sự cố trình bày ở mục~\ref{sec:kq_fw_ha}.
 
 \subsection{Campus NetOps Bot -- trợ lý vận hành mạng qua Telegram}
 

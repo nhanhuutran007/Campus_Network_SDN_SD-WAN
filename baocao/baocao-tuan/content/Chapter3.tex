@@ -27,7 +27,12 @@ Cắt uplink của vEdge 1 Site 200 trong khi ping liên tục qua overlay tới
     \label{fig:tincay_failover}
 \end{figure}
 
-RTO khoảng 8~s phù hợp với tham số BFD mặc định của Viptela (hello 1~s, hệ số 7): phải mất khoảng 7~s để BFD kết luận tunnel chết rồi lưu lượng mới chuyển sang tunnel còn lại. Mới có hai lần đo nên chưa đủ để kết luận; tuần tới sẽ đo đủ 3--5 lần và thử giảm chu kỳ BFD để so sánh.
+\textbf{Nhận xét -- chuyện gì xảy ra trong 8 giây:}
+\begin{itemize}
+    \item Khi link đứt, vEdge \textbf{không biết ngay}. Nó gửi gói BFD hello mỗi 1~s và phải mất liên tiếp \textbf{7 gói} mới kết luận tunnel chết, tức là tới giây thứ 7; khoảng 1~s sau, lưu lượng chuyển sang tunnel còn lại. Vì vậy RTO khoảng 8~s là \textbf{đúng với cấu hình mặc định}, không phải lỗi.
+    \item SDN ở Campus chính nhanh hơn nhiều (dưới 0,3~s) vì OVS đã \textbf{cài sẵn đường dự phòng}, không phải chờ phát hiện.
+    \item Mới có hai lần đo; tuần tới nhóm đo đủ 3--5 lần và giảm chu kỳ BFD (ví dụ 300~ms) để so sánh, đánh đổi là tải điều khiển tăng.
+\end{itemize}
 
 \subsection{So sánh hiệu năng Campus chính và chi nhánh}
 
@@ -123,7 +128,7 @@ vEdge chia vCPU thành lõi điều khiển và lõi chuyển tiếp dữ liệu
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\linewidth]{image/sosanh_delay_3110.png}
+    \includegraphics[width=0.85\linewidth]{image/sosanh_delay_0111.png}
     \caption{Delay trung bình LAN và WAN theo site, gồm Site 500 (31/10/2026)}
     \label{fig:sosanh_delay_3110}
 \end{figure}
@@ -134,6 +139,46 @@ vEdge chia vCPU thành lõi điều khiển và lõi chuyển tiếp dữ liệu
     \item vEdge 2 của các site 100--400 vẫn đang chạy 1 vCPU, nên đường đi qua vEdge 2 (ví dụ khi failover sang Internet) có thể chậm thêm khoảng 16~ms. Cần nâng cấu hình trước khi đo failover để số liệu không bị sai lệch.
     \item Delay WAN của Site 300 và Site 400 (9,6--12,4~ms) và jitter cao chủ yếu do vài mẫu RTT vọt lên 29--46~ms; mỗi tuyến chỉ có ít mẫu nên một mẫu chậm (máy chủ EVE đang tải cao) cũng làm trung bình tăng. Cần đo lặp 2--3 lần và lấy trung bình cho báo cáo cuối kỳ.
     \item Site 100 chỉ đo được 2/5 tuyến LAN: ngoài Web Server và DHCP-Server, lần này tuyến tới máy trạm PC-Luat-S100-1 (VLAN 30) cũng mất hết gói. Tuyến này không đi qua Server Farm/DMZ nên không giải thích được bằng chính sách firewall; cần kiểm tra riêng sau khi chuyển firewall Site 100 sang HA kiểu doanh nghiệp.
+\end{itemize}
+
+\subsection{Failover Firewall HA Site 100 (31/10/2026)}\label{sec:kq_fw_ha}
+
+Ping liên tục hai luồng trong lúc gây sự cố: từ VLAN 10 ra Internet và từ Server Farm (VLAN 90) tới Site 200. Thời gian gián đoạn là khoảng mất gói dài nhất của mỗi luồng. ``Trước tinh chỉnh'' là thiết kế mới nhưng chưa có OSPF giữa firewall và vEdge, firewall kiểm tra interface mỗi 5~s.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Thời gian gián đoạn khi failover firewall HA Site 100 (31/10/2026)}
+    \label{tab:fw_ha}
+    \begin{tabularx}{\textwidth}{|X|P{3.2cm}|P{3.2cm}|}
+        \hline
+        \textbf{Kịch bản} & \textbf{Trước tinh chỉnh} & \textbf{Sau tinh chỉnh} \\
+        \hline
+        Chuyển chủ động (\texttt{failover active}) & -- & dưới 1~s \\
+        \hline
+        Rút cáp inside của FW Active & 15~s & 11~s \\
+        \hline
+        Hỏng SW-WAN-Edge1 -- luồng ra Internet & 23~s & 19~s \\
+        \hline
+        Hỏng SW-WAN-Edge1 -- luồng Site 100 tới Site 200 & không tự phục hồi & 19~s \\
+        \hline
+        Tắt hẳn FW Active & -- & 21~s \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\linewidth]{image/fw_ha_failover.png}
+    \caption{Thời gian gián đoạn theo kịch bản, trước và sau tinh chỉnh}
+    \label{fig:fw_ha}
+\end{figure}
+
+\textbf{Nhận xét:}
+\begin{itemize}
+    \item Kết quả quan trọng nhất: trước tinh chỉnh, hỏng một switch WAN làm Site 100 \textbf{mất liên lạc hẳn} với chi nhánh vì vEdge 1 vẫn giữ route tĩnh và quảng bá vào OMP; sau khi chạy OSPF giữa firewall và vEdge, cả Internet lẫn liên site đều \textbf{tự phục hồi} sau khoảng 19~s.
+    \item Giảm chu kỳ kiểm tra interface (5~s $\rightarrow$ 1~s) rút ngắn kịch bản rút cáp inside từ 15 xuống 11~s.
+    \item Tắt hẳn firewall Active mất khoảng 21~s: firewall Standby lên thay ngay nhưng OSPF với vEdge và Core phải hội tụ lại. Hướng cải tiến: bật OSPF graceful restart (NSF) và đo lặp mỗi kịch bản 3 lần.
 \end{itemize}
 
 \subsection{Kiểm thử tích hợp}
@@ -149,7 +194,7 @@ vEdge chia vCPU thành lõi điều khiển và lõi chuyển tiếp dữ liệu
         \hline
         SDN Site 100 & 6/6 OVS, 13/13 liên kết; 7/7 máy trạm nhận DHCP, thông liên VLAN & ĐẠT \\
         \hline
-        Firewall HA & Active / Standby Ready & ĐẠT \\
+        Firewall HA & Active / Standby Ready; tự failover ở 4 kịch bản sự cố (31/10) & ĐẠT \\
         \hline
         SD-WAN & 12/12 thiết bị reachable, BFD 92/92 & ĐẠT \\
         \hline
@@ -165,7 +210,7 @@ vEdge chia vCPU thành lõi điều khiển và lõi chuyển tiếp dữ liệu
 \subsection{Đánh giá}
 
 \begin{itemize}
-    \item Hệ thống chạy đồng thời đủ các cụm và đạt toàn bộ kiểm thử chức năng; đây là nền để chuyển sang kiểm thử sự cố (failover firewall, cắt một màu WAN) trong tuần tới.
-    \item Số liệu SD-WAN mới là bước đầu: RTO khoảng 8~s và PRR 76,75\% cho thấy failover dựa vào BFD mặc định khá chậm so với SDN (fast-failover dưới 0,3~s). Đây là điểm sẽ phân tích trong báo cáo cuối kỳ.
+    \item Hệ thống chạy đồng thời đủ các cụm và đạt toàn bộ kiểm thử chức năng; firewall HA đã qua bốn kịch bản sự cố. Tuần tới chuyển sang đo các chỉ số theo tiêu chí đề cương (Chương~\ref{sec:ke_hoach}).
+    \item Thời gian khôi phục khác nhau rõ theo thành phần: SDN dưới 0,3~s, SD-WAN khoảng 8~s (BFD mặc định), firewall HA 11--21~s. Đây là điểm sẽ phân tích trong báo cáo cuối kỳ.
     \item NetOps Bot đã chẩn đoán đúng một lệch thiết kế có thật: uplink của hai switch phòng ban Site 400 đang lên trunk nhờ DTP tự thỏa thuận chứ không cấu hình tường minh. Lỗi này được giữ lại để làm kịch bản demo ``phát hiện -- sửa bằng \texttt{/change} -- tự rollback''.
 \end{itemize}
