@@ -22,6 +22,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
 
 from campus import service
+from campus import lease_push
 from campus.alerts import AlertMonitor
 from campus.change import ChangeError
 
@@ -45,6 +46,10 @@ APPROVERS = _ids("CHANGE_APPROVER_IDS")          # user id được duyệt; r�
 FOUR_EYES = os.getenv("CHANGE_FOUR_EYES", "0") == "1"
 STATE_FILE = os.getenv("ALERT_STATE_FILE", os.path.join(os.path.dirname(os.path.abspath(__file__)), "alert_state.json"))
 TG_LIMIT = 3900
+# Đẩy bảng lease DHCP sang web đo Site 900 (để trống URL/token = tắt)
+LEASE_PUSH_URL = os.getenv("LEASE_PUSH_URL", "")
+LEASE_PUSH_TOKEN = os.getenv("LEASE_PUSH_TOKEN", "")
+LEASE_PUSH_INTERVAL = max(60, int(os.getenv("LEASE_PUSH_INTERVAL", "300")))
 
 # callback_data của Telegram tối đa 64 byte → lưu khoá dài trong bảng, nút chỉ mang số
 _CB: dict[str, str] = {}
@@ -373,11 +378,32 @@ async def alert_loop(app: Application) -> None:
         await asyncio.sleep(ALERT_INTERVAL)
 
 
+async def lease_loop() -> None:
+    """Mỗi LEASE_PUSH_INTERVAL giây: đọc lease (Brand-FW + DHCP-Server) rồi POST sang web."""
+    last_err = None
+    while True:
+        try:
+            payload = await asyncio.to_thread(lease_push.collect)
+            await asyncio.to_thread(lease_push.push, payload, LEASE_PUSH_URL, LEASE_PUSH_TOKEN)
+            msg = f"{len(payload['leases'])} lease, {len(payload['errors'])} nguồn lỗi"
+            if last_err is not None or payload["errors"]:
+                logger.info("📤 Đẩy lease sang web: %s %s", msg, payload["errors"] or "")
+            last_err = None
+        except Exception as e:
+            if str(e) != last_err:          # không lặp cùng một lỗi mỗi chu kỳ
+                logger.warning("📤 Đẩy lease thất bại: %s", e)
+            last_err = str(e)
+        await asyncio.sleep(LEASE_PUSH_INTERVAL)
+
+
 async def post_init(app: Application) -> None:
     app.bot_data["monitor"] = AlertMonitor(service.vmanage(), service.ryu(), STATE_FILE)
     if ALERT_ENABLED and ALERT_CHATS:
         app.bot_data["alert_task"] = asyncio.create_task(alert_loop(app))
         logger.info("🔔 Vòng cảnh báo chạy mỗi %d s, gửi tới %d chat", ALERT_INTERVAL, len(ALERT_CHATS))
+    if LEASE_PUSH_URL and LEASE_PUSH_TOKEN:
+        app.bot_data["lease_task"] = asyncio.create_task(lease_loop())
+        logger.info("📤 Đẩy lease DHCP sang %s mỗi %d s", LEASE_PUSH_URL, LEASE_PUSH_INTERVAL)
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

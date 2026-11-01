@@ -23,6 +23,7 @@ from campus_ping_tool import (
     HOST_IP, SITE_VEDGES, SITES, WAN_IFACE, LOG_DIR, HAS_MPL,
     PingResult, ChartEngine, ping_host, site_of_ip, CYAN, PURPLE, RED, YELLOW, GREEN, ORANGE,
 )
+import dhcp_leases
 
 VMANAGE_DEFAULT = '10.9.0.10'
 VEDGE_NAMES = {ip: n for d in SITE_VEDGES.values() for ip, n in d.items()}
@@ -740,6 +741,7 @@ def cases_job(ctx, vm, cases, count, tp_window=60, tp_interval=10):
 
     def ping_rows():
         if 'rows' not in cache:
+            dhcp_leases.refresh_host_ip(log)     # IP PC theo lease DHCP (NetOps Bot day sang)
             log('  Do ping LAN + WAN ({} goi/tuyen)...\n'.format(count), 'info')
             cache['rows'] = _run_routes(ctx, vm, LAN_ROUTES, count, 'LAN') + \
                 _run_routes(ctx, vm, WAN_ROUTES, count, 'WAN')

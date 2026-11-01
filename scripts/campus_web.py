@@ -21,6 +21,8 @@ Cach chay (tren may Win trong lab 10.9.0.20, cung LAN controller site 900):
   python campus_web.py --vmanage 10.9.0.10   # IP vManage (dien san tren giao dien)
   python campus_web.py --host 0.0.0.0        # cho may khac trong LAN truy cap
                                              # (KHONG co dang nhap - chi dung trong lab)
+  python campus_web.py --lease-token <bi mat> # mo cong 8091 nhan bang lease DHCP tu NetOps Bot
+                                             # -> IP PC lay theo lease thay vi ghi cung
 ================================================================
 """
 import argparse, ipaddress, json, mimetypes, os, re, threading, webbrowser
@@ -31,6 +33,7 @@ from urllib.parse import urlparse, parse_qs, unquote
 import campus_ping_tool as core
 from campus_ping_tool import SITES, HOST_IP, HOST_SITE, WAN_IFACE, SITE_VEDGES, CORE_SITE_ID, LOG_DIR, HAS_MPL
 import sdwan_monitor as mon
+import dhcp_leases
 import sdwan_reliability as rel
 from campus_throughput import ThroughputTest
 
@@ -500,8 +503,13 @@ def api_cs_rewhitelist(d):
     return {}
 
 
+def api_leases(_):
+    return dhcp_leases.summary()
+
+
 ROUTES = {
     ('GET', '/api/meta'): api_meta,
+    ('GET', '/api/leases'): api_leases,
     ('GET', '/api/poll'): api_poll,
     ('GET', '/api/files'): api_files,
     ('GET', '/api/overview'): api_overview,
@@ -598,6 +606,51 @@ class Handler(BaseHTTPRequestHandler):
         self._dispatch('POST')
 
 
+class LeaseHandler(BaseHTTPRequestHandler):
+    """Cong rieng nhan bang lease DHCP tu NetOps Bot (POST /api/leases + header X-Lease-Token).
+    Tach khoi giao dien chinh: giao dien van chi nghe 127.0.0.1, cong nay chi nhan dung 1 API."""
+    server_version = 'CampusLease/1.0'
+    token = ''
+
+    def log_message(self, fmt, *args):
+        pass
+
+    def _reply(self, code, msg):
+        body = json.dumps({'msg': msg}, ensure_ascii=False).encode('utf-8')
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        self._reply(405, 'chi nhan POST /api/leases')
+
+    def do_POST(self):
+        import hmac
+        if urlparse(self.path).path != '/api/leases':
+            return self._reply(404, 'khong co API')
+        if not hmac.compare_digest(self.headers.get('X-Lease-Token', ''), self.token):
+            return self._reply(403, 'sai token')
+        n = int(self.headers.get('Content-Length') or 0)
+        if n > 2_000_000:
+            return self._reply(413, 'qua lon')
+        try:
+            msg = dhcp_leases.save(json.loads(self.rfile.read(n) or b'{}'))
+        except ValueError as e:
+            return self._reply(400, str(e))
+        GUI._log('[i] Nhan bang lease DHCP tu {}: {}\n'.format(self.client_address[0], msg), 'info')
+        self._reply(200, msg)
+
+
+def start_lease_server(host, port, token):
+    LeaseHandler.token = token
+    srv = ThreadingHTTPServer((host, port), LeaseHandler)
+    srv.daemon_threads = True
+    threading.Thread(target=srv.serve_forever, daemon=True, name='lease-server').start()
+    return srv
+
+
 def main():
     ap = argparse.ArgumentParser(description='Campus Network SDN + SD-WAN - giao dien web (vManage API)')
     ap.add_argument('--host', default='127.0.0.1', help='dia chi lang nghe (mac dinh 127.0.0.1)')
@@ -605,6 +658,11 @@ def main():
     ap.add_argument('--no-browser', action='store_true', help='khong tu mo trinh duyet')
     ap.add_argument('--vmanage', default=mon.VMANAGE_DEFAULT,
                     help='IP vManage dien san tren giao dien (mac dinh {})'.format(mon.VMANAGE_DEFAULT))
+    ap.add_argument('--lease-token', default=os.environ.get('CAMPUS_LEASE_TOKEN', ''),
+                    help='bat cong nhan bang lease DHCP tu NetOps Bot (token trung LEASE_PUSH_TOKEN cua bot; '
+                         'hoac bien moi truong CAMPUS_LEASE_TOKEN)')
+    ap.add_argument('--lease-host', default='0.0.0.0', help='dia chi nghe cong lease (mac dinh 0.0.0.0)')
+    ap.add_argument('--lease-port', type=int, default=8091, help='cong nhan lease (mac dinh 8091)')
     args = ap.parse_args()
     GUI.vm_default = args.vmanage
 
@@ -615,6 +673,14 @@ def main():
     except OSError as e:
         raise SystemExit('[!] Cong {} dang bi chiem ({}) - tat web cu (taskkill /F /IM python.exe) roi chay lai'.format(args.port, e))
     srv.daemon_threads = True
+    if args.lease_token:
+        try:
+            start_lease_server(args.lease_host, args.lease_port, args.lease_token)
+            print('Nhan bang lease DHCP tu NetOps Bot: http://{}:{}/api/leases'.format(args.lease_host, args.lease_port))
+        except OSError as e:
+            print('[!] Khong mo duoc cong lease {} ({}) - van chay, dung IP ghi cung'.format(args.lease_port, e))
+    else:
+        print('[i] Chua bat cong lease (--lease-token) - IP PC lay theo bang ghi cung.')
     url = 'http://{}:{}/'.format('127.0.0.1' if args.host in ('0.0.0.0', '') else args.host, args.port)
     print('Campus web tool: {}  (Ctrl+C de thoat)'.format(url))
     print('Du lieu lay tu vManage API {} + ping tu may nay - khong dung console/SSH host EVE.'.format(args.vmanage))

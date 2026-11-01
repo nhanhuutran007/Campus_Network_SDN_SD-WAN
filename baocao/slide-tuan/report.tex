@@ -287,7 +287,8 @@
 
     \begin{softcard}[okSoft]
         \textbf{\color{okGreen}Phát sinh thêm:} kiểm thử chức năng toàn hệ thống đạt; đo lại hiệu năng 5 site sau khi thêm Site 500;
-        \textbf{Campus NetOps Bot} (Telegram + AI agent) quản trị in-band Site 100 và 3 chi nhánh.
+        \textbf{Campus NetOps Bot} (Telegram + AI agent) quản trị in-band Site 100 và 3 chi nhánh;
+        công cụ đo thêm Site 500, 20 gói/tuyến và trung vị RTT; thử dự phòng Port-channel Po10 giữa 2 Core.
     \end{softcard}
 \end{frame}
 
@@ -456,6 +457,42 @@
         Quản trị in-band  & Từ Site 100 ping 15/15 IP quản trị chi nhánh; SSH 12/12 thiết bị & \done \\
         \bottomrule
     \end{tabularx}
+\end{frame}
+
+\begin{frame}{Bổ sung trong tuần: công cụ đo, dự phòng Core, tài liệu}
+    \begin{columns}[T]
+        \begin{column}{0.36\textwidth}
+            \begin{card}{Công cụ đo hiệu năng}
+                \scriptsize
+                \begin{itemize}\setlength{\itemsep}{2pt}
+                    \item Thêm \textbf{Site 500}: vEdge1/2-S500, VPC11, PC-Linux-S500 $\Rightarrow$ đo đủ 5 site.
+                    \item Mặc định \textbf{20 gói/tuyến} (trước 5) cho số liệu ổn định hơn.
+                    \item Thêm \textbf{trung vị RTT} vào CSV và biểu đồ delay, cạnh giá trị trung bình $\Rightarrow$ ít bị vài mẫu vọt kéo lệch (như jitter Site 300/400).
+                    \item Đo dự phòng bằng traceroute giới hạn 9 probe để không chạy quá lâu.
+                \end{itemize}
+            \end{card}
+        \end{column}
+        \begin{column}{0.32\textwidth}
+            \begin{card}[accent]{Port-channel Po10 (Core)}
+                \scriptsize
+                \begin{itemize}\setlength{\itemsep}{2pt}
+                    \item 2/2 link LACP \textbf{bundled}.
+                    \item Shutdown 1 link ở cả 2 đầu: \textbf{không mất gói}; VRRP chỉ thoáng đổi Master $\approx$4\,s khi link nối lại.
+                    \item Hạn chế: gỡ dây ảo 1 đầu (EVE không báo link down) thì mất khung trên link đó tới hết LACP timeout 90\,s; IOL không có \texttt{lacp rate fast}.
+                \end{itemize}
+            \end{card}
+        \end{column}
+        \begin{column}{0.30\textwidth}
+            \begin{card}[okGreen]{Topology \& tài liệu}
+                \scriptsize
+                \begin{itemize}\setlength{\itemsep}{2pt}
+                    \item Nhãn topo EVE-NG sửa theo thiết kế mới: IP TLOC Internet S200--S400, Po10, SW-WAN-Edge1/2, Site 500.
+                    \item Bot thêm \texttt{/dhcp}: đọc 4 scope, 8 lease trên DHCP-Server.
+                    \item Bảng tiến độ 21 hạng mục, báo cáo tuần 28 trang và kịch bản thuyết trình cập nhật tới 01/11.
+                \end{itemize}
+            \end{card}
+        \end{column}
+    \end{columns}
 \end{frame}
 
 \begin{frame}{Campus NetOps Bot -- Kiến trúc in-band}
