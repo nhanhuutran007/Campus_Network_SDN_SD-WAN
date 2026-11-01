@@ -215,7 +215,7 @@ SITES = {
     'Site 200 - Can Tho': {
         'site_id': 200, 'color': GREEN,
         'vlans': {
-            'VLAN 60 - NongNghiep': {'subnet':'10.2.60.0/24','gateway':'10.2.60.1','hosts':{'PC-NongNghiep-S200-1':'10.2.60.100','PC-NongNghiep-S200-2':'10.2.60.101'}},
+            'VLAN 60 - NongNghiep': {'subnet':'10.2.60.0/24','gateway':'10.2.60.1','hosts':{'PC-NongNghiep-S200-1':'10.2.60.103','PC-NongNghiep-S200-2':'10.2.60.102'}},   # tam theo lease Brand-FW 01/11 (VPC43/44)
             'VLAN 70 - YTe':        {'subnet':'10.2.70.0/24','gateway':'10.2.70.1','hosts':{'PC-YTe-S200-2':'10.2.70.100','PC-YTe-S200':'10.2.70.101'}},
             'Brand-FW-CT':          {'subnet':'10.2.1.0/30', 'gateway':'10.2.1.1', 'hosts':{'BrandFW-CT':'10.2.1.1'}},
         },
@@ -232,7 +232,7 @@ SITES = {
         'site_id': 400, 'color': ORANGE,
         'vlans': {
             'VLAN 50 - ThuySan': {'subnet':'10.4.50.0/24','gateway':'10.4.50.1','hosts':{'PC-ThuySan-S400-1':'10.4.50.100','PC-ThuySan-S400-2':'10.4.50.101'}},
-            'VLAN 60 - LuHanh':  {'subnet':'10.4.60.0/24','gateway':'10.4.60.1','hosts':{'PC-LuHanh-S400-2':'10.4.60.100','PC-LuHanh-S400':'10.4.60.101'}},
+            'VLAN 60 - LuHanh':  {'subnet':'10.4.60.0/24','gateway':'10.4.60.1','hosts':{'PC-LuHanh-S400-2':'10.4.60.101','PC-LuHanh-S400':'10.4.60.100'}},   # tam theo lease Brand-FW 01/11 (VPC49 / Linux 52)
             'Brand-FW-NT':       {'subnet':'10.4.1.0/30', 'gateway':'10.4.1.1', 'hosts':{'BrandFW-NT':'10.4.1.1'}},
         },
     },

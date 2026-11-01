@@ -389,27 +389,29 @@
             \includegraphics[width=\textwidth]{sosanh_delay_0111.png}
         \end{column}
         \begin{column}{0.43\textwidth}
-            \footnotesize
+            \scriptsize
             \rowcolors{2}{paper}{white}
-            \begin{tabularx}{\linewidth}{@{}Yccc@{}}
+            \begin{tabularx}{\linewidth}{@{}Ycccc@{}}
                 \toprule
-                \hd{Site} & \hd{Delay WAN} & \hd{Jitter} & \hd{Mất gói} \\
+                \hd{Site} & \hd{Delay WAN} & \hd{Jitter} & \hd{Mất gói} & \hd{Trung vị*} \\
                 \midrule
-                100 & 4,1\,ms  & 0,8\,ms  & 0\,\% \\
-                200 & 5,9\,ms  & 2,2\,ms  & 0\,\% \\
-                300 & 12,4\,ms & 12,1\,ms & 0\,\% \\
-                400 & 9,6\,ms  & 7,2\,ms  & 0\,\% \\
-                500 & 10,5\,ms & 4,2\,ms  & 0\,\% \\
+                100 & 4,1\,ms  & 0,8\,ms  & 0\,\% & 3,9\,ms \\
+                200 & 5,9\,ms  & 2,2\,ms  & 0\,\% & 7,4\,ms \\
+                300 & 12,4\,ms & 12,1\,ms & 0\,\% & 5,4\,ms \\
+                400 & 9,6\,ms  & 7,2\,ms  & 0\,\% & 5,4\,ms \\
+                500 & 10,5\,ms & 4,2\,ms  & 0\,\% & 5,6\,ms \\
                 \bottomrule
-            \end{tabularx}
-            \vspace{0.15cm}
+            \end{tabularx}\\[1pt]
+            {\tiny\color{inkSoft}* Trung vị RTT WAN, đo lại 01/11 bằng tính năng mới của công cụ.\par}
+            \vspace{0.1cm}
 
             \begin{softcard}
                 \scriptsize
                 \begin{itemize}\setlength{\itemsep}{1pt}
                     \item WAN qua SD-WAN \textbf{không mất gói} ở cả 5 site.
-                    \item Site 500 ban đầu chậm (LAN 18,6\,ms) do vEdge chỉ 1 vCPU; nâng lên 2 vCPU $\Rightarrow$ \textbf{3,0\,ms}.
-                    \item Jitter Site 300/400 do vài mẫu RTT vọt 29--46\,ms $\Rightarrow$ cần đo lặp.
+                    \item Trung vị chỉ \textbf{3,9--7,4\,ms}: trung bình Site 300/400/500 cao do vài mẫu vọt 29--46\,ms.
+                    \item LAN đo bằng traceroute (UDP), WAN bằng ICMP $\Rightarrow$ không so trực tiếp hai cột.
+                    \item Site 500: vEdge 1 $\rightarrow$ 2 vCPU, LAN 18,6 $\Rightarrow$ \textbf{3,0\,ms}.
                 \end{itemize}
             \end{softcard}
         \end{column}
@@ -457,6 +459,31 @@
         Quản trị in-band  & Từ Site 100 ping 15/15 IP quản trị chi nhánh; SSH 12/12 thiết bị & \done \\
         \bottomrule
     \end{tabularx}
+\end{frame}
+
+\begin{frame}{Công cụ đo \& giám sát (web Site 900) theo tiêu chí đề cương}
+    \vspace{0.05cm}
+    \scriptsize
+    \renewcommand{\arraystretch}{1.12}
+    \rowcolors{2}{paper}{white}
+    \begin{tabularx}{\textwidth}{@{}L{0.21\textwidth}L{0.25\textwidth}Yc@{}}
+        \toprule
+        \hd{Tiêu chí đề cương} & \hd{Chức năng trên web} & \hd{Đo gì / kết quả hiện có} & \hd{Trạng thái} \\
+        \midrule
+        Thời gian khôi phục khi mất liên kết & SD-WAN Failover Test; Link Failover + PRR; Controller Recovery & RTO, tỉ lệ gói phục hồi; Site 200: 7,96\,s. Mất controller: chưa đo & \partly \\
+        Hiệu năng giữa VLAN và cơ sở & So sánh Campus chính -- chi nhánh; Quick Ping & Delay (trung bình + trung vị), jitter, mất gói LAN/WAN 5 site; xuất CSV + biểu đồ & \done \\
+        Hiệu năng: thông lượng & Thông lượng trực tiếp; case Throughput WAN & Mbps theo bộ đếm interface vEdge; mới đo lưu lượng nền, chưa bơm tải & \partly \\
+        Thời gian thêm khu vực mạng & Ký cert vEdge (bật SSH, vManage tự ký / ký CA, danh sách onboard) & Đã dùng để thêm Site 500; chưa bấm giờ & \partly \\
+        Quản lý tập trung & Thiết bị trong fabric & Trạng thái mọi vEdge + controller từ vManage API & \done \\
+        Độ sẵn sàng (kế hoạch) & Availability & Availability \%, MTTR, MTBF; mới chạy ngắn, cần $\geq$ 30 phút & \partly \\
+        \bottomrule
+    \end{tabularx}
+    \vspace{0.02cm}
+
+    \begin{softcard}
+        \scriptsize\textbf{\color{brand}Nguyên tắc:} web chỉ lấy dữ liệu từ \textbf{chính thiết bị}
+        (vManage REST API, ping/traceroute từ vEdge), không qua hypervisor EVE. Tải Core/Distribution: Campus SDN Console (Ryu).
+    \end{softcard}
 \end{frame}
 
 \begin{frame}{Bổ sung trong tuần: công cụ đo, dự phòng Core, tài liệu}
@@ -650,21 +677,25 @@
     \begin{columns}[T]
         \begin{column}{0.49\textwidth}
             \begin{card}[accent]{Đo đạc theo tiêu chí đề cương}
-                \begin{itemize}\setlength{\itemsep}{2pt}
-                    \item Chưa đo \textbf{thời gian thêm VLAN / khu vực mạng}.
-                    \item Chưa đo \textbf{tải CPU, băng thông} trên Core và Distribution.
+                \footnotesize
+                \begin{itemize}\setlength{\itemsep}{1pt}
+                    \item Chưa bấm giờ \textbf{thêm VLAN / khu vực mạng}.
+                    \item Tải Core/Distribution mới đo ở \textbf{tải thấp} (VPCS chỉ sinh vài trăm kbit/s).
                     \item Chưa đo \textbf{throughput} liên VLAN và liên cơ sở.
+                    \item \textbf{6/6 ASAv chưa có license} $\Rightarrow$ lưu lượng qua FW bị giới hạn ($\approx$100\,kbit/s theo Cisco; đã thấy gói bị bỏ do \texttt{rate-exceeded}) $\Rightarrow$ throughput liên site đo qua FW chỉ phản ánh license.
                     \item Failover SD-WAN mới 2 lần tại 1 site; chưa đo mất vSmart.
                 \end{itemize}
             \end{card}
         \end{column}
         \begin{column}{0.49\textwidth}
             \begin{card}[badRed]{Kỹ thuật \& tài liệu}
-                \begin{itemize}\setlength{\itemsep}{2pt}
+                \footnotesize
+                \begin{itemize}\setlength{\itemsep}{1pt}
                     \item SDN: mất liên kết Distribution -- Core còn gián đoạn 2--3,7\,s.
                     \item vEdge 2 các site 100--400 còn 1 vCPU (chậm thêm $\approx$16\,ms khi đi đường dự phòng).
-                    \item NetOps Bot chưa có rollback cho ASA; trunk Site 400 giữ lại để demo.
-                    \item Báo cáo cuối kỳ chưa bắt đầu bản nháp.
+                    \item IP máy trạm đổi theo lease DHCP $\Rightarrow$ tuyến đo FAIL giả; đang triển khai bot đẩy bảng lease sang web.
+                    \item Cặp FW-ASAv Site 100 tự reload ($\approx$09:50 ngày 01/11), chưa rõ nguyên nhân.
+                    \item NetOps Bot chưa có rollback cho ASA; báo cáo cuối kỳ chưa có bản nháp.
                 \end{itemize}
             \end{card}
         \end{column}
@@ -686,8 +717,8 @@
         \hd{\#} & \hd{Chỉ số} & \hd{Cách đo} & \hd{Kết quả cần đạt} \\
         \midrule
         1 & Thời gian khôi phục & SD-WAN: cắt 1 màu WAN, mất vSmart, lặp 3--5 lần/site, so BFD mặc định với 300\,ms; FW HA lặp 3 lần; SDN thử fast-failover Distribution -- Core & Bảng RTO min/TB/max, PRR theo thành phần \\
-        2 & Hiệu năng liên VLAN \& liên cơ sở & iperf3 TCP/UDP giữa các VLAN Site 100 và giữa các site; delay/jitter/mất gói; nâng vEdge 2 lên 2 vCPU rồi đo lại & Throughput, delay, jitter từng tuyến \\
-        3 & Tải Core \& Distribution & CPU, bộ nhớ, lưu lượng interface Core-SW1/2 và OVS (Ryu port stats) khi chạy tải iperf3 & Biểu đồ tải theo mức lưu lượng \\
+        2 & Hiệu năng liên VLAN \& liên cơ sở & (A) iperf3 liên VLAN Site 100: VLAN 40 $\leftrightarrow$ 90 qua Core, không qua ASAv; (B) overlay vEdge $\leftrightarrow$ vEdge theo từng màu, không qua ASAv; (C) qua Brand-FW để chứng minh giới hạn license; delay/jitter 20 gói/tuyến, lấy trung vị & Throughput (min/TB/max, 3 lần $\times$ 30\,s), delay, jitter từng tuyến \\
+        3 & Tải Core \& Distribution & (D) CPU Core-SW1/2 (SNMP), Mbps/pps từng OVS, packet-in Ryu trong lúc chạy (A) & Biểu đồ tải theo mức lưu lượng \\
         4 & Thời gian mở rộng & Bấm giờ thêm 1 VLAN mới (Ryu + Core + DHCP) và thêm 1 site vEdge qua vManage & Số phút từ lúc bắt đầu đến khi máy trạm dùng được \\
         5 & Quản lý chính sách tập trung & Đổi 1 chính sách vSmart / luồng Ryu / lệnh \texttt{/change}: đo thời gian áp xuống toàn mạng & Thời gian lan truyền, số thiết bị chịu ảnh hưởng \\
         6 & Độ sẵn sàng & Theo dõi nhiều ngày từ công cụ web Site 900 & Availability, MTTR, MTBF \\
