@@ -565,6 +565,45 @@
     \end{columns}
 \end{frame}
 
+\begin{frame}{Campus NetOps Bot -- Chạy thật trên Telegram (1/2)}
+    \begin{columns}[T]
+        \begin{column}{0.45\textwidth}
+            \centering
+            {\small\textbf{\color{brand}\texttt{/health}} -- tổng quan SD-WAN + SDN}\\[3pt]
+            \includegraphics[height=0.66\textheight]{image/bot_health.png}
+        \end{column}
+        \begin{column}{0.53\textwidth}
+            \centering
+            {\small\textbf{\color{brand}\texttt{/diag site 200}} -- chẩn đoán chi nhánh theo lớp}\\[3pt]
+            \includegraphics[height=0.47\textheight]{image/bot_diag_site200.png}\\[3pt]
+            \begin{softcard}
+                \footnotesize 13/13 thiết bị SD-WAN reachable, 6/6 OVS; Site 200 qua
+                vEdge $\rightarrow$ Brand-FW $\rightarrow$ switch $\rightarrow$ DHCP: \textbf{mọi lớp bình thường}.
+            \end{softcard}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Campus NetOps Bot -- Chạy thật trên Telegram (2/2)}
+    \begin{columns}[T]
+        \begin{column}{0.49\textwidth}
+            \centering
+            {\small\textbf{\color{brand}\texttt{/diag fw}} -- cặp firewall HA Site 100}\\[3pt]
+            \includegraphics[height=0.56\textheight]{image/bot_diag_fw.png}
+        \end{column}
+        \begin{column}{0.49\textwidth}
+            \centering
+            {\small\textbf{\color{accent}Hỏi tự nhiên} -- AI agent tự SSH Core-SW1}\\[3pt]
+            \includegraphics[height=0.56\textheight]{image/bot_ai_vrrp.png}
+        \end{column}
+    \end{columns}
+    \vspace{2pt}
+    \begin{softcard}
+        \footnotesize Firewall: Active/Standby Ready, OSPF FULL với Core và vEdge, default route qua IP SLA.
+        AI agent trả lời đúng: Core-SW1 là VRRP Master ở 5 VLAN (priority 150) -- khớp thiết kế sau khi sửa split-brain.
+    \end{softcard}
+\end{frame}
+
 % ============================================================
 % 03. CHƯA HOÀN THÀNH
 % ============================================================
