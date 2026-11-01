@@ -277,7 +277,7 @@ def api_cases(d):
     cases = sorted({int(c) for c in d.get('cases', []) if str(c).isdigit() and 1 <= int(c) <= n})
     if not cases:
         raise WebError('Chon it nhat 1 Case.')
-    GUI.run_job('So sanh site', mon.cases_job, GUI, GUI.vmanage(), cases, _int(d, 'count', 1, 50, 5),
+    GUI.run_job('So sanh site', mon.cases_job, GUI, GUI.vmanage(), cases, _int(d, 'count', 1, 50, 20),
                 _int(d, 'tp_window', 20, 900, 60), _int(d, 'tp_interval', 5, 60, 10))
     return {}
 

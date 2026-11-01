@@ -348,8 +348,9 @@ VEDGE_LAN_IPS = {
 #  PING RESULT
 # =========================================================
 class PingResult:
-    __slots__ = ('avg_latency','min_latency','max_latency','jitter','loss','raw','success')
+    __slots__ = ('avg_latency','min_latency','max_latency','jitter','loss','raw','success','samples')
     def __init__(self):
+        self.samples     = []      # RTT tung goi (ms) neu nguon do tach duoc - de tinh trung vi
         self.avg_latency = 0.0
         self.min_latency = 0.0
         self.max_latency = 0.0
