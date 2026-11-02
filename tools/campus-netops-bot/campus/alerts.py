@@ -19,6 +19,24 @@ from .labapi import LabApiError, alarm_hosts, alarm_target, is_recovery
 
 log = logging.getLogger(__name__)
 STALL_ALERT_MS = int(os.getenv("ALERT_STALL_MS", "6000"))    # > 6 s là OVS bắt đầu mất kết nối
+# Chống "bão" cảnh báo (01/11/2026: FW crash lặp → vài trăm tin/ngày):
+# - cùng sự kiện (loại alarm bỏ hậu tố _up/_down + thiết bị) chỉ gửi 1 lần mỗi ALERT_COOLDOWN giây,
+#   các lần lặp trong khoảng đó được đếm và ghi kèm ở tin kế tiếp;
+# - một chu kỳ có > ALERT_DIGEST_MIN cảnh báo thì gộp thành 1 tin tóm tắt.
+COOLDOWN_S = int(os.getenv("ALERT_COOLDOWN", "600"))
+DIGEST_MIN = int(os.getenv("ALERT_DIGEST_MIN", "5"))
+_LEVEL_RANK = {"critical": 3, "major": 2, "info": 1, "recovery": 0}
+
+
+def _event_key(key: str) -> str:
+    """'Control_TLOC_Down:vEdge1-S100' và '..._Up:...' là cùng một sự kiện (để phát hiện flap)."""
+    typ, _, target = key.partition(":")
+    t = typ.lower()
+    for suf in ("_down", "_up", "-down", "-up"):
+        if t.endswith(suf):
+            t = t[: -len(suf)]
+            break
+    return f"{t}:{target}"
 
 
 @dataclass
@@ -45,6 +63,10 @@ class AlertMonitor:
         self.ryu_down_since: float | None = None
         self.muted: dict[str, float] = {}
         self._last_stall: float | None = None
+        self.last_sent: dict[str, float] = {}      # event key → lần gửi gần nhất
+        self.suppressed: dict[str, int] = {}       # event key → số lần lặp đã nuốt
+        self.pending: dict[str, Alert] = {}        # event key → tin mới nhất đang bị giữ
+        self.last_level: dict[str, str] = {}       # event key → level của tin đã gửi gần nhất
         self._load()
 
     # ---------------------------------------------------------------- trạng thái
@@ -103,7 +125,9 @@ class AlertMonitor:
             key = f"{a.get('type')}:{alarm_target(a)}"
             if self._is_muted(key):
                 continue
-            level = "recovery" if is_recovery(a) else {"Critical": "critical", "Major": "major"}.get(
+            # *_State_Change (OSPF neighbor down/init/up) dùng chung một type → nhìn message
+            up_msg = str(a.get("message", "")).strip().lower().endswith(" up")
+            level = "recovery" if is_recovery(a) or up_msg else {"Critical": "critical", "Major": "major"}.get(
                 a.get("severity"), "info")
             diag = [h for h in hosts if (d := inventory.resolve(h)) and d.role == "vedge"]
             text = (f"{a.get('rule_name_display', a.get('type'))} — {alarm_target(a)}\n"
@@ -152,6 +176,64 @@ class AlertMonitor:
                                  f"Ryu controller khựng {ms / 1000:.1f} s — OVS có thể mất kết nối tạm thời.", ["sdn"]))
         return out
 
+    # ---------------------------------------------------------------- chống bão
+    def _throttle(self, alerts: list[Alert], now: float) -> list[Alert]:
+        """Mỗi sự kiện (Down/Up gộp chung) tối đa 1 tin / COOLDOWN_S. Các lần lặp trong khoảng chờ
+        được đếm; hết khoảng chờ thì gửi TRẠNG THÁI CUỐI (vd đã Up lại) kèm số lần flap — để không
+        bao giờ mất tin phục hồi."""
+        out = []
+        for a in alerts:
+            ek = _event_key(a.key)
+            first_recovery = a.level == "recovery" and self.last_level.get(ek, "recovery") != "recovery"
+            if (COOLDOWN_S > 0 and not first_recovery
+                    and now - self.last_sent.get(ek, 0) < COOLDOWN_S):
+                self.suppressed[ek] = self.suppressed.get(ek, 0) + 1
+                self.pending[ek] = a
+                continue
+            out.append(self._mark_sent(ek, a, now))
+        for ek in [k for k in self.pending if now - self.last_sent.get(k, 0) >= COOLDOWN_S]:
+            a = self.pending[ek]
+            if a.level == "recovery" and self.last_level.get(ek) == "recovery":
+                # đã báo phục hồi rồi, cuối cùng vẫn ổn → chỉ ghi nhận, không gửi thêm
+                self.pending.pop(ek, None)
+                n = self.suppressed.pop(ek, 0)
+                if n:
+                    log.info("Flap %s: %d lần, đã ổn định", ek, n)
+                continue
+            out.append(self._mark_sent(ek, a, now))
+        # dọn khoá cũ để dict không phình
+        for ek in [k for k, t in self.last_sent.items()
+                   if now - t > max(COOLDOWN_S, 1) * 6 and k not in self.pending]:
+            self.last_sent.pop(ek, None)
+            self.suppressed.pop(ek, None)
+        return out
+
+    def _mark_sent(self, ek: str, a: Alert, now: float) -> Alert:
+        self.pending.pop(ek, None)
+        n = self.suppressed.pop(ek, 0)
+        if n:
+            a.text += f"\n(trạng thái mới nhất; đã gộp {n} lần lặp/flap trong {max(COOLDOWN_S // 60, 1)} phút)"
+        self.last_sent[ek] = now
+        self.last_level[ek] = a.level
+        return a
+
+    @staticmethod
+    def _digest(alerts: list[Alert]) -> Alert:
+        groups: dict[str, list[str]] = {}
+        for a in alerts:
+            typ, _, target = a.key.partition(":")
+            groups.setdefault(typ, []).append(target or "?")
+        top = max(alerts, key=lambda a: _LEVEL_RANK.get(a.level, 1))
+        lines = [f"Tóm tắt {len(alerts)} cảnh báo trong chu kỳ vừa qua:"]
+        for typ, targets in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+            uniq = sorted(set(targets))
+            more = f" +{len(uniq) - 4}" if len(uniq) > 4 else ""
+            lines.append(f"• {typ} ×{len(targets)} — {', '.join(uniq[:4])}{more}")
+        diag: list[str] = []
+        for a in alerts:
+            diag += [d for d in a.diagnose if d not in diag]
+        return Alert("digest", top.level if top.level != "recovery" else "info", "\n".join(lines), diag[:2])
+
     def poll(self) -> list[Alert]:
         out = []
         if self.vm:
@@ -159,4 +241,7 @@ class AlertMonitor:
         if self.ryu and self.ryu.ep is not None:
             out += self._poll_ryu()
         self._save()
+        out = self._throttle(out, time.time())
+        if DIGEST_MIN > 0 and len(out) > DIGEST_MIN:
+            out = [] if self._is_muted("digest") else [self._digest(out)]
         return out

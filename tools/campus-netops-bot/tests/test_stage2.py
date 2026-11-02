@@ -209,6 +209,72 @@ class TestAlerts(unittest.TestCase):
             self.assertEqual([a.key for a in m2.poll()], ["site_down:vEdge1-S400"])
 
 
+class TestAlertStorm(unittest.TestCase):
+    """01/11/2026: FW crash lặp → hàng trăm tin. Kiểm chống flap + gộp digest."""
+
+    def setUp(self):
+        self.vm = FakeVM()
+        self.mon = AlertMonitor(self.vm, None)
+        self.mon.poll()                                        # prime
+        self.n = 0
+
+    def add(self, typ, sev, host, msg="m"):
+        self.n += 1
+        a = alarm(f"x{self.n}", typ, sev, host)
+        a["message"] = msg
+        self.vm.data.append(a)
+
+    def test_flap_sends_down_then_up_once(self):
+        self.add("Control_TLOC_Down", "Major", "vEdge1-S100")
+        self.assertEqual([a.level for a in self.mon.poll()], ["major"])
+        self.add("Control_TLOC_Up", "Medium", "vEdge1-S100")
+        self.assertEqual([a.level for a in self.mon.poll()], ["recovery"])    # phục hồi luôn được gửi
+        for _ in range(4):                                     # flap tiếp trong khoảng chờ → im lặng
+            self.add("Control_TLOC_Down", "Major", "vEdge1-S100")
+            self.add("Control_TLOC_Up", "Medium", "vEdge1-S100")
+            self.assertEqual(self.mon.poll(), [])
+        # hết khoảng chờ, trạng thái cuối là Up và đã báo Up rồi → không gửi thêm
+        for k in self.mon.last_sent:
+            self.mon.last_sent[k] -= 10_000
+        self.assertEqual(self.mon.poll(), [])
+
+    def test_pending_problem_sent_after_cooldown(self):
+        self.add("OSPF_Neighbor_State_Change", "Major", "vEdge1-S100", "OSPF neighbor down")
+        self.assertEqual(len(self.mon.poll()), 1)
+        self.add("OSPF_Neighbor_State_Change", "Major", "vEdge1-S100", "OSPF neighbor init")
+        self.assertEqual(self.mon.poll(), [])
+        for k in self.mon.last_sent:
+            self.mon.last_sent[k] -= 10_000
+        al = self.mon.poll()
+        self.assertEqual(len(al), 1)
+        self.assertIn("đã gộp 1 lần", al[0].text)
+
+    def test_ospf_up_message_is_recovery(self):
+        self.add("OSPF_Neighbor_State_Change", "Major", "vEdge1-S100", "OSPF neighbor down")
+        self.mon.poll()
+        self.add("OSPF_Neighbor_State_Change", "Major", "vEdge1-S100", "OSPF neighbor up")
+        self.assertEqual([a.level for a in self.mon.poll()], ["recovery"])
+
+    def test_burst_becomes_one_digest(self):
+        for i, h in enumerate(["vEdge1-S100", "vEdge2-S100", "vEdge1-S200", "vEdge2-S200",
+                               "vEdge1-S300", "vEdge2-S300", "vEdge1-S400", "vEdge2-S400"]):
+            self.add("Control_Node_Down", "Critical", h)
+            self.add("OMP_Node_Down", "Major", h)
+        al = self.mon.poll()
+        self.assertEqual(len(al), 1)
+        self.assertEqual(al[0].key, "digest")
+        self.assertEqual(al[0].level, "critical")
+        self.assertIn("Control_Node_Down ×8", al[0].text)
+        self.mon.mute("digest")
+        for h in ["a", "b", "c", "d", "e", "f"]:
+            self.add("BFD_Node_Down", "Major", h)
+        self.assertEqual(self.mon.poll(), [])
+
+    def test_target_falls_back_to_system_ip(self):
+        from campus.labapi import alarm_target
+        self.assertEqual(alarm_target({"values": [{"system-ip": "10.200.100.1"}]}), "10.200.100.1")
+
+
 class FakeConsole:
     def __init__(self, outputs, fail_on=None):
         self.outputs, self.fail_on, self.calls = outputs, fail_on, []

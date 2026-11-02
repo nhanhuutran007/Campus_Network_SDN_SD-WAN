@@ -152,9 +152,14 @@ def alarm_target(a: dict) -> str:
     if hosts:
         return ", ".join(hosts)
     sites = sorted({str(v["site-id"]) for v in a.get("values") or [] if v.get("site-id")})
-    return ", ".join(f"site {x}" for x in sites) or "?"
+    if sites:
+        return ", ".join(f"site {x}" for x in sites)
+    # OSPF/BGP_* chỉ có system-ip (vd OSPF_Neighbor_State_Change) — trước đây hiện "?"
+    ips = sorted({str(v.get("system-ip") or v.get("vdevice-name") or "")
+                  for v in (a.get("values_short_display") or []) + (a.get("values") or [])} - {""})
+    return ", ".join(ips) or ", ".join(a.get("devices_ip", []) or []) or "?"
 
 
 def is_recovery(a: dict) -> bool:
-    t = a.get("type", "")
+    t = str(a.get("type", "")).lower()
     return t.endswith("_up") or t.endswith("-up")

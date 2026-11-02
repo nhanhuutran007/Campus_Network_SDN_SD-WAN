@@ -80,7 +80,7 @@ Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, 
 | SwitchBrand-S300 | 62 | iol |
 | SwitchBrand-S200 | 63 | iol |
 | SwitchBrand-S400 (đổi id 64 → 75 ngày 31/10/2026) | 75 | iol |
-| vEdge65 (Site 500 từ 03/10/2026) | 65 | vtedge |
+| vEdge1-S500 (tên node `vEdge`, vEdge65; Site 500 từ 03/10/2026) | 65 | vtedge (config="0" từ 02/11/2026, không embed — cấu hình tay, bản tham chiếu `07-Site500/vEdge65`) |
 | Access-SW2 | 66 | linux (OVS script) |
 | Access-SW1 | 68 | linux (OVS script) |
 | Access-SW4 | 69 | linux (OVS script) |
@@ -196,7 +196,7 @@ Service OVS phục hồi bridge/port theo kiểu `--may-exist`, IP `br-mgmt`, DP
 | vEdge1-S200 / vEdge2-S200 | 10.200.200.1 / .2 | Internet 203.0.113.9 — MPLS 100.64.200.1 |
 | vEdge1-S300 / vEdge2-S300 | 10.200.30.1 / .2 | Internet 203.0.113.13 — MPLS 100.64.30.1 |
 | vEdge1-S400 / vEdge2-S400 | 10.200.40.1 / .2 | Internet 203.0.113.17 — MPLS 100.64.40.1 |
-| vEdge65 (Site 500, đang triển khai) | config hiện tại 10.200.90.1 (dự kiến 10.200.50.1) | Internet 203.0.113.21 — MPLS 100.64.50.1 (phía SP đã cấu hình) |
+| vEdge1-S500 (node 65) | 10.200.50.1 (site 500) | Internet 203.0.113.21 — MPLS 100.64.50.1 (phía SP đã cấu hình) |
 
 ### 7.1. BGP (Service Provider — thay OSPF underlay, 15/08/2026)
 
