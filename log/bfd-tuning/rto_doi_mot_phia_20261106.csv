@@ -1,0 +1,2 @@
+label,run,time,replies,period_ms,commit_s,outage_cut_s,outage_back_s,gaps,bfd_up,bfd_wait_s
+after1,1,21:51:01,293,211,1.38,8.35,3.02,8.3@+0.5;3.0@+44.5,10,2
