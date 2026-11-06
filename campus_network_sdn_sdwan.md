@@ -1210,7 +1210,7 @@ Phạm vi SDN: **campus chính Site 100** (6 OVS); liên site do SD-WAN đảm n
 
 | Mục tiêu | Kết quả đo (host 1, 04/10/2026) |
 |---|---|
-| Thời gian thêm VLAN / khu vực mạng | SDN: **3,8 ms** (1 lệnh API, mọi OVS liên quan xác nhận); Core-SW1/2 (IOL truyền thống): 18 lệnh CLI/thiết bị ≈ 36 s/thiết bị; VPC trong VLAN mới ping gateway + DHCP-Server 3/3 |
+| Thời gian thêm VLAN / khu vực mạng | SDN: **3,8 ms** (1 lệnh API, mọi OVS liên quan xác nhận); Core-SW1/2 (IOL truyền thống): 18 lệnh CLI/thiết bị, script đẩy xong ≈ 1,2 s/thiết bị khi chờ đúng prompt (số 36 s cũ chủ yếu do chờ cố định sau mỗi lệnh). Đo đầu cuối 07/11/2026 (3 lần, IP tĩnh, sai số ~5 s): SDN + 2 Core xong 5,3 s, ping gateway 37,8 s, DHCP-Server 42,0 s; chưa gồm scope DHCP làm tay |
 | Thời gian khôi phục khi mất liên kết | Hội tụ controller **< 16 ms**; gián đoạn dữ liệu: cổng báo down 0–0,3 s, đứt ngầm Access–Dist 1,8 s, Dist–Core 2,9–3,4 s, mất hẳn Dist-SW1 1,9 s; quay về 0–0,4 s |
 | Hiệu năng giữa các VLAN | Trong VLAN (L2 qua OVS) RTT **1,57 ms**, khác VLAN (qua Core) **2,91 ms**, jitter ~1,2 ms, mất gói 0 % (36 cặp VPC) |
 | Tải Core / Distribution | Tải điều khiển ổn định ~93 packet-in/s, Ryu ~5 % CPU, không phụ thuộc lưu lượng người dùng; Dist-SW2 gánh VLAN 99 (~2 450 pps nền) |

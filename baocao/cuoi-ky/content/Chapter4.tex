@@ -228,7 +228,7 @@ Bài học rút ra là trong mạng SDN in-band, mặt phẳng điều khiển p
         \hline
         \textbf{Tiêu chí} & \textbf{Kết quả đo} \\
         \hline
-        Thời gian thêm VLAN & SDN: \textbf{3,8 ms} (một lệnh API, đến khi switch xác nhận); cùng thay đổi trên mỗi Core IOL cần 18 lệnh CLI, khoảng 36 giây/thiết bị. Máy trạm trong VLAN mới nhận DHCP và ping gateway 3/3 \\
+        Thời gian thêm VLAN & SDN: \textbf{3,8 ms} (một lệnh API, đến khi switch xác nhận); cùng thay đổi trên mỗi Core IOL cần 18 lệnh CLI, script đẩy xong khoảng 1,2 giây/thiết bị khi chờ đúng prompt. Đo đầu cuối ngày 07/11/2026 (3 lần, sai số khoảng 5 giây, máy trạm đặt IP tĩnh): xong SDN và hai Core sau \textbf{5,3 giây}, ping được gateway sau 37,8 giây, DHCP Server sau 42,0 giây. Chưa gồm bước tạo scope DHCP làm tay \\
         \hline
         Thời gian khôi phục khi mất liên kết & Hội tụ của Controller dưới 16 ms; gián đoạn dữ liệu chủ yếu là thời gian phát hiện: cổng báo down 0--0,3 giây, đứt ngầm Access--Distribution 1,8 giây, Distribution--Core 2,9--3,4 giây, mất hẳn Dist-SW1 1,9 giây; khi liên kết trở lại 0--0,4 giây \\
         \hline
@@ -461,6 +461,8 @@ omp
     \item \textbf{Chính sách tập trung:} mọi vEdge nhận đúng chính sách từ vSmart (\texttt{show policy from-vsmart}). Để chứng minh chính sách được thực thi, nhóm xây dựng công cụ kiểm thử tự động: đọc bộ đếm của từng luật qua API của vManage, sinh lưu lượng thật từ máy trạm chi nhánh (PC-YTe-S200-2), rồi đọc lại bộ đếm. Kết quả 10/10 phép thử đạt (Bảng~\ref{tab:kiem_thu_chinh_sach}).
     \item \textbf{Failover transport tại chi nhánh:} công cụ đăng nhập vEdge1 của chi nhánh, tắt cổng MPLS (xác nhận bằng thông báo \texttt{Commit complete}), ping liên tục mỗi khoảng 1,2 giây qua overlay, rồi tự bật lại cổng. Thời gian khôi phục (RTO) đo được là 3,3 giây (Site 200), 4,4 giây (Site 300) và 3,3 giây (Site 400); trước khi áp thiết kế beacon, chi nhánh mất 100\% gói và không tự phục hồi. Khi MPLS trở lại, lưu lượng tự quay về vEdge1. RTO chủ yếu phụ thuộc chu kỳ thăm dò 2 giây của Brand-FW.
     \item \textbf{Failover transport tại Site 100:} khi tắt cổng MPLS trên cả hai vEdge Site 100, các đường hầm qua Internet tiếp tục mang lưu lượng; khi bật lại, TLOC MPLS chỉ phục hồi sau khi bổ sung tuyến controller qua MPLS.
+    \item \textbf{Đo lại failover và thử timer BFD (06/11/2026):} cắt MPLS của vEdge1 Site 200 trong khi máy trạm ping Campus chính 5 gói/giây, gián đoạn đo được là 7,9--9,1 giây (trung bình 8,5 giây, 5 lần), cao hơn mức 3,3 giây đo ngày 26/09 ở trên; phép đo cũ lấy mẫu mỗi khoảng 1,2 giây và cấu hình lab đã thay đổi từ đó, nguyên nhân chênh lệch chưa được xác định. BFD đang dùng mặc định 1000~ms $\times$ 7. Timer mới chỉ có hiệu lực khi cả hai đầu phiên cùng đổi. Thử 500~ms $\times$ 4 cho gián đoạn 3,4--6,7 giây ở 3 trong 5 lần, so với 7,7--8,3 giây của đường đối chứng, nhưng phiên với vEdge2 Site 200 (1 vCPU) tự rớt mỗi 15--60 giây khi không cắt liên kết, nên cấu hình đã được gỡ và chưa áp dụng.
+    \item \textbf{Thông lượng liên site (06/11/2026):} đo bằng \texttt{tools iperf} giữa các vEdge trong VPN~1, không qua tường lửa, được 13/15 chiều. TCP trung bình 1,95~Mbit/s (1,66--2,20) giữa các vEdge1 và 1,73~Mbit/s ở hai chiều vEdge2 về Site 100. UDP 2~Mbit/s gần như không mất gói, 3~Mbit/s mất khoảng 14\%, 10~Mbit/s mất khoảng 81\%. Hai vEdge cùng site nối trực tiếp đạt 50~Mbit/s không mất gói, nên đây là giới hạn của WAN mô phỏng (nghi do router nhà cung cấp chạy vIOS, chưa chứng minh), không phản ánh năng lực SD-WAN.
 \end{itemize}
 
 \begin{figure}[H]
@@ -684,7 +686,7 @@ Syslog Server nhận nhật ký thực tế từ tường lửa và các thiết
     \hline
     T19 & Failover transport Site 100 & Chuyển sang Internet khi mất MPLS & \textbf{Đạt} & Lưu lượng đi qua Internet; MPLS phục hồi sau khi bổ sung tuyến controller \\
     \hline
-    T20 & Failover transport chi nhánh & Tự chuyển sang vEdge2 khi mất MPLS và quay lại & \textbf{Đạt} & RTO 3,3 / 4,4 / 3,3 giây (S200 / S300 / S400) \\
+    T20 & Failover transport chi nhánh & Tự chuyển sang vEdge2 khi mất MPLS và quay lại & \textbf{Đạt} & RTO 3,3 / 4,4 / 3,3 giây (S200 / S300 / S400, 26/09); đo lại S200 ngày 06/11: 8,5 giây \\
     \hline
     T21 & Internet tại chỗ (DIA) & Máy trạm mọi site ra Internet, phân giải tên ngoài & \textbf{Đạt} & Ba chi nhánh 3/3; traceroute chặng đầu là vEdge2 \\
     \hline
@@ -714,11 +716,11 @@ Trong 29 kịch bản, 25 kịch bản đạt, hai kịch bản đạt một ph�
 
 \subsubsection{Tính sẵn sàng}
 
-Tại lớp 3 và WAN, hệ thống có dự phòng ở mọi vị trí trọng yếu; phép thử cắt MPLS thật tại ba chi nhánh cho thấy lưu lượng nội bộ tự khôi phục qua Internet sau 3,3--4,4 giây, còn lưu lượng Internet tự chuyển sang MPLS khi mất đường Internet. Tại lớp 2 SDN, sáu kịch bản cắt liên kết đều đạt, gián đoạn dữ liệu không quá 3,5 giây khi cắt và gần như bằng 0 khi khôi phục; mất hẳn một Distribution cũng không làm gián đoạn đáng kể. SDN Controller vẫn là một máy đơn: khi Controller dừng, flow đã cài được giữ nên luồng đang chạy không mất, nhưng máy trạm mới, ARP và DHCP mới không được xử lý.
+Tại lớp 3 và WAN, hệ thống có dự phòng ở mọi vị trí trọng yếu; phép thử cắt MPLS thật tại ba chi nhánh cho thấy lưu lượng nội bộ tự khôi phục qua Internet sau 3,3--4,4 giây (đo lại Site 200 ngày 06/11/2026: trung bình 8,5 giây), còn lưu lượng Internet tự chuyển sang MPLS khi mất đường Internet. Tại lớp 2 SDN, sáu kịch bản cắt liên kết đều đạt, gián đoạn dữ liệu không quá 3,5 giây khi cắt và gần như bằng 0 khi khôi phục; mất hẳn một Distribution cũng không làm gián đoạn đáng kể. SDN Controller vẫn là một máy đơn: khi Controller dừng, flow đã cài được giữ nên luồng đang chạy không mất, nhưng máy trạm mới, ARP và DHCP mới không được xử lý.
 
 \subsubsection{Hiệu năng và khả năng quan sát}
 
-Các số liệu SDN được đo bằng script tự động và có thể chạy lại; tuy nhiên chưa có bộ đo lặp nhiều lần cho thông lượng và chưa thử được tải cao vì máy trạm giả lập chỉ sinh lưu lượng nhỏ. Tường lửa ASAv không giấy phép giới hạn 100 kết nối và băng thông thấp, đủ cho kiểm thử chức năng nhưng không phản ánh hiệu năng thiết bị thật. Về quan sát, hệ thống có ba nguồn: Campus SDN Console cho lớp 2 Campus chính, vManage (BFD, app-route, alarm và thư cảnh báo) cho WAN, và Syslog tập trung cho tường lửa.
+Các số liệu SDN được đo bằng script tự động và có thể chạy lại. Thông lượng liên site mới đo giữa các vEdge, đạt khoảng 2~Mbit/s do giới hạn của WAN mô phỏng; chưa đo thông lượng giữa máy trạm và liên VLAN, và chưa thử được tải cao vì máy trạm giả lập chỉ sinh lưu lượng nhỏ. Tường lửa ASAv không giấy phép giới hạn 100 kết nối và băng thông thấp, đủ cho kiểm thử chức năng nhưng không phản ánh hiệu năng thiết bị thật. Về quan sát, hệ thống có ba nguồn: Campus SDN Console cho lớp 2 Campus chính, vManage (BFD, app-route, alarm và thư cảnh báo) cho WAN, và Syslog tập trung cho tường lửa.
 
 \subsubsection{Khả năng tái lập và mở rộng}
 

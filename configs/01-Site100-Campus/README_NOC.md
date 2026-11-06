@@ -95,6 +95,8 @@ Kịch bản: thêm VLAN 50 "Phong Lab" (10.1.50.0/24) cho cổng `Access-SW1.en
 
 Nếu toàn bộ campus là switch truyền thống: thêm 2 Dist + các Access (VLAN, trunk allowed trên mọi trunk, cổng access) – SDN gói phần này vào 1 lệnh API, giữ lại phần L3 trên Core. Còn tay: scope DHCP trên DHCP-Server 72.
 
+**Đính chính 07/11/2026:** 35–36 s/Core ở bảng trên chủ yếu do `sdn_vlan_test.py` chờ cố định khoảng 1,5 s sau mỗi lệnh. Khi chờ đúng prompt, 18 lệnh mất khoảng 1,2 s/Core. Đo đầu cuối 3 lần (VLAN 50, VPC19 IP tĩnh, sai số ~5 s): SDN + 2 Core xong 5,3 s, ping gateway 37,8 s, DHCP-Server 42,0 s; khoảng 30 s chờ sau khi cấu hình xong chưa rõ nguyên nhân. Log `log/sdn-eval/vlan_dau_cuoi_20261107.jsonl`.
+
 **Lưu ý IOL:** xoá VLAN khi Core đang là VRRP Master bằng `no interface VlanX` gửi dồn đã làm Core-SW1 IOL crash (04/10/2026, tự lên lại sau khi start node 3; cây SDN tự phục hồi). Đoạn xoá do controller sinh nay theo thứ tự an toàn: `no vrrp` → `shutdown` → OSPF → trunk → `no interface` → `no vlan`.
 
 ## Pipeline OpenFlow (từ giai đoạn 3)

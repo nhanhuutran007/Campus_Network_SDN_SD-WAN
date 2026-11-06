@@ -235,9 +235,9 @@
                 \begin{tabularx}{\linewidth}{@{}L{0.33\linewidth}Yc@{}}
                     \hd{Tiêu chí} & \hd{Đã có} & \hd{Trạng thái} \\
                     \midrule
-                    Thời gian thêm VLAN / khu vực mạng & Đã thêm Site 500, chưa bấm giờ & \todo \\
+                    Thời gian thêm VLAN / khu vực mạng & VLAN: cấu hình 5,3\,s, dùng được $\approx$40\,s; chưa bấm giờ thêm site & \partly \\
                     Thời gian khôi phục khi mất liên kết & SDN $<$0,3\,s; SD-WAN $\approx$8\,s; FW HA 11--21\,s & \partly \\
-                    Hiệu năng giữa VLAN và cơ sở & Delay/jitter/mất gói 5 site; chưa đo throughput & \partly \\
+                    Hiệu năng giữa VLAN và cơ sở & Delay/jitter/mất gói 5 site; thông lượng giữa vEdge $\approx$2\,Mbit/s & \partly \\
                     Tải trên Core và Distribution & Chưa đo & \todo \\
                     Quản lý chính sách tập trung & vSmart, Ryu, NetOps Bot; chưa đo định lượng & \partly \\
                 \end{tabularx}
@@ -472,7 +472,7 @@
         \midrule
         Thời gian khôi phục khi mất liên kết & SD-WAN Failover Test; Link Failover + PRR; Controller Recovery & RTO, tỉ lệ gói phục hồi; Site 200: 7,96\,s. Mất controller: chưa đo & \partly \\
         Hiệu năng giữa VLAN và cơ sở & So sánh Campus chính -- chi nhánh; Quick Ping & Delay (trung bình + trung vị), jitter, mất gói LAN/WAN 5 site; xuất CSV + biểu đồ & \done \\
-        Hiệu năng: thông lượng & Thông lượng trực tiếp; case Throughput WAN & Mbps theo bộ đếm interface vEdge; mới đo lưu lượng nền, chưa bơm tải & \partly \\
+        Hiệu năng: thông lượng & Thông lượng trực tiếp; case Throughput WAN & Bộ đếm vEdge; iperf giữa vEdge $\approx$2\,Mbit/s & \partly \\
         Thời gian thêm khu vực mạng & Ký cert vEdge (bật SSH, vManage tự ký / ký CA, danh sách onboard) & Đã dùng để thêm Site 500; chưa bấm giờ & \partly \\
         Quản lý tập trung & Thiết bị trong fabric & Trạng thái mọi vEdge + controller từ vManage API & \done \\
         Độ sẵn sàng (kế hoạch) & Availability & Availability \%, MTTR, MTBF; mới chạy ngắn, cần $\geq$ 30 phút & \partly \\
@@ -679,11 +679,11 @@
             \begin{card}[accent]{Đo đạc theo tiêu chí đề cương}
                 \footnotesize
                 \begin{itemize}\setlength{\itemsep}{1pt}
-                    \item Chưa bấm giờ \textbf{thêm VLAN / khu vực mạng}.
+                    \item Đã bấm giờ thêm VLAN; chưa bấm giờ \textbf{thêm site}.
                     \item Tải Core/Distribution mới đo ở \textbf{tải thấp} (VPCS chỉ sinh vài trăm kbit/s).
-                    \item Chưa đo \textbf{throughput} liên VLAN và liên cơ sở.
+                    \item \textbf{Throughput} mới đo giữa vEdge, chưa đo giữa máy trạm và liên VLAN.
                     \item \textbf{6/6 ASAv chưa có license} $\Rightarrow$ lưu lượng qua FW bị giới hạn ($\approx$100\,kbit/s theo Cisco; đã thấy gói bị bỏ do \texttt{rate-exceeded}) $\Rightarrow$ throughput liên site đo qua FW chỉ phản ánh license.
-                    \item Failover SD-WAN mới 2 lần tại 1 site; chưa đo mất vSmart.
+                    \item Failover SD-WAN đo lại Site 200 (8,5\,s, 5 lần); chưa đo mất vSmart.
                 \end{itemize}
             \end{card}
         \end{column}
