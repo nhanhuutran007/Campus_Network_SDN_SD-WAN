@@ -60,7 +60,7 @@ Hệ thống gồm năm khối chức năng và hai miền truyền tải, đư�
         \hline
         400 & Cơ sở Nha Trang & 65030 & Cấu trúc như Site 200; VLAN 50 Thủy sản, 60 Lữ hành \\
         \hline
-        500 & Cơ sở mở rộng & 65040 & vEdge Site 500 (hai transport), SW-S500, hai máy trạm; đang đưa vào fabric \\
+        500 & Cơ sở mở rộng & 65040 & Hai vEdge (MPLS, Internet), Brand-FW-S500, SW-S500, hai máy trạm \\
         \hline
         900 & Trung tâm điều khiển SD-WAN & -- & vManage, vSmart, vBond, Switch32 (LAN controller), Switch61 (mặt quản trị), máy trạm quản trị \\
         \hline
@@ -130,7 +130,7 @@ Nguyên tắc phân vai quan trọng là \textit{mỗi thành phần chỉ làm 
             \draw[controlLink] (s900.south east) to[bend left=18] (s400.north);
         \end{pgfonlayer}
 
-        \node[branch, dashed, text width=7.6cm, minimum height=0.9cm] (s500) at (0,-3.25) {\textbf{Site 500 -- cơ sở mở rộng, AS 65040}: vEdge Site 500 nối cả Internet và MPLS; đang đưa vào fabric};
+        \node[branch, text width=7.6cm, minimum height=0.9cm] (s500) at (0,-3.25) {\textbf{Site 500 -- cơ sở mở rộng, AS 65040}: vEdge1 qua MPLS, vEdge2 qua Internet, Brand-FW-S500};
 
         \node[align=center, font=\scriptsize] at (0,-4.35) {\textcolor{blue!75!black}{\rule{1.0cm}{0.8pt}} Internet \quad
         \textcolor{orange!85!black}{\rule{1.0cm}{0.8pt}} MPLS \quad
@@ -315,11 +315,11 @@ Site 900 đặt ba controller trên mạng LAN \texttt{10.9.0.0/24} do Switch32 
 
 Mạng \texttt{10.9.1.0/24} do Switch61 làm gateway là mặt quản trị thứ hai của controller. Switch61 có một cổng định tuyến nhận địa chỉ DHCP từ mạng thật của phòng lab, cho phép truy cập giao diện web của vManage từ máy tính bên ngoài EVE-NG.
 
-Hai router nhà cung cấp là Cisco vIOS. Router Internet (AS 64511) có tám liên kết khách hàng: hai vEdge Site 100, ba vEdge2 chi nhánh, vEdge Site 500, Switch32 và router MPLS; cổng Gi0/0 nối ra mạng thật của phòng lab, nhận địa chỉ bằng DHCP và thực hiện PAT cho khách hàng, đóng vai trò cổng Internet của nhà cung cấp. Router MPLS (AS 64512) có bảy liên kết: hai vEdge Site 100, ba vEdge1 chi nhánh, vEdge Site 500 và Switch32. Hai nhà cung cấp trao đổi tuyến qua eBGP trên \texttt{100.64.254.0/30}; router Internet gửi tuyến mặc định cho router MPLS, nhờ đó transport MPLS cũng có đường ra Internet (mô hình MPLS có Internet tập trung tại nhà cung cấp).
+Hai router nhà cung cấp là Cisco vIOS. Router Internet (AS 64511) có tám liên kết khách hàng: hai vEdge Site 100, ba vEdge2 chi nhánh, vEdge2 Site 500, Switch32 và router MPLS; cổng Gi0/0 nối ra mạng thật của phòng lab, nhận địa chỉ bằng DHCP và thực hiện PAT cho khách hàng, đóng vai trò cổng Internet của nhà cung cấp. Router MPLS (AS 64512) có bảy liên kết: hai vEdge Site 100, ba vEdge1 chi nhánh, vEdge1 Site 500 và Switch32. Hai nhà cung cấp trao đổi tuyến qua eBGP trên \texttt{100.64.254.0/30}; router Internet gửi tuyến mặc định cho router MPLS, nhờ đó transport MPLS cũng có đường ra Internet (mô hình MPLS có Internet tập trung tại nhà cung cấp).
 
 \subsubsection{Cơ sở mở rộng (Site 500)}
 
-Site 500 được thêm để kiểm chứng khả năng mở rộng: vEdge Site 500 nối cả hai nhà cung cấp (\texttt{203.0.113.21/30} về router Internet, \texttt{100.64.50.1/30} về router MPLS, eBGP AS 65040) và nối SW-S500 với hai máy trạm. Phía nhà cung cấp và danh sách site của chính sách vSmart (\texttt{site-id 100-500}) đã sẵn sàng; Edge đang được cấu hình theo quy ước chung (System-IP \texttt{10.200.50.1}, LAN \texttt{10.5.x.0/24}).
+Site 500 được thêm để kiểm chứng khả năng mở rộng, theo khuôn hai vEdge và Brand-FW như các chi nhánh: vEdge1-S500 (System-IP \texttt{10.200.50.1}) nối MPLS qua \texttt{100.64.50.1/30}, vEdge2-S500 (\texttt{10.200.50.2}) nối Internet qua \texttt{203.0.113.21/30}, eBGP AS 65040. Phía LAN, Brand-FW-S500 nối hai vEdge qua \texttt{10.5.1.0/30} và \texttt{10.5.1.4/30}, là gateway \texttt{10.5.10.1} và cấp DHCP cho hai máy trạm qua SW-S500.
 
 \subsubsection{Luồng lưu lượng}
 
@@ -511,7 +511,7 @@ System-IP có dạng \texttt{10.200.<site>.<n>/32}. Site 300, 400 và 500 đư�
     \scriptsize
     \caption{Quy hoạch System-IP, TLOC và BGP của các vEdge}
     \label{tab:system_ip_tloc}
-    \begin{tabularx}{\textwidth}{|c|P{1.7cm}|P{2.0cm}|P{2.6cm}|P{2.6cm}|X|}
+    \begin{tabularx}{\textwidth}{|c|P{1.7cm}|P{2.2cm}|P{2.8cm}|P{2.8cm}|X|}
         \hline
         \textbf{Site} & \textbf{Thiết bị} & \textbf{System-IP} & \textbf{TLOC biz-internet} & \textbf{TLOC mpls} & \textbf{BGP} \\
         \hline
@@ -722,7 +722,7 @@ Ba controller dùng chung \texttt{organization-name site-900}, mọi Edge trỏ 
 
 Mỗi vEdge có ba VPN: VPN 0 cho transport (giao diện WAN khai báo tunnel-interface, đóng gói IPsec, color tương ứng; BGP với nhà cung cấp), VPN 1 tên \texttt{LAN} là VPN dịch vụ chứa mạng nội bộ, VPN 512 cho quản trị ngoài băng. Trên giao diện tunnel chỉ các dịch vụ cần thiết được cho phép (BGP, DHCP, DNS, ICMP, NETCONF, NTP, STUN, HTTPS, SSH).
 
-Site 100 có hai Edge, mỗi Edge có hai TLOC, tổng cộng bốn TLOC; mỗi chi nhánh có hai Edge, mỗi Edge một TLOC khác màu. Với tám Edge và mười TLOC, overlay full-mesh tạo ra các phiên BFD giữa mọi cặp TLOC khác site: mỗi Edge Site 100 có 12 phiên (hai TLOC $\times$ sáu TLOC chi nhánh), mỗi Edge chi nhánh có 8 phiên (một TLOC $\times$ bốn TLOC Site 100 và bốn TLOC của hai chi nhánh còn lại). Các Edge cùng site không dựng đường hầm với nhau vì có cùng Site-ID. Chu kỳ tổng hợp số liệu app-route được đặt 120 giây (\texttt{bfd app-route poll-interval 120000}) thay vì mặc định 10 phút để chính sách AAR phản ứng nhanh hơn.
+Site 100 có hai Edge, mỗi Edge có hai TLOC, tổng cộng bốn TLOC; mỗi chi nhánh có hai Edge, mỗi Edge một TLOC khác màu. Với mười Edge và mười hai TLOC, overlay full-mesh tạo ra các phiên BFD giữa mọi cặp TLOC khác site: mỗi Edge Site 100 có 16 phiên (hai TLOC $\times$ tám TLOC chi nhánh), mỗi Edge chi nhánh có 10 phiên (một TLOC $\times$ bốn TLOC Site 100 và sáu TLOC của ba chi nhánh còn lại). Các Edge cùng site không dựng đường hầm với nhau vì có cùng Site-ID. Chu kỳ tổng hợp số liệu app-route được đặt 120 giây (\texttt{bfd app-route poll-interval 120000}) thay vì mặc định 10 phút để chính sách AAR phản ứng nhanh hơn.
 
 \subsubsection{Chính sách tập trung trên vSmart}
 
@@ -739,7 +739,7 @@ Mỗi SLA class có thêm tiêu chí \texttt{fallback-best-tunnel} theo độ tr
     \small
     \caption{Chính sách Application-Aware Routing AAR\_LAN}
     \label{tab:aar_policy}
-    \begin{tabularx}{\textwidth}{|c|X|P{2.6cm}|P{2.6cm}|}
+    \begin{tabularx}{\textwidth}{|c|X|P{3.2cm}|P{3.2cm}|}
         \hline
         \textbf{Seq} & \textbf{Điều kiện khớp} & \textbf{SLA class} & \textbf{Bộ đếm} \\
         \hline
@@ -758,7 +758,7 @@ Mỗi SLA class có thêm tiêu chí \texttt{fallback-best-tunnel} theo độ tr
 
 \textbf{Data policy} \texttt{DP\_BRANCH} áp chiều \texttt{from-service} (lưu lượng từ LAN chi nhánh vào overlay) trên \texttt{BRANCHES}: sequence 10 chặn Telnet (TCP 23) vào Server Farm và đếm \texttt{TELNET\_TO\_FARM}; sequence 15 chặn SSH/Telnet (TCP 22, 23) vào DMZ và đếm \texttt{ADMIN\_TO\_DMZ}; sequence 20 cho phép và đếm ICMP; hành động mặc định là accept. Chính sách này thể hiện khả năng áp một quy tắc bảo mật lên nhiều chi nhánh cùng lúc từ một điểm.
 
-\textbf{Control policy} \texttt{PREFER-VE1} áp chiều ra đến \texttt{ALL\_EDGES}: tuyến OMP do vEdge1 của mỗi site khởi tạo (\texttt{10.200.100.1}, \texttt{10.200.200.1}, \texttt{10.200.30.1}, \texttt{10.200.40.1}) được đặt \textit{preference} 200, cao hơn tuyến cùng prefix của vEdge2. Như vậy ở trạng thái bình thường, mọi site đều gửi lưu lượng vào site khác qua vEdge1 của site đích. Điều này khớp với tuyến mặc định chính của tường lửa (tường lửa biên Campus chính và Brand-FW đều ra qua vEdge1), nên hai chiều lưu lượng đi qua cùng một cổng tường lửa và tránh lưu lượng bất đối xứng. vEdge2 chỉ được dùng khi vEdge1 hoặc đường truyền của nó hỏng.
+\textbf{Control policy} \texttt{PREFER-VE1} áp chiều ra đến \texttt{ALL\_EDGES}: tuyến OMP do vEdge1 của mỗi site khởi tạo (\texttt{10.200.100.1}, \texttt{10.200.200.1}, \texttt{10.200.30.1}, \texttt{10.200.40.1}, \texttt{10.200.50.1}) được đặt \textit{preference} 200, cao hơn tuyến cùng prefix của vEdge2. Như vậy ở trạng thái bình thường, mọi site đều gửi lưu lượng vào site khác qua vEdge1 của site đích. Điều này khớp với tuyến mặc định chính của tường lửa (tường lửa biên Campus chính và Brand-FW đều ra qua vEdge1), nên hai chiều lưu lượng đi qua cùng một cổng tường lửa và tránh lưu lượng bất đối xứng. vEdge2 chỉ được dùng khi vEdge1 hoặc đường truyền của nó hỏng.
 
 \subsubsection{Truy cập Internet trực tiếp}
 
@@ -781,7 +781,7 @@ vManage thu trạng thái của toàn fabric (kết nối điều khiển, OMP, 
     \small
     \caption{Các dịch vụ trong hệ thống}
     \label{tab:dich_vu}
-    \begin{tabularx}{\textwidth}{|P{2.4cm}|P{2.6cm}|P{3.2cm}|X|}
+    \begin{tabularx}{\textwidth}{|P{1.9cm}|P{2.2cm}|P{2.6cm}|X|}
         \hline
         \textbf{Dịch vụ} & \textbf{Máy chủ} & \textbf{Nền tảng} & \textbf{Thiết kế} \\
         \hline

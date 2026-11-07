@@ -66,6 +66,14 @@
 \setlength{\cftbeforesecskip}{6pt}
 \setlength{\cftbeforesubsecskip}{2pt}
 \setlength{\cftbeforesubsubsecskip}{1pt}
+\setlength{\cftsubsecnumwidth}{3.8em}
+\renewcommand{\cftsubsecaftersnum}{\hspace{0.5em}}
+\setlength{\cftsubsubsecnumwidth}{5em}
+\renewcommand{\cftsubsubsecaftersnum}{\hspace{0.4em}}
+\setlength{\cftfignumwidth}{3.2em}
+\renewcommand{\cftfigaftersnum}{\hspace{0.4em}}
+\setlength{\cfttabnumwidth}{3.8em}
+\renewcommand{\cfttabaftersnum}{\hspace{0.4em}}
 
 % Căn giữa các tiêu đề danh mục tương tự tiêu đề section gốc
 \renewcommand{\cfttoctitlefont}{\hspace*{\fill}\fontsize{16pt}{0pt}\selectfont\bfseries}
@@ -97,6 +105,12 @@
 % --- SỬA LỖI TẠI ĐÂY ---
 % \renewcommand{\tabularxcolumn}[1]{>{\small}m{#1}} % Dòng lệnh cũ gây lỗi thu nhỏ chữ
 \renewcommand{\tabularxcolumn}[1]{>{\raggedright\arraybackslash}m{#1}} % Lệnh mới: Bỏ \small, thêm căn lề trái cho đẹp
+% Giữ chữ trong các bảng ở mức dễ đọc, đồng nhất 12pt.
+\usepackage{etoolbox}
+\newcommand{\tabletextsize}{\fontsize{12pt}{14.4pt}\selectfont}
+\AtBeginEnvironment{tabular}{\tabletextsize}
+\AtBeginEnvironment{tabularx}{\tabletextsize}
+\AtBeginEnvironment{longtable}{\tabletextsize}
 % -----------------------
 
 

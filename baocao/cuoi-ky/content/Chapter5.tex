@@ -2,7 +2,7 @@
 
 \subsection{Kết quả đạt được}
 
-Đề tài đã xây dựng một mô hình mạng Campus đa cơ sở kết hợp SDN và SD-WAN trên nền tảng EVE-NG, gồm Campus chính (Site 100), ba cơ sở phụ Cần Thơ, Đà Nẵng, Nha Trang (Site 200, 300, 400), trung tâm điều khiển SD-WAN (Site 900), hai nhà cung cấp dịch vụ Internet, MPLS và một cơ sở mở rộng (Site 500) đang được đưa vào hệ thống. Mô hình có 70 node, 103 phân đoạn mạng, sử dụng thiết bị của nhiều nền tảng: Cisco IOL, vIOS, ASAv, Viptela, Open vSwitch, Ryu, Windows Server, Windows và Ubuntu. Các kết quả chính gồm:
+Đề tài đã xây dựng một mô hình mạng Campus đa cơ sở kết hợp SDN và SD-WAN trên nền tảng EVE-NG, gồm Campus chính (Site 100), ba cơ sở phụ Cần Thơ, Đà Nẵng, Nha Trang (Site 200, 300, 400), trung tâm điều khiển SD-WAN (Site 900), hai nhà cung cấp dịch vụ Internet, MPLS và một cơ sở mở rộng (Site 500). Mô hình có 70 node, 103 phân đoạn mạng, sử dụng thiết bị của nhiều nền tảng: Cisco IOL, vIOS, ASAv, Viptela, Open vSwitch, Ryu, Windows Server, Windows và Ubuntu. Các kết quả chính gồm:
 
 \textbf{Về thiết kế}, đề tài đã xây dựng quy hoạch địa chỉ thống nhất theo mã site, bảng VLAN, bảng liên kết, System-IP, TLOC và ASN cho toàn hệ thống; thiết kế hai kiến trúc cùng tồn tại có chủ đích: ba tầng Core--Distribution--Access có SDN tại Campus chính và Firewall-as-Core tại chi nhánh.
 
@@ -10,7 +10,7 @@
 
 \textbf{Về SDN}, ứng dụng Ryu do nhóm phát triển điều khiển toàn bộ chuyển mạch lớp 2 của sáu Open vSwitch: học MAC theo VLAN, xử lý thẻ 802.1Q theo OpenFlow 1.3, cây chuyển tiếp tính tập trung với thăm dò liên kết chủ động, kênh quản trị VLAN 99 nhiều đường và không phụ thuộc STP, thêm VLAN và áp chính sách bằng một lệnh API, cùng giao diện Campus SDN Console. Kết quả đo cho thấy phần SDN của thao tác thêm VLAN mất 3,8~ms (toàn bộ cấu hình xong trong khoảng 5,3 giây, máy trạm dùng được sau khoảng 40 giây), áp chính sách toàn campus mất 8,0~ms, Controller hội tụ dưới 16~ms, gián đoạn dữ liệu khi mất liên kết không quá 3,5 giây, và cả sáu kịch bản tự phục hồi đều đạt.
 
-\textbf{Về SD-WAN}, tám vEdge được xác thực bằng PKI và hình thành overlay IPsec trên hai transport với BGP underlay; toàn bộ phiên BFD hoạt động; VPN dịch vụ cho phép máy trạm các site thông nhau; vSmart áp tập trung hai SLA class, chính sách AAR cho các lớp lưu lượng, data policy lọc truy cập quản trị từ chi nhánh và control policy ưu tiên vEdge1 tại mọi site; công cụ kiểm thử tự động xác nhận 10/10 phép thử chính sách qua bộ đếm trên vEdge. Khi cắt thật đường MPLS tại ba chi nhánh, lưu lượng tự khôi phục qua Internet sau 3,3--4,4 giây nhờ cơ chế theo dõi beacon trên tường lửa chi nhánh. vManage tự gửi thư cảnh báo khi một Edge mất BFD, kết nối điều khiển hoặc OMP.
+\textbf{Về SD-WAN}, mười vEdge được xác thực bằng PKI và hình thành overlay IPsec trên hai transport với BGP underlay; toàn bộ phiên BFD hoạt động; VPN dịch vụ cho phép máy trạm các site thông nhau; vSmart áp tập trung hai SLA class, chính sách AAR cho các lớp lưu lượng, data policy lọc truy cập quản trị từ chi nhánh và control policy ưu tiên vEdge1 tại mọi site; công cụ kiểm thử tự động xác nhận 10/10 phép thử chính sách qua bộ đếm trên vEdge. Khi cắt thật đường MPLS tại ba chi nhánh, lưu lượng tự khôi phục qua Internet sau khoảng 8--9 giây (đo lại Site 200 tháng 11/2026) nhờ cơ chế theo dõi beacon trên tường lửa chi nhánh. vManage tự gửi thư cảnh báo khi một Edge mất BFD, kết nối điều khiển hoặc OMP.
 
 \textbf{Về truy cập Internet}, người dùng mọi cơ sở ra Internet tại chỗ qua NAT trên vEdge, có dự phòng qua transport MPLS khi mất đường Internet; DNS nội bộ chuyển tiếp tên ngoài; vùng quản trị, Server Farm, DMZ và trung tâm điều khiển chỉ được ra Internet trong phạm vi cần thiết.
 
@@ -23,7 +23,7 @@
 \begin{itemize}
     \item \textbf{SDN Controller là điểm lỗi đơn:} chỉ có một máy Controller; khi Controller dừng, luồng đã cài vẫn chạy nhưng lưu lượng mới (ARP, DHCP, máy trạm mới) không được xử lý. Controller vẫn hiếm khi bị khựng vài giây do tài nguyên máy chủ ảo hóa.
     \item \textbf{Chưa thử tải cao:} máy trạm giả lập chỉ sinh lưu lượng nhỏ nên chưa đánh giá được SDN và tường lửa dưới tải lớn; thông lượng mới đo giữa các vEdge, chưa đo giữa máy trạm và liên VLAN; chưa có bộ đo lặp nhiều lần cho CPU/RAM.
-    \item \textbf{Một số phép thử chưa hoàn chỉnh:} dự phòng Internet mới cắt thử tại Site 200; kết nối Mail từ VLAN 40 tại Campus chính chưa được kiểm tra lại; phép thử chính sách SD-WAN mới đo từ một chi nhánh; Site 500 chưa vào fabric.
+    \item \textbf{Một số phép thử chưa hoàn chỉnh:} dự phòng Internet mới cắt thử tại Site 200; kết nối Mail từ VLAN 40 tại Campus chính chưa được kiểm tra lại; phép thử chính sách SD-WAN mới đo từ một chi nhánh; Site 500 mới kiểm tra kết nối, chưa đo failover.
     \item \textbf{Cảnh báo phụ thuộc vManage:} khi chính vManage hỏng thì không có thư cảnh báo; thư phục hồi cho BFD/Control/OMP chưa được bật.
     \item \textbf{Giới hạn của môi trường mô phỏng:} thông lượng WAN mô phỏng chỉ khoảng 2~Mbit/s; ASAv không giấy phép giới hạn 100 kết nối và băng thông thấp; vManage cần tài nguyên lớn; đồng hồ, hiệu năng và hành vi khởi động của thiết bị ảo khác thiết bị thật (ví dụ card mạng ảo đôi khi treo chiều nhận).
     \item \textbf{Một số biện pháp bảo mật mới ở mức thiết kế:} 802.1X, DHCP Snooping, Dynamic ARP Inspection, SNMPv3, SSH thay Telnet toàn hệ thống, xác thực REST API và AAA tập trung.
@@ -34,7 +34,7 @@
 
 \begin{enumerate}
     \item \textbf{Tăng tính sẵn sàng của Controller:} chạy Controller dự phòng nóng (hai tiến trình Ryu với vai trò master/slave của OpenFlow) hoặc chuyển logic sang nền tảng hỗ trợ cluster; tách Controller khỏi các dịch vụ nặng.
-    \item \textbf{Hoàn thiện Site 500:} cấu hình Edge, LAN và DHCP theo khuôn chung, kiểm chứng việc thêm một site mới chỉ cần cấp mã site và tự nhận chính sách.
+    \item \textbf{Hoàn thiện Site 500:} đo failover, tìm nguyên nhân mất gói và kiểm tra máy trạm tới đủ các site.
     \item \textbf{Hoàn thiện giám sát và cảnh báo:} bổ sung một công cụ độc lập đọc alarm qua API của vManage và trạng thái của Campus SDN Console để cảnh báo cả khi vManage hỏng; bật thư phục hồi; tích hợp Syslog và số liệu SNMP vào một bảng điều khiển chung.
     \item \textbf{Đo kiểm dưới tải:} dùng máy phát lưu lượng (iPerf) để đánh giá SDN, tường lửa và AAR khi đường truyền suy giảm; lặp lại phép đo để có số liệu thống kê.
     \item \textbf{Tăng cường bảo mật:} 802.1X tại cổng Access, chống DHCP/ARP giả mạo bằng flow trên Controller, cách ly thiết bị bất thường theo ngưỡng tải, SSH/SNMPv3, xác thực API, AAA tập trung và NTP thống nhất.
