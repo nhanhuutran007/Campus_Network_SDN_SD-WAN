@@ -141,7 +141,7 @@ Nguyên tắc phân vai quan trọng là \textit{mỗi thành phần chỉ làm 
     \label{fig:topology_mang_campus}
 \end{figure}
 
-Hình~\ref{fig:kien_truc_tong_the_campus} là topology vật lý đầy đủ của hệ thống trên EVE-NG, gồm 70 node và 103 phân đoạn mạng. Nhãn trên hình chỉ dùng để định hướng; các thông số địa chỉ chuẩn của từng thiết bị được trình bày trong các bảng quy hoạch ở Mục~\ref{sec:quy_hoach_ip}.
+Hình~\ref{fig:kien_truc_tong_the_campus} là topology vật lý đầy đủ của hệ thống trên EVE-NG, gồm 74 node và 107 phân đoạn mạng. Nhãn trên hình chỉ dùng để định hướng; các thông số địa chỉ chuẩn của từng thiết bị được trình bày trong các bảng quy hoạch ở Mục~\ref{sec:quy_hoach_ip}.
 
 \begin{figure}[H]
     \centering
@@ -614,7 +614,7 @@ Thông số chung của các bridge \texttt{br0}: phiên bản OpenFlow~1.3 (\te
 
 \subsubsection{Ứng dụng điều khiển chuyển mạch}
 
-Ứng dụng Ryu \texttt{campus\_switch\_13.py} do nhóm xây dựng (phiên bản 2, tháng 10/2026) đảm nhận toàn bộ logic lớp 2. Ứng dụng tổ chức flow thành hai bảng (Bảng~\ref{tab:pipeline_sdn}): bảng 0 cho các chức năng kiểm soát (thăm dò liên kết, kênh quản trị, chặn cạnh ngoài cây, chính sách), bảng 1 cho chuyển tiếp lớp 2.
+Ứng dụng Ryu \texttt{campus\_switch\_13.py} do nhóm xây dựng (phiên bản 2) đảm nhận toàn bộ logic lớp 2. Ứng dụng tổ chức flow thành hai bảng (Bảng~\ref{tab:pipeline_sdn}): bảng 0 cho các chức năng kiểm soát (thăm dò liên kết, kênh quản trị, chặn cạnh ngoài cây, chính sách), bảng 1 cho chuyển tiếp lớp 2.
 
 \begin{enumerate}
     \item \textbf{Học MAC theo VLAN:} bảng MAC được khóa theo cặp (VLAN, MAC). Flood chỉ diễn ra trong đúng VLAN, trên các cổng thuộc cây chuyển tiếp. Với gói unicast đã biết đích, ứng dụng cài flow khớp \texttt{in\_port}, \texttt{vlan\_vid} và MAC (thời gian chờ 300 giây).
