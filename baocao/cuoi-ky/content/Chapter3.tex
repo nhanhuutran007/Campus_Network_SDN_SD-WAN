@@ -48,7 +48,7 @@ Hệ thống gồm năm khối chức năng và hai miền truyền tải, đư�
     \small
     \caption{Các site và vai trò trong mô hình}
     \label{tab:cac_site}
-    \begin{tabularx}{\textwidth}{|c|P{2.6cm}|c|X|}
+    \begin{tabularx}{\textwidth}{|c|P{2.6cm}|c|Y|}
         \hline
         \textbf{Site-ID} & \textbf{Tên} & \textbf{ASN} & \textbf{Thành phần chính} \\
         \hline
@@ -145,7 +145,7 @@ Hình~\ref{fig:kien_truc_tong_the_campus} là topology vật lý đầy đủ c�
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{image/eve_topology.jpg}
+    \includegraphics[width=\textwidth]{image/topo-vatly.jpg}
     \caption{Topology vật lý của hệ thống trên EVE-NG}
     \label{fig:kien_truc_tong_the_campus}
 \end{figure}
@@ -160,50 +160,66 @@ Campus chính được thiết kế ba tầng, kèm biên tường lửa HA, vù
     \centering
     \resizebox{\textwidth}{!}{%
     \begin{tikzpicture}[
-        font=\scriptsize, >=stealth,
-        dev/.style={draw, rounded corners, align=center, minimum height=0.85cm, text width=2.5cm},
-        wan/.style={dev, fill=gray!12, draw=black!60},
-        edge/.style={dev, fill=red!6, draw=red!60!black},
-        fw/.style={dev, fill=orange!10, draw=orange!70!black},
-        core/.style={dev, fill=blue!8, draw=blue!65!black},
-        ovs/.style={dev, fill=green!8, draw=green!45!black},
-        srv/.style={dev, fill=yellow!10, draw=yellow!50!black, text width=3.6cm},
-        act/.style={line width=0.9pt},
-        stb/.style={dashed, line width=0.6pt}
+        font=\small, >=stealth,
+        dev/.style={draw, rounded corners=2pt, align=center, minimum height=1.1cm, text width=3.3cm, line width=0.8pt},
+        wan/.style={dev, fill=gray!10, draw=black!70},
+        edge/.style={dev, fill=red!5, draw=red!60!black},
+        fw/.style={dev, fill=orange!8, draw=orange!70!black},
+        l2/.style={dev, fill=blue!4, draw=blue!50!black},
+        core/.style={dev, fill=blue!10, draw=blue!65!black},
+        ovs/.style={dev, fill=green!7, draw=green!40!black, text width=3.1cm},
+        srv/.style={dev, fill=yellow!8, draw=yellow!45!black, text width=3.7cm, align=left},
+        lbl/.style={font=\footnotesize, fill=white, inner sep=1.5pt},
+        act/.style={line width=1.1pt},
+        stb/.style={dashed, line width=0.7pt, black!60}
     ]
-        \node[wan] (inet) at (-2.2,9.2) {Internet\\AS 64511};
-        \node[wan] (mpls) at (2.2,9.2) {MPLS\\AS 64512};
-        \node[edge] (ve1) at (-2.2,7.6) {vEdge1-S100\\10.200.100.1};
-        \node[edge] (ve2) at (2.2,7.6) {vEdge2-S100\\10.200.100.2};
-        \node[fw] (fwa) at (-2.2,5.8) {FW-ASAv-Active\\Primary};
-        \node[fw] (fws) at (2.2,5.8) {FW-ASAv-Standby\\Secondary};
-        \node[srv] (dmz) at (-6.8,5.8) {DMZ 10.1.1.0/28\\SwitchDMZ (VLAN 101)\\Web .10 -- Mail .11};
-        \node[core] (c1) at (-2.2,3.8) {Core-SW1\\VRRP Master};
-        \node[core] (c2) at (2.2,3.8) {Core-SW2\\VRRP Backup};
-        \node[srv] (farm) at (6.9,2.9) {SwitchServerFarm\\VLAN 90: DHCP/DNS .10, Syslog .11\\VLAN 99: Controller .10, PC-Mgmt .50, ASDM .33/.34};
-        \node[ovs] (d1) at (-2.2,1.9) {Dist-SW1 (OVS)\\DPID 0x05};
-        \node[ovs] (d2) at (2.2,1.9) {Dist-SW2 (OVS)\\DPID 0x08};
-        \node[ovs] (a1) at (-5.4,0) {Access-SW1\\VLAN 10 CNTT};
-        \node[ovs] (a2) at (-1.8,0) {Access-SW2\\VLAN 20 Toán-TK};
-        \node[ovs] (a3) at (1.8,0) {Access-SW3\\VLAN 30 Luật};
-        \node[ovs] (a4) at (5.4,0) {Access-SW4\\VLAN 40 Hành chính};
+        % WAN
+        \node[wan] (inet) at (-3.4,13.6) {\textbf{Internet}\\AS 64511};
+        \node[wan] (mpls) at (3.4,13.6) {\textbf{MPLS}\\AS 64512};
+        \node[edge] (ve1) at (-3.4,11.3) {\textbf{vEdge1-S100}\\System-IP 10.200.100.1};
+        \node[edge] (ve2) at (3.4,11.3) {\textbf{vEdge2-S100}\\System-IP 10.200.100.2};
+        \node[l2] (swe1) at (-3.4,9.0) {\textbf{SW-WAN-Edge1}\\VLAN 103: 10.1.3.0/29};
+        \node[l2] (swe2) at (3.4,9.0) {\textbf{SW-WAN-Edge2}\\VLAN 104: 10.1.3.8/29};
+        % Firewall HA
+        \node[fw] (fwa) at (-3.4,6.7) {\textbf{FW-ASAv-Active}\\Primary (.1 / .9)};
+        \node[fw] (fws) at (3.4,6.7) {\textbf{FW-ASAv-Standby}\\Secondary (.4 / .12)};
+        \node[srv] (dmz) at (-8.2,9.0) {\textbf{DMZ} 10.1.1.0/28\\(SwitchDMZ)\\Web-Server .10\\Mail-Server .11};
+        % Core
+        \node[core] (c1) at (-3.4,4.2) {\textbf{Core-SW1}\\VRRP Master, gốc cây};
+        \node[core] (c2) at (3.4,4.2) {\textbf{Core-SW2}\\VRRP Backup};
+        \node[srv] (farm) at (8.2,4.2) {\textbf{SwitchServerFarm}\\VLAN 90: DHCP/DNS .10,\\ \quad Syslog .11\\VLAN 99: Controller .10,\\ \quad PC-Mgmt .50, ASDM};
+        % SDN
+        \node[ovs] (d1) at (-3.4,1.7) {\textbf{Dist-SW1} (OVS)};
+        \node[ovs] (d2) at (3.4,1.7) {\textbf{Dist-SW2} (OVS)};
+        \node[ovs] (a1) at (-7.6,-1.0) {\textbf{Access-SW1}\\VLAN 10 -- CNTT};
+        \node[ovs] (a2) at (-2.55,-1.0) {\textbf{Access-SW2}\\VLAN 20 -- Toán-TK};
+        \node[ovs] (a3) at (2.55,-1.0) {\textbf{Access-SW3}\\VLAN 30 -- Luật};
+        \node[ovs] (a4) at (7.6,-1.0) {\textbf{Access-SW4}\\VLAN 40 -- Hành chính};
 
         \draw[act] (inet) -- (ve1); \draw[act] (inet) -- (ve2);
         \draw[act] (mpls) -- (ve1); \draw[act] (mpls) -- (ve2);
-        \draw[act] (ve1) -- (fwa); \draw[act] (ve2) -- (fwa);
-        \draw[stb] (ve1) -- (fws); \draw[stb] (ve2) -- (fws);
-        \draw[act, orange!70!black] (fwa) -- node[above]{failover Gi0/5} (fws);
-        \draw[act] (dmz) -- (fwa); \draw[stb] (dmz.south east) -- (fws);
-        \draw[act] (fwa) -- (c1); \draw[act] (fwa) -- (c2);
-        \draw[stb] (fws) -- (c1); \draw[stb] (fws) -- (c2);
-        \draw[act, blue!65!black] (c1) -- node[above]{Po10} node[below]{LACP} (c2);
-        \draw[act] ($(c1.south)+(0.9,0)$) |- (farm.west); \draw[stb] (c2.east) -- (farm.north west);
-        \draw[act] (c1) -- (d1); \draw[stb] (c2) -- (d1);
-        \draw[act] (c2) -- (d2); \draw[stb] (c1) -- (d2);
-        \draw[stb] (d1) -- node[above]{inter-dist} (d2);
+        \draw[act] (ve1) -- node[lbl]{OSPF} (swe1);
+        \draw[act] (ve2) -- node[lbl]{OSPF} (swe2);
+        \draw[act] (swe1) -- (fwa); \draw[stb] (swe1) -- (fws);
+        \draw[act] (swe2) -- (fwa); \draw[stb] (swe2) -- (fws);
+        \draw[act, orange!70!black] (fwa) -- node[lbl, above=2pt]{failover Gi0/5} (fws);
+        \draw[act] (dmz.south) |- node[lbl, pos=0.75]{Gi0/4} (fwa.west);
+        \draw[stb] (dmz.south) ++(-0.6,0) |- ($(fws.south)+(0,-0.35)$) -- (fws.south);
+        \draw[act] (fwa) -- node[lbl, pos=0.45]{VLAN 101} (c1);
+        \draw[act] (fwa) -- node[lbl, pos=0.25]{VLAN 102} (c2);
+        \draw[stb] (fws) -- (c1);
+        \draw[stb] (fws) -- node[lbl, pos=0.45]{VLAN 101} (c2);
+        \draw[act, blue!65!black] (c1) -- node[lbl, above=3pt]{Po10 (LACP)} node[lbl, below=3pt]{VLAN 10--40, 100--102} (c2);
+        \draw[act] (c2) -- node[lbl]{VLAN 90} (farm);
+        \draw[act] (c1.south) ++(0.9,0) |- ($(farm.south)+(0,-0.45)$) node[lbl, pos=0.62]{trunk VLAN 90, 99} -- (farm.south);
+        \draw[act] (c1) -- node[lbl, pos=0.4]{D1-C1} (d1);
+        \draw[act] (c1) -- node[lbl, pos=0.2]{D2-C1} (d2);
+        \draw[stb] (c2) -- node[lbl, pos=0.2]{D1-C2} (d1);
+        \draw[stb] (c2) -- node[lbl, pos=0.4]{D2-C2} (d2);
+        \draw[stb] (d1) -- node[lbl]{D1-D2} (d2);
         \foreach \a in {a1,a2,a3,a4} {\draw[act] (d1) -- (\a); \draw[stb] (d2) -- (\a);}
 
-        \node[align=center] at (0,-1.2) {\rule{0.8cm}{0.9pt} đường chính \quad - - - đường dự phòng / cạnh bị Controller chặn trong cây dữ liệu};
+        \node[align=center, font=\small] at (0,-2.8) {\rule[0.5ex]{1cm}{1.1pt}~đường đang dùng (cây dữ liệu của Controller, tường lửa Active) \qquad - - -~đường dự phòng / cạnh bị Controller chặn};
     \end{tikzpicture}%
     }
     \caption{Topology chi tiết Campus chính (Site 100)}
@@ -214,9 +230,9 @@ Campus chính được thiết kế ba tầng, kèm biên tường lửa HA, vù
 
 \textbf{Tầng Distribution} gồm Dist-SW1 và Dist-SW2, cũng là OVS. Mỗi Distribution có bốn cổng xuống Access (\texttt{ens4}--\texttt{ens7}), một liên kết chéo giữa hai Distribution (\texttt{ens8}) và hai đường lên hai Core (\texttt{ens9}, \texttt{ens10}). Do đó topology lớp 2 có nhiều vòng: Access nối kép, liên kết chéo Distribution và bốn đường Distribution--Core. OVS không chạy STP; việc chống vòng lặp do SDN Controller đảm nhận bằng cách tính một cây chuyển tiếp và chặn các cạnh dư (Mục~\ref{sec:thiet_ke_sdn}).
 
-\textbf{Tầng Core} gồm Core-SW1 và Core-SW2 là switch lớp 3 Cisco IOL. Hai Core nối với nhau bằng Port-Channel~10 lớp 3 (hai cổng E0/0, E0/1, LACP \texttt{active}) mang subnet \texttt{10.1.0.4/30}. Core đảm nhận SVI và VRRP cho VLAN 10/20/30/40/90, DHCP Relay, OSPF với tường lửa và Rapid-PVST+ cho phần lớp 2 Cisco. Kết nối Core--Distribution là trunk 802.1Q theo mô hình chéo: mỗi Core nối cả hai Distribution.
+\textbf{Tầng Core} gồm Core-SW1 và Core-SW2 là switch lớp 3 Cisco IOL. Hai Core nối với nhau bằng Port-Channel~10 (hai cổng E0/0, E0/1, LACP \texttt{active}) ở chế độ trunk 802.1Q, mang ba nhóm VLAN: VLAN 100 (\texttt{10.1.0.4/30}, liên kết định tuyến giữa hai Core qua SVI), VLAN 101 và 102 (hai mạng transit tới tường lửa) và VLAN 10--40. VLAN người dùng được đưa vào Po10 để hai Core luôn nghe được bản tin VRRP của nhau: khi cây dữ liệu của SDN Controller chặn đường lên Core-SW2, nếu Po10 không mang VLAN 10--40 thì Core-SW2 không nghe thấy Master và tự lên Master (split-brain). Core đảm nhận SVI và VRRP cho VLAN 10/20/30/40/90, DHCP Relay, OSPF với tường lửa và Rapid-PVST+ cho phần lớp 2 Cisco. Kết nối Core--Distribution là trunk 802.1Q theo mô hình chéo: mỗi Core nối cả hai Distribution.
 
-\textbf{Biên mạng} là cặp Cisco ASAv chạy Active/Standby. Mỗi tường lửa có hai cổng inside nối hai Core (định tuyến \texttt{/30}), hai cổng outside nối hai vEdge, một cổng DMZ, một cổng Management0/0 trong VLAN 99 và cổng Gi0/5 dành cho liên kết failover. Management0/0 đặt ở chế độ \texttt{management-only} (quản trị ngoài băng): cổng này chỉ phục vụ ASDM/HTTPS tới chính tường lửa, không tham gia chuyển tiếp dữ liệu; lưu lượng dữ liệu đến VLAN 99 đi qua inside đến Core-SW1.
+\textbf{Biên mạng} là cặp Cisco ASAv chạy Active/Standby theo mô hình doanh nghiệp: mọi cổng dữ liệu của hai đơn vị cùng nằm trên một phân đoạn chung, đơn vị Active giữ địa chỉ chính, đơn vị Standby giữ địa chỉ dự phòng, nên khi chuyển vai trò, các thiết bị xung quanh không phải đổi cấu hình. Phía trong có hai mạng transit \texttt{/29}: \texttt{inside} (VLAN 101, \texttt{10.1.2.0/29}) và \texttt{inside2} (VLAN 102, \texttt{10.1.2.8/29}, OSPF cost 20 làm đường dự phòng), cả hai Core đều có SVI trong hai VLAN này. Phía ngoài, hai switch lớp 2 SW-WAN-Edge1 (VLAN 103, \texttt{10.1.3.0/29}) và SW-WAN-Edge2 (VLAN 104, \texttt{10.1.3.8/29}) nối cổng \texttt{outside}/\texttt{outside2} của cả hai tường lửa với vEdge1 và vEdge2. Tường lửa trao đổi OSPF Area~0 với cả hai Core và hai vEdge (hello 2 giây, dead 8 giây phía vEdge), nên tuyến về Campus chính trên vEdge được học động thay vì tuyến tĩnh. Ngoài ra mỗi tường lửa có một cổng DMZ, một cổng Management0/0 trong VLAN 99 và cổng Gi0/5 dành cho liên kết failover; sáu giao diện dữ liệu đều được giám sát (\textit{monitored}) với chu kỳ thăm dò 1 giây, thời gian giữ 5 giây. Management0/0 đặt ở chế độ \texttt{management-only} (quản trị ngoài băng): cổng này chỉ phục vụ ASDM/HTTPS tới chính tường lửa, không tham gia chuyển tiếp dữ liệu; lưu lượng dữ liệu đến VLAN 99 đi qua inside đến Core-SW1.
 
 \textbf{Vùng DMZ} (\texttt{10.1.1.0/28}) gồm Web Server (Ubuntu, Nginx) và Mail Server (hMailServer), nối qua SwitchDMZ (VLAN nội bộ 101) đến cổng DMZ của hai tường lửa.
 
@@ -229,19 +245,21 @@ Bảng~\ref{tab:cong_core_site100} tổng hợp ánh xạ cổng của hai Core.
     \small
     \caption{Ánh xạ cổng của Core-SW1 và Core-SW2}
     \label{tab:cong_core_site100}
-    \begin{tabularx}{\textwidth}{|c|X|X|}
+    \begin{tabularx}{\textwidth}{|c|Z|Z|}
         \hline
         \textbf{Cổng} & \textbf{Core-SW1} & \textbf{Core-SW2} \\
         \hline
-        E0/0, E0/1 & Po10 đến Core-SW2, \texttt{10.1.0.5/30} & Po10 đến Core-SW1, \texttt{10.1.0.6/30} \\
+        E0/0, E0/1 & Po10 trunk đến Core-SW2 (VLAN 10--40, 100--102); SVI Vlan100 \texttt{10.1.0.5/30} & Po10 trunk đến Core-SW1; SVI Vlan100 \texttt{10.1.0.6/30} \\
         \hline
         E0/2 & Trunk đến Dist-SW1 (VLAN 10--40, 99) & Trunk đến Dist-SW2 (VLAN 10--40) \\
         \hline
         E1/2 & Trunk đến Dist-SW2 (VLAN 10--40, 99) & Trunk đến Dist-SW1 (VLAN 10--40, 99) \\
         \hline
-        E1/0 & FW-Active Gi0/0, \texttt{10.1.2.2/30} & FW-Standby Gi0/0, \texttt{10.1.2.10/30} \\
+        E1/0 & Access VLAN 101 đến FW-Active Gi0/0 & Access VLAN 101 đến FW-Standby Gi0/0 \\
         \hline
-        E0/3 & FW-Standby Gi0/1, \texttt{10.1.2.14/30} & FW-Active Gi0/1, \texttt{10.1.2.6/30} \\
+        E0/3 & Access VLAN 102 đến FW-Standby Gi0/1 & Access VLAN 102 đến FW-Active Gi0/1 \\
+        \hline
+        SVI 101 / 102 & \texttt{10.1.2.2/29} / \texttt{10.1.2.11/29} & \texttt{10.1.2.3/29} / \texttt{10.1.2.10/29} \\
         \hline
         E1/1 & Trunk đến SwitchServerFarm (VLAN 90, 99) & Trunk đến SwitchServerFarm (VLAN 90) \\
         \hline
@@ -256,31 +274,38 @@ Ba cơ sở phụ dùng chung một khuôn thiết kế \textit{Firewall-as-Core
 
 \begin{figure}[H]
     \centering
-    \resizebox{0.85\textwidth}{!}{%
+    \resizebox{0.9\textwidth}{!}{%
     \begin{tikzpicture}[
-        font=\scriptsize, >=stealth,
-        dev/.style={draw, rounded corners, align=center, minimum height=0.8cm, text width=2.6cm},
-        wan/.style={dev, fill=gray!12, draw=black!60},
-        edge/.style={dev, fill=red!6, draw=red!60!black},
-        fw/.style={dev, fill=orange!10, draw=orange!70!black},
-        sw/.style={dev, fill=blue!6, draw=blue!60!black}
+        font=\footnotesize, >=stealth,
+        dev/.style={draw, rounded corners=2pt, align=center, minimum height=1.05cm, text width=3.3cm, line width=0.8pt},
+        wan/.style={dev, fill=gray!10, draw=black!70},
+        edge/.style={dev, fill=red!5, draw=red!60!black},
+        fw/.style={dev, fill=orange!8, draw=orange!70!black, text width=3.8cm},
+        sw/.style={dev, fill=blue!5, draw=blue!55!black},
+        pc/.style={dev, fill=white, draw=black!50, text width=2.9cm, minimum height=0.8cm},
+        lbl/.style={font=\scriptsize, fill=white, inner sep=1pt},
+        ln/.style={line width=1.1pt}
     ]
-        \node[wan] (mpls) at (-2.5,6) {MPLS (color mpls)};
-        \node[wan] (inet) at (2.5,6) {Internet (biz-internet)};
-        \node[edge] (v1) at (-2.5,4.4) {vEdge1\\TLOC MPLS};
-        \node[edge] (v2) at (2.5,4.4) {vEdge2\\TLOC Internet};
-        \node[fw] (fw) at (0,2.6) {Brand-FW\\gateway .1 + DHCP};
-        \node[sw] (sb) at (0,1.0) {SwitchBrand (L2)\\mgmt 10.x.99.2};
-        \node[sw] (s1) at (-2.5,-0.6) {SW khối 1\\mgmt 10.x.99.11};
-        \node[sw] (s2) at (2.5,-0.6) {SW khối 2\\mgmt 10.x.99.12};
-        \node[align=center] at (-2.5,-1.7) {2 máy trạm VLAN A};
-        \node[align=center] at (2.5,-1.7) {2 máy trạm VLAN B};
-        \draw (mpls) -- (v1); \draw (inet) -- (v2);
-        \draw (v1) -- node[above]{10.x.2.0/30} (v2);
-        \draw (v1) -- node[left]{outside1 10.x.1.0/30} (fw);
-        \draw (v2) -- node[right]{outside2 10.x.1.4/30} (fw);
-        \draw (fw) -- node[right]{trunk A,B,99} (sb);
-        \draw (sb) -- node[left]{A,99} (s1); \draw (sb) -- node[right]{B,99} (s2);
+        \node[wan] (mpls) at (-3.4,7.6) {\textbf{MPLS} (AS 64512)\\color \texttt{mpls}};
+        \node[wan] (inet) at (3.4,7.6) {\textbf{Internet} (AS 64511)\\color \texttt{biz-internet}};
+        \node[edge] (v1) at (-3.4,5.4) {\textbf{vEdge1}\\TLOC MPLS\\System-IP 10.200.x.1};
+        \node[edge] (v2) at (3.4,5.4) {\textbf{vEdge2}\\TLOC Internet\\System-IP 10.200.x.2};
+        \node[fw] (fw) at (0,3.0) {\textbf{Brand-FW} (ASAv)\\gateway .1 các VLAN, DHCP\\SLA/track chọn vEdge};
+        \node[sw] (sb) at (0,0.8) {\textbf{SwitchBrand} (IOL L2)\\quản trị 10.x.99.2};
+        \node[sw] (s1) at (-3.6,-1.4) {\textbf{Switch khối 1}\\quản trị 10.x.99.11};
+        \node[sw] (s2) at (3.6,-1.4) {\textbf{Switch khối 2}\\quản trị 10.x.99.12};
+        \node[pc] (p1) at (-3.6,-3.3) {2 máy trạm VLAN A};
+        \node[pc] (p2) at (3.6,-3.3) {2 máy trạm VLAN B};
+        \draw[ln] (mpls) -- node[lbl]{eBGP, 100.64.x.x/30} (v1);
+        \draw[ln] (inet) -- node[lbl]{eBGP, 203.0.113.x/30} (v2);
+        \draw[ln] (v1) -- node[lbl]{10.x.2.0/30} (v2);
+        \draw[ln] (v1) -- node[lbl]{outside1 10.x.1.0/30} (fw);
+        \draw[ln] (v2) -- node[lbl]{outside2 10.x.1.4/30} (fw);
+        \draw[ln] (fw) -- node[lbl]{trunk VLAN A, B, 99} (sb);
+        \draw[ln] (sb) -- node[lbl]{trunk A, 99} (s1);
+        \draw[ln] (sb) -- node[lbl]{trunk B, 99} (s2);
+        \draw[ln] (s1) -- node[lbl]{access A} (p1);
+        \draw[ln] (s2) -- node[lbl]{access B} (p2);
     \end{tikzpicture}%
     }
     \caption{Khuôn thiết kế chi nhánh Firewall-as-Core}
@@ -296,7 +321,7 @@ Lý do chọn Firewall-as-Core cho chi nhánh: (1) chi nhánh chỉ có hai VLAN
     \scriptsize
     \caption{Thiết bị và máy trạm tại các cơ sở phụ}
     \label{tab:thiet_bi_chi_nhanh}
-    \begin{tabularx}{\textwidth}{|c|P{2.9cm}|P{3.2cm}|X|}
+    \begin{tabularx}{\textwidth}{|c|P{2.9cm}|P{3.2cm}|Z|}
         \hline
         \textbf{Site} & \textbf{Brand-FW} & \textbf{Switch} & \textbf{Máy trạm theo VLAN} \\
         \hline
@@ -351,7 +376,7 @@ Toàn bộ mạng nội bộ dùng dải \texttt{10.0.0.0/8} với các quy tắ
     \small
     \caption{Phân hoạch VLAN tại Campus chính}
     \label{tab:vlan_campus_chinh}
-    \begin{tabularx}{\textwidth}{|c|P{2.8cm}|P{2.5cm}|P{2.5cm}|X|}
+    \begin{tabularx}{\textwidth}{|c|P{3.4cm}|P{2.4cm}|P{3.1cm}|Z|}
         \hline
         \textbf{VLAN} & \textbf{Khu vực} & \textbf{Subnet} & \textbf{Gateway} & \textbf{Phạm vi địa chỉ} \\
         \hline
@@ -363,11 +388,21 @@ Toàn bộ mạng nội bộ dùng dải \texttt{10.0.0.0/8} với các quy tắ
         \hline
         40 & Khối Hành chính & 10.1.40.0/24 & 10.1.40.1 (VRRP) & DHCP .100--.199 \\
         \hline
-        90 & Server Farm & 10.1.90.0/24 & 10.1.90.1 (VRRP) & Tĩnh: DHCP/DNS .10, Syslog .11 \\
+        90 & Server Farm & 10.1.90.0/24 & 10.1.90.1 (VRRP) & DHCP/DNS .10, Syslog .11 \\
         \hline
-        99 & Quản trị và kênh điều khiển SDN & 10.1.99.0/24 & 10.1.99.1 (SVI Core-SW1) & Tĩnh cho thiết bị hạ tầng \\
+        99 & Quản trị, kênh điều khiển SDN & 10.1.99.0/24 & 10.1.99.1 (Core-SW1) & Thiết bị hạ tầng \\
         \hline
-        101 & DMZ (nội bộ SwitchDMZ) & 10.1.1.0/28 & 10.1.1.1 (FW) & Tĩnh: Web .10, Mail .11 \\
+        100 & Transit giữa hai Core & 10.1.0.4/30 & -- & Core .5 / .6 \\
+        \hline
+        101 & Transit inside & 10.1.2.0/29 & 10.1.2.1 (FW) & FW .1/.4; Core .2/.3 \\
+        \hline
+        102 & Transit inside2 & 10.1.2.8/29 & 10.1.2.9 (FW) & FW .9/.12; Core .11/.10 \\
+        \hline
+        103 & Transit outside & 10.1.3.0/29 & -- & FW .1/.4; vEdge1 .2 \\
+        \hline
+        104 & Transit outside2 & 10.1.3.8/29 & -- & FW .9/.12; vEdge2 .10 \\
+        \hline
+        DMZ & DMZ (cục bộ SwitchDMZ) & 10.1.1.0/28 & 10.1.1.1 (FW) & Web .10, Mail .11 \\
         \hline
     \end{tabularx}
 \end{table}
@@ -379,7 +414,7 @@ Tại VLAN 10--40 và 90, Core-SW1 dùng địa chỉ SVI \texttt{.2} với VRRP
     \small
     \caption{Địa chỉ trong VLAN 99 (10.1.99.0/24)}
     \label{tab:vlan99}
-    \begin{tabularx}{\textwidth}{|P{3.0cm}|X|}
+    \begin{tabularx}{\textwidth}{|P{3.0cm}|Z|}
         \hline
         \textbf{Địa chỉ} & \textbf{Thiết bị} \\
         \hline
@@ -407,29 +442,21 @@ Tại VLAN 10--40 và 90, Core-SW1 dùng địa chỉ SVI \texttt{.2} với VRRP
     \small
     \caption{Các mạng hạ tầng tại Campus chính}
     \label{tab:mang_bo_tro_campus}
-    \begin{tabularx}{\textwidth}{|P{2.6cm}|P{3.0cm}|X|}
+    \begin{tabularx}{\textwidth}{|P{2.6cm}|P{3.0cm}|Z|}
         \hline
         \textbf{Subnet} & \textbf{Liên kết} & \textbf{Địa chỉ hai đầu} \\
         \hline
-        10.1.0.4/30 & Core-SW1 -- Core-SW2 & Po10: .5 / .6 \\
+        10.1.0.4/30 & Core-SW1 -- Core-SW2 (VLAN 100 qua Po10) & Vlan100: .5 / .6 \\
         \hline
-        10.1.2.0/30 & FW-Active -- Core-SW1 & FW Gi0/0 (inside) .1 -- Core-SW1 E1/0 .2 \\
+        10.1.2.0/29 & Transit \texttt{inside} (VLAN 101) & FW Gi0/0 .1 (standby .4); Core-SW1 .2; Core-SW2 .3 \\
         \hline
-        10.1.2.4/30 & FW-Active -- Core-SW2 & FW Gi0/1 (inside2) .5 -- Core-SW2 E0/3 .6 \\
+        10.1.2.8/29 & Transit \texttt{inside2} (VLAN 102, OSPF cost 20) & FW Gi0/1 .9 (standby .12); Core-SW2 .10; Core-SW1 .11 \\
         \hline
-        10.1.2.8/30 & FW-Standby -- Core-SW2 & FW Gi0/0 .9 -- Core-SW2 E1/0 .10 \\
+        10.1.3.0/29 & Transit \texttt{outside} (VLAN 103, SW-WAN-Edge1) & FW Gi0/2 .1 (standby .4); vEdge1-S100 ge0/0 .2 \\
         \hline
-        10.1.2.12/30 & FW-Standby -- Core-SW1 & FW Gi0/1 .13 -- Core-SW1 E0/3 .14 \\
+        10.1.3.8/29 & Transit \texttt{outside2} (VLAN 104, SW-WAN-Edge2) & FW Gi0/3 .9 (standby .12); vEdge2-S100 ge0/1 .10 \\
         \hline
-        10.1.3.0/30 & FW-Active -- vEdge1 & FW Gi0/2 (outside) .1 -- vEdge1 ge0/0 .2 \\
-        \hline
-        10.1.3.4/30 & FW-Active -- vEdge2 & FW Gi0/3 (outside2) .5 -- vEdge2 ge0/1 .6 \\
-        \hline
-        10.1.3.8/30 & FW-Standby -- vEdge2 & FW Gi0/2 .9 -- vEdge2 ge0/0 .10 \\
-        \hline
-        10.1.3.12/30 & FW-Standby -- vEdge1 & FW Gi0/3 .13 -- vEdge1 ge0/1 .14 \\
-        \hline
-        10.1.1.0/28 & DMZ & FW-Active Gi0/4 .1; FW-Standby Gi0/4 .2; Web .10; Mail .11 \\
+        10.1.1.0/28 & DMZ & FW Gi0/4 .1 (standby .14); Web .10; Mail .11 \\
         \hline
         10.1.255.0/29 & Liên kết failover Gi0/5 & Primary .1, Secondary .2 \\
         \hline
@@ -447,7 +474,7 @@ OSPF Router-ID của Core-SW1 và Core-SW2 lần lượt là \texttt{10.1.0.1} v
     \small
     \caption{Phân hoạch VLAN tại các cơ sở phụ}
     \label{tab:vlan_chi_nhanh}
-    \begin{tabularx}{\textwidth}{|c|c|P{2.5cm}|P{2.4cm}|P{2.2cm}|X|}
+    \begin{tabularx}{\textwidth}{|c|c|P{2.5cm}|P{2.4cm}|P{2.2cm}|Z|}
         \hline
         \textbf{Site} & \textbf{VLAN} & \textbf{Khu vực} & \textbf{Subnet} & \textbf{Gateway} & \textbf{Phạm vi} \\
         \hline
@@ -481,7 +508,7 @@ VLAN ID có thể trùng giữa các site (ví dụ VLAN 60 tại Site 200 và S
     \small
     \caption{Quy hoạch địa chỉ Site 900}
     \label{tab:dia_chi_site900}
-    \begin{tabularx}{\textwidth}{|P{3.0cm}|P{3.3cm}|P{3.0cm}|X|}
+    \begin{tabularx}{\textwidth}{|P{3.0cm}|P{3.3cm}|P{3.0cm}|Z|}
         \hline
         \textbf{Thiết bị} & \textbf{Controller LAN 10.9.0.0/24} & \textbf{Mặt quản trị 10.9.1.0/24} & \textbf{Ghi chú} \\
         \hline
@@ -511,7 +538,7 @@ System-IP có dạng \texttt{10.200.<site>.<n>/32}. Site 300, 400 và 500 đư�
     \scriptsize
     \caption{Quy hoạch System-IP, TLOC và BGP của các vEdge}
     \label{tab:system_ip_tloc}
-    \begin{tabularx}{\textwidth}{|c|P{1.7cm}|P{2.2cm}|P{2.8cm}|P{2.8cm}|X|}
+    \begin{tabularx}{\textwidth}{|c|P{1.7cm}|P{2.2cm}|P{2.8cm}|P{2.8cm}|Z|}
         \hline
         \textbf{Site} & \textbf{Thiết bị} & \textbf{System-IP} & \textbf{TLOC biz-internet} & \textbf{TLOC mpls} & \textbf{BGP} \\
         \hline
@@ -559,7 +586,7 @@ Brand-FW tách hai loại lưu lượng và theo dõi mỗi loại bằng một 
     \small
     \caption{Tuyến và cơ chế theo dõi trên Brand-FW}
     \label{tab:tuyen_brandfw}
-    \begin{tabularx}{\textwidth}{|P{2.6cm}|P{3.4cm}|P{3.0cm}|X|}
+    \begin{tabularx}{\textwidth}{|P{2.6cm}|P{3.4cm}|P{3.0cm}|Y|}
         \hline
         \textbf{Đích} & \textbf{Tuyến chính} & \textbf{Tuyến dự phòng} & \textbf{Theo dõi} \\
         \hline
@@ -591,7 +618,7 @@ Kênh OpenFlow đi trên chính VLAN 99 của hạ tầng (không kéo dây đi�
     \small
     \caption{Datapath OVS do SDN Controller quản lý}
     \label{tab:dpid_sdn}
-    \begin{tabularx}{\textwidth}{|P{2.4cm}|P{3.4cm}|P{2.4cm}|X|}
+    \begin{tabularx}{\textwidth}{|P{2.4cm}|P{3.4cm}|P{2.4cm}|Y|}
         \hline
         \textbf{Thiết bị} & \textbf{DPID} & \textbf{IP quản trị} & \textbf{Cổng} \\
         \hline
@@ -614,7 +641,7 @@ Thông số chung của các bridge \texttt{br0}: phiên bản OpenFlow~1.3 (\te
 
 \subsubsection{Ứng dụng điều khiển chuyển mạch}
 
-Ứng dụng Ryu \texttt{campus\_switch\_13.py} do nhóm xây dựng (phiên bản 2) đảm nhận toàn bộ logic lớp 2. Ứng dụng tổ chức flow thành hai bảng (Bảng~\ref{tab:pipeline_sdn}): bảng 0 cho các chức năng kiểm soát (thăm dò liên kết, kênh quản trị, chặn cạnh ngoài cây, chính sách), bảng 1 cho chuyển tiếp lớp 2.
+Ứng dụng Ryu \texttt{campus\_switch\_13.py} do nhóm xây dựng đảm nhận toàn bộ logic lớp 2. Ứng dụng tổ chức flow thành hai bảng (Bảng~\ref{tab:pipeline_sdn}): bảng 0 cho các chức năng kiểm soát (thăm dò liên kết, kênh quản trị, chặn cạnh ngoài cây, chính sách), bảng 1 cho chuyển tiếp lớp 2.
 
 \begin{enumerate}
     \item \textbf{Học MAC theo VLAN:} bảng MAC được khóa theo cặp (VLAN, MAC). Flood chỉ diễn ra trong đúng VLAN, trên các cổng thuộc cây chuyển tiếp. Với gói unicast đã biết đích, ứng dụng cài flow khớp \texttt{in\_port}, \texttt{vlan\_vid} và MAC (thời gian chờ 300 giây).
@@ -633,7 +660,7 @@ Thông số chung của các bridge \texttt{br0}: phiên bản OpenFlow~1.3 (\te
     \small
     \caption{Tổ chức bảng flow trên các OVS}
     \label{tab:pipeline_sdn}
-    \begin{tabularx}{\textwidth}{|c|P{2.6cm}|X|}
+    \begin{tabularx}{\textwidth}{|c|P{2.6cm}|Y|}
         \hline
         \textbf{Bảng} & \textbf{Ưu tiên} & \textbf{Nội dung} \\
         \hline
@@ -661,7 +688,7 @@ Thông số chung của các bridge \texttt{br0}: phiên bản OpenFlow~1.3 (\te
     \small
     \caption{Đồ thị liên kết và cây dữ liệu ở trạng thái bình thường}
     \label{tab:cay_du_lieu}
-    \begin{tabularx}{\textwidth}{|P{4.6cm}|c|X|}
+    \begin{tabularx}{\textwidth}{|P{4.6cm}|c|Y|}
         \hline
         \textbf{Liên kết} & \textbf{Trọng số} & \textbf{Vai trò trong cây} \\
         \hline
@@ -739,7 +766,7 @@ Mỗi SLA class có thêm tiêu chí \texttt{fallback-best-tunnel} theo độ tr
     \small
     \caption{Chính sách Application-Aware Routing AAR\_LAN}
     \label{tab:aar_policy}
-    \begin{tabularx}{\textwidth}{|c|X|P{3.2cm}|P{3.2cm}|}
+    \begin{tabularx}{\textwidth}{|c|Z|P{3.2cm}|P{3.2cm}|}
         \hline
         \textbf{Seq} & \textbf{Điều kiện khớp} & \textbf{SLA class} & \textbf{Bộ đếm} \\
         \hline
@@ -781,7 +808,7 @@ vManage thu trạng thái của toàn fabric (kết nối điều khiển, OMP, 
     \small
     \caption{Các dịch vụ trong hệ thống}
     \label{tab:dich_vu}
-    \begin{tabularx}{\textwidth}{|P{1.9cm}|P{2.2cm}|P{2.6cm}|X|}
+    \begin{tabularx}{\textwidth}{|P{1.9cm}|P{2.2cm}|P{2.6cm}|Y|}
         \hline
         \textbf{Dịch vụ} & \textbf{Máy chủ} & \textbf{Nền tảng} & \textbf{Thiết kế} \\
         \hline
@@ -815,7 +842,7 @@ Hệ thống được chia thành các vùng bảo mật sau: vùng người dù
     \small
     \caption{Danh sách truy cập trên tường lửa biên Campus chính}
     \label{tab:acl_fw}
-    \begin{tabularx}{\textwidth}{|P{2.3cm}|P{2.4cm}|X|}
+    \begin{tabularx}{\textwidth}{|P{2.3cm}|P{2.4cm}|Y|}
         \hline
         \textbf{ACL} & \textbf{Áp vào} & \textbf{Nội dung} \\
         \hline

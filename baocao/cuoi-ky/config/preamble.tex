@@ -101,10 +101,13 @@
 \newcolumntype{d}{>{\hsize=.1\hsize}X}
 \newcolumntype{a}{>{\hsize=1.1\hsize}X}
 \newcolumntype{g}{>{\hsize=5\hsize}X}
-\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
-% --- SỬA LỖI TẠI ĐÂY ---
-% \renewcommand{\tabularxcolumn}[1]{>{\small}m{#1}} % Dòng lệnh cũ gây lỗi thu nhỏ chữ
-\renewcommand{\tabularxcolumn}[1]{>{\raggedright\arraybackslash}m{#1}} % Lệnh mới: Bỏ \small, thêm căn lề trái cho đẹp
+% Căn chỉnh bảng: P{w} và X căn giữa theo cả chiều ngang và chiều dọc;
+% L{w} và Y căn trái, giữa theo chiều dọc, dùng cho cột chứa đoạn văn dài.
+\newcolumntype{P}[1]{>{\centering\arraybackslash}m{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}m{#1}}
+\renewcommand{\tabularxcolumn}[1]{m{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{Z}{>{\centering\arraybackslash}X}
 % Giữ chữ trong các bảng ở mức dễ đọc, đồng nhất 12pt.
 \usepackage{etoolbox}
 \newcommand{\tabletextsize}{\fontsize{12pt}{14.4pt}\selectfont}

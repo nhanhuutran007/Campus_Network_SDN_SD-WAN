@@ -2746,7 +2746,7 @@ class PolicyTab(tk.Frame):
                 ('W', 'W  Whitelist vEdge tren vBond (tu dong day lai tu vManage neu thieu)'),
                 ('DP', 'DP Data-policy DP_BRANCH: Telnet->Farm, SSH->DMZ bi chan; HTTP->DMZ, ICMP cho qua'),
                 ('AAR', 'AAR App-route AAR_LAN: ICMP lien site khop luat SLA_REALTIME (AAR_ICMP)'),
-                ('CP', 'CP Control-policy PREFER-VE1: chi nhanh chon route 10.1.0.0/16 cua vEdge1-S100')]):
+                ('CP', 'CP Control-policy PREFER-VE1: chi nhanh chon route 10.1.90.0/24 cua vEdge1-S100')]):
             var = tk.BooleanVar(value=True); self.chk[key] = var
             tk.Checkbutton(cf, text=text, variable=var, bg=BG2, fg=TEAL, selectcolor=BG3,
                            activebackground=BG2, font=FONT_UI).grid(row=i, column=0, sticky='w', padx=4)
@@ -2894,16 +2894,16 @@ class PolicyTab(tk.Frame):
 
     def _control(self, api, rows, opts, edges):
         log = self.gui._log
-        log('  [CP] Route OMP 10.1.0.0/16 tren vEdge site nguon...\n', 'info')
+        log('  [CP] Route OMP 10.1.90.0/24 tren vEdge site nguon (tu 31/10/2026 Site 100 quang ba tuyen OSPF cu the)...\n', 'info')
         for e in edges:
             routes = {r.get('originator'): r.get('status', '')
-                      for r in api.get('device/omp/routes/received?deviceId=' + e, grep='"10\\.1\\.0\\.0/16"')
-                      if r.get('prefix') == '10.1.0.0/16'}
+                      for r in api.get('device/omp/routes/received?deviceId=' + e, grep='"10\\.1\\.90\\.0/24"')
+                      if r.get('prefix') == '10.1.90.0/24'}
             ve1, ve2 = routes.get('10.200.100.1', ''), routes.get('10.200.100.2', '')
             ok = 'C' in ve1 and 'C' not in ve2
             name = {ip: n for d in SITE_VEDGES.values() for ip, n in d.items()}.get(e, e)
             self._record(rows, 'CP-1', 'PREFER-VE1', 'Chi nhanh uu tien vEdge1-S100 ({})'.format(name),
-                         opts, '10.1.0.0/16', 'status', 've1=[{}] ve2=[{}]'.format(ve1 or '-', ve2 or '-'),
+                         opts, '10.1.90.0/24', 'status', 've1=[{}] ve2=[{}]'.format(ve1 or '-', ve2 or '-'),
                          '', ok)
 
     def _open_src_vpc(self, ssh, opts):

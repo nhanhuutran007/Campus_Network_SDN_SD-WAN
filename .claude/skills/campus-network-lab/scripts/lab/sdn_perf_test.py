@@ -63,7 +63,7 @@ def main():
     for t in th:
         t.join()
     print("Do %d cap trong %.0f s" % (len(rows), time.time() - t0))
-    summ = lab.post("/campus/perf", {"rows": rows, "count": a.count})
+    summ = lab.post("/campus/perf", {"rows": rows, "count": a.count}) or {}  # may do khong toi duoc controller van giu CSV
     print("Trong VLAN: %s" % summ.get("intra_vlan"))
     print("Khac VLAN : %s" % summ.get("inter_vlan"))
     out_dir = os.path.join(REPO, "log", "sdn-eval")

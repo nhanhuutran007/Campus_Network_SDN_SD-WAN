@@ -1,0 +1,23 @@
+{"phase": "truoc", "pps": {"mpls": 7.5, "biz-internet": 2.0}, "stats": {"mpls": {"lat": "0", "loss": "0"}, "biz-internet": {"lat": "2", "loss": "0"}}, "t": "02:05:10"}
+{"phase": "truoc", "pps": {"mpls": 7.6, "biz-internet": 2.0}, "stats": {"mpls": {"lat": "0", "loss": "0"}, "biz-internet": {"lat": "2", "loss": "0"}}, "t": "02:06:33"}
+{"phase": "truoc", "pps": {"mpls": 7.5, "biz-internet": 2.0}, "stats": {"mpls": {"lat": "1", "loss": "0"}, "biz-internet": {"lat": "4", "loss": "0"}}, "t": "02:07:56"}
+{"phase": "bat-netem", "qdisc": "qdisc netem 8001: root refcnt 2 limit 1000 delay 400ms", "t": "02:07:56"}
+{"phase": "suy-giam", "pps": {"mpls": 7.5, "biz-internet": 2.0}, "stats": {"mpls": {"lat": "36", "loss": "0"}, "biz-internet": {"lat": "4", "loss": "0"}}, "t": "02:09:20"}
+{"phase": "suy-giam", "pps": {"mpls": 7.5, "biz-internet": 2.0}, "stats": {"mpls": {"lat": "36", "loss": "0"}, "biz-internet": {"lat": "4", "loss": "0"}}, "t": "02:10:43"}
+{"phase": "suy-giam", "pps": {"mpls": 7.5, "biz-internet": 2.0}, "stats": {"mpls": {"lat": "103", "loss": "0"}, "biz-internet": {"lat": "4", "loss": "0"}}, "t": "02:12:06"}
+{"phase": "suy-giam", "pps": {"mpls": 6.1, "biz-internet": 3.4}, "stats": {"mpls": {"lat": "169", "loss": "0"}, "biz-internet": {"lat": "4", "loss": "0"}}, "t": "02:13:29"}
+{"phase": "suy-giam", "pps": {"mpls": 2.0, "biz-internet": 7.5}, "stats": {"mpls": {"lat": "169", "loss": "0"}, "biz-internet": {"lat": "4", "loss": "0"}}, "t": "02:14:52"}
+{"phase": "da-chuyen", "sau_giay": 416, "t": "02:14:52"}
+{"phase": "suy-giam", "pps": {"mpls": 2.0, "biz-internet": 7.5}, "stats": {"mpls": {"lat": "236", "loss": "0"}, "biz-internet": {"lat": "4", "loss": "0"}}, "t": "02:16:15"}
+{"phase": "suy-giam", "pps": {"mpls": 2.0, "biz-internet": 7.5}, "stats": {"mpls": {"lat": "302", "loss": "0"}, "biz-internet": {"lat": "4", "loss": "0"}}, "t": "02:17:39"}
+{"phase": "go-netem", "qdisc": "qdisc fq_codel 0: root refcnt 2 limit 10240p flows 1024 quantum 9014 target 5ms interval 100ms memory_limit 32Mb ecn drop_batch 64", "t": "02:17:39"}
+{"phase": "phuc-hoi", "pps": {"mpls": 2.0, "biz-internet": 7.5}, "stats": {"mpls": {"lat": "302", "loss": "0"}, "biz-internet": {"lat": "4", "loss": "0"}}, "t": "02:19:02"}
+{"phase": "phuc-hoi", "pps": {"mpls": 2.0, "biz-internet": 7.5}, "stats": {"mpls": {"lat": "323", "loss": "0"}, "biz-internet": {"lat": "2", "loss": "0"}}, "t": "02:20:26"}
+{"phase": "phuc-hoi", "pps": {"mpls": 2.0, "biz-internet": 7.5}, "stats": {"mpls": {"lat": "287", "loss": "0"}, "biz-internet": {"lat": "2", "loss": "0"}}, "t": "02:21:49"}
+{"phase": "phuc-hoi", "pps": {"mpls": 2.0, "biz-internet": 7.5}, "stats": {"mpls": {"lat": "220", "loss": "0"}, "biz-internet": {"lat": "2", "loss": "0"}}, "t": "02:23:12"}
+{"phase": "phuc-hoi", "pps": {"mpls": 2.0, "biz-internet": 7.5}, "stats": {"mpls": {"lat": "220", "loss": "0"}, "biz-internet": {"lat": "2", "loss": "0"}}, "t": "02:24:36"}
+{"phase": "phuc-hoi", "pps": {"mpls": 2.0, "biz-internet": 7.5}, "stats": {"mpls": {"lat": "154", "loss": "0"}, "biz-internet": {"lat": "2", "loss": "0"}}, "t": "02:25:59"}
+{"phase": "phuc-hoi", "pps": {"mpls": 2.9, "biz-internet": 6.6}, "stats": {"mpls": {"lat": "87", "loss": "0"}, "biz-internet": {"lat": "2", "loss": "0"}}, "t": "02:27:22"}
+{"phase": "phuc-hoi", "pps": {"mpls": 7.5, "biz-internet": 2.0}, "stats": {"mpls": {"lat": "87", "loss": "0"}, "biz-internet": {"lat": "2", "loss": "0"}}, "t": "02:28:46"}
+{"phase": "da-quay-ve", "sau_giay": 667, "t": "02:28:46"}
+{"phase": "ket-thuc", "moved_s": 416, "back_s": 667, "ping": "7578 packets transmitted, 7574 received, 0.0527844% packet loss, time 1520506ms\nrtt min/avg/max/mdev = 3.354/12.711/2150.855/51.480 ms, pipe 11", "t": "02:28:47"}

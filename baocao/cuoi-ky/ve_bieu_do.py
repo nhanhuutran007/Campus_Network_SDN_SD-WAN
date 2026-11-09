@@ -29,8 +29,8 @@ def finish(ax, fig, name, xlabel=None, ylabel=None, xgrid=True):
 
 # 1. SDN self-recovery scenarios (values from Table "Kết quả kịch bản tự phục hồi SDN")
 sc = ["S1: D1-C1", "S2: A4-D1", "S3: D1-D2", "S4: D2-C1", "S5: A4-D1 + D2-C1", "S6: D1-C1 + D1-C2"]
-cut = [3.3, 2.1, 0, 0, 3.4, 3.5]
-rec = [0.3, 0, 0, 0, 0, 0.3]
+cut = [3.2, 2.0, 0, 0, 3.5, 3.6]
+rec = [0, 0, 0, 0, 0.1, 0]
 fig, ax = plt.subplots(figsize=(7.2, 3.6))
 y = range(len(sc))
 h = 0.36
@@ -111,17 +111,62 @@ ax.set_yticks(range(len(pairs))); ax.set_yticklabels([p[0] for p in pairs]); ax.
 ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, p: ("%.1f" % v).replace(".", ",")))
 finish(ax, fig, "bd-tcp-thongluong.png", xlabel="Thông lượng TCP trung bình (Mbit/s)")
 
-# 5. Overall test outcome (29 scenarios)
-parts = [("Đạt", 25, GOOD), ("Đạt một phần", 3, WARN), ("Chưa đạt", 1, CRIT)]
-fig, ax = plt.subplots(figsize=(7.2, 1.25))
-left = 0
-for lab, n, c in parts:
-    ax.barh(0, n, left=left, height=0.55, color=c, edgecolor=SURF, linewidth=2)
-    left += n
-ax.text(12.5, 0, "Đạt: 25", ha="center", va="center", fontsize=10, color="white", fontweight="bold")
-ax.text(26.5, -0.45, "Đạt một phần: 3", ha="right", va="top", fontsize=9, color=INK)
-ax.text(28.5, -0.45, "Chưa đạt: 1", ha="left", va="top", fontsize=9, color=INK)
-ax.plot([26.5, 26.5], [-0.28, -0.42], color=INK2, linewidth=0.8); ax.plot([28.5, 28.5], [-0.28, -0.42], color=INK2, linewidth=0.8)
-ax.set_xlim(0, 33); ax.set_ylim(-0.8, 0.35); ax.set_yticks([]); ax.set_xticks([])
-for s in ("left", "bottom"): ax.spines[s].set_visible(False)
-finish(ax, fig, "bd-tongket-kiemthu.png")
+# 5. Branch failover per site and scenario (43 cuts, ICMP 5 packets/s)
+fo = [json.loads(l) for l in open(R + "log/failover-chinhanh/failover.jsonl", encoding="utf-8")]
+groups = [("Cắt MPLS", [("Site 200", "s200-mpls"), ("Site 300", "s300-mpls"), ("Site 400", "s400-mpls"), ("Site 500", "s500-mpls")]),
+          ("Mất vEdge1", [("Site 200", "s200-vedge1-mat"), ("Site 300", "s300-vedge1-mat"), ("Site 400", "s400-vedge1-mat"), ("Site 500", "s500-vedge1-mat")]),
+          ("Cắt Internet", [("Site 200", "s200-internet"), ("Site 300", "s300-internet"), ("Site 400", "s400-internet"), ("Site 500", "s500-internet-sau-nat")]),
+          ("Mất vEdge2", [("Site 200", "s200-vedge2-mat"), ("Site 300", "s300-vedge2-mat"), ("Site 400", "s400-vedge2-mat"), ("Site 500", "s500-vedge2-mat")])]
+fig, axes = plt.subplots(1, 4, figsize=(7.4, 3.0), sharey=True, sharex=True)
+for ax, (title, rows) in zip(axes, groups):
+    for i, (lab, name) in enumerate(rows):
+        x = [r for r in fo if r["name"] == name]
+        new, same = [r["rto_new"] for r in x], [r["rto_same"] for r in x]
+        ax.scatter(new, [i] * len(new), s=34, color=S1, zorder=3, edgecolors=SURF, linewidths=1, label="Luồng mới" if i == 0 else None)
+        ax.scatter(same, [i] * len(same), s=34, color=S2, zorder=3, edgecolors=SURF, linewidths=1, marker="D", label="Luồng đang chạy" if i == 0 else None)
+    ax.set_title(title, fontsize=9.5, color=INK, loc="left")
+    ax.set_yticks(range(4)); ax.set_yticklabels(["Site 200", "Site 300", "Site 400", "Site 500"]); ax.set_ylim(3.5, -0.5); ax.set_xlim(0, 42)
+    ax.grid(axis="x", color=GRID, linewidth=0.8); ax.set_axisbelow(True); ax.tick_params(length=0)
+h, l = axes[0].get_legend_handles_labels()
+fig.legend(h, l, loc="upper center", ncol=2, frameon=False, fontsize=9, bbox_to_anchor=(0.5, 1.07))
+fig.supxlabel("Thời gian từ lúc cắt đến khi thông lại (giây)", fontsize=10, color=INK2)
+fig.tight_layout()
+fig.savefig(OUT + "bd-failover-4site.png", bbox_inches="tight")
+plt.close(fig)
+print("saved bd-failover-4site.png")
+
+# 6. UDP loss on SDN paths: stressed host vs stable host (same configuration)
+st_all = [json.loads(l) for l in open(R + "log/sdn-eval/stress_20261108.jsonl", encoding="utf-8")]
+paths = [("Cùng VLAN, cùng Access", "a1", "a1b"), ("Liên VLAN qua Core", "a1", "a4"), ("VLAN 10 tới Server Farm", "a1", "farm")]
+fig, axes = plt.subplots(1, 3, figsize=(7.4, 2.6), sharey=True)
+for ax, (title, a, b) in zip(axes, paths):
+    u = [r for r in st_all if r["test"] == "udp" and r["src"] == a and r["dst"] == b and "lost_pct" in r]
+    old = [r for r in u if r["ts"] < "2026-11-08 17"]
+    new = [r for r in u if r["ts"] >= "2026-11-08 17"]
+    rates = sorted({r["offered"] for r in u})
+    pos = {v: i for i, v in enumerate(rates)}
+    ax.scatter([pos[r["offered"]] for r in old], [r["lost_pct"] for r in old], s=42, color=S2, marker="D", zorder=3, edgecolors=SURF, linewidths=1, label="Máy chủ quá tải (1 lần mỗi mức)")
+    ax.scatter([pos[r["offered"]] for r in new], [r["lost_pct"] for r in new], s=30, color=S1, zorder=4, edgecolors=SURF, linewidths=1, label="Máy chủ ổn định (3 lần mỗi mức)")
+    ax.set_xticks(range(len(rates))); ax.set_xticklabels(["%g" % v for v in rates]); ax.set_xlim(-0.5, len(rates) - 0.5); ax.set_ylim(-1, 21)
+    ax.set_title(title, fontsize=9, color=INK, loc="left"); ax.grid(axis="y", color=GRID, linewidth=0.8); ax.set_axisbelow(True); ax.tick_params(length=0)
+axes[0].set_ylabel("Mất gói (%)")
+h, l = axes[0].get_legend_handles_labels()
+fig.legend(h, l, loc="upper center", ncol=2, frameon=False, fontsize=9, bbox_to_anchor=(0.5, 1.09))
+fig.supxlabel("Tốc độ UDP phát (Mbit/s)", fontsize=10, color=INK2)
+fig.tight_layout()
+fig.savefig(OUT + "bd-sdn-udp-haitrangthai.png", bbox_inches="tight")
+plt.close(fig)
+print("saved bd-sdn-udp-haitrangthai.png")
+
+# 7. Control-plane load: Ryu CPU vs new MACs per second (stable host)
+mf = [r for r in st_all if r["test"] == "macflood" and r["ts"] >= "2026-11-08 17"]
+mf.sort(key=lambda r: r["rate"])
+xs, ys = [r["mon"]["pktin_max"] for r in mf], [r["mon"]["ryu_max"] for r in mf]
+fig, ax = plt.subplots(figsize=(7.2, 2.7))
+ax.plot(xs, ys, color=S1, linewidth=2, marker="o", markersize=6, markeredgecolor=SURF, markeredgewidth=1.5, zorder=3)
+for r, x, y in zip(mf, xs, ys):
+    low = r["rate"] == 1  # the first two points sit close together
+    ax.text(x + (22 if low else -12), y + (-2.6 if low else 2.2), "%d MAC/s: %s%%" % (r["rate"], ("%.1f" % y).replace(".", ",")),
+            fontsize=8.5, color=INK2, ha="left" if low else "right")
+ax.set_xlim(0, 1250); ax.set_ylim(0, 52)
+finish(ax, fig, "bd-sdn-packetin.png", xlabel="Packet-in tới Controller (gói/giây)", ylabel="CPU tiến trình Ryu (%)", xgrid=False)
