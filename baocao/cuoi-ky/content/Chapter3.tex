@@ -62,7 +62,7 @@ Hệ thống gồm năm khối chức năng và hai miền truyền tải, đư�
         \hline
         500 & Cơ sở mở rộng & 65040 & Hai vEdge (MPLS, Internet), Brand-FW-S500, SW-S500, hai máy trạm \\
         \hline
-        900 & Trung tâm điều khiển SD-WAN & -- & vManage, vSmart, vBond, Switch32 (LAN controller), Switch61 (mặt quản trị), máy trạm quản trị \\
+        900 & Trung tâm điều khiển SD-WAN & -- & vManage, vSmart, vBond, switch LAN controller, switch quản trị, máy trạm quản trị \\
         \hline
         -- & Nhà cung cấp Internet & 64511 & Router Internet, color \texttt{biz-internet} \\
         \hline
@@ -96,7 +96,7 @@ Nguyên tắc phân vai quan trọng là \textit{mỗi thành phần chỉ làm 
     ]
         \node[controller] (s900) at (0,5.1) {\textbf{Site 900 -- Mặt phẳng điều khiển SD-WAN}\\
         vManage \texttt{10.9.0.10}; vSmart \texttt{10.9.0.11} (System-IP \texttt{10.9.0.13}); vBond \texttt{10.9.0.12}\\
-        Switch32 gateway \texttt{10.9.0.2}; ra Internet có kiểm soát; cảnh báo email};
+        Switch LAN gateway \texttt{10.9.0.2}; ra Internet có kiểm soát; cảnh báo email};
 
         \node[transport] (internet) at (-4.6,3.25) {\textbf{Internet underlay}\\AS 64511 -- color \texttt{biz-internet}};
         \node[transport] (mpls) at (4.6,3.25) {\textbf{MPLS underlay}\\AS 64512 -- color \texttt{mpls}};
@@ -161,40 +161,40 @@ Campus chính được thiết kế ba tầng, kèm biên tường lửa HA, vù
     \resizebox{\textwidth}{!}{%
     \begin{tikzpicture}[
         font=\small, >=stealth,
-        dev/.style={draw, rounded corners=2pt, align=center, minimum height=1.1cm, text width=3.3cm, line width=0.8pt},
+        dev/.style={draw, rounded corners=2pt, align=center, minimum height=1.1cm, text width=3.3cm, line width=0.8pt, font=\linespread{1}\small},
         wan/.style={dev, fill=gray!10, draw=black!70},
         edge/.style={dev, fill=red!5, draw=red!60!black},
         fw/.style={dev, fill=orange!8, draw=orange!70!black},
         l2/.style={dev, fill=blue!4, draw=blue!50!black},
         core/.style={dev, fill=blue!10, draw=blue!65!black},
-        ovs/.style={dev, fill=green!7, draw=green!40!black, text width=3.1cm},
-        srv/.style={dev, fill=yellow!8, draw=yellow!45!black, text width=3.7cm, align=left},
+        ovs/.style={dev, fill=green!7, draw=green!40!black, text width=3.5cm},
+        srv/.style={dev, fill=yellow!8, draw=yellow!45!black},
         lbl/.style={font=\footnotesize, fill=white, inner sep=1.5pt},
         act/.style={line width=1.1pt},
         stb/.style={dashed, line width=0.7pt, black!60}
     ]
         % WAN
-        \node[wan] (inet) at (-3.4,13.6) {\textbf{Internet}\\AS 64511};
-        \node[wan] (mpls) at (3.4,13.6) {\textbf{MPLS}\\AS 64512};
-        \node[edge] (ve1) at (-3.4,11.3) {\textbf{vEdge1-S100}\\System-IP 10.200.100.1};
-        \node[edge] (ve2) at (3.4,11.3) {\textbf{vEdge2-S100}\\System-IP 10.200.100.2};
-        \node[l2] (swe1) at (-3.4,9.0) {\textbf{SW-WAN-Edge1}\\VLAN 103: 10.1.3.0/29};
-        \node[l2] (swe2) at (3.4,9.0) {\textbf{SW-WAN-Edge2}\\VLAN 104: 10.1.3.8/29};
-        % Firewall HA
-        \node[fw] (fwa) at (-3.4,6.7) {\textbf{FW-ASAv-Active}\\Primary (.1 / .9)};
-        \node[fw] (fws) at (3.4,6.7) {\textbf{FW-ASAv-Standby}\\Secondary (.4 / .12)};
-        \node[srv] (dmz) at (-8.2,9.0) {\textbf{DMZ} 10.1.1.0/28\\(SwitchDMZ)\\Web-Server .10\\Mail-Server .11};
-        % Core
-        \node[core] (c1) at (-3.4,4.2) {\textbf{Core-SW1}\\VRRP Master, gốc cây};
-        \node[core] (c2) at (3.4,4.2) {\textbf{Core-SW2}\\VRRP Backup};
-        \node[srv] (farm) at (8.2,4.2) {\textbf{SwitchServerFarm}\\VLAN 90: DHCP/DNS .10,\\ \quad Syslog .11\\VLAN 99: Controller .10,\\ \quad PC-Mgmt .50, ASDM};
+        \node[wan] (inet) at (-3.5,17.0) {\textbf{Internet}\\AS 64511};
+        \node[wan] (mpls) at (3.5,17.0) {\textbf{MPLS}\\AS 64512};
+        \node[edge] (ve1) at (-6.8,15.2) {\textbf{vEdge1-S100}\\System-IP 10.200.100.1};
+        \node[edge] (ve2) at (6.8,15.2) {\textbf{vEdge2-S100}\\System-IP 10.200.100.2};
+        \node[l2] (swe1) at (-6.8,13.2) {\textbf{SW-WAN-Edge1}\\VLAN 103: 10.1.3.0/29};
+        \node[l2] (swe2) at (6.8,13.2) {\textbf{SW-WAN-Edge2}\\VLAN 104: 10.1.3.8/29};
+        % Firewall HA; DMZ nam giua hai tuong lua
+        \node[fw] (fwa) at (-6.8,9.8) {\textbf{FW-ASAv-Active}\\Primary (.1 / .9)};
+        \node[fw] (fws) at (6.8,9.8) {\textbf{FW-ASAv-Standby}\\Secondary (.4 / .12)};
+        \node[srv, text width=5.2cm] (dmz) at (0,9.45) {\textbf{DMZ} 10.1.1.0/28 (SwitchDMZ)\\Web-Server .10, Mail-Server .11};
+        % Core; Server Farm nam giua hai Core
+        \node[core] (c1) at (-6.8,6.0) {\textbf{Core-SW1}\\VRRP Master, gốc cây};
+        \node[core] (c2) at (6.8,6.0) {\textbf{Core-SW2}\\VRRP Backup};
+        \node[srv, text width=5.2cm] (farm) at (0,5.3) {\textbf{SwitchServerFarm}\\VLAN 90: DHCP/DNS .10, Syslog .11\\VLAN 99: Controller .10,\\PC-Mgmt .50, FW Mgmt .33/.34};
         % SDN
-        \node[ovs] (d1) at (-3.4,1.7) {\textbf{Dist-SW1} (OVS)};
-        \node[ovs] (d2) at (3.4,1.7) {\textbf{Dist-SW2} (OVS)};
-        \node[ovs] (a1) at (-7.6,-1.0) {\textbf{Access-SW1}\\VLAN 10 -- CNTT};
-        \node[ovs] (a2) at (-2.55,-1.0) {\textbf{Access-SW2}\\VLAN 20 -- Toán-TK};
-        \node[ovs] (a3) at (2.55,-1.0) {\textbf{Access-SW3}\\VLAN 30 -- Luật};
-        \node[ovs] (a4) at (7.6,-1.0) {\textbf{Access-SW4}\\VLAN 40 -- Hành chính};
+        \node[ovs] (d1) at (-3,1.6) {\textbf{Dist-SW1} (OVS)};
+        \node[ovs] (d2) at (3,1.6) {\textbf{Dist-SW2} (OVS)};
+        \node[ovs] (a1) at (-7.8,-1.2) {\textbf{Access-SW1}\\VLAN 10 -- CNTT};
+        \node[ovs] (a2) at (-2.6,-1.2) {\textbf{Access-SW2}\\VLAN 20 -- Toán-TK};
+        \node[ovs] (a3) at (2.6,-1.2) {\textbf{Access-SW3}\\VLAN 30 -- Luật};
+        \node[ovs] (a4) at (7.8,-1.2) {\textbf{Access-SW4}\\VLAN 40 -- Hành chính};
 
         \draw[act] (inet) -- (ve1); \draw[act] (inet) -- (ve2);
         \draw[act] (mpls) -- (ve1); \draw[act] (mpls) -- (ve2);
@@ -202,24 +202,28 @@ Campus chính được thiết kế ba tầng, kèm biên tường lửa HA, vù
         \draw[act] (ve2) -- node[lbl]{OSPF} (swe2);
         \draw[act] (swe1) -- (fwa); \draw[stb] (swe1) -- (fws);
         \draw[act] (swe2) -- (fwa); \draw[stb] (swe2) -- (fws);
-        \draw[act, orange!70!black] (fwa) -- node[lbl, above=2pt]{failover Gi0/5} (fws);
-        \draw[act] (dmz.south) |- node[lbl, pos=0.75]{Gi0/4} (fwa.west);
-        \draw[stb] (dmz.south) ++(-0.6,0) |- ($(fws.south)+(0,-0.35)$) -- (fws.south);
-        \draw[act] (fwa) -- node[lbl, pos=0.45]{VLAN 101} (c1);
-        \draw[act] (fwa) -- node[lbl, pos=0.25]{VLAN 102} (c2);
-        \draw[stb] (fws) -- (c1);
-        \draw[stb] (fws) -- node[lbl, pos=0.45]{VLAN 101} (c2);
-        \draw[act, blue!65!black] (c1) -- node[lbl, above=3pt]{Po10 (LACP)} node[lbl, below=3pt]{VLAN 10--40, 100--102} (c2);
-        \draw[act] (c2) -- node[lbl]{VLAN 90} (farm);
-        \draw[act] (c1.south) ++(0.9,0) |- ($(farm.south)+(0,-0.45)$) node[lbl, pos=0.62]{trunk VLAN 90, 99} -- (farm.south);
-        \draw[act] (c1) -- node[lbl, pos=0.4]{D1-C1} (d1);
-        \draw[act] (c1) -- node[lbl, pos=0.2]{D2-C1} (d2);
-        \draw[stb] (c2) -- node[lbl, pos=0.2]{D1-C2} (d1);
-        \draw[stb] (c2) -- node[lbl, pos=0.4]{D2-C2} (d2);
+        % Failover phia tren khoi DMZ
+        \draw[act, orange!70!black] ([yshift=3.5mm]fwa.east) -- node[lbl, above=1pt]{failover Gi0/5} ([yshift=3.5mm]fws.west);
+        \draw[act] (fwa.east |- dmz.west) -- node[lbl]{Gi0/4} (dmz.west);
+        \draw[stb] (dmz.east) -- node[lbl]{Gi0/4} (fws.west |- dmz.east);
+        % Tuong lua - Core
+        \draw[act] (fwa) -- node[lbl]{VLAN 101} (c1);
+        \draw[act] (fwa) -- node[lbl, pos=0.62]{VLAN 102} (c2);
+        \draw[stb] (fws) -- node[lbl, pos=0.62]{VLAN 102} (c1);
+        \draw[stb] (fws) -- node[lbl]{VLAN 101} (c2);
+        % Po10 phia tren khoi Server Farm
+        \draw[act, blue!65!black] ([yshift=3.5mm]c1.east) -- node[lbl, above=1pt]{Po10 (LACP): VLAN 10--40, 100--102} ([yshift=3.5mm]c2.west);
+        \draw[act] (c1.east |- 0,5.75) -- node[lbl]{VLAN 90, 99} (farm.west |- 0,5.75);
+        \draw[act] (farm.east |- 0,5.75) -- node[lbl]{VLAN 90} (c2.west |- 0,5.75);
+        % Core - Distribution
+        \draw[act] (c1) -- node[lbl, pos=0.5]{D1-C1} (d1);
+        \draw[act] (c1) -- node[lbl, pos=0.5]{D2-C1} (d2);
+        \draw[stb] (c2) -- node[lbl, pos=0.5]{D1-C2} (d1);
+        \draw[stb] (c2) -- node[lbl, pos=0.5]{D2-C2} (d2);
         \draw[stb] (d1) -- node[lbl]{D1-D2} (d2);
         \foreach \a in {a1,a2,a3,a4} {\draw[act] (d1) -- (\a); \draw[stb] (d2) -- (\a);}
 
-        \node[align=center, font=\small] at (0,-2.8) {\rule[0.5ex]{1cm}{1.1pt}~đường đang dùng (cây dữ liệu của Controller, tường lửa Active) \qquad - - -~đường dự phòng / cạnh bị Controller chặn};
+        \node[align=center, font=\small] at (0,-2.7) {\rule[0.5ex]{1cm}{1.1pt}~đường đang dùng (cây dữ liệu của Controller, tường lửa Active) \qquad - - -~đường dự phòng / cạnh bị Controller chặn};
     \end{tikzpicture}%
     }
     \caption{Topology chi tiết Campus chính (Site 100)}
@@ -336,11 +340,11 @@ Lý do chọn Firewall-as-Core cho chi nhánh: (1) chi nhánh chỉ có hai VLAN
 
 \subsubsection{Trung tâm điều khiển SD-WAN (Site 900) và nhà cung cấp}
 
-Site 900 đặt ba controller trên mạng LAN \texttt{10.9.0.0/24} do Switch32 làm gateway (\texttt{10.9.0.2}). Switch32 là switch lớp 3 IOL có hai SVI nối ra hai nhà cung cấp: \texttt{203.0.113.249/30} về router Internet và \texttt{100.64.255.249/30} về router MPLS. Kết nối giữa Site 900 và nhà cung cấp dùng tuyến tĩnh (CE--PE static): Switch32 có tuyến mặc định về Internet, tuyến \texttt{100.64.0.0/16} về MPLS; ngược lại hai router nhà cung cấp có tuyến \texttt{10.9.0.0/16} trỏ về Switch32. Nhờ vậy vBond, vSmart, vManage tới được từ cả hai transport. Controller được ra Internet \textit{có kiểm soát} (chỉ DNS, NTP, HTTPS, ping chẩn đoán và SMTP gửi cảnh báo của vManage) như trong thực tế doanh nghiệp, nơi controller cần đồng bộ thời gian, phân giải tên và gửi thông báo.
+Site 900 đặt ba controller trên mạng LAN \texttt{10.9.0.0/24} do switch LAN Site 900 làm gateway (\texttt{10.9.0.2}). Đây là switch lớp 3 IOL có hai SVI nối ra hai nhà cung cấp: \texttt{203.0.113.249/30} về router Internet và \texttt{100.64.255.249/30} về router MPLS. Kết nối giữa Site 900 và nhà cung cấp dùng tuyến tĩnh (CE--PE static): switch này có tuyến mặc định về Internet, tuyến \texttt{100.64.0.0/16} về MPLS; ngược lại hai router nhà cung cấp có tuyến \texttt{10.9.0.0/16} trỏ về switch LAN Site 900. Nhờ vậy vBond, vSmart, vManage tới được từ cả hai transport. Controller được ra Internet \textit{có kiểm soát} (chỉ DNS, NTP, HTTPS, ping chẩn đoán và SMTP gửi cảnh báo của vManage) như trong thực tế doanh nghiệp, nơi controller cần đồng bộ thời gian, phân giải tên và gửi thông báo.
 
-Mạng \texttt{10.9.1.0/24} do Switch61 làm gateway là mặt quản trị thứ hai của controller. Switch61 có một cổng định tuyến nhận địa chỉ DHCP từ mạng thật của phòng lab, cho phép truy cập giao diện web của vManage từ máy tính bên ngoài EVE-NG.
+Mạng \texttt{10.9.1.0/24} do switch quản trị Site 900 làm gateway là mặt quản trị thứ hai của controller. Switch này có một cổng định tuyến nhận địa chỉ DHCP từ mạng thật của phòng lab, cho phép truy cập giao diện web của vManage từ máy tính bên ngoài EVE-NG.
 
-Hai router nhà cung cấp là Cisco vIOS. Router Internet (AS 64511) có tám liên kết khách hàng: hai vEdge Site 100, ba vEdge2 chi nhánh, vEdge2 Site 500, Switch32 và router MPLS; cổng Gi0/0 nối ra mạng thật của phòng lab, nhận địa chỉ bằng DHCP và thực hiện PAT cho khách hàng, đóng vai trò cổng Internet của nhà cung cấp. Router MPLS (AS 64512) có bảy liên kết: hai vEdge Site 100, ba vEdge1 chi nhánh, vEdge1 Site 500 và Switch32. Hai nhà cung cấp trao đổi tuyến qua eBGP trên \texttt{100.64.254.0/30}; router Internet gửi tuyến mặc định cho router MPLS, nhờ đó transport MPLS cũng có đường ra Internet (mô hình MPLS có Internet tập trung tại nhà cung cấp).
+Hai router nhà cung cấp là Cisco vIOS. Router Internet (AS 64511) có tám liên kết khách hàng: hai vEdge Site 100, ba vEdge2 chi nhánh, vEdge2 Site 500, switch LAN Site 900 và router MPLS; cổng Gi0/0 nối ra mạng thật của phòng lab, nhận địa chỉ bằng DHCP và thực hiện PAT cho khách hàng, đóng vai trò cổng Internet của nhà cung cấp. Router MPLS (AS 64512) có bảy liên kết: hai vEdge Site 100, ba vEdge1 chi nhánh, vEdge1 Site 500 và switch LAN Site 900. Hai nhà cung cấp trao đổi tuyến qua eBGP trên \texttt{100.64.254.0/30}; router Internet gửi tuyến mặc định cho router MPLS, nhờ đó transport MPLS cũng có đường ra Internet (mô hình MPLS có Internet tập trung tại nhà cung cấp).
 
 \subsubsection{Cơ sở mở rộng (Site 500)}
 
@@ -518,9 +522,9 @@ VLAN ID có thể trùng giữa các site (ví dụ VLAN 60 tại Site 200 và S
         \hline
         vBond & 10.9.0.12 & 10.9.1.12 & System-IP 10.9.3.12; \texttt{vbond 10.9.0.12 local} \\
         \hline
-        Switch32 & 10.9.0.2 & -- & Gateway controller LAN; CE--PE tĩnh \\
+        Switch LAN & 10.9.0.2 & -- & Gateway controller LAN; CE--PE tĩnh \\
         \hline
-        Switch61 & -- & 10.9.1.1 & Cầu ra mạng thật của phòng lab \\
+        Switch quản trị & -- & 10.9.1.1 & Cầu ra mạng thật của phòng lab \\
         \hline
         Máy trạm quản trị & 10.9.0.20 & -- & Truy cập vManage \\
         \hline
@@ -861,7 +865,7 @@ Thời gian chờ phiên DNS được giảm xuống 10 giây (\texttt{class-map
 
 Mỗi Brand-FW áp ACL \texttt{SDWAN\_IN} trên hai giao diện outside, chỉ cho phép lưu lượng từ \texttt{10.0.0.0/8} đến subnet của chính chi nhánh; lưu lượng khởi tạo từ LAN chi nhánh đi ra được cho phép theo security-level. ACL \texttt{VLAN99\_IN} trên giao diện VLAN 99 chỉ cho vùng quản trị chi nhánh đi trong \texttt{10.0.0.0/8}. Nhật ký mức \texttt{warnings} được gửi về Syslog Server tại Campus chính.
 
-Tại Site 900, Switch32 áp ACL \texttt{SITE900\_EGRESS} chiều vào trên SVI của mạng controller: lưu lượng tới \texttt{10.0.0.0/8}, \texttt{100.64.0.0/10} và \texttt{203.0.113.0/24} (fabric SD-WAN và nội bộ) được tự do; ra Internet chỉ DNS, NTP, HTTPS, ICMP echo và SMTP 587 từ riêng vManage; mọi thứ khác bị từ chối và ghi nhật ký. Router Internet chỉ NAT mạng controller \texttt{10.9.0.0/24}.
+Tại Site 900, switch LAN áp ACL \texttt{SITE900\_EGRESS} chiều vào trên SVI của mạng controller: lưu lượng tới \texttt{10.0.0.0/8}, \texttt{100.64.0.0/10} và \texttt{203.0.113.0/24} (fabric SD-WAN và nội bộ) được tự do; ra Internet chỉ DNS, NTP, HTTPS, ICMP echo và SMTP 587 từ riêng vManage; mọi thứ khác bị từ chối và ghi nhật ký. Router Internet chỉ NAT mạng controller \texttt{10.9.0.0/24}.
 
 Trên overlay, data policy \texttt{DP\_BRANCH} chặn Telnet vào Server Farm và SSH/Telnet vào DMZ từ mọi chi nhánh. Như vậy một luồng từ chi nhánh vào DMZ phải thỏa đồng thời chính sách overlay và ACL tường lửa biên --- hai lớp kiểm soát độc lập.
 

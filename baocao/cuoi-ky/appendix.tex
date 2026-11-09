@@ -203,7 +203,7 @@ route outside2 9.9.9.9 255.255.255.255 10.2.1.6 1
 
 \subsection*{D. Danh sách truy cập trên tường lửa biên và Site 900}
 
-\begin{lstlisting}[style=customcode, caption={ACL SDWAN\_IN, DMZ\_IN và INSIDE\_OUT trên tường lửa biên Campus chính (rút gọn)}]
+\begin{lstlisting}[style=customcode, caption={Các ACL trên tường lửa biên Campus chính (rút gọn)}]
 access-list SDWAN_IN extended permit tcp 10.0.0.0 255.0.0.0 host 10.1.1.10 object-group WEB_SVC
 access-list SDWAN_IN extended permit tcp 10.0.0.0 255.0.0.0 host 10.1.1.11 object-group MAIL_SVC
 access-list SDWAN_IN extended permit icmp 10.0.0.0 255.0.0.0 10.1.1.0 255.255.255.240 echo
@@ -234,7 +234,7 @@ policy-map global_policy
   set connection timeout idle 0:00:10
 \end{lstlisting}
 
-\begin{lstlisting}[style=customcode, caption={ACL SITE900\_EGRESS trên Switch32 (rút gọn)}]
+\begin{lstlisting}[style=customcode, caption={ACL SITE900\_EGRESS trên switch LAN Site 900 (rút gọn)}]
 ip access-list extended SITE900_EGRESS
  permit ip 10.9.0.0 0.0.255.255 10.0.0.0 0.255.255.255
  permit ip 10.9.0.0 0.0.255.255 100.64.0.0 0.63.255.255

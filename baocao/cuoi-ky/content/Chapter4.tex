@@ -28,7 +28,7 @@ Toàn bộ hệ thống được triển khai trong một lab EVE-NG gồm \text
         \hline
         Tường lửa & Cisco ASAv 9.20(2)2 & 6 & FW-ASAv-Active/Standby; Brand-FW ba chi nhánh và Site 500 \\
         \hline
-        Switch Cisco & Cisco IOL L2 (adventerprisek9 và ipbasek9) & 18 & Core-SW1/2, SwitchDMZ, SwitchServerFarm, SW-WAN-Edge1/2, Switch32, Switch61, ba SwitchBrand, sáu switch khối chi nhánh, SW-S500 \\
+        Switch Cisco & Cisco IOL L2 (adventerprisek9 và ipbasek9) & 18 & Core-SW1/2, SwitchDMZ, SwitchServerFarm, SW-WAN-Edge1/2, hai switch Site 900, ba SwitchBrand, sáu switch khối chi nhánh, SW-S500 \\
         \hline
         Router nhà cung cấp & Cisco vIOS 15.7(3)M3 & 2 & Internet, MPLS \\
         \hline
@@ -49,7 +49,7 @@ Toàn bộ hệ thống được triển khai trong một lab EVE-NG gồm \text
 
 Core-SW1/2 dùng image IOL thay cho vIOS-L2 vì vIOS-L2 thường xuyên rơi vào trạng thái chiếm dụng CPU và nạp cấu hình khởi động không ổn định khi tầng dưới phát nhiều broadcast. Image IOL \texttt{adventerprisek9} hỗ trợ đầy đủ \texttt{switchport}, SVI, \texttt{ip routing}, cổng định tuyến, VRRP và OSPF. Máy trạm VPCS được dùng cho các phép thử ping và DHCP nhanh; bốn máy Ubuntu có giao diện đồ họa được dùng để kiểm thử dịch vụ Web và Mail như người dùng thật.
 
-Thứ tự khởi động lab được chuẩn hóa để tránh lỗi phụ thuộc: nhà cung cấp (Internet, MPLS) và Switch32 $\rightarrow$ ba controller SD-WAN $\rightarrow$ các vEdge $\rightarrow$ tường lửa và Core Site 100 $\rightarrow$ SwitchServerFarm, SwitchDMZ $\rightarrow$ SDN Controller $\rightarrow$ Dist-SW1/2 $\rightarrow$ Access-SW1--4 $\rightarrow$ máy chủ dịch vụ $\rightarrow$ chi nhánh $\rightarrow$ máy trạm.
+Thứ tự khởi động lab được chuẩn hóa để tránh lỗi phụ thuộc: nhà cung cấp (Internet, MPLS) và switch LAN Site 900 $\rightarrow$ ba controller SD-WAN $\rightarrow$ các vEdge $\rightarrow$ tường lửa và Core Site 100 $\rightarrow$ SwitchServerFarm, SwitchDMZ $\rightarrow$ SDN Controller $\rightarrow$ Dist-SW1/2 $\rightarrow$ Access-SW1--4 $\rightarrow$ máy chủ dịch vụ $\rightarrow$ chi nhánh $\rightarrow$ máy trạm.
 
 \subsection{Triển khai mạng LAN tại Campus chính}
 
@@ -177,6 +177,7 @@ Phía vEdge Site 100, VPN~1 chạy OSPF Area~0 trên cổng nối SW-WAN-Edge (h
 
 Khối lệnh~\ref{lst:fw_live_ch4} là trạng thái thực tế của hệ thống: Primary ở trạng thái Active, Secondary đạt \texttt{Standby Ready}, cấu hình đã đồng bộ (\texttt{Sync Done}); tường lửa có sáu láng giềng OSPF \texttt{FULL} gồm hai vEdge và hai Core trên cả hai mạng transit. Từ PC-Management (\texttt{10.1.99.50}), giao diện ASDM của tường lửa Active được truy cập thành công qua HTTPS. Để ASDM hoạt động, mỗi đơn vị cần tự sinh cặp khóa RSA cho HTTPS (khóa không được đồng bộ qua failover) và máy quản trị cần môi trường Java phù hợp với trình khởi chạy ASDM.
 
+\enlargethispage{2\baselineskip}
 \begin{lstlisting}[style=customcode,caption={Trạng thái failover và OSPF của FW-ASAv-Active},label={lst:fw_live_ch4}]
 FW-ASAv-Active# show failover state
                State          Last Failure Reason
@@ -244,15 +245,20 @@ Trên Controller, Ryu được chạy dưới dạng dịch vụ systemd (ưu ti
 
 Campus SDN Console là giao diện web do nhóm tự phát triển, chạy ngay trong tiến trình Ryu (ứng dụng \texttt{campus\_noc\_monitor.py}), không dùng thư viện ngoài vì VLAN 99 không ra Internet. Mọi thao tác trên giao diện đều gọi REST API của chính Controller, nên cũng có thể tự động hóa bằng script. Bảng~\ref{tab:sdn_console_tabs} tóm tắt mười trang chức năng và mục tiêu đánh giá tương ứng; các hình tiếp theo được chụp trực tiếp trên hệ thống đang vận hành.
 
-\begin{table}[H]
-    \centering
-    \small
-    \caption{Các trang chức năng của Campus SDN Console}
-    \label{tab:sdn_console_tabs}
-    \begin{tabularx}{\textwidth}{|P{2.4cm}|Y|}
-        \hline
-        \textbf{Trang} & \textbf{Chức năng} \\
-        \hline
+\begingroup
+\small
+\begin{longtable}{|P{2.4cm}|L{\dimexpr\textwidth-2.4cm-4\tabcolsep-3\arrayrulewidth\relax}|}
+    \caption{Các trang chức năng của Campus SDN Console}\label{tab:sdn_console_tabs} \\
+    \hline
+    \textbf{Trang} & \textbf{Chức năng} \\
+    \hline
+    \endfirsthead
+    \hline
+    \textbf{Trang} & \textbf{Chức năng} \\
+    \hline
+    \endhead
+    \hline
+    \endfoot
         Tổng quan & Số switch OpenFlow và liên kết đang sống, thời gian hội tụ gần nhất và trung bình, băng thông tổng theo thời gian, nhật ký sự kiện \\
         \hline
         Topology & Đồ thị liên kết và cây dữ liệu; cắt/khôi phục từng liên kết ở chế độ mô phỏng đứt ngầm (\textit{silent}) hoặc tắt cổng (\textit{admin}) \\
@@ -272,9 +278,8 @@ Campus SDN Console là giao diện web do nhóm tự phát triển, chạy ngay 
         Sức khỏe & Kênh điều khiển của từng switch, cha trong cây, các đường quản trị VLAN 99 đang dùng, số lần nối lại; số lần Controller khựng; vai trò STP của VLAN 99 trên Core-SW1 qua SNMP; cảnh báo tự sinh \\
         \hline
         Kịch bản & Chạy tự động sáu kịch bản cắt liên kết S1--S6 và kết luận Đạt/Không đạt theo ngưỡng gián đoạn \\
-        \hline
-    \end{tabularx}
-\end{table}
+\end{longtable}
+\endgroup
 
 Hình~\ref{fig:console_topology_s1} chụp đúng lúc kịch bản S1 đang cắt liên kết Dist-SW1--Core-SW1 (nét đứt màu cam): Controller đã tính lại cây, mọi Access đi lên Core-SW1 qua Dist-SW2, liên kết D1-C1 ở trạng thái \textit{cắt (silent)}, mười hai liên kết còn lại vẫn sống.
 
@@ -375,15 +380,20 @@ Bài học rút ra là trong mạng SDN in-band, mặt phẳng điều khiển p
 
 \textbf{Đánh giá theo năm tiêu chí định lượng} (Bảng~\ref{tab:sdn_muc_tieu}): các phép đo được thực hiện bằng script tự động, ping 0,1 giây từ Controller tới máy trạm.
 
-\begin{table}[H]
-    \centering
-    \small
-    \caption{Kết quả đánh giá SDN theo năm tiêu chí}
-    \label{tab:sdn_muc_tieu}
-    \begin{tabularx}{\textwidth}{|P{3.3cm}|Y|}
-        \hline
-        \textbf{Tiêu chí} & \textbf{Kết quả đo} \\
-        \hline
+\begingroup
+\small
+\begin{longtable}{|P{3.3cm}|L{\dimexpr\textwidth-3.3cm-4\tabcolsep-3\arrayrulewidth\relax}|}
+    \caption{Kết quả đánh giá SDN theo năm tiêu chí}\label{tab:sdn_muc_tieu} \\
+    \hline
+    \textbf{Tiêu chí} & \textbf{Kết quả đo} \\
+    \hline
+    \endfirsthead
+    \hline
+    \textbf{Tiêu chí} & \textbf{Kết quả đo} \\
+    \hline
+    \endhead
+    \hline
+    \endfoot
         Thời gian thêm VLAN & SDN: \textbf{3,8 ms} (một lệnh API, đến khi switch xác nhận); cùng thay đổi trên mỗi Core IOL cần 18 lệnh CLI, script đẩy xong khoảng 1,2 giây/thiết bị khi chờ đúng prompt. Đo đầu cuối (3 lần, sai số khoảng 5 giây, máy trạm đặt IP tĩnh): xong SDN và hai Core sau \textbf{5,3 giây}, ping được gateway sau 37,8 giây, DHCP Server sau 42,0 giây. Chưa gồm bước tạo scope DHCP làm tay \\
         \hline
         Thời gian khôi phục khi mất liên kết & Hội tụ của Controller dưới 16 ms; gián đoạn dữ liệu chủ yếu là thời gian phát hiện: cổng báo down 0--0,3 giây, đứt ngầm Access--Distribution 1,8 giây, Distribution--Core 2,9--3,4 giây, mất hẳn Dist-SW1 1,9 giây; khi liên kết trở lại 0--0,4 giây \\
@@ -393,9 +403,8 @@ Bài học rút ra là trong mạng SDN in-band, mặt phẳng điều khiển p
         Tải Core/Distribution & Lúc rảnh khoảng 85 packet-in/s, Ryu khoảng 4\% CPU; không tăng theo lưu lượng người dùng (luồng đã học đi thẳng bằng flow). Khi tăng lên 1000 MAC mới/giây (1088 packet-in/s), Ryu tăng tuyến tính tới 41,3\% CPU, luồng đang chạy không mất gói (100/100), 6/6 switch giữ kết nối (Hình~\ref{fig:bd_packetin}). Dưới tải dữ liệu, CPU tiến trình Dist-SW1 và Access-SW1 lên tối đa 84\% và 79\% (Bảng~\ref{tab:cpu_ram}) \\
         \hline
         Áp chính sách tập trung & Luật chặn ICMP giữa VLAN 10 và VLAN 40 áp lên bốn Access trong \textbf{8,0--12,6 ms} (12 flow-mod), gỡ trong 5,2--10,8 ms; bộ đếm của luật khớp đúng số gói bị chặn (5/5); luồng khác không bị ảnh hưởng (Hình~\ref{fig:console_policy}) \\
-        \hline
-    \end{tabularx}
-\end{table}
+\end{longtable}
+\endgroup
 
 \textbf{Kịch bản tự phục hồi:} trang Kịch bản của Console chạy tự động sáu kịch bản cắt liên kết (mô phỏng đứt ngầm, giữ 15 giây) với tiêu chí đạt: gián đoạn khi cắt không quá 5 giây, khi khôi phục không quá 3 giây và mạng trở về đủ 13/13 liên kết, 6/6 switch. Bảng~\ref{tab:sdn_kich_ban} là kết quả trên hệ thống hoàn chỉnh (ping 0,1 giây tới một máy trạm mỗi VLAN 10--40), cột cuối ghi kết quả trước khi tắt ONOS và thiết kế lại kênh VLAN 99 để so sánh.
 
@@ -979,7 +988,7 @@ Từ báo cáo có thể rút ra các nhận định sau:
 
 Việc cho người dùng ra Internet được làm theo từng giai đoạn, kiểm thử xong giai đoạn trước mới sang giai đoạn sau: (1) router Internet nhận địa chỉ DHCP từ mạng thật của phòng lab, PAT các dải \texttt{203.0.113.0/24} và \texttt{100.64.0.0/10}; (2) vEdge Site 100 bật \texttt{nat} trên cổng \texttt{biz-internet} và thêm tuyến mặc định kiểu NAT trong VPN 1; (3) chi nhánh: vEdge2 tương tự, Brand-FW tách tuyến nội bộ và tuyến Internet (Khối lệnh~\ref{lst:brandfw_ch4}); (4) DNS Server chuyển tiếp tên ngoài, tường lửa biên chỉ cho riêng máy chủ DNS hỏi ra ngoài; (5) chính sách theo vùng (VLAN 99, Server Farm, DMZ, Site 900); (6) ma trận kiểm thử. Dự phòng Internet của chi nhánh được thực hiện bằng NAT trên cổng MPLS của vEdge1 kèm IP SLA \texttt{track 2} trên Brand-FW.
 
-Cảnh báo email được triển khai sau cùng: Switch32 mở thêm một dòng ACL cho riêng vManage gửi SMTP 587, vManage được khai báo DNS (\texttt{vpn 0 dns 8.8.8.8 primary}), sau đó cấu hình máy chủ SMTP và luật thông báo \texttt{SDWAN-DOWN-ALERT} trên giao diện vManage.
+Cảnh báo email được triển khai sau cùng: switch LAN Site 900 mở thêm một dòng ACL cho riêng vManage gửi SMTP 587, vManage được khai báo DNS (\texttt{vpn 0 dns 8.8.8.8 primary}), sau đó cấu hình máy chủ SMTP và luật thông báo \texttt{SDWAN-DOWN-ALERT} trên giao diện vManage.
 
 \subsubsection{Các vấn đề kỹ thuật}\label{sec:bai_hoc_internet}
 
