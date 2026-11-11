@@ -69,7 +69,7 @@
         <interface id="6" name="Gi0/6" type="ethernet" network_id="71"/>
         <interface id="7" name="Gi0/7" type="ethernet" network_id="92"/>
       </node>
-      <node id="28" name="vEdge1" type="qemu" template="vtedge" image="vtedge-20.10.1" console="telnet" cpu="2" cpulimit="0" ram="1024" ethernet="5" uuid="5b24589e-464c-499c-b452-3eefbcc2f260" qemu_options="-machine type=pc,accel=kvm -cpu host -vga std -usbdevice tablet -boot order=dc -cpu host" qemu_version="2.12.0" qemu_arch="x86_64" qemu_nic="virtio-net-pci" delay="0" icon="SDWAN-2D-Velo-vEdge-S.svg" config="1" left="1035" top="795">
+      <node id="28" name="vEdge1" type="qemu" template="vtedge" image="vtedge-20.10.1" console="telnet" cpu="2" cpulimit="0" ram="1024" ethernet="5" uuid="5b24589e-464c-499c-b452-3eefbcc2f260" qemu_options="-machine type=pc,accel=kvm -cpu host -vga std -usbdevice tablet -boot order=dc -cpu host" qemu_version="2.12.0" qemu_arch="x86_64" qemu_nic="virtio-net-pci" delay="0" icon="SDWAN-2D-Velo-vEdge-S.svg" config="0" left="1035" top="795">
         <interface id="1" name="ge0/0" type="ethernet" network_id="110"/>
         <interface id="3" name="ge0/2" type="ethernet" network_id="47"/>
         <interface id="4" name="ge0/3" type="ethernet" network_id="48"/>
@@ -239,7 +239,7 @@
         <interface id="16" name="e0/1" type="ethernet" network_id="86"/>
         <interface id="32" name="e0/2" type="ethernet" network_id="87"/>
       </node>
-      <node id="6" name="vEdge2" type="qemu" template="vtedge" image="vtedge-20.10.1" console="telnet" cpu="2" cpulimit="0" ram="1024" ethernet="5" uuid="1d5e1b86-1b90-4bbb-932c-c76c1d4c56a0" qemu_options="-machine type=pc,accel=kvm -cpu host -vga std -usbdevice tablet -boot order=dc -cpu host" qemu_version="2.12.0" qemu_arch="x86_64" qemu_nic="virtio-net-pci" delay="0" icon="SDWAN-2D-Velo-vEdge-S.svg" config="1" left="1356" top="789">
+      <node id="6" name="vEdge2" type="qemu" template="vtedge" image="vtedge-20.10.1" console="telnet" cpu="2" cpulimit="0" ram="1024" ethernet="5" uuid="1d5e1b86-1b90-4bbb-932c-c76c1d4c56a0" qemu_options="-machine type=pc,accel=kvm -cpu host -vga std -usbdevice tablet -boot order=dc -cpu host" qemu_version="2.12.0" qemu_arch="x86_64" qemu_nic="virtio-net-pci" delay="0" icon="SDWAN-2D-Velo-vEdge-S.svg" config="0" left="1356" top="789">
         <interface id="2" name="ge0/1" type="ethernet" network_id="111"/>
         <interface id="3" name="ge0/2" type="ethernet" network_id="45"/>
         <interface id="4" name="ge0/3" type="ethernet" network_id="46"/>

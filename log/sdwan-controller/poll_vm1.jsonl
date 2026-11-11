@@ -1,0 +1,549 @@
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236037.69}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236040.57}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236043.37}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236046.0}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236048.7}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236051.72}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236054.34}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236057.39}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236060.05}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236062.85}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236065.51}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236068.05}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236070.58}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236073.24}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236075.94}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236078.49}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236081.02}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236083.52}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236086.03}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236088.54}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236091.08}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236093.53}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236096.0}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236098.51}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236101.03}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236103.59}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236106.1}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236108.59}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236111.17}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236113.72}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236116.24}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236118.84}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236121.52}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236124.06}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236126.8}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236129.65}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236132.18}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236134.74}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236137.34}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236139.91}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236142.58}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236145.14}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236147.65}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236150.2}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236152.82}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236155.38}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236158.06}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236160.88}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236163.5}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236166.29}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236169.16}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236171.81}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236174.33}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236176.88}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236179.36}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236181.9}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236184.45}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236187.13}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236189.7}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236192.25}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236194.86}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236197.45}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236200.17}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236203.13}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236205.71}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "con"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236208.27}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236210.88}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236213.45}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236215.97}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236218.54}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236221.07}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236223.62}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236226.14}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236228.66}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236231.17}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236233.68}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236236.15}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236238.82}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236241.34}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236243.93}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236246.5}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236249.0}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236251.61}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236254.11}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236257.01}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236259.56}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236262.5}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236264.98}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236267.5}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236270.03}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236272.61}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236275.29}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236278.29}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236280.8}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236283.27}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236285.69}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236288.16}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236290.76}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236293.55}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236296.1}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236298.56}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236301.25}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236303.75}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236306.32}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236308.84}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236311.63}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236317.5}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236320.57}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236323.44}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236326.26}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236329.06}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236331.72}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236335.7}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236338.5}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236340.98}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236344.38}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236347.07}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236350.11}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236352.64}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236355.36}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236357.78}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236360.28}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236362.75}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236365.29}
+{"ctrl": {"vsmart": "up", "vbond": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236367.82}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236370.33}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236373.08}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236375.65}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236378.44}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236381.03}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236384.24}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236387.02}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236395.48}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236398.14}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236400.74}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236403.36}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236406.06}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236408.76}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236411.51}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236414.14}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236416.76}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236419.64}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236422.66}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236425.25}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236428.17}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236431.01}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236433.84}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236436.85}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236440.35}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236443.45}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236446.23}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236448.86}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236451.49}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236454.21}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236456.74}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236459.39}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236462.55}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236465.77}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236468.52}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236471.43}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236474.12}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236477.01}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236480.9}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236483.53}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236487.15}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236490.72}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236493.41}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236496.28}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236498.93}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236501.51}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236504.06}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236506.96}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236509.63}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236512.24}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236515.12}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236517.77}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236520.39}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236523.21}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236526.07}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236528.66}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236531.2}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236533.86}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236536.43}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236539.4}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236543.04}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236546.37}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236548.95}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236551.59}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236554.26}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236556.89}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236559.74}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236562.42}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236565.0}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236567.72}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236572.43}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236575.35}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236578.06}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236580.66}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236583.3}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236585.87}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236588.41}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236591.06}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236593.63}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236596.31}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236598.98}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236601.6}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236604.16}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236606.71}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236609.48}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236612.19}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236614.98}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236617.71}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236620.53}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236623.4}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236625.97}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236628.63}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236631.91}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236634.77}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236637.48}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236640.61}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236643.91}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236646.68}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236649.26}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236651.99}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236654.86}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236658.35}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236661.18}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236663.91}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236667.25}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236669.86}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236672.45}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236675.03}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236677.68}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236680.3}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236682.94}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236685.81}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236688.58}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236691.88}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236696.66}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236699.37}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236702.23}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236704.9}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236707.44}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236710.1}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236712.7}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236715.32}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236717.91}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236721.05}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236723.62}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236726.89}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236729.43}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236732.04}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236734.78}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236737.8}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236740.59}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236743.64}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236746.69}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236749.28}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236751.8}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236754.42}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236756.98}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236760.58}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236765.68}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236768.48}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236771.41}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236775.57}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236779.18}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236781.9}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236784.42}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236786.98}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236789.81}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236793.14}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236796.1}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236798.64}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236801.23}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236803.95}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236807.17}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236811.98}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236821.98}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236825.94}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236828.36}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236830.93}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236833.89}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236836.67}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236839.2}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236841.81}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236844.49}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236847.11}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236849.82}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236852.91}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236855.43}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236857.97}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236860.6}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236863.12}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236865.68}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236868.22}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236870.75}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236873.3}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236875.86}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236878.41}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236881.04}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236883.76}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236886.3}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236888.87}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236891.52}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236894.06}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236896.58}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236899.26}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236902.09}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236904.66}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236907.25}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236909.82}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236912.36}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236914.92}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236917.5}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236920.32}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236922.92}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236925.43}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236927.92}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236930.55}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236933.15}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236936.26}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236938.93}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236941.62}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236944.19}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236946.99}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236950.05}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236953.06}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236956.56}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236959.21}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236961.77}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236964.33}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236966.92}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236969.46}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236971.99}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236974.53}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236977.27}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236979.82}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236982.43}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236985.0}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236988.09}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236991.84}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236994.8}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794236997.52}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237002.91}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237005.51}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237008.04}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237010.58}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237013.18}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237015.75}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237018.35}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237020.92}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237023.53}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237026.22}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237028.79}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237031.35}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237033.87}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237036.45}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237039.01}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237041.56}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237044.4}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237047.23}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237049.9}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237052.45}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237054.99}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237057.6}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237060.13}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237062.77}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237065.35}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237068.03}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237070.9}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237073.45}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237075.97}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237078.64}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237081.32}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237083.93}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237086.53}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237089.98}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237092.62}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237095.15}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237097.71}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237100.23}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237102.82}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237105.52}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237108.1}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237110.64}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237113.16}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237115.68}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237118.24}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237120.87}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237123.51}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237126.09}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237129.26}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237131.84}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237134.38}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237136.99}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237139.5}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237142.05}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237144.61}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237147.37}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237149.95}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237153.21}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237156.05}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237158.58}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237161.07}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237163.61}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237166.13}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237168.72}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237171.31}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237174.4}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237176.95}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237179.48}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237181.99}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237184.54}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237187.15}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237189.71}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237192.27}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237194.82}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237197.36}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237199.99}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237202.53}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237205.23}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237207.77}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237210.3}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237212.87}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237215.44}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237218.0}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237220.67}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237223.32}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237225.88}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237228.45}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237230.97}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237233.49}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237236.07}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237238.64}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237241.29}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237243.87}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237246.4}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237248.95}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237251.56}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237254.08}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237256.62}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237259.2}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237261.76}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237264.33}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237266.85}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237269.36}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237272.2}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237274.75}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237277.33}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237280.06}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237282.61}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237285.18}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237287.74}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237290.27}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237292.82}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237295.37}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237298.03}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237300.65}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237303.2}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237305.78}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237308.33}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237310.9}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237313.45}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237316.02}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237318.56}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237321.11}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237323.74}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237326.34}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237328.88}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237331.54}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237334.15}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237337.15}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237339.85}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237342.44}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237344.97}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237347.51}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237350.1}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237352.62}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237355.21}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237357.83}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237360.41}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237363.1}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237365.65}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237368.86}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237371.38}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237373.92}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237376.49}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237379.25}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237381.85}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237384.39}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237386.94}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237389.48}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237392.04}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237394.57}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237397.23}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237399.86}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237402.44}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237404.99}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237407.53}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237410.14}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237412.66}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237415.25}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237417.86}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237420.45}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237423.02}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237425.58}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237428.11}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237430.65}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237433.17}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237435.73}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237438.27}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237440.82}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237443.57}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237446.18}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237448.6}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237451.04}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237453.61}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237456.46}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237459.11}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237461.73}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237464.43}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237467.2}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237469.76}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237472.34}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237474.93}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237477.5}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237480.07}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237482.7}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237485.28}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237489.14}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237491.74}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237494.42}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237497.0}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237499.57}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237502.17}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237504.8}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237507.63}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237510.17}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237512.86}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237515.64}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237518.97}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237522.22}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237524.95}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237527.57}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237530.11}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237532.72}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237535.42}
+{"ctrl": {"vsmart": "up", "vbond": "up", "vmanage": "up"}, "omp": "UP", "peers": "1", "routes": "17", "bfd": "10", "t": 1794237538.0}

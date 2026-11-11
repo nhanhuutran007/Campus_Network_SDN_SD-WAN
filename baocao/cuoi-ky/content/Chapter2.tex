@@ -203,7 +203,7 @@ Edge chia bảng định tuyến thành nhiều VPN (tương tự VRF): \textbf{
 
 \textbf{OMP} (Overlay Management Protocol) chạy trong các kết nối DTLS/TLS giữa Edge và vSmart, mang ba loại thông tin: tuyến OMP (các prefix của VPN dịch vụ), TLOC và thông tin dịch vụ. vSmart đóng vai trò tương tự route reflector: nhận tuyến từ mọi Edge, áp chính sách điều khiển rồi phân phối lại. Mặc định, các Edge dựng đường hầm IPsec full-mesh giữa mọi cặp TLOC.
 
-\textbf{BFD} (Bidirectional Forwarding Detection) chạy bên trong mỗi đường hầm IPsec để phát hiện đường hầm hỏng trong khoảng thời gian dưới giây và đo độ trễ, jitter, tỷ lệ mất gói. Các số liệu này là đầu vào cho chính sách định tuyến theo ứng dụng.
+\textbf{BFD} (Bidirectional Forwarding Detection) chạy bên trong mỗi đường hầm IPsec, gửi gói thăm dò định kỳ để phát hiện đường hầm hỏng và đo độ trễ, jitter, tỷ lệ mất gói. Thời gian phát hiện bằng chu kỳ thăm dò nhân với hệ số \textit{multiplier}; với giá trị mặc định 1000~ms $\times$ 7 là khoảng 7 giây, và có thể rút ngắn bằng cách giảm hai tham số này. Các số liệu này là đầu vào cho chính sách định tuyến theo ứng dụng.
 
 \subsubsection{Xác thực thiết bị và PKI}
 

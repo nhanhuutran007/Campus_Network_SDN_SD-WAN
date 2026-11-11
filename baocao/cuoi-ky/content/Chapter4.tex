@@ -173,7 +173,7 @@ router ospf 1
  redistribute static subnets route-map STATIC_TO_OSPF
 \end{lstlisting}
 
-Phía vEdge Site 100, VPN~1 chạy OSPF Area~0 trên cổng nối SW-WAN-Edge (hello 2 giây, dead 8 giây) và quảng bá tuyến OSPF vào OMP (\texttt{omp advertise ospf external}); vEdge không cần tuyến tĩnh \texttt{10.1.0.0/16} về tường lửa. Tường lửa phân phối lại tuyến tĩnh \texttt{10.1.99.0/24} vào OSPF để chi nhánh tới được VLAN quản trị. Ba danh sách truy cập theo hướng được giữ nguyên: \texttt{INSIDE\_OUT} (chỉ máy chủ DNS hỏi tên ra ngoài, VLAN 99 không ra Internet), \texttt{SDWAN\_IN} (chi nhánh chỉ vào được Web 80/443, Mail 25/587/143/993 trong DMZ, DNS nội bộ và các mạng Campus) và \texttt{DMZ\_IN} (DMZ chỉ gửi Syslog, DNS, ping vào trong).
+Phía vEdge Site 100, VPN~1 chạy OSPF Area~0 trên cổng nối SW-WAN-Edge (hello 2 giây, dead 8 giây) và quảng bá tuyến OSPF vào OMP (\texttt{omp advertise ospf external}); vEdge không cần tuyến tĩnh \texttt{10.1.0.0/16} về tường lửa. Chiều ngược lại, hai vEdge phân phối tuyến OMP vào OSPF với metric 10 (vEdge1) và 100 (vEdge2) để tường lửa có đường dự phòng tới chi nhánh khi mất vEdge1 (xem kết quả đo ở mục Kết quả kiểm thử SD-WAN). Tường lửa phân phối lại tuyến tĩnh \texttt{10.1.99.0/24} vào OSPF để chi nhánh tới được VLAN quản trị. Ba danh sách truy cập theo hướng được giữ nguyên: \texttt{INSIDE\_OUT} (chỉ máy chủ DNS hỏi tên ra ngoài, VLAN 99 không ra Internet), \texttt{SDWAN\_IN} (chi nhánh chỉ vào được Web 80/443, Mail 25/587/143/993 trong DMZ, DNS nội bộ và các mạng Campus) và \texttt{DMZ\_IN} (DMZ chỉ gửi Syslog, DNS, ping vào trong).
 
 Khối lệnh~\ref{lst:fw_live_ch4} là trạng thái thực tế của hệ thống: Primary ở trạng thái Active, Secondary đạt \texttt{Standby Ready}, cấu hình đã đồng bộ (\texttt{Sync Done}); tường lửa có sáu láng giềng OSPF \texttt{FULL} gồm hai vEdge và hai Core trên cả hai mạng transit. Từ PC-Management (\texttt{10.1.99.50}), giao diện ASDM của tường lửa Active được truy cập thành công qua HTTPS. Để ASDM hoạt động, mỗi đơn vị cần tự sinh cặp khóa RSA cho HTTPS (khóa không được đồng bộ qua failover) và máy quản trị cần môi trường Java phù hợp với trình khởi chạy ASDM.
 
@@ -677,6 +677,7 @@ vpn 1
  name LAN
  router
   ospf
+   redistribute omp route-policy OMP2OSPF_PRI
    area 0
     interface ge0/0
      hello-interval 2
@@ -691,6 +692,13 @@ vpn 1
 omp
  advertise connected
  advertise static
+policy
+ route-policy OMP2OSPF_PRI
+  sequence 10
+   action accept
+    set
+     metric 10
+  default-action reject
 \end{lstlisting}
 
 \subsubsection{Các vấn đề kỹ thuật và nguyên nhân gốc}
@@ -715,7 +723,7 @@ omp
     \hline
     vEdge lên vBond, vManage nhưng không có OMP với vSmart & Chưa đăng ký chassis/serial trên vSmart & Đăng ký trên đủ ba controller \\
     \hline
-    Sau khi khởi động lại controller, một số vEdge rơi khỏi fabric & Danh sách thiết bị hợp lệ trên controller bị mất sau khởi động lại & Đăng ký lại; bổ sung bước kiểm tra danh sách đủ tám vEdge sau mỗi lần khởi động controller \\
+    Sau khi khởi động lại controller, một số vEdge rơi khỏi fabric & Danh sách thiết bị hợp lệ trên controller bị mất sau khởi động lại & Đăng ký lại; bổ sung bước kiểm tra danh sách đủ mười vEdge sau mỗi lần khởi động controller \\
     \hline
     Chỉ một color lên được controller (``1/3 vSmart'') & Tuyến \texttt{10.9.0.0/24} chỉ có qua MPLS, che tuyến \texttt{/16} qua Internet theo longest-prefix match & Khai báo tuyến \texttt{/24} qua cả hai transport (ECMP) \\
     \hline
@@ -730,6 +738,12 @@ omp
     Overlay lên nhưng máy trạm các site không thông nhau & Chưa có VPN dịch vụ, cổng LAN nằm trong VPN 512 & Tạo VPN 1 \texttt{LAN}, chuyển cổng LAN vào VPN 1, thêm tuyến tổng hợp và quảng bá OMP \\
     \hline
     Mất MPLS tại chi nhánh làm mất 100\% gói, không tự phục hồi & Brand-FW không biết đường MPLS phía xa đã đứt nên vẫn đẩy lưu lượng về vEdge1; vEdge2 chuyển lưu lượng LAN qua vEdge1 nên chiều về đi vào cổng khác chiều đi và bị tường lửa trạng thái hủy & Brand-FW theo dõi beacon \texttt{10.1.255.1} bằng \texttt{sla monitor} và \texttt{track}; tuyến LAN của vEdge2 trỏ thẳng về \texttt{outside2}; control policy ưu tiên vEdge1 của mọi site \\
+    \hline
+    Mất vEdge1 Site 100 (hoặc cả hai transport của nó) làm Campus chính mất kết nối tới chi nhánh suốt thời gian sự cố & Tường lửa biên chỉ có tuyến tĩnh mặc định tới vEdge1, không có \texttt{track} (đã gỡ vì làm ASA khởi động lại); vEdge không phân phối tuyến OMP vào OSPF nên tường lửa không có đường khác; cổng \texttt{outside} vẫn up nên tuyến tĩnh không bị gỡ & Hai vEdge Site 100 \texttt{redistribute omp} vào OSPF với metric 10 và 100 \\
+    \hline
+    Mất vEdge1 Site 100, hoặc chỉ mất Internet của vEdge1, làm Campus chính mất Internet suốt thời gian sự cố & Tuyến mặc định của tường lửa biên là tuyến tĩnh tới vEdge1 không có \texttt{track}; vEdge1 chỉ NAT trên cổng biz-internet & \texttt{sla monitor} ICMP tới 1.1.1.1 qua cổng \texttt{outside} cùng \texttt{track} trên tuyến mặc định; tuyến dự phòng qua \texttt{outside2} (vEdge2) được dùng khi track Down \\
+    \hline
+    Ngay sau khi phân phối OMP vào OSPF, Campus chính mất 100\% gói tới chi nhánh & vEdge1 dùng metric mặc định, cao hơn metric 100 của vEdge2, nên tường lửa gửi ra vEdge2 trong khi chiều về vẫn vào qua vEdge1 (control policy); tường lửa trạng thái hủy gói & Đặt metric 10 cho vEdge1 để chiều đi trùng chiều về \\
 \end{longtable}
 \endgroup
 
@@ -740,11 +754,11 @@ omp
     \item \textbf{Underlay:} mọi phiên eBGP CE--PE và phiên giữa hai nhà cung cấp ở trạng thái Established; các vEdge nhận tuyến mặc định qua transport tương ứng.
     \item \textbf{BFD:} toàn bộ phiên đều up --- mỗi vEdge Site 100 16/16, mỗi vEdge chi nhánh 10/10 (Hình~\ref{fig:vmanage_devices}); tổng các cột này là 112, bằng số đường hầm trên trang tổng quan. Cả năm site đạt BFD Full (Hình~\ref{fig:vmanage_health}). Hình~\ref{fig:bfd_s200} là đầu ra trên vEdge2 Site 200: mười phiên BFD tới các TLOC của Site 100, 300, 400, 500 đều up (timer mặc định 1000~ms $\times$ 7) và phiên OMP với vSmart ở trạng thái up.
     \item \textbf{Overlay dữ liệu:} ping giữa máy trạm các chi nhánh 200, 300, 400 thành công 10/10; máy trạm chi nhánh truy cập được dịch vụ tại Campus chính.
-    \item \textbf{Chất lượng đường truyền:} thống kê app-route từ Site 200 đến Site 300 qua MPLS: mất gói 0\%, độ trễ 37~ms, jitter 6~ms --- thỏa \texttt{SLA\_REALTIME}. Trên vManage, trong 24 giờ, hai TLOC của vEdge1-S100 đều up, bảng TLOC ghi mất gói khoảng 0,2\%, độ trễ 18--20~ms, jitter 17--19~ms; biểu đồ có hai đỉnh mất gói 2--3\%, nguyên nhân chưa đối chiếu với nhật ký (Hình~\ref{fig:vmanage_tloc}).
+    \item \textbf{Chất lượng đường truyền:} thống kê app-route từ Site 200 đến Site 300 qua MPLS: mất gói 0\%, độ trễ 37~ms, jitter 6~ms --- thỏa \texttt{SLA\_REALTIME}. Trên vManage, trong 24 giờ, hai TLOC của vEdge1-S100 đều up, bảng TLOC ghi mất gói khoảng 0,2\%, độ trễ 18--20~ms, jitter 17--19~ms; biểu đồ có hai đỉnh mất gói khoảng 2--3\% (Hình~\ref{fig:vmanage_tloc}). Đỉnh đầu, chiều 06/11, nằm trong khoảng thử timer BFD có cắt liên kết thật. Đỉnh sau, sáng 07/11, gần sự kiện các vEdge mất kết nối điều khiển đồng loạt nêu trong mục báo cáo 7 ngày, nhưng trên biểu đồ sớm hơn sự kiện đó khoảng 1 giờ nên chưa đủ căn cứ để kết luận hai hiện tượng là một.
     \item \textbf{Chính sách tập trung:} mọi vEdge nhận đúng chính sách từ vSmart (\texttt{show policy from-vsmart}). Để chứng minh chính sách được thực thi, nhóm xây dựng công cụ kiểm thử tự động: đọc bộ đếm của từng luật qua API của vManage, sinh lưu lượng thật từ máy trạm chi nhánh, rồi đọc lại bộ đếm. Chạy lần lượt từ máy trạm cả bốn chi nhánh (PC-YTe-S200-2, PC-TaiChinh-S300-2, PC-LuHanh-S400-2, VPC11 Site 500), mỗi nơi đều đạt 10/10 phép thử (Bảng~\ref{tab:kiem_thu_chinh_sach}).
     \item \textbf{Failover tại chi nhánh:} khi cắt MPLS hoặc mất vEdge1, Brand-FW phát hiện mất beacon qua \texttt{sla monitor}/\texttt{track} và chuyển lưu lượng nội bộ sang vEdge2 (Internet); khi cắt Internet hoặc mất vEdge2, lưu lượng ra Internet chuyển sang vEdge1 và thoát qua MPLS; khi nối lại, lưu lượng tự quay về. Nếu không có thiết kế beacon, chi nhánh mất 100\% gói và không tự phục hồi. Phép đo dùng cách cắt thật tại máy chủ (\texttt{ip link set <tap> down}, thiết bị không nhận sự kiện liên kết), lặp 46 lần trên cả bốn chi nhánh (Bảng~\ref{tab:failover_chi_nhanh}, Hình~\ref{fig:bd_failover_4site}), ICMP 5 gói/giây, đồng thời hai đầu đo: \textit{luồng mới} đổi ICMP id mỗi gói, \textit{luồng đang chạy} giữ nguyên id. Luồng mới khôi phục sau \textbf{3,2--13,4 giây}, không khác biệt đáng kể giữa các site. Luồng đang chạy khôi phục sau 18,6--38,1 giây. Khi nối lại liên kết, gián đoạn có trung vị 12 giây; 8/46 lần trên 20 giây, lâu nhất 41 giây.
     \item \textbf{Hai lỗi do phép đo failover phát hiện:} (1) ASA gắn kết nối vào đường ra cũ nên luồng đang chạy mất suốt thời gian cắt, dù luồng mới đã chuyển đường sau khoảng 8 giây; thêm \texttt{timeout floating-conn 0:00:30} trên bốn Brand-FW giải quyết được, đổi lại luồng đang chạy khôi phục chậm hơn luồng mới khoảng 15--30 giây. (2) Tại Site 500, khi cắt Internet, máy trạm mất Internet suốt 90 giây cắt vì cổng MPLS của vEdge1 thiếu lệnh \texttt{nat} so với ba chi nhánh kia; sau khi bổ sung, thời gian khôi phục còn 7,8--10,3 giây.
-    \item \textbf{Failover transport tại Site 100:} khi tắt cổng MPLS trên cả hai vEdge Site 100, các đường hầm qua Internet tiếp tục mang lưu lượng; TLOC MPLS phục hồi khi bật lại cổng nhờ tuyến tới controller được khai báo qua cả hai transport.
+    \item \textbf{Failover tại Site 100:} đo cùng cách cắt thật, luồng từ Server Farm tới máy trạm Site 200, đi qua tường lửa biên, overlay và Brand-FW (Bảng~\ref{tab:failover_s100}). Khi mất một transport, lưu lượng tự chuyển sang đường hầm còn lại sau khoảng 8--9 giây; mất vEdge2 không ảnh hưởng vì lưu lượng đi qua vEdge1. Phép đo phát hiện lỗi thiết kế: khi mất hẳn vEdge1 hoặc cả hai transport của nó, Campus chính mất kết nối tới chi nhánh suốt thời gian sự cố, 10/10 lần (Bảng~\ref{tab:loi_sdwan}). Sau khi hai vEdge phân phối tuyến OMP vào OSPF, luồng mới khôi phục sau 12,2--14,4 giây khi mất vEdge1 và 8,4--9,8 giây khi mất hai transport. Luồng đang chạy ban đầu vẫn mất suốt thời gian cắt vì tường lửa biên chưa có \texttt{timeout floating-conn}; sau khi thêm \texttt{timeout floating-conn 0:00:30} như bốn Brand-FW, luồng đang chạy khôi phục sau 44,2--45,8 giây khi mất vEdge1 và 38,6--41,6 giây khi mất hai transport (5/5 lần mỗi kịch bản). Khi vEdge1 trở lại, luồng mới gián đoạn 0,3--4,8 giây, còn luồng đang chạy mất thêm 30,6--35,0 giây vì kết nối còn gắn vào cổng sang vEdge2 cho tới khi hết \texttt{floating-conn}. Lưu lượng ra Internet (máy trạm VLAN 10 tới 8.8.8.8) ban đầu mất suốt thời gian cắt trong cả ba kịch bản mất vEdge1, mất hai transport của vEdge1 và chỉ cắt Internet của vEdge1 (9/9 lần), vì tuyến mặc định của tường lửa là tuyến tĩnh tới vEdge1 không có \texttt{track} và vEdge1 chỉ NAT ra Internet trên cổng biz-internet. Sau khi tường lửa theo dõi 1.1.1.1 qua vEdge1 bằng \texttt{sla monitor} (chu kỳ 3 giây) và gắn \texttt{track} vào tuyến mặc định, lưu lượng Internet tự chuyển sang vEdge2 trong cả 9/9 lần: luồng mới khôi phục sau 3,6--7,6 giây, luồng đang chạy sau 19,0--23,0 giây, khi nối lại gián đoạn 0,2--5,4 giây; lưu lượng liên site không bị ảnh hưởng khi chỉ mất Internet của vEdge1 (0 gói mất, 2/2 lần).
     \item \textbf{AAR khi đường truyền suy giảm:} dùng \texttt{netem} tăng trễ 400~ms trên cổng MPLS của vEdge1 Site 100, trong khi Server Farm ping Site 200 5 gói/giây. Trễ của tunnel MPLS trong \texttt{show app-route stats} là trung bình trượt qua 6 chu kỳ 2 phút nên tăng dần, vượt ngưỡng 150~ms của \texttt{SLA\_REALTIME} sau khoảng 5,5 phút; lưu lượng trên tunnel chuyển từ \texttt{mpls} sang \texttt{biz-internet} trong khoảng 5,5--7 phút. Gỡ \texttt{netem}, lưu lượng tự quay về sau khoảng 10--11 phút. Toàn bộ quá trình chỉ mất 4/7578 gói (0,05\%). AAR chuyển đường êm nhưng chậm, nên chỉ phù hợp với suy giảm kéo dài; đứt hẳn vẫn dựa vào BFD và Brand-FW.
     \item \textbf{Timer BFD:} hệ thống dùng timer mặc định 1000~ms $\times$ 7; timer mới chỉ có hiệu lực khi cả hai đầu phiên cùng đổi. Thử 500~ms $\times$ 4 cho gián đoạn 3,4--6,7 giây ở 3 trong 5 lần, so với 7,7--8,3 giây của đường đối chứng, nhưng phiên với vEdge2 Site 200 (1 vCPU) tự rớt mỗi 15--60 giây khi không cắt liên kết, nên timer rút ngắn không được áp dụng.
     \item \textbf{Tách thời gian khôi phục theo từng chiều:} bắt gói đồng thời trên các cổng của Brand-FW và vEdge khi cắt MPLS của vEdge1 Site 200, đích là cổng outside của FW Site 100, được 4/5 lần hợp lệ. Gói trả lời về tới máy trạm sau 8,3--9,1 giây (trung bình 8,8 giây), ổn định qua các lần đo. Chiều đi dao động hơn: Brand-FW chuyển sang vEdge2 sau 3,4--7,7 giây, tức sau 2--4 lần thăm dò SLA thất bại. Có lần chiều đi xong sau 3,43 giây, Site 100 trả lời ngay nhưng gói trả lời vẫn mất 5,2 giây mới về tới Site 200. Vì vậy giới hạn chính là chiều về, chờ BFD mặc định 7 giây để Site 100 bỏ đường cũ; chiều đi là giới hạn thứ hai. Muốn giảm RTO phải giảm cả timer BFD ở hai site lẫn chu kỳ SLA trên Brand-FW (Hình~\ref{fig:bd_failover}).
@@ -772,7 +786,51 @@ omp
     \end{tabularx}
 \end{table}
 
-Các cột site là luồng mới. Hai kịch bản đầu đo lưu lượng liên site, hai kịch bản sau đo lưu lượng ra Internet (8.8.8.8). Số lần lặp tại mỗi kịch bản từ 2 đến 5 nên chỉ cho biết khoảng dao động, chưa đủ để so sánh giữa các site.
+Các cột site là luồng mới. Hai kịch bản đầu đo lưu lượng liên site, hai kịch bản sau đo lưu lượng ra Internet (8.8.8.8). Số lần lặp tại mỗi kịch bản từ 2 đến 5 nên chỉ cho biết khoảng dao động, chưa đủ để so sánh giữa các site. Tỷ lệ gói nhận được (\textit{Packet Recovery Rate}) tính trên cả cửa sổ đo của mỗi lần cắt, gồm 15 giây trước khi cắt, thời gian cắt 60--90 giây và 45 giây sau khi nối lại, là 83,3--97,3\% với luồng mới và 48,8--87,1\% với luồng đang chạy, trung bình theo từng kịch bản và site.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Thời gian gián đoạn khi cắt thật tại Site 100, luồng Server Farm tới máy trạm Site 200, giây (số lần trong ngoặc vuông)}
+    \label{tab:failover_s100}
+    \begin{tabularx}{\textwidth}{|L{4.2cm}|Y|Y|Y|}
+        \hline
+        \textbf{Kịch bản} & \textbf{Trước khi sửa} & \textbf{Sau khi sửa, luồng mới} & \textbf{Sau khi sửa, luồng đang chạy} \\
+        \hline
+        Cắt MPLS của vEdge1 & 8,4 ở 1/3 lần, 2 lần không mất gói [3] & 8,6--9,2 [3] & 8,6--9,2 \\
+        \hline
+        Cắt Internet của vEdge1 & 8,6 ở 1/3 lần, 2 lần không mất gói [3] & -- & -- \\
+        \hline
+        Cắt MPLS của cả hai vEdge & 7,6--8,2 [3] & -- & -- \\
+        \hline
+        Cắt cả hai transport của vEdge1 & Mất suốt thời gian cắt [5] & 8,4--9,8 [10] & 38,6--41,6 [5] \\
+        \hline
+        Mất hẳn vEdge1 & Mất suốt thời gian cắt [5] & 12,2--14,4 [10] & 44,2--45,8 [5] \\
+        \hline
+        Mất hẳn vEdge2 & Không mất gói [3] & Không mất gói [3] & Không mất gói \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\textbf{Mất controller.} Mỗi controller được tắt đột ngột trong 2 phút rồi bật lại, trong khi hai luồng ICMP 5 gói/giây chạy qua overlay từ Site 200 tới Site 300 và Site 500, và trạng thái kết nối điều khiển, OMP, BFD của vEdge1-S200 được đọc liên tục (Bảng~\ref{tab:mat_controller}). Không lần nào mất gói: đường hầm IPsec và bảng tuyến đã có trên vEdge tiếp tục được dùng, OMP \textit{graceful restart} giữ tuyến khi vSmart vắng mặt, BFD giữ 10/10 phiên. Thời gian phục hồi chủ yếu là thời gian khởi động của máy ảo controller. Phép đo chỉ chứng minh mặt phẳng dữ liệu không bị ảnh hưởng; trong thời gian mất controller, việc thay đổi chính sách, đưa thiết bị mới vào fabric hay phản ứng với thay đổi tuyến giữa các site chưa được thử.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Ảnh hưởng khi mất từng controller (vEdge1-S200, hai luồng 5 gói/giây)}
+    \label{tab:mat_controller}
+    \begin{tabularx}{\textwidth}{|L{1.9cm}|c|P{1.8cm}|Y|Y|}
+        \hline
+        \textbf{Thiết bị} & \textbf{Số lần} & \textbf{Gói mất} & \textbf{vEdge phát hiện mất} & \textbf{Kết nối lại sau khi bật} \\
+        \hline
+        vSmart & 3 & 0/22\,500 & 12,5--12,8 s; OMP về 0 peer sau 50--60 s & 184 s (2 lần), lần còn lại không đọc được chính xác \\
+        \hline
+        vBond & 3 & 0/22\,500 & 12,0--12,6 s (2 lần) & 200--203 s \\
+        \hline
+        vManage & 1 & 0/15\,000 & 13,4 s & 182 s \\
+        \hline
+    \end{tabularx}
+\end{table}
 
 \begin{figure}[H]
     \centering
@@ -870,9 +928,18 @@ Các cột site là luồng mới. Hai kịch bản đầu đo lưu lượng li�
     \end{tabularx}
 \end{table}
 
-Bảng~\ref{tab:kiem_thu_chinh_sach} gồm 7 mã phép thử nhưng ứng với 10 lần kiểm tra: DP-3 kiểm tra đồng thời ba bộ đếm, còn CP-1 được xem trên hai vEdge của Site 200. Công cụ dùng lệnh \texttt{ping -P 6 -p <cổng>} của VPCS để gửi gói TCP SYN đến cổng đích, tương đương một lần mở kết nối Telnet/SSH đối với vEdge. Các bộ đếm tăng đúng như mong đợi đồng thời tại vEdge chi nhánh, chứng minh chính sách chỉ khai báo một lần trên vSmart đã được đẩy xuống và thực thi tại các Edge. Giới hạn của phép thử: luồng kiểm thử xuất phát từ Site 200 và chỉ có một luồng ICMP; việc thực thi chính sách được chứng minh qua bộ đếm trên vEdge, còn khả năng truy cập đầu--cuối vào dịch vụ Campus chính được kiểm chứng riêng ở Mục~\ref{sec:bai_hoc_dich_vu} và các phần kiểm thử dịch vụ.
+Bảng~\ref{tab:kiem_thu_chinh_sach} gồm 7 mã phép thử nhưng ứng với 10 lần kiểm tra: DP-3 kiểm tra đồng thời ba bộ đếm, còn CP-1 được xem trên hai vEdge của Site 200. Công cụ dùng lệnh \texttt{ping -P 6 -p <cổng>} của VPCS để gửi gói TCP SYN đến cổng đích, tương đương một lần mở kết nối Telnet/SSH đối với vEdge. Các bộ đếm tăng đúng như mong đợi đồng thời tại vEdge chi nhánh, chứng minh chính sách chỉ khai báo một lần trên vSmart đã được đẩy xuống và thực thi tại các Edge. Bảng ghi số liệu của lượt chạy từ máy trạm Site 200; ba chi nhánh còn lại chạy cùng bộ phép thử và cũng đạt 10/10. Giới hạn của phép thử: mỗi lượt chỉ có một luồng ICMP; việc thực thi chính sách được chứng minh qua bộ đếm trên vEdge, còn khả năng truy cập đầu--cuối vào dịch vụ Campus chính được kiểm chứng riêng ở Mục~\ref{sec:bai_hoc_dich_vu} và các phần kiểm thử dịch vụ.
 
-Các chính sách được cấu hình bằng CLI trực tiếp trên vSmart, không qua giao diện vManage, nên trang Configuration $\rightarrow$ Policies của vManage hiển thị trống; bằng chứng chính sách đang chạy nằm ở đầu ra lệnh trên thiết bị. Khối lệnh~\ref{lst:vsmart_policy_ch4} cho thấy nơi áp chính sách trên vSmart, Khối lệnh~\ref{lst:vedge_policy_ch4} cho thấy vEdge1-S200 đã nhận SLA class, data policy và AAR từ vSmart. \texttt{PREFER-VE1} không có trong đầu ra của vEdge vì control policy được vSmart thực thi khi gửi tuyến OMP, không đẩy xuống Edge.
+Các lớp AAR còn lại được kiểm thử thêm từ máy trạm Site 200, đọc bộ đếm trên vEdge1-S200 trước và sau mỗi lần gửi: 50 gói UDP mang DSCP 46 làm \texttt{AAR\_VOICE} tăng 50; kết nối TCP tới Server Farm làm \texttt{AAR\_FARM} tăng; kết nối TCP tới cổng 25, 143, 587, 993 của Mail Server làm \texttt{AAR\_MAIL} tăng 24 (gồm cả gói gửi lại, máy chủ Mail khi đó tắt); kết nối HTTPS tới Web Server làm \texttt{AAR\_WEB} tăng. Ping mang DSCP 46 không làm \texttt{AAR\_VOICE} tăng mà được tính vào \texttt{AAR\_ICMP}, vì sequence 10 (ICMP) đứng trước sequence 20 (DSCP 46) và chính sách dừng ở sequence khớp đầu tiên. Hai bộ đếm chiều về \texttt{AAR\_WEB\_RET} và \texttt{AAR\_MAIL\_RET} được tính tại vEdge Site 100 và chưa được kiểm thử.
+
+Các chính sách được cấu hình bằng CLI trực tiếp trên vSmart, không qua giao diện vManage, nên trang Configuration $\rightarrow$ Policies của vManage hiển thị trống (Hình~\ref{fig:vmanage_policies}); bằng chứng chính sách đang chạy nằm ở đầu ra lệnh trên thiết bị. Khối lệnh~\ref{lst:vsmart_policy_ch4} cho thấy nơi áp chính sách trên vSmart, Khối lệnh~\ref{lst:vedge_policy_ch4} cho thấy vEdge1-S200 đã nhận SLA class, data policy và AAR từ vSmart. \texttt{PREFER-VE1} không có trong đầu ra của vEdge vì control policy được vSmart thực thi khi gửi tuyến OMP, không đẩy xuống Edge.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/vmanage-policies-20261107.png}
+    \caption{Trang Policies của vManage trống vì chính sách được cấu hình bằng CLI trên vSmart}
+    \label{fig:vmanage_policies}
+\end{figure}
 
 \begin{lstlisting}[style=customcode,caption={vSmart: show running-config apply-policy},label={lst:vsmart_policy_ch4}]
 apply-policy
@@ -1055,7 +1122,7 @@ Cảnh báo email được triển khai sau cùng: switch LAN Site 900 mở thê
     \label{fig:dia_brandfw}
 \end{figure}
 
-\textbf{Cảnh báo email:} khi tắt cổng \texttt{biz-internet} của vEdge2 Site 200, vManage gửi thư cảnh báo cho từng sự kiện (Bảng~\ref{tab:canh_bao_email}); khi bật lại cổng, thiết bị phục hồi đủ 3 kết nối điều khiển và 8 phiên BFD, vManage gửi thư cho sự kiện Interface State Change. Luật thông báo chọn mức Critical, Major và Medium cùng các alarm phục hồi BFD, Control, OMP Up, nên quản trị viên nhận cả thư báo lỗi lẫn thư báo phục hồi.
+\textbf{Cảnh báo email:} khi tắt cổng \texttt{biz-internet} của vEdge2 Site 200, vManage gửi thư cảnh báo cho từng sự kiện (Bảng~\ref{tab:canh_bao_email}); khi bật lại cổng, thiết bị phục hồi đủ 3 kết nối điều khiển và 8 phiên BFD (phép thử thực hiện khi fabric chưa có Site 500; nay vEdge này có 10 phiên), vManage gửi thư cho sự kiện Interface State Change. Luật thông báo chọn mức Critical, Major và Medium cùng các alarm phục hồi BFD, Control, OMP Up, nên quản trị viên nhận cả thư báo lỗi lẫn thư báo phục hồi.
 
 \begin{table}[H]
     \centering
@@ -1238,7 +1305,7 @@ Bot đã phát huy tác dụng trong sự cố ngày 01/11/2026: Telegram nhận
     \hline
     T13 & BGP underlay & Mọi phiên Established, có default & \textbf{Đạt} & Hai nhà cung cấp và 10 vEdge \\
     \hline
-    T14 & SD-WAN control plane & 10 vEdge có kết nối điều khiển và OMP & \textbf{Đạt} & 3 controller và 10 vEdge reachable \\
+    T14 & SD-WAN control plane & 10 vEdge có kết nối điều khiển và OMP & \textbf{Đạt} & 3 controller và 10 vEdge reachable; tắt từng controller 2 phút (7 lần): 0 gói mất, kết nối lại 182--203 s sau khi bật \\
     \hline
     T15 & TLOC và BFD & Mọi đường hầm up & \textbf{Đạt} & 16/16 (mỗi vEdge Site 100), 10/10 (mỗi vEdge chi nhánh), 112 đường hầm \\
     \hline
@@ -1248,7 +1315,7 @@ Bot đã phát huy tác dụng trong sự cố ngày 01/11/2026: Telegram nhận
     \hline
     T18 & Data policy và control policy & Chặn Telnet/SSH vào Farm, DMZ; chi nhánh chọn vEdge1 & \textbf{Đạt} & 10/10 lần kiểm tra qua bộ đếm và bảng tuyến OMP, tại cả bốn chi nhánh \\
     \hline
-    T19 & Failover transport Site 100 & Chuyển sang Internet khi mất MPLS & \textbf{Đạt} & Lưu lượng đi qua Internet; MPLS phục hồi sau khi bổ sung tuyến controller \\
+    T19 & Failover Site 100 & Tự chuyển khi mất một transport hoặc một vEdge & \textbf{Đạt} & Mất transport 7,6--9,6 s; mất vEdge1 12,2--14,4 s sau khi sửa lỗi phân phối tuyến (trước đó không tự chuyển); luồng đang chạy 38,6--45,8 s sau khi thêm \texttt{floating-conn}; Internet của Site 100 3,6--7,6 s sau khi thêm SLA/\texttt{track} \\
     \hline
     T20 & Failover transport chi nhánh & Tự chuyển sang vEdge2 khi mất MPLS hoặc vEdge1 và quay lại & \textbf{Đạt} & Bốn chi nhánh, 25 lần cắt: 7,4--11,2 giây \\
     \hline
@@ -1283,7 +1350,7 @@ Cả 30 kịch bản đều đạt. Bốn kịch bản T10, T12, T22, T29 chỉ 
 
 \subsubsection{Tính sẵn sàng}
 
-Tại biên Campus chính, cặp tường lửa HA tự chuyển vai trò khi lỗi: chuyển chủ động dưới 1 giây, rút cáp inside 11 giây, tắt hẳn đơn vị Active 21 giây; Core-SW2 giữ đúng vai trò VRRP Backup nhờ Po10 mang VLAN người dùng. Tại lớp 3 và WAN, hệ thống có dự phòng ở mọi vị trí trọng yếu; phép thử cắt thật lặp 46 lần tại bốn chi nhánh cho thấy lưu lượng nội bộ tự khôi phục qua Internet và lưu lượng Internet tự chuyển sang MPLS sau 3,2--13,4 giây với luồng mới, 18,6--38,1 giây với luồng đang chạy, kể cả khi mất hẳn một vEdge. Tại lớp 2 SDN, sáu kịch bản cắt liên kết đều đạt, gián đoạn dữ liệu không quá 3,5 giây khi cắt và gần như bằng 0 khi khôi phục; mất hẳn một Distribution cũng không làm gián đoạn đáng kể. SDN Controller vẫn là một máy đơn: khi Controller dừng, flow đã cài được giữ nên luồng đang chạy không mất, nhưng máy trạm mới, ARP và DHCP mới không được xử lý.
+Tại biên Campus chính, cặp tường lửa HA tự chuyển vai trò khi lỗi: chuyển chủ động dưới 1 giây, rút cáp inside 11 giây, tắt hẳn đơn vị Active 21 giây; Core-SW2 giữ đúng vai trò VRRP Backup nhờ Po10 mang VLAN người dùng. Tại lớp 3 và WAN, gateway, Edge và đường truyền đều có dự phòng, riêng vManage, vSmart và vBond mỗi loại chỉ có một máy, nhưng mất một controller trong 2 phút không làm mất gói nào trên overlay. Tại Site 100, mất một transport được khôi phục sau 7,6--9,6 giây; mất hẳn vEdge1 chỉ tự khôi phục (12,2--14,4 giây với luồng mới, 44,2--45,8 giây với luồng đang chạy) sau khi sửa lỗi phân phối tuyến do phép đo phát hiện; lưu lượng ra Internet của Campus chính cũng tự chuyển sang vEdge2 sau 3,6--7,6 giây nhờ \texttt{sla monitor} và \texttt{track} trên tường lửa biên. Phép thử cắt thật lặp 46 lần tại bốn chi nhánh cho thấy lưu lượng nội bộ tự khôi phục qua Internet và lưu lượng Internet tự chuyển sang MPLS sau 3,2--13,4 giây với luồng mới, 18,6--38,1 giây với luồng đang chạy, kể cả khi mất hẳn một vEdge. Tại lớp 2 SDN, sáu kịch bản cắt liên kết đều đạt, gián đoạn dữ liệu không quá 3,5 giây khi cắt và gần như bằng 0 khi khôi phục; mất hẳn một Distribution cũng không làm gián đoạn đáng kể. SDN Controller vẫn là một máy đơn: khi Controller dừng, flow đã cài được giữ nên luồng đang chạy không mất, nhưng máy trạm mới, ARP và DHCP mới không được xử lý.
 
 \subsubsection{Hiệu năng và khả năng quan sát}
 

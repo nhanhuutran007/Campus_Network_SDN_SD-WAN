@@ -562,7 +562,9 @@ System-IP có dạng \texttt{10.200.<site>.<n>/32}. Site 300, 400 và 500 đư�
         \hline
         400 & vEdge2 & 10.200.40.2 & 203.0.113.17/30 & -- & AS 65030 -- Internet \\
         \hline
-        500 & vEdge & 10.200.50.1 (dự kiến) & 203.0.113.21/30 & 100.64.50.1/30 & AS 65040, 2 neighbor \\
+        500 & vEdge1 & 10.200.50.1 & -- & 100.64.50.1/30 & AS 65040 -- MPLS \\
+        \hline
+        500 & vEdge2 & 10.200.50.2 & 203.0.113.21/30 & -- & AS 65040 -- Internet \\
         \hline
     \end{tabularx}
 \end{table}
@@ -573,7 +575,7 @@ System-IP có dạng \texttt{10.200.<site>.<n>/32}. Site 300, 400 và 500 đư�
 
 OSPF Area~0 chạy giữa Core-SW1, Core-SW2 và tường lửa Active. Mỗi Core quảng bá subnet của Port-Channel, hai liên kết đến tường lửa và các VLAN 10/20/30/40/90. Tường lửa quảng bá subnet inside, DMZ \texttt{10.1.1.0/28} và tuyến mặc định (\texttt{default-information originate always}). Trên tường lửa, hai tuyến mặc định tĩnh trỏ về hai vEdge: qua \texttt{outside} đến vEdge1 với khoảng cách 1 (tuyến chính) và qua \texttt{outside2} đến vEdge2 với khoảng cách 2 (tuyến dự phòng). Thêm một tuyến tĩnh \texttt{10.1.99.0/24} qua Core-SW1 để lưu lượng trả về VLAN 99 đi đúng giao diện inside (Mục~\ref{sec:bai_hoc_internet}).
 
-Trên vEdge Site 100, VPN dịch vụ 1 chứa hai cổng nối tường lửa và tuyến tĩnh \texttt{10.1.0.0/16} trỏ về tường lửa Active; OMP quảng bá tuyến tĩnh và mạng kết nối trực tiếp (\texttt{advertise static}, \texttt{advertise connected}) lên vSmart. Như vậy toàn bộ khối \texttt{10.1.0.0/16} được đại diện bằng một tuyến tổng hợp trên overlay. VPN 1 còn có tuyến mặc định kiểu NAT (\texttt{ip route 0.0.0.0/0 vpn 0}) trỏ ra cổng \texttt{biz-internet} để người dùng ra Internet; tuyến loại này không được quảng bá vào OMP nên không lan sang site khác.
+Trên vEdge Site 100, VPN dịch vụ 1 chạy OSPF Area~0 với tường lửa trên cổng nối SW-WAN-Edge. Theo chiều Campus ra overlay, vEdge học các mạng Campus qua OSPF và quảng bá vào OMP (\texttt{advertise ospf external}). Theo chiều ngược lại, mỗi vEdge phân phối tuyến OMP của chi nhánh vào OSPF (\texttt{redistribute omp}) với metric khác nhau: vEdge1 metric 10, vEdge2 metric 100. Bình thường tường lửa gửi lưu lượng chi nhánh qua vEdge1, cùng hướng với lưu lượng chiều về đã được control policy ưu tiên vEdge1; khi vEdge1 mất, tuyến OSPF của nó hết hạn sau dead-interval và tường lửa chuyển sang tuyến của vEdge2. Hai metric phải khác nhau rõ ràng: nếu tường lửa chọn vEdge2 trong khi chiều về vẫn qua vEdge1, tường lửa trạng thái sẽ hủy gói vì hai chiều đi qua hai cổng khác nhau. VPN 1 còn có tuyến mặc định kiểu NAT (\texttt{ip route 0.0.0.0/0 vpn 0}) trỏ ra cổng \texttt{biz-internet} để người dùng ra Internet; tuyến loại này không được quảng bá vào OMP nên không lan sang site khác.
 
 \subsubsection{Định tuyến underlay}
 
@@ -803,7 +805,7 @@ Người dùng tại mỗi cơ sở ra Internet tại chỗ (DIA), không đi v�
 
 \subsubsection{Giám sát và cảnh báo sự cố}
 
-vManage thu trạng thái của toàn fabric (kết nối điều khiển, OMP, BFD, giao diện) và sinh alarm theo mức độ. Hệ thống cấu hình vManage tự gửi email khi có alarm mức Critical hoặc Major thuộc các loại BFD/Control/OMP Node/Site Down và Interface State Change. Thư được gửi qua máy chủ SMTP bên ngoài (cổng 587, STARTTLS, xác thực bằng mật khẩu ứng dụng); vì vậy Site 900 được mở thêm đúng một luồng SMTP 587 cho riêng địa chỉ vManage và vManage được khai báo DNS để phân giải tên máy chủ thư. Nhược điểm của cách này là khi chính vManage hỏng thì không có thư cảnh báo; hướng bổ sung là một công cụ giám sát độc lập đọc alarm qua API của vManage.
+vManage thu trạng thái của toàn fabric (kết nối điều khiển, OMP, BFD, giao diện) và sinh alarm theo mức độ. Hệ thống cấu hình vManage tự gửi email khi có alarm mức Critical, Major hoặc Medium thuộc các loại BFD/Control/OMP Node/Site Down, các alarm phục hồi Up tương ứng và Interface State Change. Thư được gửi qua máy chủ SMTP bên ngoài (cổng 587, STARTTLS, xác thực bằng mật khẩu ứng dụng); vì vậy Site 900 được mở thêm đúng một luồng SMTP 587 cho riêng địa chỉ vManage và vManage được khai báo DNS để phân giải tên máy chủ thư. Nhược điểm của cách này là khi chính vManage hỏng thì không có thư cảnh báo; vì vậy NetOps Bot (Mục~\ref{sec:netops_bot}) được bổ sung làm kênh giám sát độc lập, đọc alarm qua API của vManage và báo cả khi vManage mất kết nối.
 
 \subsection{Thiết kế dịch vụ}
 

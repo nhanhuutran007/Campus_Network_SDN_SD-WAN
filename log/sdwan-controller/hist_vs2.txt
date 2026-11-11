@@ -1,0 +1,16 @@
+show control connections-history | nomore | tab
+
+                                                                                                                                                                                                     CFG     VH                                          
+                 PEER     SITE  DOMAIN  PRIVATE    PRIVATE             PUBLIC                       LOCAL  REMOTE              LOCAL     REMOTE                                                      SYSTEM  ORG                                         
+INSTANCE  INDEX  TYPE     ID    ID      IP         PORT     PUBLIC IP  PORT    SYSTEM IP  PROTOCOL  COLOR  COLOR    STATE      ENUM      ENUM    DOWNTIME                  PREV DOWNTIME             IP      NAME  UUID                                  
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+0         0      vsmart   900   1       10.9.0.11  12346    10.9.0.11  12346   10.9.0.13  dtls      mpls   default  connect    DCONFAIL  NOERR   2026-11-09T13:49:10+0000  2026-11-09T13:48:36+0000  -       -                                           
+0         1      vsmart   900   1       10.9.0.11  12346    10.9.0.11  12346   10.9.0.13  dtls      mpls   default  tear_down  VS_TMO    NOERR   2026-11-09T13:47:15+0000  2026-11-09T13:34:43+0000  -       -     83b093fd-aa02-4e1a-a0f9-054a348d06b2  
+0         2      vbond    0     0       10.9.0.12  12346    10.9.0.12  12346   0.0.0.0    dtls      mpls   mpls     connect    DCONFAIL  NOERR   2026-11-08T16:45:24+0000  2026-11-08T16:45:06+0000  -       -                                           
+0         3      vmanage  900   0       10.9.0.10  12546    10.9.0.10  12546   10.9.3.10  dtls      mpls   default  tear_down  VM_TMO    NOERR   2026-11-08T16:44:38+0000  N/A                       -       -     62113ef0-17c0-4703-b9da-f6715de61bab  
+0         4      vbond    0     0       10.9.0.12  12346    10.9.0.12  12346   0.0.0.0    dtls      mpls   mpls     tear_down  VB_TMO    NOERR   2026-11-08T16:44:37+0000  N/A                       -       -     62c1c310-0653-48c4-b046-678102091ca3  
+0         5      vsmart   900   1       10.9.0.11  12346    10.9.0.11  12346   10.9.0.13  dtls      mpls   default  tear_down  VS_TMO    NOERR   2026-11-08T16:42:06+0000  N/A                       -       -     83b093fd-aa02-4e1a-a0f9-054a348d06b2  
+0         6      vbond    0     0       10.9.0.12  12346    10.9.0.12  12346   0.0.0.0    dtls      mpls   mpls     tear_down  VB_TMO    NOERR   2026-11-08T16:42:06+0000  N/A                       -       -     62c1c310-0653-48c4-b046-678102091ca3  
+0         7      vmanage  900   0       10.9.0.10  12546    10.9.0.10  12546   10.9.3.10  dtls      mpls   default  tear_down  VM_TMO    NOERR   2026-11-08T16:42:06+0000  N/A                       -       -     62113ef0-17c0-4703-b9da-f6715de61bab  
+
+vEdge1-S200#
