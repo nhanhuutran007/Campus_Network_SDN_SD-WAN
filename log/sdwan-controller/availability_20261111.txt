@@ -1,0 +1,55 @@
+# Do kha dung duong ham SD-WAN tu vManage API (statistics/approute, 168 gio gan nhat), lay 11/11/2026
+# 346059 ban ghi; cua so 10 phut; chi tinh cua so ma ca hai dau duong ham deu co du lieu (lab dang chay).
+# Duong ham "up" trong cua so neu co ban ghi app-route voi loss_percentage < 100; thieu ban ghi = down.
+# Cong cu: scratchpad av.py + fetch.sh chay trong vshell vManage (cookie phien API, khong luu mat khau).
+cua so 10 phut co du lieu: 671 = 111.8 gio; tu 06/11 13:50 den 11/11 09:50 UTC
+SO DUONG HAM 112 | KHA DUNG TONG 99.957% (74752/74784)
+  thiet bi vEdge1-S100 100.000% (10692/10692)
+  thiet bi vEdge1-S200 100.000% (6686/6686)
+  thiet bi vEdge1-S300 99.955% (6679/6682)
+  thiet bi vEdge1-S400 100.000% (6682/6682)
+  thiet bi vEdge1-S500 100.000% (6670/6670)
+  thiet bi vEdge2-S100 100.000% (10692/10692)
+  thiet bi vEdge2-S200 100.000% (6686/6686)
+  thiet bi vEdge2-S300 99.985% (6681/6682)
+  thiet bi vEdge2-S400 100.000% (6682/6682)
+  thiet bi vEdge2-S500 99.578% (6602/6630)
+  mau biz-internet->biz-internet 99.898% (18657/18676)
+  mau biz-internet->mpls 99.947% (18686/18696)
+  mau mpls->biz-internet 99.989% (18694/18696)
+  mau mpls->mpls 99.995% (18715/18716)
+10 duong ham kem nhat:
+  99.25% vEdge2-S500 biz-internet -> vEdge1-S100 biz-internet  mat 5/663 cua so
+  99.40% vEdge2-S500 biz-internet -> vEdge2-S200 biz-internet  mat 4/663 cua so
+  99.40% vEdge2-S500 biz-internet -> vEdge2-S400 biz-internet  mat 4/663 cua so
+  99.55% vEdge2-S500 biz-internet -> vEdge1-S100 mpls  mat 3/663 cua so
+  99.55% vEdge2-S500 biz-internet -> vEdge2-S300 biz-internet  mat 3/663 cua so
+  99.70% vEdge2-S500 biz-internet -> vEdge1-S200 mpls  mat 2/663 cua so
+  99.70% vEdge2-S500 biz-internet -> vEdge1-S400 mpls  mat 2/663 cua so
+  99.70% vEdge2-S500 biz-internet -> vEdge2-S100 biz-internet  mat 2/663 cua so
+  99.70% vEdge2-S500 biz-internet -> vEdge2-S100 mpls  mat 2/663 cua so
+  99.85% vEdge2-S500 biz-internet -> vEdge1-S300 mpls  mat 1/663 cua so
+  site 100 100.000% (670/670)
+  site 200 100.000% (671/671)
+  site 30 100.000% (669/669)     (nhan "30","40","50" la octet thu 3 cua system-ip = site 300/400/500)
+  site 40 100.000% (669/669)
+  site 50 100.000% (669/669)
+cua so co duong ham mat (UTC theo entry_time, so duong ham):
+   08/11 11:40 1
+   08/11 11:50 3
+   08/11 12:00 1
+   08/11 16:40 2
+   08/11 16:50 8
+   08/11 17:00 1
+   08/11 17:10 1
+   08/11 17:20 1
+   08/11 19:30 1
+   08/11 19:40 1
+   09/11 14:00 1
+   09/11 15:50 1
+   09/11 16:00 1
+   09/11 16:30 1
+   09/11 17:30 2
+   09/11 17:50 1
+   10/11 14:10 1
+   11/11 09:30 4
