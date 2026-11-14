@@ -7,7 +7,23 @@
 \usepackage{tcolorbox}
 
 %% 2. BỐ CỤC TRANG & CANH LỀ (ĐÃ SỬA THEO YÊU CẦU)
-\usepackage[a4paper, top=3.5cm, bottom=3cm, left=3.5cm, right=2cm]{geometry}
+% Theo TemplateCacMonDuAnVaThucTap_KhoaCNTT: A4, lề trên 3,5 - dưới 3 - trái 3,5 - phải 2 cm,
+% số trang nằm ở giữa lề trên (header cách mép giấy 1,27 cm).
+\usepackage[a4paper, top=3.5cm, bottom=3cm, left=3.5cm, right=2cm, headheight=16pt, headsep=1.65cm]{geometry}
+\usepackage{fancyhdr}
+\fancypagestyle{baocao}{%
+  \fancyhf{}%
+  \fancyhead[C]{\normalfont\fontsize{13pt}{15.6pt}\selectfont\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyhead[C]{\normalfont\fontsize{13pt}{15.6pt}\selectfont\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
+\pagestyle{baocao}
 % Đã BỎ tùy chọn "twoside" để lề trang không bị lệch
 
 
@@ -18,8 +34,8 @@
 % --- CÀI ĐẶT FONT, GIÃN DÒNG, THỤT LỀ MỚI ---
 \renewcommand{\normalsize}{\fontsize{13}{15.6}\selectfont}
 \linespread{1.5} % Giãn dòng 1.5
-\setlength{\parindent}{1cm} % Thụt đầu dòng 1cm
-\setlength{\parskip}{10pt} % Khoảng cách giữa các đoạn là 10pt
+\setlength{\parindent}{1.27cm} % Thụt đầu dòng 1,27 cm (style "Nội dung văn bản" của template)
+\setlength{\parskip}{0pt} % Template: không có khoảng cách trước/sau đoạn
 \setlength{\emergencystretch}{2em}
 
 
@@ -27,60 +43,86 @@
 \usepackage{titlesec}
 \setcounter{secnumdepth}{4}
 
-% Định dạng cho các chương CÓ ĐÁNH SỐ 
+% Theo template khoa CNTT:
+%   Heading 1 (Chương):          "CHƯƠNG N. TÊN CHƯƠNG", 16pt, đậm, canh trái
+%   Heading 2 (Tiểu mục cấp 1):  14pt, đậm
+%   Heading 3 (Tiểu mục cấp 2):  14pt, đậm nghiêng
+%   Heading 4 (Tiểu mục cấp 3):  14pt, thường
+%   Khoảng cách trước/sau mỗi đề mục 6pt, giãn dòng 1,5.
 \titleformat{\section}[block]
-  {\fontsize{16pt}{0pt}\selectfont \bfseries \centering}
-  {CHƯƠNG \thesection:}
-  {0.5em}
+  {\normalfont\fontsize{16pt}{19.2pt}\selectfont\bfseries\raggedright}
+  {CHƯƠNG \thesection.}
+  {0.4em}
   {}
-\titlespacing*{\section}{0pt}{0pt}{15pt}
+\titlespacing*{\section}{0pt}{6pt}{6pt}
 
-% Định dạng cho các chương KHÔNG ĐÁNH SỐ
-\titleformat{name=\section,numberless}[display]
-  {\fontsize{16pt}{0pt}\selectfont \bfseries \centering}
+% Tiêu đề các trang mở đầu, danh mục, tài liệu tham khảo, phụ lục: 16pt, đậm, canh giữa
+\titleformat{name=\section,numberless}[block]
+  {\normalfont\fontsize{16pt}{19.2pt}\selectfont\bfseries\centering}
   {}
   {0em}
   {}
+\titlespacing*{name=\section,numberless}{0pt}{6pt}{12pt}
 
-% Định dạng cho các mục con
-\titleformat*{\subsection}{\fontsize{14pt}{0pt}\selectfont \bfseries}
-\titlespacing*{\subsection}{0pt}{3pt}{0pt}
+\titleformat{\subsection}
+  {\normalfont\fontsize{14pt}{16.8pt}\selectfont\bfseries\raggedright}
+  {\thesubsection}
+  {0.6em}
+  {}
+\titlespacing*{\subsection}{0pt}{6pt}{6pt}
 
-\titleformat*{\subsubsection}{\fontsize{13pt}{0pt}\selectfont \bfseries \itshape}
-\titlespacing*{\subsubsection}{0pt}{6pt}{0pt}
-
-\titleformat*{\paragraph}{\fontsize{13pt}{0pt}\selectfont \itshape}
-\titlespacing*{\paragraph}{0pt}{0pt}{0pt}
+\titleformat{\subsubsection}
+  {\normalfont\fontsize{14pt}{16.8pt}\selectfont\bfseries\itshape\raggedright}
+  {\thesubsubsection}
+  {0.6em}
+  {}
+\titlespacing*{\subsubsection}{0pt}{6pt}{6pt}
 
 \titleformat{\paragraph}
-  {\normalfont\fontsize{13pt}{0pt}\selectfont\itshape}
+  {\normalfont\fontsize{14pt}{16.8pt}\selectfont\raggedright}
   {\theparagraph}
-  {1em}
+  {0.6em}
   {}
-\titlespacing*{\paragraph}{0pt}{0.5ex plus 0.5ex minus .2ex}{0.5ex plus .2ex}
+\titlespacing*{\paragraph}{0pt}{6pt}{6pt}
 
 
 %% 5. HÌNH ẢNH, BẢNG BIỂU & CHÚ THÍCH (CAPTION)
 \usepackage[nottoc]{tocbibind}
 \usepackage{tocloft}
+% Mục lục theo template: cấp 1 "CHƯƠNG N. TÊN" đậm, cấp 2 thường, cấp 3 nghiêng (thụt 0,25 cm),
+% tất cả 13pt, có dấu chấm dẫn tới số trang.
 \setlength{\cftbeforesecskip}{6pt}
 \setlength{\cftbeforesubsecskip}{2pt}
 \setlength{\cftbeforesubsubsecskip}{1pt}
-\setlength{\cftsubsecnumwidth}{3.8em}
-\renewcommand{\cftsubsecaftersnum}{\hspace{0.5em}}
-\setlength{\cftsubsubsecnumwidth}{5em}
-\renewcommand{\cftsubsubsecaftersnum}{\hspace{0.4em}}
-\setlength{\cftfignumwidth}{3.2em}
-\renewcommand{\cftfigaftersnum}{\hspace{0.4em}}
-\setlength{\cfttabnumwidth}{3.8em}
-\renewcommand{\cfttabaftersnum}{\hspace{0.4em}}
+\renewcommand{\cftsecpresnum}{CHƯƠNG }
+\renewcommand{\cftsecaftersnum}{.}
+\renewcommand{\cftsecleader}{\bfseries\cftdotfill{\cftdotsep}}
+\cftsetpnumwidth{2.4em}
+\cftsetrmarg{3em}
+\setlength{\cftsubsecindent}{0pt}
+\setlength{\cftsubsecnumwidth}{2.4em}
+\setlength{\cftsubsubsecindent}{0.25cm}
+\setlength{\cftsubsubsecnumwidth}{3.7em}
+\renewcommand{\cftsubsubsecfont}{\itshape}
+% Danh mục hình vẽ / bảng biểu: "Hình 2.1: Tên hình", "Bảng 4.1: Tên bảng"
+\setlength{\cftfigindent}{0pt}
+\renewcommand{\cftfigpresnum}{Hình }
+\renewcommand{\cftfigaftersnum}{:}
+\setlength{\cfttabindent}{0pt}
+\renewcommand{\cfttabpresnum}{Bảng }
+\renewcommand{\cfttabaftersnum}{:}
+\AtBeginDocument{%
+  \settowidth{\cftsecnumwidth}{\normalsize\bfseries CHƯƠNG 0.\ }%
+  \settowidth{\cftfignumwidth}{\normalsize Hình 0.00:\ \ }%
+  \settowidth{\cfttabnumwidth}{\normalsize Bảng 0.00:\ \ }%
+}
 
 % Căn giữa các tiêu đề danh mục tương tự tiêu đề section gốc
-\renewcommand{\cfttoctitlefont}{\hspace*{\fill}\fontsize{16pt}{0pt}\selectfont\bfseries}
+\renewcommand{\cfttoctitlefont}{\hspace*{\fill}\fontsize{16pt}{19.2pt}\selectfont\bfseries}
 \renewcommand{\cftaftertoctitle}{\hspace*{\fill}}
-\renewcommand{\cftloftitlefont}{\hspace*{\fill}\fontsize{16pt}{0pt}\selectfont\bfseries}
+\renewcommand{\cftloftitlefont}{\hspace*{\fill}\fontsize{16pt}{19.2pt}\selectfont\bfseries}
 \renewcommand{\cftafterloftitle}{\hspace*{\fill}}
-\renewcommand{\cftlottitlefont}{\hspace*{\fill}\fontsize{16pt}{0pt}\selectfont\bfseries}
+\renewcommand{\cftlottitlefont}{\hspace*{\fill}\fontsize{16pt}{19.2pt}\selectfont\bfseries}
 \renewcommand{\cftafterlottitle}{\hspace*{\fill}}
 \usepackage{graphicx}
 \usepackage{float}
@@ -90,11 +132,10 @@
 \usepackage[font=normal]{caption}
 \usepackage{array}
 
-\renewcommand{\figurename}{\fontsize{12pt}{0pt}\selectfont Hình}
-\captionsetup[figure]{labelsep=space}
-
-\renewcommand{\tablename}{\fontsize{12pt}{0pt}\selectfont Bảng}
-\captionsetup[table]{labelsep=space}
+% Chú thích theo template: "Hình 2.1: ...", "Bảng 4.1: ...", 13pt, canh giữa;
+% chú thích bảng đặt phía trên bảng, chú thích hình đặt phía dưới hình.
+\captionsetup{labelsep=colon, justification=centering, skip=6pt}
+\captionsetup[table]{position=top}
 
 \newcolumntype{s}{>{\hsize=.3\hsize}X}
 \newcolumntype{y}{>{\hsize=.4\hsize}X}

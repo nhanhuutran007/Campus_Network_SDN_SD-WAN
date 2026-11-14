@@ -1,14 +1,13 @@
 \newpage
-\section*{DANH MỤC CÁC TỪ VIẾT TẮT}
-\addcontentsline{toc}{section}{DANH MỤC CÁC TỪ VIẾT TẮT}
+\section*{DANH MỤC CÁC CHỮ VIẾT TẮT}
+\phantomsection\addcontentsline{toc}{section}{DANH MỤC CÁC CHỮ VIẾT TẮT}
 
+% Theo template: bảng hai cột không kẻ khung, không dòng tiêu đề, chữ 13pt.
 {
-\fontsize{12pt}{14pt}\selectfont
-\setlength{\parskip}{0pt}
-\renewcommand{\arraystretch}{1.05}
-\begin{longtable}{ >{\centering\arraybackslash}p{3cm} p{9cm} }
-    \textbf{Viết tắt} & \textbf{Tiếng Anh} \\
-
+\let\tabletextsize\normalsize
+\setlength{\LTleft}{0pt}
+\renewcommand{\arraystretch}{1.0}
+\begin{longtable}{ @{}p{3cm} p{12cm}@{} }
     AAR & Application-Aware Routing \\
     ACL & Access Control List \\
     API & Application Programming Interface \\

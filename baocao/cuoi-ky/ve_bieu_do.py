@@ -62,20 +62,26 @@ finish(ax, fig, "bd-vlan-daucuoi.png", xlabel="Thời gian kể từ lúc gửi 
 # 3. Branch failover, per direction (07/11/2026, 4 valid runs)
 rt = [json.loads(l) for l in open(R + "log/bfd-tuning/rto_2chieu_20261107.jsonl", encoding="utf-8")]
 rt = [r for r in rt if "error" not in r]
-fig, ax = plt.subplots(figsize=(7.2, 2.8))
+# Each run is one timeline bar starting at the cut (t = 0): first the outage while the forward path is
+# still broken, then the wait for the return path; the bar ends when the reply reaches the workstation.
+vn = lambda v, nd=1: ("%.*f" % (nd, v)).replace(".", ",")
+fig, ax = plt.subplots(figsize=(7.2, 3.1))
 for i, r in enumerate(rt):
     f, b = r["fwd_vEdge2"], r["reply_at_vpc"]
-    ax.plot([f, b], [i, i], color=GRID, linewidth=2.2, zorder=1)
-    ax.scatter([f], [i], s=60, color=S1, zorder=3, edgecolors=SURF, linewidths=1.5, label="Chiều đi: Brand-FW chuyển sang vEdge2" if i == 0 else None)
-    ax.scatter([b], [i], s=60, color=S2, zorder=3, edgecolors=SURF, linewidths=1.5, label="Gói trả lời về tới máy trạm" if i == 0 else None)
-    ax.text(f - 0.15, i - 0.3, ("%.2f" % f).replace(".", ","), ha="center", fontsize=8.5, color=INK2)
-    ax.text(b + 0.15, i - 0.3, ("%.2f" % b).replace(".", ","), ha="center", fontsize=8.5, color=INK2)
-ax.axvline(7, color=INK2, linestyle="--", linewidth=1)
-ax.text(7.05, len(rt) - 0.45, "BFD phát hiện mất: 7 s", fontsize=8.5, color=INK2)
-ax.set_yticks(range(len(rt))); ax.set_yticklabels(["Lần %d" % (i + 1) for i in range(len(rt))]); ax.invert_yaxis()
-ax.set_xlim(0, 10.5); ax.set_ylim(len(rt) - 0.3, -0.8)
-ax.legend(loc="upper left", frameon=False, fontsize=9, ncol=2, bbox_to_anchor=(0, 1.18))
-finish(ax, fig, "bd-failover-2chieu.png", xlabel="Thời gian kể từ khi cắt MPLS vEdge1 Site 200 (giây)")
+    ax.barh(i, f, height=0.56, color=S1, edgecolor=SURF, linewidth=1.5,
+            label="Giai đoạn 1: chiều đi còn đứt (chờ Brand-FW chuyển sang vEdge2)" if i == 0 else None)
+    ax.barh(i, b - f, left=f, height=0.56, color=S2, edgecolor=SURF, linewidth=1.5,
+            label="Giai đoạn 2: chiều đi đã thông, chờ chiều về (Site 100 bỏ đường cũ)" if i == 0 else None)
+    ax.text(f / 2, i, vn(f) + " s", ha="center", va="center", fontsize=9, color="#ffffff", fontweight="bold")
+    ax.text((f + b) / 2, i, vn(b - f) + " s", ha="center", va="center", fontsize=9, color="#ffffff", fontweight="bold")
+    ax.text(b + 0.12, i, "thông lại sau " + vn(b) + " s", va="center", fontsize=9, color=INK)
+ax.axvline(7, color=INK2, linestyle="--", linewidth=1, zorder=4)
+ax.text(7.1, -0.62, "BFD mặc định: 7 s", fontsize=8.5, color=INK2, ha="left")
+ax.set_yticks(range(len(rt))); ax.set_yticklabels(["Lần đo %d" % (i + 1) for i in range(len(rt))])
+ax.set_xlim(0, 12); ax.set_ylim(len(rt) - 0.45, -0.85)
+ax.set_xticks(range(0, 11, 2))
+ax.legend(loc="lower left", frameon=False, fontsize=8.5, ncol=1, bbox_to_anchor=(-0.01, 1.0), handlelength=1.2)
+finish(ax, fig, "bd-failover-2chieu.png", xlabel="Thời gian kể từ lúc cắt MPLS của vEdge1 Site 200 (giây)")
 
 # 4a. UDP loss vs offered rate (06/11/2026, all measured directions)
 rows = list(csv.DictReader(open(R + "log/thongluong/thongluong_vedge_20261106.csv", encoding="utf-8")))
@@ -117,19 +123,28 @@ groups = [("Cắt MPLS", [("Site 200", "s200-mpls"), ("Site 300", "s300-mpls"), 
           ("Mất vEdge1", [("Site 200", "s200-vedge1-mat"), ("Site 300", "s300-vedge1-mat"), ("Site 400", "s400-vedge1-mat"), ("Site 500", "s500-vedge1-mat")]),
           ("Cắt Internet", [("Site 200", "s200-internet"), ("Site 300", "s300-internet"), ("Site 400", "s400-internet"), ("Site 500", "s500-internet-sau-nat")]),
           ("Mất vEdge2", [("Site 200", "s200-vedge2-mat"), ("Site 300", "s300-vedge2-mat"), ("Site 400", "s400-vedge2-mat"), ("Site 500", "s500-vedge2-mat")])]
-fig, axes = plt.subplots(1, 4, figsize=(7.4, 3.0), sharey=True, sharex=True)
-for ax, (title, rows) in zip(axes, groups):
+# One panel per failure scenario; per site two bars = mean outage of new flows and of running flows,
+# labelled with the mean, with one small dot per individual cut.
+titles = {"Cắt MPLS": "Cắt đường MPLS (lưu lượng liên site)", "Mất vEdge1": "Mất vEdge1 (lưu lượng liên site)",
+          "Cắt Internet": "Cắt đường Internet (lưu lượng ra Internet)", "Mất vEdge2": "Mất vEdge2 (lưu lượng ra Internet)"}
+fig, axes = plt.subplots(2, 2, figsize=(7.4, 5.4), sharey=True, sharex=True)
+bh = 0.36
+for ax, (title, rows) in zip(axes.flat, groups):
     for i, (lab, name) in enumerate(rows):
         x = [r for r in fo if r["name"] == name]
-        new, same = [r["rto_new"] for r in x], [r["rto_same"] for r in x]
-        ax.scatter(new, [i] * len(new), s=34, color=S1, zorder=3, edgecolors=SURF, linewidths=1, label="Luồng mới" if i == 0 else None)
-        ax.scatter(same, [i] * len(same), s=34, color=S2, zorder=3, edgecolors=SURF, linewidths=1, marker="D", label="Luồng đang chạy" if i == 0 else None)
-    ax.set_title(title, fontsize=9.5, color=INK, loc="left")
-    ax.set_yticks(range(4)); ax.set_yticklabels(["Site 200", "Site 300", "Site 400", "Site 500"]); ax.set_ylim(3.5, -0.5); ax.set_xlim(0, 42)
+        for vals, off, col, leg in (([r["rto_new"] for r in x], -bh / 2 - 0.02, S1, "Luồng mới (kết nối mở sau khi cắt)"),
+                                    ([r["rto_same"] for r in x], bh / 2 + 0.02, S2, "Luồng đang chạy (kết nối có từ trước khi cắt)")):
+            m = st.mean(vals)
+            ax.barh(i + off, m, height=bh, color=col, label=leg if i == 0 else None)
+            ax.scatter(vals, [i + off] * len(vals), s=9, color=INK, zorder=3, linewidths=0)
+            ax.text(max(vals) + 1.0, i + off, ("%.1f s" % m).replace(".", ","), va="center", fontsize=8.5, color=INK)
+    ax.set_title(titles[title], fontsize=9.5, color=INK, loc="left")
+    ax.set_yticks(range(4)); ax.set_yticklabels(["Site 200", "Site 300", "Site 400", "Site 500"]); ax.set_ylim(3.55, -0.55); ax.set_xlim(0, 48)
+    ax.set_xticks(range(0, 41, 10))
     ax.grid(axis="x", color=GRID, linewidth=0.8); ax.set_axisbelow(True); ax.tick_params(length=0)
-h, l = axes[0].get_legend_handles_labels()
-fig.legend(h, l, loc="upper center", ncol=2, frameon=False, fontsize=9, bbox_to_anchor=(0.5, 1.07))
-fig.supxlabel("Thời gian từ lúc cắt đến khi thông lại (giây)", fontsize=10, color=INK2)
+h, l = axes.flat[0].get_legend_handles_labels()
+fig.legend(h, l, loc="upper center", ncol=2, frameon=False, fontsize=9, bbox_to_anchor=(0.5, 1.045))
+fig.supxlabel("Thời gian mất kết nối kể từ lúc cắt (giây) – thanh: trung bình, chấm đen: từng lần cắt", fontsize=9.5, color=INK2)
 fig.tight_layout()
 fig.savefig(OUT + "bd-failover-4site.png", bbox_inches="tight")
 plt.close(fig)
