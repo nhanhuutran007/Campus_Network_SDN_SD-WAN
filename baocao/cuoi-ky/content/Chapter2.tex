@@ -21,7 +21,7 @@ Các yêu cầu này là lý do đề tài kết hợp mô hình mạng phân c�
 
 \subsection{Mô hình mạng phân cấp Core--Distribution--Access}
 
-Mô hình Core--Distribution--Access là kiến trúc phổ biến trong thiết kế mạng Campus vì chia hệ thống thành các tầng có chức năng rõ ràng. Cách phân tầng này giúp quá trình thiết kế, vận hành và mở rộng mạng trở nên có tổ chức, đồng thời giới hạn phạm vi ảnh hưởng khi xảy ra sự cố.
+Mô hình Core--Distribution--Access (Hình~\ref{fig:core_distribution_access}) là kiến trúc phổ biến trong thiết kế mạng Campus vì chia hệ thống thành các tầng có chức năng rõ ràng. Cách phân tầng này giúp quá trình thiết kế, vận hành và mở rộng mạng trở nên có tổ chức, đồng thời giới hạn phạm vi ảnh hưởng khi xảy ra sự cố.
 
 \begin{figure}[H]
     \centering
@@ -39,13 +39,6 @@ Mô hình Core--Distribution--Access là kiến trúc phổ biến trong thiết
 Trong đề tài, cơ sở chính áp dụng đầy đủ ba tầng: hai Core Switch đảm nhận định tuyến liên VLAN và gateway dự phòng; hai Distribution Switch và bốn Access Switch là switch ảo Open vSwitch do SDN Controller điều khiển. Các cơ sở phụ có quy mô nhỏ nên áp dụng mô hình rút gọn, trong đó tường lửa chi nhánh đảm nhận luôn vai trò lõi định tuyến (\textit{Firewall-as-Core}).
 
 \subsection{VLAN, trunk 802.1Q và định tuyến liên VLAN}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.80\textwidth]{image/vlan.png}
-    \caption{Minh họa VLAN và phân đoạn mạng}
-    \label{fig:vlan_phan_doan_mang}
-\end{figure}
 
 VLAN (Virtual LAN) là kỹ thuật chia một hạ tầng switch vật lý thành nhiều mạng logic độc lập. Mỗi VLAN là một miền quảng bá riêng, nhờ đó lưu lượng broadcast được giới hạn và các nhóm người dùng được tách biệt về mặt logic. Trong mạng Campus, VLAN thường được phân chia theo chức năng: VLAN cho từng khoa, VLAN hành chính, VLAN máy chủ và VLAN quản trị thiết bị.
 
@@ -73,7 +66,7 @@ EtherChannel gộp nhiều liên kết vật lý song song thành một liên k�
 
 \subsubsection{Giao thức dự phòng gateway VRRP}
 
-Máy trạm chỉ khai báo một default gateway, do đó nếu gateway gặp sự cố thì toàn bộ VLAN mất kết nối ra ngoài. VRRP (Virtual Router Redundancy Protocol, RFC~5798) cho phép nhiều router cùng chia sẻ một địa chỉ IP ảo (VIP). Router có độ ưu tiên (priority) cao nhất trở thành \textit{Master} và trả lời ARP cho VIP bằng địa chỉ MAC ảo \texttt{0000.5e00.01xx}; các router còn lại ở trạng thái \textit{Backup} và theo dõi bản tin quảng bá của Master. Khi Master ngừng gửi quảng bá trong khoảng thời gian \textit{Master Down Interval}, Backup có priority cao nhất sẽ tiếp quản VIP mà máy trạm không cần thay đổi cấu hình. Khác với HSRP là giao thức riêng của Cisco, VRRP là chuẩn mở của IETF.
+Máy trạm chỉ khai báo một default gateway, do đó nếu gateway gặp sự cố thì toàn bộ VLAN mất kết nối ra ngoài. VRRP (Virtual Router Redundancy Protocol, RFC~5798 \citep{rfc5798_vrrpv3}) cho phép nhiều router cùng chia sẻ một địa chỉ IP ảo (VIP). Router có độ ưu tiên (priority) cao nhất trở thành \textit{Master} và trả lời ARP cho VIP bằng địa chỉ MAC ảo \texttt{0000.5e00.01xx}; các router còn lại ở trạng thái \textit{Backup} và theo dõi bản tin quảng bá của Master. Khi Master ngừng gửi quảng bá trong khoảng thời gian \textit{Master Down Interval}, Backup có priority cao nhất sẽ tiếp quản VIP mà máy trạm không cần thay đổi cấu hình. Khác với HSRP là giao thức riêng của Cisco, VRRP là chuẩn mở của IETF.
 
 \subsection{Định tuyến nội bộ và định tuyến liên miền}
 
@@ -81,11 +74,11 @@ Máy trạm chỉ khai báo một default gateway, do đó nếu gateway gặp s
 
 \subsubsection{OSPF}
 
-OSPF (Open Shortest Path First, RFC~2328) là giao thức định tuyến nội bộ theo trạng thái liên kết. Các router trao đổi LSA (Link-State Advertisement) để xây dựng cơ sở dữ liệu topology giống nhau trong một area, sau đó mỗi router chạy thuật toán Dijkstra để tính cây đường đi ngắn nhất. Hai router trở thành láng giềng khi thống nhất các tham số như area, hello/dead interval và mặt nạ mạng; trạng thái \texttt{FULL} cho biết cơ sở dữ liệu đã đồng bộ. Mỗi router được nhận dạng bằng một Router-ID 32 bit. Lệnh \texttt{default-information originate} cho phép một router (thường là thiết bị biên) quảng bá tuyến mặc định vào miền OSPF. OSPF hội tụ nhanh, hỗ trợ phân vùng và phù hợp với mạng phân cấp; trong đề tài, OSPF Area~0 chạy giữa hai Core Switch và tường lửa biên của cơ sở chính.
+OSPF (Open Shortest Path First, RFC~2328 \citep{rfc2328_ospfv2}) là giao thức định tuyến nội bộ theo trạng thái liên kết. Các router trao đổi LSA (Link-State Advertisement) để xây dựng cơ sở dữ liệu topology giống nhau trong một area, sau đó mỗi router chạy thuật toán Dijkstra để tính cây đường đi ngắn nhất. Hai router trở thành láng giềng khi thống nhất các tham số như area, hello/dead interval và mặt nạ mạng; trạng thái \texttt{FULL} cho biết cơ sở dữ liệu đã đồng bộ. Mỗi router được nhận dạng bằng một Router-ID 32 bit. Lệnh \texttt{default-information originate} cho phép một router (thường là thiết bị biên) quảng bá tuyến mặc định vào miền OSPF. OSPF hội tụ nhanh, hỗ trợ phân vùng và phù hợp với mạng phân cấp; trong đề tài, OSPF Area~0 chạy giữa hai Core Switch, tường lửa biên và hai vEdge của cơ sở chính.
 
 \subsubsection{BGP}
 
-BGP (Border Gateway Protocol, RFC~4271) là giao thức định tuyến giữa các hệ tự trị (Autonomous System, AS), được sử dụng làm giao thức định tuyến của Internet và của các nhà cung cấp dịch vụ MPLS. Mỗi AS được định danh bằng một số ASN; phiên BGP giữa hai AS khác nhau gọi là eBGP. BGP chạy trên TCP cổng 179, lựa chọn tuyến dựa trên tập thuộc tính đường đi (AS\_PATH, NEXT\_HOP, LOCAL\_PREF,...) thay vì một metric đơn lẻ, do đó phù hợp với việc thể hiện chính sách giữa khách hàng và nhà cung cấp. Trong mô hình khách hàng--nhà cung cấp (CE--PE), nhà cung cấp thường gửi tuyến mặc định cho khách hàng bằng tùy chọn \texttt{default-originate}. Đề tài dùng eBGP để mô phỏng hạ tầng underlay của hai nhà cung cấp Internet và MPLS.
+BGP (Border Gateway Protocol, RFC~4271 \citep{rfc4271_bgp4}) là giao thức định tuyến giữa các hệ tự trị (Autonomous System, AS), được sử dụng làm giao thức định tuyến của Internet và của các nhà cung cấp dịch vụ MPLS. Mỗi AS được định danh bằng một số ASN; phiên BGP giữa hai AS khác nhau gọi là eBGP. BGP chạy trên TCP cổng 179, lựa chọn tuyến dựa trên tập thuộc tính đường đi (AS\_PATH, NEXT\_HOP, LOCAL\_PREF,...) thay vì một metric đơn lẻ, do đó phù hợp với việc thể hiện chính sách giữa khách hàng và nhà cung cấp. Trong mô hình khách hàng--nhà cung cấp (CE--PE), nhà cung cấp thường gửi tuyến mặc định cho khách hàng bằng tùy chọn \texttt{default-originate}. Đề tài dùng eBGP để mô phỏng hạ tầng underlay của hai nhà cung cấp Internet và MPLS.
 
 \subsubsection{Tuyến tĩnh, tuyến dự phòng và theo dõi đường đi}
 
@@ -119,7 +112,7 @@ SDN (Software-Defined Networking) là mô hình mạng trong đó mặt phẳng 
 
 \subsubsection{Kiến trúc SDN ba lớp}
 
-Kiến trúc SDN thường được mô tả theo ba lớp: lớp ứng dụng, lớp điều khiển và lớp hạ tầng, liên kết với nhau qua các giao diện lập trình.
+Kiến trúc SDN thường được mô tả theo ba lớp (Hình~\ref{fig:sdn_architecture}): lớp ứng dụng, lớp điều khiển và lớp hạ tầng, liên kết với nhau qua các giao diện lập trình.
 
 \begin{figure}[H]
     \centering
@@ -136,7 +129,7 @@ Kiến trúc SDN thường được mô tả theo ba lớp: lớp ứng dụng, 
 
 \subsubsection{Nguyên lý hoạt động và giao thức OpenFlow 1.3}
 
-OpenFlow là giao thức southbound tiêu chuẩn do Open Networking Foundation phát triển. Phiên bản 1.3 được sử dụng rộng rãi nhất và là phiên bản dùng trong đề tài. Controller và switch trao đổi bản tin trên kết nối TCP (cổng chuẩn 6653). Các khái niệm chính gồm:
+OpenFlow là giao thức southbound tiêu chuẩn do Open Networking Foundation phát triển \citep{onf_openflow_134}. Phiên bản 1.3 được sử dụng rộng rãi nhất và là phiên bản dùng trong đề tài. Controller và switch trao đổi bản tin trên kết nối TCP (cổng chuẩn 6653). Các khái niệm chính gồm:
 
 \begin{itemize}
     \item \textbf{Flow table và flow entry:} mỗi flow entry gồm tập trường so khớp (\textit{match}: cổng vào, địa chỉ MAC, EtherType, VLAN ID, địa chỉ IP, cổng TCP/UDP,...), độ ưu tiên (\textit{priority}), tập lệnh (\textit{instructions/actions}: output, drop, push/pop VLAN, set-field), bộ đếm, thời gian sống (idle/hard timeout) và một giá trị \textit{cookie} do Controller gán để nhận diện nhóm flow. Gói tin khớp với flow có priority cao nhất.
@@ -152,7 +145,7 @@ Khi mất kết nối với Controller, switch hoạt động theo \textit{fail 
 
 \textbf{Open vSwitch (OVS)} là switch ảo mã nguồn mở hỗ trợ OpenFlow, gồm cơ sở dữ liệu cấu hình OVSDB và tiến trình chuyển tiếp \texttt{ovs-vswitchd}. Mỗi bridge của OVS có thể được gán Datapath ID (DPID), phiên bản OpenFlow, địa chỉ Controller và fail mode. Cổng của bridge có thể mang thuộc tính \texttt{tag} (cổng access) hoặc \texttt{trunks} (cổng trunk).
 
-\textbf{Ryu} là framework SDN viết bằng Python theo mô hình hướng sự kiện. Ứng dụng Ryu đăng ký các bộ xử lý sự kiện như kết nối switch, Packet-In, thay đổi trạng thái cổng và trả lời thống kê. Ryu đi kèm ứng dụng \texttt{ofctl\_rest} cung cấp REST API để đọc và thay đổi flow, phù hợp cho việc xây dựng logic điều khiển tùy biến và ứng dụng giám sát.
+\textbf{Ryu} là framework SDN viết bằng Python theo mô hình hướng sự kiện \citep{ryu_434_docs}. Ứng dụng Ryu đăng ký các bộ xử lý sự kiện như kết nối switch, Packet-In, thay đổi trạng thái cổng và trả lời thống kê. Ryu đi kèm ứng dụng \texttt{ofctl\_rest} cung cấp REST API để đọc và thay đổi flow, phù hợp cho việc xây dựng logic điều khiển tùy biến và ứng dụng giám sát.
 
 \textbf{ONOS} (Open Network Operating System) là Controller hướng đến môi trường nhà cung cấp dịch vụ, có kiến trúc phân tán, giao diện đồ họa trực quan, cơ chế phát hiện topology qua LLDP và hệ thống ứng dụng mở rộng. ONOS có thể được dùng như một lớp quan sát topology song song với Controller chuyển tiếp chính, nhưng chạy trên nền Java nên cần nhiều tài nguyên CPU và bộ nhớ hơn Ryu.
 
@@ -166,18 +159,7 @@ Khi mất kết nối với Controller, switch hoạt động theo \textit{fail 
 
 Nhược điểm là Controller trở thành thành phần trọng yếu: nếu Controller hoặc kênh điều khiển gặp sự cố, switch ở chế độ \texttt{secure} không xử lý được lưu lượng mới (ARP, DHCP, máy trạm mới). Khi kênh điều khiển đi chung hạ tầng dữ liệu, bài toán ``switch cần Controller để chuyển tiếp, nhưng Controller chỉ tới được qua chính các switch'' phải được giải quyết bằng quy tắc khởi động (bootstrap) và cây quản trị không vòng lặp. Ngoài ra, việc triển khai SDN đòi hỏi kiến thức cả về mạng lẫn lập trình, và logic mà switch truyền thống có sẵn (chống vòng lặp, dự phòng) phải được Controller hiện thực lại.
 
-\subsubsection{Ứng dụng của SDN trong mạng Campus}
-
-SDN được ứng dụng rộng rãi trong trung tâm dữ liệu, điện toán đám mây và mạng doanh nghiệp. Đối với mạng Campus, SDN có thể được dùng để quản lý VLAN tập trung, cách ly thiết bị bất thường, chống vòng lặp theo topology toàn cục và giám sát tải cổng theo thời gian thực. Trong phạm vi đề tài, SDN không thay thế hoàn toàn mô hình Core--Distribution--Access mà là lớp điều khiển tập trung cho phần chuyển mạch lớp 2 của cơ sở chính.
-
 \subsection{Công nghệ SD-WAN}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.80\textwidth]{image/sdwan.jpg}
-    \caption{Minh họa công nghệ SD-WAN}
-    \label{fig:sdwan}
-\end{figure}
 
 SD-WAN (Software-Defined WAN) áp dụng nguyên lý tách mặt phẳng điều khiển cho mạng diện rộng. Thay vì phụ thuộc vào một đường truyền riêng đắt tiền, SD-WAN tạo một mạng \textit{overlay} gồm các đường hầm mã hóa chạy trên nhiều loại đường truyền (\textit{transport}) như Internet, MPLS, 4G/5G, và lựa chọn đường truyền theo chính sách và chất lượng đo được.
 
@@ -201,7 +183,7 @@ Edge chia bảng định tuyến thành nhiều VPN (tương tự VRF): \textbf{
 
 \textbf{TLOC} (Transport Locator) là điểm kết cuối đường hầm, định danh bởi bộ ba (System-IP, color, encapsulation). \textbf{Color} gán nhãn cho loại đường truyền, ví dụ \texttt{mpls}, \texttt{biz-internet}. Color cũng quyết định cách Edge chọn địa chỉ để dựng đường hầm; nhãn phải khớp với bản chất đường truyền để các đường hầm chéo màu (ví dụ \texttt{mpls}--\texttt{biz-internet}) hình thành đúng.
 
-\textbf{OMP} (Overlay Management Protocol) chạy trong các kết nối DTLS/TLS giữa Edge và vSmart, mang ba loại thông tin: tuyến OMP (các prefix của VPN dịch vụ), TLOC và thông tin dịch vụ. vSmart đóng vai trò tương tự route reflector: nhận tuyến từ mọi Edge, áp chính sách điều khiển rồi phân phối lại. Mặc định, các Edge dựng đường hầm IPsec full-mesh giữa mọi cặp TLOC.
+\textbf{OMP} (Overlay Management Protocol) chạy trong các kết nối DTLS/TLS giữa Edge và vSmart, mang ba loại thông tin: tuyến OMP (các prefix của VPN dịch vụ), TLOC và thông tin dịch vụ \citep{cisco_sdwan_omp}. vSmart đóng vai trò tương tự route reflector: nhận tuyến từ mọi Edge, áp chính sách điều khiển rồi phân phối lại. Mặc định, các Edge dựng đường hầm IPsec full-mesh giữa mọi cặp TLOC.
 
 \textbf{BFD} (Bidirectional Forwarding Detection) chạy bên trong mỗi đường hầm IPsec, gửi gói thăm dò định kỳ để phát hiện đường hầm hỏng và đo độ trễ, jitter, tỷ lệ mất gói. Thời gian phát hiện bằng chu kỳ thăm dò nhân với hệ số \textit{multiplier}; với giá trị mặc định 1000~ms $\times$ 7 là khoảng 7 giây, và có thể rút ngắn bằng cách giảm hai tham số này. Các số liệu này là đầu vào cho chính sách định tuyến theo ứng dụng.
 

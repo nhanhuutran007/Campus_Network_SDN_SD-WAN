@@ -47,7 +47,7 @@ Toàn bộ hệ thống được triển khai trong một lab EVE-NG gồm \text
     \end{tabularx}
 \end{table}
 
-Core-SW1/2 dùng image IOL thay cho vIOS-L2 vì vIOS-L2 thường xuyên rơi vào trạng thái chiếm dụng CPU và nạp cấu hình khởi động không ổn định khi tầng dưới phát nhiều broadcast. Image IOL \texttt{adventerprisek9} hỗ trợ đầy đủ \texttt{switchport}, SVI, \texttt{ip routing}, cổng định tuyến, VRRP và OSPF. Máy trạm VPCS được dùng cho các phép thử ping và DHCP nhanh; bốn máy Ubuntu có giao diện đồ họa được dùng để kiểm thử dịch vụ Web và Mail như người dùng thật.
+Core-SW1/2 dùng image IOL thay cho vIOS-L2 vì vIOS-L2 thường xuyên rơi vào trạng thái chiếm dụng CPU và nạp cấu hình khởi động không ổn định khi tầng dưới phát nhiều broadcast. Image IOL \texttt{adventerprisek9} hỗ trợ đầy đủ \texttt{switchport}, SVI, \texttt{ip routing}, cổng định tuyến, VRRP và OSPF. Máy trạm VPCS được dùng cho các phép thử ping và DHCP nhanh; năm máy Ubuntu có giao diện đồ họa được dùng để kiểm thử dịch vụ Web và Mail như người dùng thật.
 
 Thứ tự khởi động lab được chuẩn hóa để tránh lỗi phụ thuộc: nhà cung cấp (Internet, MPLS) và switch LAN Site 900 $\rightarrow$ ba controller SD-WAN $\rightarrow$ các vEdge $\rightarrow$ tường lửa và Core Site 100 $\rightarrow$ SwitchServerFarm, SwitchDMZ $\rightarrow$ SDN Controller $\rightarrow$ Dist-SW1/2 $\rightarrow$ Access-SW1--4 $\rightarrow$ máy chủ dịch vụ $\rightarrow$ chi nhánh $\rightarrow$ máy trạm.
 
@@ -160,9 +160,15 @@ logging host inside 10.1.90.11
 access-group INSIDE_OUT in interface inside
 access-group SDWAN_IN in interface outside
 access-group DMZ_IN in interface dmz
-route outside 0.0.0.0 0.0.0.0 10.1.3.2 1
+sla monitor 10
+ type echo protocol ipIcmpEcho 1.1.1.1 interface outside
+ frequency 3
+track 10 rtr 10 reachability
+route outside 1.1.1.1 255.255.255.255 10.1.3.2 1
+route outside 0.0.0.0 0.0.0.0 10.1.3.2 1 track 10
 route outside2 0.0.0.0 0.0.0.0 10.1.3.10 2
 route inside 10.1.99.0 255.255.255.0 10.1.2.2 1
+timeout floating-conn 0:00:30
 router ospf 1
  network 10.1.2.0 255.255.255.248 area 0
  network 10.1.2.8 255.255.255.248 area 0
@@ -206,7 +212,7 @@ Neighbor ID   Pri State         Dead Time Address    Interface
     \label{fig:fw_ha_failover}
 \end{figure}
 
-Trong quá trình triển khai có ba vấn đề đáng chú ý. Thứ nhất, cách đấu dây ban đầu nối đơn vị Standby vào các mạng \texttt{/30} khác với đơn vị Active, nên khi chuyển vai trò, các thiết bị xung quanh không còn cùng mạng với tường lửa mới: failover thực chất chưa từng hoạt động. Việc chuyển sang các mạng transit chung \texttt{/29} qua VLAN 101--104 đã khắc phục điều này. Thứ hai, khi cây dữ liệu của SDN Controller chặn đường lên Core-SW2, Core-SW2 không nghe được VRRP của Core-SW1 và cùng lên Master (split-brain); thêm VLAN 10--40 vào Po10 đã đưa Core-SW2 về Backup ở cả năm VLAN. Thứ ba, trong hai ngày 01--02/11/2026 cả hai đơn vị ASAv khởi động lại lặp do lỗi phần mềm (\texttt{show crashinfo} ghi lỗi trong tiến trình cập nhật bảng định tuyến) khi dùng tuyến mặc định có \texttt{track} theo \texttt{sla monitor}; bỏ \texttt{track} và \texttt{sla monitor} trên tường lửa biên, để OSPF với vEdge đảm nhận phát hiện lỗi, đã làm tường lửa chạy ổn định trở lại.
+Trong quá trình triển khai có ba vấn đề đáng chú ý. Thứ nhất, cách đấu dây ban đầu nối đơn vị Standby vào các mạng \texttt{/30} khác với đơn vị Active, nên khi chuyển vai trò, các thiết bị xung quanh không còn cùng mạng với tường lửa mới: failover thực chất chưa từng hoạt động. Việc chuyển sang các mạng transit chung \texttt{/29} qua VLAN 101--104 đã khắc phục điều này. Thứ hai, khi cây dữ liệu của SDN Controller chặn đường lên Core-SW2, Core-SW2 không nghe được VRRP của Core-SW1 và cùng lên Master (split-brain); thêm VLAN 10--40 vào Po10 đã đưa Core-SW2 về Backup ở cả năm VLAN. Thứ ba, cả hai đơn vị ASAv từng khởi động lại lặp do lỗi phần mềm (\texttt{show crashinfo} ghi lỗi trong tiến trình cập nhật bảng định tuyến) khi tuyến mặc định có \texttt{track} theo \texttt{sla monitor} thăm dò chính vEdge1 (\texttt{10.1.3.2}, chu kỳ 2 giây); gỡ cấu hình này thì tường lửa ổn định trở lại. Về sau \texttt{track} được đưa lại với đích thăm dò \texttt{1.1.1.1} và chu kỳ 3 giây để Internet của Campus chính tự chuyển sang vEdge2 (Bảng~\ref{tab:loi_sdwan}); cấu hình mới chưa gây lỗi, giới hạn kiểm chứng được nêu ở Chương~\ref{sec:ket_luan_huong_phat_trien}.
 
 \subsection{Triển khai SDN tại Campus chính}
 
@@ -367,8 +373,6 @@ Phần SDN là phần tốn nhiều công sức nhất vì toàn bộ hành vi m
     Controller khựng 0,5--9 giây theo cụm, có lúc cả sáu OVS mất kết nối & ONOS chạy song song chiếm hơn một vCPU của máy Controller (2 vCPU); Ryu bị đói CPU & Tắt ONOS, ưu tiên CPU cho Ryu; thêm ân hạn để khựng không bị coi là liên kết chết \\
     \hline
     Vòng thăm dò đứng hẳn khi một switch chết & Ryu 4.34 chờ vô hạn khi hàng đợi gửi của kết nối chết đầy & Giới hạn thời gian chờ gửi 0,5 giây; Echo 2 giây $\times$ 3 lần \\
-    \hline
-    Khởi động đồng loạt: một Access vào chế độ khẩn cấp & Máy ảo bị chậm CPU lúc boot, gắn \texttt{/boot} quá thời gian & Đánh dấu \texttt{nofail} cho \texttt{/boot} trên sáu OVS và Controller \\
 \end{longtable}
 \endgroup
 
@@ -508,7 +512,7 @@ Có ba nhận xét. Thứ nhất, dữ liệu không ảnh hưởng mặt phẳn
     \label{fig:bd_packetin}
 \end{figure}
 
-\textbf{CPU và RAM:} lấy mẫu mỗi 30 giây từ máy chủ, theo từng tiến trình node, qua ba trạng thái: rảnh (30 mẫu), tải SDN (40 mẫu), tải WAN (17 mẫu); kết quả ở Bảng~\ref{tab:cpu_ram}. Cách đo này cần thiết vì CPU do chính Core IOL báo cáo luôn là 0\%, cả qua SNMP lẫn \texttt{show processes cpu}, kể cả khi đang chuyển 336~Mbit/s, nên số liệu CPU Core trên Console không phản ánh tải chuyển mạch. vEdge chạy 2 vCPU chiếm ổn định hơn một lõi (khoảng 107\%) ngay cả lúc rảnh, trong khi vEdge2 Site 200 chạy 1 vCPU chỉ khoảng 8\%, cho thấy phần lớn CPU đó không tỷ lệ với lưu lượng.
+\textbf{CPU và RAM:} lấy mẫu mỗi 30 giây từ máy chủ, theo từng tiến trình node, ở hai trạng thái: rảnh (30 mẫu) và tải SDN (40 mẫu); kết quả ở Bảng~\ref{tab:cpu_ram}. Cách đo này cần thiết vì CPU do chính Core IOL báo cáo luôn là 0\%, cả qua SNMP lẫn \texttt{show processes cpu}, kể cả khi đang chuyển 336~Mbit/s, nên số liệu CPU Core trên Console không phản ánh tải chuyển mạch. vEdge chạy 2 vCPU chiếm ổn định hơn một lõi (khoảng 107\%) ngay cả lúc rảnh, trong khi vEdge2 Site 200 chạy 1 vCPU chỉ khoảng 8\%, cho thấy phần lớn CPU đó không tỷ lệ với lưu lượng.
 
 \begin{table}[H]
     \centering
@@ -717,8 +721,6 @@ policy
     \endhead
     \hline
     \endfoot
-    vEdge không xác minh được chứng thư & Thiếu chuỗi Root CA trên vEdge & Cài Root CA trước, chứng thư thiết bị sau \\
-    \hline
     vBond/vSmart từ chối chứng thư dù đã ký đúng CA & Trường Organization của subject trong chứng thư không đúng giá trị nền tảng yêu cầu & Ký lại chứng thư với subject đúng chuẩn \\
     \hline
     vEdge lên vBond, vManage nhưng không có OMP với vSmart & Chưa đăng ký chassis/serial trên vSmart & Đăng ký trên đủ ba controller \\
@@ -727,15 +729,9 @@ policy
     \hline
     Chỉ một color lên được controller (``1/3 vSmart'') & Tuyến \texttt{10.9.0.0/24} chỉ có qua MPLS, che tuyến \texttt{/16} qua Internet theo longest-prefix match & Khai báo tuyến \texttt{/24} qua cả hai transport (ECMP) \\
     \hline
-    Mọi đường hầm chéo màu down tại chi nhánh & vEdge2 chi nhánh khai color \texttt{mpls} trên giao diện Internet & Sửa color thành \texttt{biz-internet} \\
-    \hline
-    BGP CE--PE không lên & Thiếu \texttt{allow-service bgp} trên tunnel-interface, thiếu \texttt{address-family} & Bổ sung cấu hình \\
-    \hline
     Một TLOC mất hẳn kết nối điều khiển, OMP và BFD dù cấu hình không đổi (gặp ở vEdge2 Site 100 và vEdge1 Site 300) & Card mạng ảo của cổng WAN bị treo chiều nhận (bộ đếm drop của giao diện ảo trên máy chủ tăng liên tục) & \texttt{shutdown} / \texttt{no shutdown} cổng; BGP, TLOC, OMP và BFD lên lại \\
     \hline
     Đường hầm chéo màu của Site 100 down (biz-internet $\leftrightarrow$ mpls) & Mỗi TLOC chỉ có tuyến tới transport bên kia qua một cổng & Thêm tuyến mặc định qua từng transport trong VPN 0 của hai vEdge Site 100 \\
-    \hline
-    Overlay lên nhưng máy trạm các site không thông nhau & Chưa có VPN dịch vụ, cổng LAN nằm trong VPN 512 & Tạo VPN 1 \texttt{LAN}, chuyển cổng LAN vào VPN 1, thêm tuyến tổng hợp và quảng bá OMP \\
     \hline
     Mất MPLS tại chi nhánh làm mất 100\% gói, không tự phục hồi & Brand-FW không biết đường MPLS phía xa đã đứt nên vẫn đẩy lưu lượng về vEdge1; vEdge2 chuyển lưu lượng LAN qua vEdge1 nên chiều về đi vào cổng khác chiều đi và bị tường lửa trạng thái hủy & Brand-FW theo dõi beacon \texttt{10.1.255.1} bằng \texttt{sla monitor} và \texttt{track}; tuyến LAN của vEdge2 trỏ thẳng về \texttt{outside2}; control policy ưu tiên vEdge1 của mọi site \\
     \hline
@@ -750,11 +746,11 @@ policy
 \subsubsection{Kết quả kiểm thử SD-WAN}
 
 \begin{itemize}
-    \item \textbf{Control plane:} ba controller và mười vEdge Site 100--500 đều reachable trên vManage (Hình~\ref{fig:vmanage_overview} và Hình~\ref{fig:vmanage_devices}). Mỗi vEdge Site 100 đạt 2/2 kết nối tới vSmart, mỗi vEdge chi nhánh đạt 1/1. Tại vEdge1-S100, mỗi color có một kết nối DTLS tới vSmart, riêng biz-internet có thêm kết nối tới vManage (Hình~\ref{fig:vmanage_control}).
+    \item \textbf{Control plane:} ba controller và mười vEdge Site 100--500 đều reachable trên vManage (Hình~\ref{fig:vmanage_overview} và Hình~\ref{fig:vmanage_devices}). Mỗi vEdge Site 100 đạt 2/2 kết nối tới vSmart, mỗi vEdge chi nhánh đạt 1/1. Tại vEdge1-S100, mỗi color có một kết nối DTLS tới vSmart, riêng biz-internet có thêm kết nối tới vManage.
     \item \textbf{Underlay:} mọi phiên eBGP CE--PE và phiên giữa hai nhà cung cấp ở trạng thái Established; các vEdge nhận tuyến mặc định qua transport tương ứng.
-    \item \textbf{BFD:} toàn bộ phiên đều up --- mỗi vEdge Site 100 16/16, mỗi vEdge chi nhánh 10/10 (Hình~\ref{fig:vmanage_devices}); tổng các cột này là 112, bằng số đường hầm trên trang tổng quan. Cả năm site đạt BFD Full (Hình~\ref{fig:vmanage_health}). Hình~\ref{fig:bfd_s200} là đầu ra trên vEdge2 Site 200: mười phiên BFD tới các TLOC của Site 100, 300, 400, 500 đều up (timer mặc định 1000~ms $\times$ 7) và phiên OMP với vSmart ở trạng thái up.
+    \item \textbf{BFD:} toàn bộ phiên đều up --- mỗi vEdge Site 100 16/16, mỗi vEdge chi nhánh 10/10 (Hình~\ref{fig:vmanage_devices}); tổng các cột này là 112, bằng số đường hầm trên trang tổng quan. Cả năm site đạt BFD Full. Hình~\ref{fig:bfd_s200} là đầu ra trên vEdge2 Site 200: mười phiên BFD tới các TLOC của Site 100, 300, 400, 500 đều up (timer mặc định 1000~ms $\times$ 7) và phiên OMP với vSmart ở trạng thái up.
     \item \textbf{Overlay dữ liệu:} ping giữa máy trạm các chi nhánh 200, 300, 400 thành công 10/10; máy trạm chi nhánh truy cập được dịch vụ tại Campus chính.
-    \item \textbf{Chất lượng đường truyền:} thống kê app-route từ Site 200 đến Site 300 qua MPLS: mất gói 0\%, độ trễ 37~ms, jitter 6~ms --- thỏa \texttt{SLA\_REALTIME}. Trên vManage, trong 24 giờ, hai TLOC của vEdge1-S100 đều up, bảng TLOC ghi mất gói khoảng 0,2\%, độ trễ 18--20~ms, jitter 17--19~ms; biểu đồ có hai đỉnh mất gói khoảng 2--3\% (Hình~\ref{fig:vmanage_tloc}). Đỉnh đầu, chiều 06/11, nằm trong khoảng thử timer BFD có cắt liên kết thật. Đỉnh sau, sáng 07/11, gần sự kiện các vEdge mất kết nối điều khiển đồng loạt nêu trong mục báo cáo 7 ngày, nhưng trên biểu đồ sớm hơn sự kiện đó khoảng 1 giờ nên chưa đủ căn cứ để kết luận hai hiện tượng là một.
+    \item \textbf{Chất lượng đường truyền:} thống kê app-route từ Site 200 đến Site 300 qua MPLS: mất gói 0\%, độ trễ 37~ms, jitter 6~ms --- thỏa \texttt{SLA\_REALTIME}. Trên vManage, trong 24 giờ, hai TLOC của vEdge1-S100 đều up, mất gói khoảng 0,2\%, độ trễ 18--20~ms, jitter 17--19~ms. Về chất lượng thoại, ước lượng theo E-model rút gọn (ITU-T G.107, codec G.711, coi độ trễ app-route là độ trễ một chiều) cho hệ số R khoảng 91--92 và \textbf{MOS khoảng 4,4} trên cả hai đường; nếu trễ lên 400~ms như trong phép thử AAR bên dưới, MOS còn khoảng 3,3, dưới mức 3,6 thường được coi là chấp nhận được, phù hợp với ngưỡng 150~ms của \texttt{SLA\_REALTIME}. Đây là số ước lượng từ chỉ số đường truyền, không phải đo trên cuộc gọi thật.
     \item \textbf{Chính sách tập trung:} mọi vEdge nhận đúng chính sách từ vSmart (\texttt{show policy from-vsmart}). Để chứng minh chính sách được thực thi, nhóm xây dựng công cụ kiểm thử tự động: đọc bộ đếm của từng luật qua API của vManage, sinh lưu lượng thật từ máy trạm chi nhánh, rồi đọc lại bộ đếm. Chạy lần lượt từ máy trạm cả bốn chi nhánh (PC-YTe-S200-2, PC-TaiChinh-S300-2, PC-LuHanh-S400-2, VPC11 Site 500), mỗi nơi đều đạt 10/10 phép thử (Bảng~\ref{tab:kiem_thu_chinh_sach}).
     \item \textbf{Failover tại chi nhánh:} khi cắt MPLS hoặc mất vEdge1, Brand-FW phát hiện mất beacon qua \texttt{sla monitor}/\texttt{track} và chuyển lưu lượng nội bộ sang vEdge2 (Internet); khi cắt Internet hoặc mất vEdge2, lưu lượng ra Internet chuyển sang vEdge1 và thoát qua MPLS; khi nối lại, lưu lượng tự quay về. Nếu không có thiết kế beacon, chi nhánh mất 100\% gói và không tự phục hồi. Phép đo dùng cách cắt thật tại máy chủ (\texttt{ip link set <tap> down}, thiết bị không nhận sự kiện liên kết), lặp 46 lần trên cả bốn chi nhánh (Bảng~\ref{tab:failover_chi_nhanh}, Hình~\ref{fig:bd_failover_4site}), ICMP 5 gói/giây, đồng thời hai đầu đo: \textit{luồng mới} đổi ICMP id mỗi gói, \textit{luồng đang chạy} giữ nguyên id. Luồng mới khôi phục sau \textbf{3,2--13,4 giây}, không khác biệt đáng kể giữa các site. Luồng đang chạy khôi phục sau 18,6--38,1 giây. Khi nối lại liên kết, gián đoạn có trung vị 12 giây; 8/46 lần trên 20 giây, lâu nhất 41 giây.
     \item \textbf{Hai lỗi do phép đo failover phát hiện:} (1) ASA gắn kết nối vào đường ra cũ nên luồng đang chạy mất suốt thời gian cắt, dù luồng mới đã chuyển đường sau khoảng 8 giây; thêm \texttt{timeout floating-conn 0:00:30} trên bốn Brand-FW giải quyết được, đổi lại luồng đang chạy khôi phục chậm hơn luồng mới khoảng 15--30 giây. (2) Tại Site 500, khi cắt Internet, máy trạm mất Internet suốt 90 giây cắt vì cổng MPLS của vEdge1 thiếu lệnh \texttt{nat} so với ba chi nhánh kia; sau khi bổ sung, thời gian khôi phục còn 7,8--10,3 giây.
@@ -763,6 +759,7 @@ policy
     \item \textbf{Timer BFD:} hệ thống dùng timer mặc định 1000~ms $\times$ 7; timer mới chỉ có hiệu lực khi cả hai đầu phiên cùng đổi. Thử 500~ms $\times$ 4 cho gián đoạn 3,4--6,7 giây ở 3 trong 5 lần, so với 7,7--8,3 giây của đường đối chứng, nhưng phiên với vEdge2 Site 200 (1 vCPU) tự rớt mỗi 15--60 giây khi không cắt liên kết, nên timer rút ngắn không được áp dụng.
     \item \textbf{Tách thời gian khôi phục theo từng chiều:} bắt gói đồng thời trên các cổng của Brand-FW và vEdge khi cắt MPLS của vEdge1 Site 200, đích là cổng outside của FW Site 100, được 4/5 lần hợp lệ. Gói trả lời về tới máy trạm sau 8,3--9,1 giây (trung bình 8,8 giây), ổn định qua các lần đo. Chiều đi dao động hơn: Brand-FW chuyển sang vEdge2 sau 3,4--7,7 giây, tức sau 2--4 lần thăm dò SLA thất bại. Có lần chiều đi xong sau 3,43 giây, Site 100 trả lời ngay nhưng gói trả lời vẫn mất 5,2 giây mới về tới Site 200. Vì vậy giới hạn chính là chiều về, chờ BFD mặc định 7 giây để Site 100 bỏ đường cũ; chiều đi là giới hạn thứ hai. Muốn giảm RTO phải giảm cả timer BFD ở hai site lẫn chu kỳ SLA trên Brand-FW (Hình~\ref{fig:bd_failover}).
     \item \textbf{Site 500:} VPC11 nhận DHCP \texttt{10.5.10.100} và ping gateway 20/20. Máy trạm Site 500 thông Site 200, 300, 400, Server Farm, Web Server và Internet. Đo nền 5 phút (1500 gói, máy chủ ổn định): tới Site 200 mất 0\%, RTT trung vị 4~ms, phân vị 95 là 5~ms; tới Server Farm mất 0\%, 7~ms và 31~ms; để đối chứng, Site 200 tới Site 300 cũng mất 0\%, 5~ms và 10~ms. Lượt đo trước đó ghi mất 2,75\% và RTT gần 1 giây; khi máy chủ quá tải, đo đối chứng cho thấy các cặp site khác cũng tăng RTT tương tự (trung bình 116--233~ms) nên đây là hiện tượng chung do máy chủ, không phải lỗi riêng của Site 500. Failover của Site 500 có trong Bảng~\ref{tab:failover_chi_nhanh}.
+    \item \textbf{Khối lượng cấu hình khi thêm một site:} Site 500 dùng lại khuôn chi nhánh. Mỗi vEdge có 85 dòng cấu hình, chỉ 9--10 dòng khác vEdge tương ứng của Site 200 (tên, System-IP, Site-ID, địa chỉ, ASN); Brand-FW và switch dùng lại khuôn với địa chỉ và VLAN riêng. Ngoài site mới, chỉ phải thêm khoảng 10 dòng trên mỗi router nhà cung cấp (cổng và láng giềng BGP) và một sequence trong \texttt{PREFER-VE1} trên vSmart; các chính sách SLA, AAR và data policy tự áp vì danh sách site đã khai theo dải. Thời gian thêm site đầu--cuối chưa được đo.
     \item \textbf{Thông lượng liên site:} đo bằng \texttt{tools iperf} giữa các vEdge trong VPN~1, không qua tường lửa, được 13/15 chiều (giữa máy trạm, qua tường lửa, xem Bảng~\ref{tab:sdn_tai_cao}). TCP trung bình 1,95~Mbit/s (1,66--2,20) giữa các vEdge1 và 1,73~Mbit/s ở hai chiều vEdge2 về Site 100. UDP 2~Mbit/s gần như không mất gói, 3~Mbit/s mất khoảng 14\%, 10~Mbit/s mất khoảng 81\%. Hai vEdge cùng site nối trực tiếp đạt 50~Mbit/s không mất gói, nên đây là giới hạn của WAN mô phỏng (nghi do router nhà cung cấp chạy vIOS, chưa chứng minh), không phản ánh năng lực SD-WAN (Hình~\ref{fig:bd_udp} và Hình~\ref{fig:bd_tcp}).
 \end{itemize}
 
@@ -848,16 +845,18 @@ Các cột site là luồng mới. Hai kịch bản đầu đo lưu lượng li�
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{image/bd-udp-matgoi.png}
-    \caption{Tỷ lệ mất gói UDP theo tốc độ gửi giữa các vEdge}
-    \label{fig:bd_udp}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{image/bd-tcp-thongluong.png}
-    \caption{Thông lượng TCP trung bình theo từng chiều đo giữa các vEdge}
-    \label{fig:bd_tcp}
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/bd-udp-matgoi.png}
+        \caption{Tỷ lệ mất gói UDP theo tốc độ gửi giữa các vEdge}
+        \label{fig:bd_udp}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/bd-tcp-thongluong.png}
+        \caption{Thông lượng TCP trung bình theo từng chiều đo giữa các vEdge}
+        \label{fig:bd_tcp}
+    \end{minipage}
 \end{figure}
 
 \begin{figure}[H]
@@ -869,30 +868,9 @@ Các cột site là luồng mới. Hai kịch bản đầu đo lưu lượng li�
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{image/vmanage-health-20261107.png}
-    \caption{vManage: mất gói theo transport trong 24 giờ, năm site đạt BFD Full và phân bố băng thông cổng transport}
-    \label{fig:vmanage_health}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
     \includegraphics[width=\textwidth]{image/vmanage-devices-20261107.png}
     \caption{Danh sách thiết bị trên vManage. Dòng đầu không có tên là mục WAN Edge chưa gán thiết bị; vManage hiện cảnh báo vàng, bộ nhớ 87\%}
     \label{fig:vmanage_devices}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{image/vmanage-control-s100-20261107.png}
-    \caption{Kết nối điều khiển của vEdge1-S100 trên hai color}
-    \label{fig:vmanage_control}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{image/vmanage-tloc-s100-20261107.png}
-    \caption{Mất gói theo TLOC của vEdge1-S100 trong 24 giờ, hai color mpls và biz-internet đều up}
-    \label{fig:vmanage_tloc}
 \end{figure}
 
 \begin{figure}[H]
@@ -981,44 +959,12 @@ from-vsmart app-route-policy AAR_LAN
 
 \subsubsection{Báo cáo tình trạng SD-WAN 7 ngày từ vManage}
 
-Ngoài các phép đo tại một thời điểm, dashboard vManage có chức năng xuất báo cáo tổng hợp (\textit{Executive Summary Report}) dạng PDF, gồm ba phần Site, Device và Tunnel. Mỗi phần có trạng thái Good/Fair/Poor hiện tại và biểu đồ theo khung 6 giờ. Bản xuất bao phủ 7 ngày gần nhất tính đến lúc xuất. Tại thời điểm xuất, cả 5 site, 10 vEdge và 112 đường hầm đều ở mức Good. Bảng~\ref{tab:bao_cao_7_ngay} tổng hợp diễn biến theo thời gian, nhãn giờ lấy theo báo cáo.
-
-\begin{table}[H]
-    \centering
-    \small
-    \caption{Diễn biến 7 ngày trong báo cáo vManage (đếm từ biểu đồ; đường hầm là 50 đường kém nhất)}
-    \label{tab:bao_cao_7_ngay}
-    \begin{tabularx}{\textwidth}{|P{3.5cm}|P{2.6cm}|P{2.6cm}|Z|}
-        \hline
-        \textbf{Khung thời gian} & \textbf{5 site} & \textbf{10 vEdge} & \textbf{50 đường hầm} \\
-        \hline
-        31/10 12h -- 01/11 06h & 5 Good & 10 Good & 50 Good; riêng 01/11 06h: 21 Good, 29 Fair \\
-        \hline
-        01/11 12h & 4 Fair, 1 Good & 8 Fair, 2 Good & 10 Poor, 7 Fair, 33 Good \\
-        \hline
-        01/11 18h & 4 Fair, 1 Good & 8 Fair, 1 Good, 1 không có dữ liệu & 10 Poor, 35 Good, 5 không có dữ liệu \\
-        \hline
-        02/11 00h & 5 Good & 10 Good & 50 Good \\
-        \hline
-        02/11 06h & 5 Good & 10 Good & 50 Fair \\
-        \hline
-        02/11 12h -- 18h & Không có dữ liệu & Không có dữ liệu & 50 Poor \\
-        \hline
-        03/11 00h -- 06/11 06h & Không có dữ liệu & Không có dữ liệu & Không có dữ liệu (hệ thống ngừng vận hành) \\
-        \hline
-        06/11 12h & 5 Good & 10 Good & 26 Good, 24 Fair \\
-        \hline
-        06/11 18h -- 07/11 12h & 5 Good & 10 Good & 50 Good \\
-        \hline
-    \end{tabularx}
-\end{table}
-
-Từ báo cáo có thể rút ra các nhận định sau:
+Ngoài các phép đo tại một thời điểm, vManage xuất được báo cáo tổng hợp (\textit{Executive Summary Report}) cho 7 ngày gần nhất, chấm mức Good/Fair/Poor cho từng site, thiết bị và đường hầm theo khung 6 giờ (Hình~\ref{fig:bc7_site}). Tại thời điểm xuất, cả 5 site, 10 vEdge và 112 đường hầm đều ở mức Good. Báo cáo cho ba nhận định:
 
 \begin{itemize}
-    \item \textbf{Giai đoạn 01--02/11} khớp với nhật ký vận hành: tường lửa FW-ASAv Site 100 khởi động lại lặp do \texttt{route track} và \texttt{sla monitor}, đã sửa ngày 02/11. Site 500 vẫn Good trong khi bốn site còn lại xuống Fair (Hình~\ref{fig:bc7_site}). Mười đường hầm Poor ngày 01/11 đều tới \texttt{vEdge1-S500:mpls} (Hình~\ref{fig:bc7_tunnel}), phù hợp với việc vEdge1-S500 unreachable từ tối 01/11 (Hình~\ref{fig:bc7_thietbi}).
-    \item \textbf{Giai đoạn 03--06/11} không có dữ liệu vì hệ thống được ngừng vận hành có chủ đích trong giai đoạn này, không phải sự cố; dữ liệu có lại khi vManage khởi động chiều 06/11 (cột Up Since ở Hình~\ref{fig:vmanage_devices}). Báo cáo của vManage chỉ phản ánh các khung thời gian hệ thống đang chạy. Cả 50 đường hầm Poor ở hai khung 02/11 12h--18h, ngay trước khoảng này, nhiều khả năng ứng với quá trình dừng hệ thống; nhận định này chưa được kiểm chứng.
-    \item \textbf{Nhãn Good không đồng nghĩa không mất gói.} Trong mục đường hầm Good ở khung hiện tại, năm đường có mất gói cao nhất đều đi qua TLOC biz-internet của vEdge2-S200, mất 15,5--15,6\% so với gần 0\% ở 12 giờ trước, độ trễ tới 72,57~ms (Hình~\ref{fig:bc7_chiso}). Nhật ký trên vEdge giải thích con số này. Khoảng 17 phút trước khi xuất báo cáo, các vEdge Site 100 và Site 200 cùng mất kết nối điều khiển tới cả ba controller do hết thời gian chờ (\texttt{VS\_TMO}, \texttt{VM\_TMO}, \texttt{VB\_TMO}); toàn bộ phiên BFD của vEdge2-S200 rớt và dựng lại trong khoảng 3 giây với cổng nguồn mới. Hiện tượng tương tự đã xảy ra khoảng 5 giờ trước đó. Đọc lại vào sáng hôm sau, cả mười đường hầm của vEdge2-S200 mất 0--1 gói trên khoảng 120 gói thăm dò mỗi cửa sổ. Như vậy mức 15,6\% phản ánh sự kiện ngắn nằm trong khung tính, không phải mất gói kéo dài. Vì sao controller hết thời gian chờ đồng loạt thì chưa xác định.
+    \item Khung thời gian bốn site xuống Fair, mười đường hầm tới vEdge1 Site 500 xuống Poor trùng với sự cố tường lửa biên Site 100 khởi động lại lặp (Mục~\ref{sec:fw_ha}) và việc vEdge1 Site 500 mất kết nối; sau khi khắc phục, mọi chỉ số trở lại Good.
+    \item Các khung không có dữ liệu là lúc hệ thống được ngừng vận hành có chủ đích; báo cáo của vManage chỉ phản ánh thời gian hệ thống đang chạy.
+    \item Nhãn Good không đồng nghĩa không mất gói: năm đường hầm qua TLOC biz-internet của vEdge2 Site 200 ghi mất 15,5--15,6\% trong khung hiện tại. Nhật ký trên vEdge cho thấy khoảng 17 phút trước khi xuất báo cáo, các vEdge Site 100 và Site 200 mất kết nối điều khiển tới cả ba controller do hết thời gian chờ, toàn bộ phiên BFD của vEdge2 Site 200 rớt và dựng lại trong khoảng 3 giây; đọc lại vào sáng hôm sau, các đường hầm này chỉ mất 0--1 gói trên khoảng 120 gói thăm dò mỗi cửa sổ. Như vậy con số 15,6\% phản ánh một sự kiện ngắn nằm trong khung tính, không phải mất gói kéo dài; nguyên nhân controller hết thời gian chờ đồng loạt chưa được xác định.
 \end{itemize}
 
 \begin{figure}[H]
@@ -1026,27 +972,6 @@ Từ báo cáo có thể rút ra các nhận định sau:
     \includegraphics[width=\textwidth]{image/vmanage-7ngay-site.png}
     \caption{Báo cáo vManage: tình trạng 5 site theo khung 6 giờ trong 7 ngày}
     \label{fig:bc7_site}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{image/vmanage-7ngay-thietbi.png}
-    \caption{Báo cáo vManage: tình trạng 10 vEdge theo khung 6 giờ}
-    \label{fig:bc7_thietbi}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{image/vmanage-7ngay-tunnel.png}
-    \caption{Báo cáo vManage: 25 trong 50 đường hầm kém nhất theo khung 6 giờ}
-    \label{fig:bc7_tunnel}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{image/vmanage-7ngay-tunnel-chiso.png}
-    \caption{Báo cáo vManage: năm đường hầm cao nhất theo độ trễ, mất gói và jitter trong nhóm Good, so với 12 giờ trước}
-    \label{fig:bc7_chiso}
 \end{figure}
 
 \subsection{Truy cập Internet và cảnh báo sự cố}
@@ -1058,6 +983,8 @@ Việc cho người dùng ra Internet được làm theo từng giai đoạn, ki
 Cảnh báo email được triển khai sau cùng: switch LAN Site 900 mở thêm một dòng ACL cho riêng vManage gửi SMTP 587, vManage được khai báo DNS (\texttt{vpn 0 dns 8.8.8.8 primary}), sau đó cấu hình máy chủ SMTP và luật thông báo \texttt{SDWAN-DOWN-ALERT} trên giao diện vManage.
 
 \subsubsection{Các vấn đề kỹ thuật}\label{sec:bai_hoc_internet}
+
+Các vấn đề gặp phải khi triển khai được tổng hợp trong Bảng~\ref{tab:loi_internet}.
 
 \begingroup
 \small
@@ -1082,12 +1009,12 @@ Cảnh báo email được triển khai sau cùng: switch LAN Site 900 mở thê
     Khi vEdge2 hỏng, máy trạm vẫn không tới được một số đích Internet & Đích thăm dò SLA ban đầu là \texttt{8.8.8.8}; tuyến \texttt{/32} ghim gói thăm dò kéo cả lưu lượng người dùng tới \texttt{8.8.8.8} về vEdge2 đã hỏng & Đổi đích thăm dò sang \texttt{9.9.9.9} \\
     \hline
     Ping từ VLAN 99 Campus chính tới chi nhánh thất bại & Tường lửa biên có giao diện management nối trực tiếp \texttt{10.1.99.0/24} nên gói trả về đi ra management, không khớp phiên trên inside (bất đối xứng) & \texttt{management-only} cho Management0/0 và tuyến \texttt{10.1.99.0/24} qua Core-SW1 \\
-    \hline
-    vManage không gửi được thư cảnh báo & Máy chủ SMTP từ chối xác thực (\texttt{535 Username and Password not accepted}) do thông tin nhập trên giao diện sai; mạng không chặn (bộ đếm ACL của luồng 587 vẫn tăng) & Nhập lại tài khoản đầy đủ và mật khẩu ứng dụng; xác nhận qua nhật ký gửi thư của vManage \\
 \end{longtable}
 \endgroup
 
 \subsubsection{Kết quả kiểm thử}
+
+Bảng~\ref{tab:kiem_thu_internet} là ma trận kiểm thử truy cập Internet; Hình~\ref{fig:dia_brandfw} là trạng thái \texttt{track}, tuyến mặc định và traceroute trên Brand-FW Site 200.
 
 \begin{table}[H]
     \centering
@@ -1293,7 +1220,7 @@ Bot đã phát huy tác dụng trong sự cố ngày 01/11/2026: Telegram nhận
     \hline
     T07 & Chống vòng lặp & Không bão khi khởi động, khởi động lại switch & \textbf{Đạt} & Tối đa khoảng 365 gói/s so với 200.000 gói/s trước khắc phục \\
     \hline
-    T08 & Thêm VLAN qua API & VLAN mới hoạt động trên các OVS liên quan & \textbf{Đạt} & 3,8 ms; máy trạm nhận DHCP, ping gateway 3/3 \\
+    T08 & Thêm VLAN qua API & VLAN mới hoạt động trên các OVS liên quan & \textbf{Đạt} & 3,8 ms phần SDN; đầu cuối 5,3 giây; ping gateway 3/3 \\
     \hline
     T09 & Tự phục hồi SDN & Kịch bản S1--S6 đạt tiêu chí gián đoạn & \textbf{Đạt} & 6/6 kịch bản; cắt thật 3/3; tắt hẳn Dist-SW2 mất 0--5 gói \\
     \hline
@@ -1315,7 +1242,7 @@ Bot đã phát huy tác dụng trong sự cố ngày 01/11/2026: Telegram nhận
     \hline
     T18 & Data policy và control policy & Chặn Telnet/SSH vào Farm, DMZ; chi nhánh chọn vEdge1 & \textbf{Đạt} & 10/10 lần kiểm tra qua bộ đếm và bảng tuyến OMP, tại cả bốn chi nhánh \\
     \hline
-    T19 & Failover Site 100 & Tự chuyển khi mất một transport hoặc một vEdge & \textbf{Đạt} & Mất transport 7,6--9,6 s; mất vEdge1 12,2--14,4 s sau khi sửa lỗi phân phối tuyến (trước đó không tự chuyển); luồng đang chạy 38,6--45,8 s sau khi thêm \texttt{floating-conn}; Internet của Site 100 3,6--7,6 s sau khi thêm SLA/\texttt{track} \\
+    T19 & Failover Site 100 & Tự chuyển khi mất một transport hoặc một vEdge & \textbf{Đạt} & Mất transport 7,6--9,8 s; mất vEdge1 12,2--14,4 s sau khi sửa lỗi phân phối tuyến (trước đó không tự chuyển); luồng đang chạy 38,6--45,8 s sau khi thêm \texttt{floating-conn}; Internet của Site 100 3,6--7,6 s sau khi thêm SLA/\texttt{track} \\
     \hline
     T20 & Failover transport chi nhánh & Tự chuyển sang vEdge2 khi mất MPLS hoặc vEdge1 và quay lại & \textbf{Đạt} & Bốn chi nhánh, 25 lần cắt: 7,4--11,2 giây \\
     \hline
@@ -1345,17 +1272,130 @@ Bot đã phát huy tác dụng trong sự cố ngày 01/11/2026: Telegram nhận
 
 \subsubsection{Mức độ đáp ứng yêu cầu chức năng}
 
-Cả 30 kịch bản đều đạt. Bốn kịch bản T10, T12, T22, T29 chỉ đạt sau khi đo đầy đủ dưới tải cao, tại mọi chi nhánh và sửa các lỗi phát hiện được trong quá trình đo. Các chức năng cốt lõi của đề tài đều đã được chứng minh: phân đoạn VLAN; gateway dự phòng VRRP; OSPF nội bộ; tường lửa HA dùng chung phân đoạn và tự chuyển khi lỗi, với DMZ; DHCP tập trung qua relay và DHCP cục bộ tại chi nhánh; điều khiển toàn bộ lớp 2 Campus chính bằng Ryu với cây tính tập trung, tự phục hồi và giao diện giám sát; overlay SD-WAN mười Edge trên hai transport với BGP underlay, PKI, chính sách SLA/AAR/data/control và cảnh báo email; truy cập Internet tại chỗ có dự phòng; các dịch vụ DNS, Web, Mail, Syslog truy cập được từ cả Campus chính và chi nhánh; và một trợ lý vận hành qua Telegram cho giám sát, chẩn đoán và cảnh báo.
+Cả 30 kịch bản đều đạt. Bốn kịch bản T10, T12, T22, T29 chỉ đạt sau khi đo đầy đủ dưới tải cao, tại mọi chi nhánh và sửa các lỗi phát hiện được trong quá trình đo. Năm nội dung của đề tài đều đã được hiện thực và kiểm chứng: mạng Campus ba tầng Core--Distribution--Access; phân chia VLAN theo khoa và khối hành chính; SDN Controller điều khiển toàn bộ switch lớp 2 của Campus chính; SD-WAN kết nối Campus chính với các cơ sở phụ; tích hợp RSTP, OSPF, DHCP, ACL và dự phòng liên kết ở mọi tầng. Ngoài ra hệ thống có truy cập Internet tại chỗ có dự phòng, các dịch vụ DNS, Web, Mail, Syslog dùng được từ mọi cơ sở, cảnh báo email và trợ lý vận hành qua Telegram.
 
+\subsubsection{Đối chiếu với các tiêu chí đánh giá của đề cương}
+
+Bảng~\ref{tab:doi_chieu_tieu_chi} đối chiếu kết quả với bảy nhóm tiêu chí đánh giá của đề cương; các tiêu chí chưa có số đo được ghi rõ.
+
+\begingroup
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{|L{2.7cm}|L{\dimexpr\textwidth-2.7cm-2.6cm-6\tabcolsep-4\arrayrulewidth\relax}|L{2.6cm}|}
+    \caption{Đối chiếu kết quả với các tiêu chí đánh giá của đề cương}\label{tab:doi_chieu_tieu_chi} \\
+    \hline
+    \textbf{Tiêu chí} & \textbf{Kết quả} & \textbf{Nguồn} \\
+    \hline
+    \endfirsthead
+    \hline
+    \textbf{Tiêu chí} & \textbf{Kết quả} & \textbf{Nguồn} \\
+    \hline
+    \endhead
+    \hline
+    \endfoot
+    \multicolumn{3}{|l|}{\textbf{1. Hiệu năng}} \\
+    \hline
+    Throughput & 1,2 Gbit/s cùng Access; 170 Mbit/s liên VLAN; khoảng 2 Mbit/s liên site (giới hạn WAN mô phỏng); 0,1 Mbit/s qua ASAv không giấy phép & Bảng~\ref{tab:sdn_tai_cao}, Hình~\ref{fig:bd_tcp} \\
+    \hline
+    Delay, Jitter & LAN: RTT 0,43 ms cùng VLAN, 1,57 ms khác VLAN, jitter dưới 0,4 ms. Liên site: RTT trung vị 4--7 ms; app-route 37 ms, jitter 6 ms & Bảng~\ref{tab:sdn_muc_tieu} \\
+    \hline
+    Packet Loss & LAN 0\% (490/490); liên site 0\% (1500 gói); UDP liên site 2 Mbit/s gần 0\%, 3 Mbit/s 14\% & Bảng~\ref{tab:sdn_muc_tieu}, Hình~\ref{fig:bd_udp} \\
+    \hline
+    \multicolumn{3}{|l|}{\textbf{2. Khả năng mở rộng}} \\
+    \hline
+    Thời gian thêm VLAN & 3,8 ms phần SDN; 5,3 giây gồm cả hai Core; máy trạm dùng được sau khoảng 40 giây & Hình~\ref{fig:bd_vlan} \\
+    \hline
+    Thời gian thêm Site & Chưa đo thời gian đầu--cuối. Khối lượng: 85 dòng mỗi vEdge (9--10 dòng khác khuôn), khoảng 10 dòng mỗi router nhà cung cấp, một sequence trên vSmart & Mục kiểm thử SD-WAN \\
+    \hline
+    Thời gian cấu hình, số lệnh CLI & Thêm VLAN: một lệnh API cho sáu OVS, so với 18 lệnh CLI trên mỗi Core (script đẩy 1,2 giây/thiết bị) & Bảng~\ref{tab:sdn_muc_tieu} \\
+    \hline
+    \multicolumn{3}{|l|}{\textbf{3. Độ tin cậy}} \\
+    \hline
+    Link Failover Time & SDN không quá 3,6 giây; chi nhánh 3,2--13,4 giây; Site 100 7,6--14,4 giây; tường lửa HA dưới 1 đến 21 giây & Bảng~\ref{tab:sdn_kich_ban}, \ref{tab:failover_chi_nhanh}, \ref{tab:failover_s100} \\
+    \hline
+    Controller Recovery Time & SDN Controller khởi động lại: sáu switch nối lại sau khoảng 15 giây. Controller SD-WAN: kết nối lại sau 182--203 giây, không mất gói dữ liệu & Bảng~\ref{tab:mat_controller} \\
+    \hline
+    Packet Recovery Rate & 83,3--97,3\% với luồng mới, 48,8--87,1\% với luồng đang chạy, tính trên cả cửa sổ đo & Bảng~\ref{tab:failover_chi_nhanh} \\
+    \hline
+    Availability & 112 đường hầm SD-WAN: 99,957\% trong 111,8 giờ; cả năm site 100\%. Chưa tính cho phần SDN & Mục Tính sẵn sàng \\
+    \hline
+    \multicolumn{3}{|l|}{\textbf{4. Quản trị}} \\
+    \hline
+    Số bước cấu hình, mức độ tự động hóa & VLAN và chính sách SDN: một lệnh API hoặc một biểu mẫu trên Console; chính sách SD-WAN khai một lần trên vSmart cho mọi chi nhánh; phép đo chạy bằng script; NetOps Bot thay đổi cấu hình có duyệt và tự hoàn tác & Mục~\ref{sec:sdn_console}, \ref{sec:netops_bot} \\
+    \hline
+    Thời gian triển khai, xử lý sự cố & Thêm VLAN 5,3 giây. Chẩn đoán theo lớp bằng lệnh \texttt{/diag} dừng ở lớp lỗi đầu tiên; thời gian xử lý sự cố chưa được đo & Mục~\ref{sec:netops_bot} \\
+    \hline
+    \multicolumn{3}{|l|}{\textbf{5. Bảo mật}} \\
+    \hline
+    VLAN Isolation & Flood chỉ trong đúng VLAN; lưu lượng liên VLAN bắt buộc qua Core; luật chặn VLAN 10 -- VLAN 40 chặn 5/5 gói, VLAN khác không ảnh hưởng & Hình~\ref{fig:console_policy} \\
+    \hline
+    Micro-Segmentation & Luật theo VLAN, dải địa chỉ, giao thức và cổng, áp ngay tại bốn Access; chưa phân đoạn tới từng máy trạm & Mục~\ref{sec:sdn_console} \\
+    \hline
+    ACL Efficiency & ACL biên chặn cổng không công bố (8080), chỉ mở Web, Mail vào DMZ; data policy chặn Telnet/SSH từ chi nhánh, bộ đếm tăng đúng số gói thử & Bảng~\ref{tab:kiem_thu_chinh_sach} \\
+    \hline
+    Policy Enforcement Time & SDN: áp 8,0--12,6 ms, gỡ 5,2--10,8 ms trên bốn Access. SD-WAN: chưa đo & Bảng~\ref{tab:sdn_muc_tieu} \\
+    \hline
+    \multicolumn{3}{|l|}{\textbf{6. QoS}} \\
+    \hline
+    SLA Satisfaction & Đường MPLS thỏa \texttt{SLA\_REALTIME} (0\%, 37 ms, 6 ms); khi trễ vượt 150 ms, AAR chuyển đường sau 5,5--7 phút, mất 0,05\%. Tỷ lệ thỏa SLA theo thời gian chưa tính & Mục kiểm thử SD-WAN \\
+    \hline
+    VoIP MOS, Video Quality & MOS ước lượng khoảng 4,4 (E-model). Chất lượng video không đo vì WAN mô phỏng chỉ khoảng 2 Mbit/s & Mục kiểm thử SD-WAN \\
+    \hline
+    Bandwidth Utilization & Console hiển thị phần trăm sử dụng từng cổng theo thời gian thực; chưa tổng hợp thành số liệu & Mục~\ref{sec:sdn_console} \\
+    \hline
+    \multicolumn{3}{|l|}{\textbf{7. Khả năng mở rộng hệ thống}} \\
+    \hline
+    Số Switch, Host, Branch & 6 OVS do Controller điều khiển và 18 switch Cisco; 22 máy trạm; 4 cơ sở phụ và Site 900; 10 vEdge, 112 đường hầm & Bảng~\ref{tab:nen_tang_trien_khai_ch4} \\
+    \hline
+    CPU, RAM Controller & Ryu: 4--9\% CPU lúc rảnh, 41,3\% ở 1000 MAC mới/giây; máy Controller dùng 944 MB RAM. vManage: 32 GB RAM & Bảng~\ref{tab:cpu_ram}, Hình~\ref{fig:bd_packetin} \\
+\end{longtable}
+\endgroup
+
+\subsubsection{So sánh với các mô hình đối chứng}
+
+Đề cương đặt mô hình đề xuất cạnh bốn mô hình đối chứng. Đề tài chỉ triển khai mô hình đề xuất, trong đó phần lớp 3 và biên vẫn là mạng ba tầng truyền thống; vì vậy Bảng~\ref{tab:so_sanh_mo_hinh} là so sánh định tính dựa trên đặc điểm kiến trúc ở Chương~\ref{sec:co_so_ly_thuyet}, chỉ các số ghi ``đo'' là số đo của đề tài.
+
+\begingroup
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{|L{2.2cm}|L{2.9cm}|L{3.2cm}|L{2.9cm}|L{3.3cm}|}
+    \caption{So sánh mô hình đề xuất với các mô hình đối chứng}\label{tab:so_sanh_mo_hinh} \\
+    \hline
+    \textbf{Tiêu chí} & \textbf{Flat, Two-Tier} & \textbf{Three-Tier truyền thống} & \textbf{VXLAN EVPN} & \textbf{Đề xuất (SDN + SD-WAN)} \\
+    \hline
+    \endfirsthead
+    \hline
+    \textbf{Tiêu chí} & \textbf{Flat, Two-Tier} & \textbf{Three-Tier truyền thống} & \textbf{VXLAN EVPN} & \textbf{Đề xuất (SDN + SD-WAN)} \\
+    \hline
+    \endhead
+    \hline
+    \endfoot
+    Phân đoạn & Flat: một miền quảng bá; Two-Tier: VLAN & VLAN, ACL trên từng thiết bị & VNI, VRF trên fabric & VLAN, luật tập trung trên Controller, VPN trên overlay \\
+    \hline
+    Chống vòng, hội tụ lớp 2 & STP, 30--50 giây; RSTP vài giây & RSTP vài giây, chặn cổng dư & Không cần STP trong fabric, ECMP & Controller tính cây; đo: hội tụ dưới 16 ms, gián đoạn không quá 3,6 giây \\
+    \hline
+    Thêm VLAN & CLI trên từng switch & CLI trên từng switch và Core; đo: 18 lệnh mỗi Core & Khai VNI trên các leaf liên quan & Đo: một lệnh API, 3,8 ms cho sáu OVS \\
+    \hline
+    Chính sách & Từng thiết bị & Từng thiết bị & Tập trung nếu có bộ điều khiển fabric & Đo: một lệnh, 8,0--12,6 ms cho bốn Access; vSmart cho mọi chi nhánh \\
+    \hline
+    Kết nối liên cơ sở & Một đường WAN, tuyến tĩnh & WAN truyền thống, chọn đường theo định tuyến & Overlay trong một miền; liên site cần giải pháp riêng & Overlay IPsec trên hai transport, chọn đường theo SLA \\
+    \hline
+    Failover WAN & Thủ công hoặc theo định tuyến & Theo hội tụ định tuyến & Phụ thuộc underlay & Đo: 3,2--13,4 giây với luồng mới \\
+    \hline
+    Quan sát & Từng thiết bị & SNMP, Syslog từng thiết bị & Công cụ của nhà sản xuất & Console, vManage, NetOps Bot \\
+    \hline
+    Điểm yếu & Không mở rộng được, bão broadcast & Cấu hình thủ công, dễ lệch & Thiết bị và kỹ năng đòi hỏi cao & Controller là điểm trọng yếu; kênh điều khiển in-band phức tạp \\
+\end{longtable}
+\endgroup
+
+Riêng với mô hình ba tầng truyền thống, đề tài có hai đối chứng đo được ngay trên hệ thống. Thứ nhất, khi kênh VLAN 99 còn phụ thuộc RSTP của Core, khôi phục liên kết Dist-SW2--Core-SW1 gián đoạn 10,9 giây do cổng rơi vào trạng thái \textit{Dispute}; sau khi Controller đảm nhận hoàn toàn việc chống vòng, cùng kịch bản không còn gián đoạn (Bảng~\ref{tab:sdn_kich_ban}). Thứ hai, trước khi có cơ chế theo dõi đường truyền và chính sách tập trung, chi nhánh mất kết nối hoàn toàn và không tự phục hồi khi đứt MPLS; với thiết kế hiện tại, lưu lượng mới tự khôi phục sau 7,4--11,2 giây (Bảng~\ref{tab:failover_chi_nhanh}).
 
 \subsubsection{Tính sẵn sàng}
 
-Tại biên Campus chính, cặp tường lửa HA tự chuyển vai trò khi lỗi: chuyển chủ động dưới 1 giây, rút cáp inside 11 giây, tắt hẳn đơn vị Active 21 giây; Core-SW2 giữ đúng vai trò VRRP Backup nhờ Po10 mang VLAN người dùng. Tại lớp 3 và WAN, gateway, Edge và đường truyền đều có dự phòng, riêng vManage, vSmart và vBond mỗi loại chỉ có một máy, nhưng mất một controller trong 2 phút không làm mất gói nào trên overlay. Tại Site 100, mất một transport được khôi phục sau 7,6--9,6 giây; mất hẳn vEdge1 chỉ tự khôi phục (12,2--14,4 giây với luồng mới, 44,2--45,8 giây với luồng đang chạy) sau khi sửa lỗi phân phối tuyến do phép đo phát hiện; lưu lượng ra Internet của Campus chính cũng tự chuyển sang vEdge2 sau 3,6--7,6 giây nhờ \texttt{sla monitor} và \texttt{track} trên tường lửa biên. Phép thử cắt thật lặp 46 lần tại bốn chi nhánh cho thấy lưu lượng nội bộ tự khôi phục qua Internet và lưu lượng Internet tự chuyển sang MPLS sau 3,2--13,4 giây với luồng mới, 18,6--38,1 giây với luồng đang chạy, kể cả khi mất hẳn một vEdge. Tại lớp 2 SDN, sáu kịch bản cắt liên kết đều đạt, gián đoạn dữ liệu không quá 3,6 giây khi cắt và gần như bằng 0 khi khôi phục; mất hẳn một Distribution cũng không làm gián đoạn đáng kể. SDN Controller vẫn là một máy đơn: khi Controller dừng, flow đã cài được giữ nên luồng đang chạy không mất, nhưng máy trạm mới, ARP và DHCP mới không được xử lý. Về độ khả dụng của overlay, thống kê app-route lấy từ API vManage cho 111,8 giờ lab chạy trong tuần 06--11/11 (346.059 bản ghi), tính theo cửa sổ 10 phút và chỉ tính khi cả hai đầu đường hầm đang chạy, cho thấy 112 đường hầm BFD khả dụng \textbf{99,957\%} (32/74.784 cửa sổ bị mất); thấp nhất là các đường hầm biz-internet của vEdge2-S500 (99,25--99,85\%), còn cả năm site luôn có ít nhất một đường hầm hoạt động (100\%). Phần lớn cửa sổ bị mất rơi vào thời gian các đợt cắt liên kết có chủ đích khi đo failover. Vì độ phân giải là 10 phút, các gián đoạn ngắn như failover 8--45 giây không làm cửa sổ bị tính là mất, nên con số này phản ánh mức sẵn sàng theo giờ chạy, không thay cho số đo thời gian khôi phục ở trên.
+Gateway, lõi, tường lửa biên, Edge và đường truyền đều có dự phòng và đã được kiểm chứng bằng phép cắt thật (Bảng~\ref{tab:doi_chieu_tieu_chi}, nhóm Độ tin cậy). Hai thành phần chưa có dự phòng là SDN Controller và ba controller SD-WAN: khi SDN Controller dừng, flow đã cài được giữ nên luồng đang chạy không mất, nhưng máy trạm mới, ARP và DHCP mới không được xử lý; mất một controller SD-WAN trong 2 phút không làm mất gói nào trên overlay.
 
-\subsubsection{Hiệu năng và khả năng quan sát}
+Về độ khả dụng của overlay, thống kê app-route lấy từ API vManage cho 111,8 giờ hệ thống chạy (346.059 bản ghi), tính theo cửa sổ 10 phút và chỉ tính khi cả hai đầu đường hầm đang chạy, cho thấy 112 đường hầm khả dụng \textbf{99,957\%} (32/74.784 cửa sổ bị mất); thấp nhất là các đường hầm biz-internet của vEdge2 Site 500 (99,25--99,85\%), còn cả năm site luôn có ít nhất một đường hầm hoạt động (100\%). Phần lớn cửa sổ bị mất rơi vào các đợt cắt liên kết có chủ đích khi đo failover. Vì độ phân giải là 10 phút, các gián đoạn 8--45 giây không làm cửa sổ bị tính là mất, nên con số này phản ánh mức sẵn sàng theo giờ chạy, không thay cho số đo thời gian khôi phục.
 
-Các số liệu SDN được đo bằng script tự động và có thể chạy lại. Dưới tải cao, OVS cùng Access đạt khoảng 1,2~Gbit/s, liên VLAN qua Core khoảng 170~Mbit/s, Controller chịu được 1000 MAC mới/giây và mặt phẳng điều khiển không bị ảnh hưởng bởi lưu lượng dữ liệu. Giữa các vEdge, thông lượng khoảng 2~Mbit/s do giới hạn của WAN mô phỏng; giữa các máy trạm qua tường lửa chỉ khoảng 0,1~Mbit/s do ASAv chưa có giấy phép. Các con số qua WAN và tường lửa đủ cho kiểm thử chức năng nhưng không phản ánh hiệu năng thiết bị thật. Về quan sát, hệ thống có bốn nguồn: Campus SDN Console cho lớp 2 Campus chính, vManage (BFD, app-route, alarm và thư cảnh báo) cho WAN, Syslog tập trung cho tường lửa, và NetOps Bot tổng hợp hai nguồn đầu thành cảnh báo, chẩn đoán trên Telegram, vẫn hoạt động khi vManage hỏng. Hiệu năng SDN phụ thuộc rõ vào trạng thái máy chủ ảo hóa: khi máy chủ ổn định, 69/74 node chạy đồng thời mà RTT trung bình chỉ 0,43 và 1,57~ms, không mất gói; khi máy chủ quá tải, Controller khựng làm xuất hiện đỉnh trễ và mất gói tới 6,9\%.
+\subsubsection{Khả năng quan sát, tái lập và mở rộng}
 
-\subsubsection{Khả năng tái lập và mở rộng}
+Hệ thống có bốn nguồn quan sát: Campus SDN Console cho lớp 2 Campus chính; vManage (BFD, app-route, alarm, thư cảnh báo) cho WAN; Syslog tập trung cho tường lửa; và NetOps Bot tổng hợp hai nguồn đầu thành cảnh báo, chẩn đoán trên Telegram, vẫn hoạt động khi vManage hỏng. Hiệu năng SDN phụ thuộc rõ vào trạng thái máy chủ ảo hóa: khi máy chủ ổn định, 69/74 node chạy đồng thời mà không mất gói; khi máy chủ quá tải, Controller khựng làm xuất hiện đỉnh trễ và mất gói tới 6,9\%.
 
-Cấu hình mọi thiết bị được lưu thành tệp nguồn theo site và theo thiết bị, cùng bảng ánh xạ node và thứ tự khởi động, cho phép dựng lại hệ thống. Các OVS và Controller có dịch vụ khởi động tự khôi phục trạng thái sau khi khởi động lại. Việc thêm một chi nhánh chỉ cần nhân bản khuôn Firewall-as-Core với mã site mới, cấp System-IP và đưa vEdge qua quy trình PKI; chính sách trên vSmart áp theo dải Site-ID (đã mở rộng tới 500) nên bao phủ site mới, trừ control policy \texttt{PREFER-VE1} phải thêm một sequence cho vEdge1 của site đó, như đã làm với Site 500.
+Cấu hình mọi thiết bị được lưu thành tệp nguồn theo site, cùng bảng ánh xạ node và thứ tự khởi động, cho phép dựng lại hệ thống; các OVS và Controller tự khôi phục trạng thái sau khi khởi động lại. Thêm một chi nhánh chỉ cần nhân bản khuôn Firewall-as-Core với mã site mới, cấp System-IP và đưa vEdge qua quy trình PKI; chính sách trên vSmart áp theo dải Site-ID nên bao phủ site mới, trừ control policy \texttt{PREFER-VE1} phải thêm một sequence cho vEdge1 của site đó, như đã làm với Site 500.

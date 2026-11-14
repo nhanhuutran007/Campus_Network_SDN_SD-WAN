@@ -151,7 +151,8 @@
 \newcolumntype{Z}{>{\centering\arraybackslash}X}
 % Giữ chữ trong các bảng ở mức dễ đọc, đồng nhất 12pt.
 \usepackage{etoolbox}
-\newcommand{\tabletextsize}{\fontsize{12pt}{14.4pt}\selectfont}
+% Trong bảng dùng giãn dòng 1,15 (thân văn bản vẫn 1,5) để bảng gọn, giảm số trang.
+\newcommand{\tabletextsize}{\linespread{1.15}\fontsize{12pt}{14.4pt}\selectfont}
 \AtBeginEnvironment{tabular}{\tabletextsize}
 \AtBeginEnvironment{tabularx}{\tabletextsize}
 \AtBeginEnvironment{longtable}{\tabletextsize}
@@ -163,7 +164,7 @@
 % Gói xcolor đã được nạp ở mục 5, không cần nạp lại
 
 \lstdefinestyle{customcode}{
-    basicstyle=\small\ttfamily,
+    basicstyle=\linespread{1.1}\small\ttfamily, % khối lệnh giãn dòng đơn
     breaklines=true,
     numbers=left,
     numberstyle=\tiny\color{gray},

@@ -8,19 +8,7 @@ Campus chính được thiết kế theo mô hình Core--Distribution--Access: h
 
 Các cơ sở được kết nối bằng Cisco SD-WAN (Viptela 20.10.1) với mười vEdge trên hai transport, underlay BGP, xác thực PKI, overlay IPsec và chính sách tập trung trên vSmart gồm SLA class, Application-Aware Routing, data policy và control policy ưu tiên vEdge1 tại mọi site; tường lửa chi nhánh theo dõi đường MPLS bằng IP SLA để tự chuyển sang đường Internet; vManage tự gửi thư cảnh báo khi Edge mất kết nối. Người dùng mọi cơ sở ra Internet tại chỗ (Direct Internet Access) qua NAT trên vEdge, có dự phòng qua MPLS, trong khi vùng quản trị và trung tâm điều khiển chỉ ra Internet có kiểm soát. Các dịch vụ DNS nội bộ \texttt{campus.internal}, Web HTTPS và Mail được người dùng chi nhánh truy cập qua overlay, dưới sự kiểm soát của chính sách SD-WAN và ACL tường lửa biên.
 
-Kết quả kiểm thử cho thấy cả 30 kịch bản đều đạt: thêm VLAN qua API mất 3,8~ms, áp chính sách toàn campus mất 8,0~ms, cả sáu kịch bản cắt liên kết SDN đều tự phục hồi với gián đoạn không quá 3,5 giây; mười vEdge lên fabric với toàn bộ phiên BFD hoạt động; các chính sách tập trung đạt 10/10 phép thử bộ đếm tại cả bốn chi nhánh; qua 46 lần cắt thật, khi mất MPLS, Internet hoặc một vEdge, lưu lượng mới tự khôi phục sau 3,2--13,4 giây; dưới tải cao, OVS đạt khoảng 1,2~Gbit/s, liên VLAN khoảng 170~Mbit/s và Controller xử lý 1000 MAC mới/giây mà không ảnh hưởng luồng đang chạy. Báo cáo cũng phân tích nguyên nhân gốc của các sự cố kỹ thuật đã gặp và nêu rõ các hạn chế còn lại như SDN Controller là điểm lỗi đơn, thông lượng qua tường lửa bị giới hạn do ASAv chưa có giấy phép và hiệu năng phụ thuộc trạng thái máy chủ ảo hóa.
-
-\newpage
-
-Nội dung báo cáo được tổ chức thành năm chương:
-
-\begin{itemize}
-    \item[-] \textbf{Chương 1 -- Mở đầu và tổng quan đề tài:} lý do chọn đề tài, mục tiêu, đối tượng, phạm vi, phương pháp nghiên cứu, ý nghĩa thực tiễn và bố cục báo cáo.
-    \item[-] \textbf{Chương 2 -- Cơ sở lý thuyết:} mạng Campus phân cấp, VLAN, RSTP, EtherChannel, VRRP, OSPF, BGP, các dịch vụ mạng, tường lửa và DMZ, SDN với OpenFlow 1.3, Open vSwitch, Ryu, ONOS, SD-WAN với kiến trúc Viptela và nền tảng EVE-NG.
-    \item[-] \textbf{Chương 3 -- Mô hình mạng Campus đề xuất:} phân tích yêu cầu, kiến trúc tổng thể, topology từng site, quy hoạch VLAN và địa chỉ IP, thiết kế định tuyến, SDN, SD-WAN, dịch vụ và chính sách bảo mật.
-    \item[-] \textbf{Chương 4 -- Triển khai, kiểm thử và đánh giá:} hiện thực từng thành phần, các vấn đề kỹ thuật cùng nguyên nhân gốc, kết quả kiểm thử và đánh giá.
-    \item[-] \textbf{Chương 5 -- Kết luận và hướng phát triển:} tổng kết kết quả, hạn chế và hướng phát triển.
-\end{itemize}
+Kết quả kiểm thử cho thấy cả 30 kịch bản đều đạt: thêm VLAN qua API mất 3,8~ms, áp chính sách toàn campus mất 8,0--12,6~ms, cả sáu kịch bản cắt liên kết SDN đều tự phục hồi với gián đoạn không quá 3,6 giây; mười vEdge lên fabric với toàn bộ phiên BFD hoạt động; các chính sách tập trung đạt 10/10 phép thử bộ đếm tại cả bốn chi nhánh; qua 46 lần cắt thật, khi mất MPLS, Internet hoặc một vEdge, lưu lượng mới tự khôi phục sau 3,2--13,4 giây; dưới tải cao, OVS đạt khoảng 1,2~Gbit/s, liên VLAN khoảng 170~Mbit/s và Controller xử lý 1000 MAC mới/giây mà không ảnh hưởng luồng đang chạy. Báo cáo cũng phân tích nguyên nhân gốc của các sự cố kỹ thuật đã gặp và nêu rõ các hạn chế còn lại như SDN Controller là điểm lỗi đơn, thông lượng qua tường lửa bị giới hạn do ASAv chưa có giấy phép và hiệu năng phụ thuộc trạng thái máy chủ ảo hóa.
 
 Mô hình chứng minh SDN và SD-WAN có thể được kết hợp với các cơ chế truyền thống trong một hệ thống thống nhất: VRRP, OSPF và tường lửa HA bảo đảm ổn định tại lớp 3 và biên mạng; SDN mang lại khả năng lập trình, chống vòng lặp và quan sát tập trung cho lớp 2; SD-WAN cung cấp kết nối liên cơ sở an toàn, có dự phòng và chính sách tập trung. Đây là nền tảng để tiếp tục phát triển các chức năng tự động hóa, giám sát và bảo mật cho mạng Campus đa cơ sở.
 

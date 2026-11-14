@@ -33,7 +33,7 @@ Hai công nghệ điều khiển bằng phần mềm là SDN (Software-Defined N
     \item Mô hình được hiện thực trên nền tảng mô phỏng EVE-NG với 74 node, gồm Campus chính (Site 100), ba cơ sở phụ (Site 200, 300, 400), trung tâm điều khiển SD-WAN (Site 900), hai router mô phỏng nhà cung cấp Internet, MPLS và một cơ sở mở rộng (Site 500).
     \item SDN được áp dụng cho tầng Distribution và Access của Campus chính (sáu Open vSwitch); tầng Core và tường lửa giữ cơ chế truyền thống theo mô hình Hybrid SDN. Liên kết giữa các cơ sở do SD-WAN đảm nhận.
     \item Mạng WAN giữa các site dùng dải \texttt{203.0.113.0/24} (dành cho tài liệu) và dải \texttt{100.64.0.0/10} (CGNAT); router nhà cung cấp Internet nối ra mạng thật của phòng lab để người dùng truy cập Internet. Mạng không dây và xác thực 802.1X nằm ngoài phạm vi triển khai và được nêu ở phần hướng phát triển.
-    \item Đánh giá tập trung vào tính đúng đắn chức năng và khả năng phục hồi; hiệu năng tuyệt đối không được đo do giới hạn của môi trường ảo hóa.
+    \item Đánh giá theo các tiêu chí của đề cương (hiệu năng, khả năng mở rộng, độ tin cậy, quản trị, bảo mật, QoS, quy mô hệ thống), tập trung vào tính đúng đắn chức năng và khả năng phục hồi; thông lượng và độ trễ có được đo nhưng chịu giới hạn của môi trường ảo hóa nên không phản ánh hiệu năng thiết bị thật.
 \end{itemize}
 
 \subsection{Phương pháp nghiên cứu}
