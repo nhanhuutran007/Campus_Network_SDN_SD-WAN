@@ -8,7 +8,7 @@
 |---|---|---|
 | Tài liệu thiết kế (nguồn sự thật cho báo cáo) | `campus_network_sdn_sdwan.md` | Mermaid topo 1.1–1.6, bảng IP 2.0–2.5, VLAN/DHCP 2.4, SDN 2.7 |
 | Báo cáo LaTeX | `baocao/cuoi-ky/` (`main.tex`, `content/Chapter1–5.tex`, `config/preamble.tex`, `tailieuthamkhao.bib`, `appendix.tex`) | `pdflatex` + `babel[vietnamese]` (MiKTeX); Chương 3 (mô hình đề xuất) lớn nhất, Chương 4 triển khai/kiểm thử/đánh giá, Chương 5 kết luận |
-| Slide báo cáo tiến độ | `baocao/slide-tuan/` (`report.tex`/`report.pdf`, kịch bản `kich-ban-thuyet-trinh.md`) | `SlideTrinhBayDA/` cũ đã bị người dùng xoá 03/10/2026 — không tạo lại |
+| Slide bảo vệ cuối kỳ | `baocao/slide_final/` (`report.tex`/`report.pdf` Beamer 43 trang nội dung theo 5 chương báo cáo, kịch bản `kichban.docx`; ảnh riêng trong `image/`, ảnh dùng chung lấy từ `../cuoi-ky/image/` qua `\graphicspath`). Trước 15/11/2026 là `baocao/slide-tuan/` (slide tiến độ tuần) | `SlideTrinhBayDA/` cũ đã bị người dùng xoá 03/10/2026 — không tạo lại |
 | Bảng theo dõi tiến độ | `docs/tien-do/BangTheoDoiTienDo.md` (21 hạng mục — thêm #21 NetOps Bot; cập nhật tới 30/10/2026) + `docs/tien-do/Template_Timeline_Tong_quan_08-08_den_21-11-2026.xlsx` | Cột "nhóm tự điền" (4) **để trống có chủ đích** — không điền thay |
 | Giải thích tunnel SD-WAN | `docs/huong-dan/Giai_thich_Tunnel_SD-WAN.md` | Tài liệu giải thích cho phần lý thuyết |
 | Hướng dẫn vận hành | `docs/huong-dan/` | Ryu/OVS, ký/add vEdge, phục hồi vEdge S100, xem GUI vManager |
@@ -28,7 +28,7 @@ Mốc: bảo vệ giả định cuối 11/2026 (timeline 08/08 → 21/11/2026).
 ## Biên dịch và kiểm tra
 
 - Báo cáo: từ `baocao/cuoi-ky/` chạy `pdflatex -halt-on-error main.tex` (2 lượt, thêm `bibtex main` khi đổi tài liệu tham khảo) — cần MiKTeX. Đọc `main.log` tìm `Overfull`, `undefined references`, `Citation … undefined`.
-- Slide: `pdflatex` từ `baocao/slide-tuan/`. Render trang vừa sửa sang ảnh và **xem trực quan**; dọn ảnh preview tạm sau khi kiểm.
+- Slide: `pdflatex` (2 lượt) từ `baocao/slide_final/`; kiểm `Overfull box` trong `report.log`. Render trang vừa sửa sang ảnh và **xem trực quan**; dọn ảnh preview tạm sau khi kiểm.
 - File sinh ra (`*.aux`, `*.log`, `*.toc`…) nằm trong `.gitignore` (không track từ 03/10/2026); chỉ commit PDF khi người dùng yêu cầu.
 - Skill `design-slides` (cục bộ ở `.codex/skills/design-slides/`, không track) có checklist Beamer/`check_slides.py` để tham khảo khi làm slide.
 

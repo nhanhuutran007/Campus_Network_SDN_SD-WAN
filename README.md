@@ -230,7 +230,7 @@ Bảng đầy đủ nằm trong [`campus_network_sdn_sdwan.md`](campus_network_s
     ├── cuoi-ky/                      # Báo cáo đồ án cuối kỳ (LaTeX)
     ├── giua-ky/                      # Báo cáo giữa kỳ (LaTeX)
     ├── baocao-tuan/                  # Báo cáo tiến độ tuần (LaTeX + PDF)
-    └── slide-tuan/                   # Slide báo cáo tiến độ hằng tuần
+    └── slide_final/                  # Slide bảo vệ cuối kỳ + kịch bản thuyết trình
 ```
 
 ---
