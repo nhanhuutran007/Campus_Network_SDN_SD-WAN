@@ -239,7 +239,7 @@ def diagnose_dhcp(site: str) -> Result:
     if s in BRANCH:
         fw, sw = BRANCH[s]
         steps = [
-            ("L2 Trunk SwitchBrand", sw, "show interfaces trunk", dg.ios_trunk),
+            ("L2 Trunk SwitchBrand", sw, "show interfaces trunk", dg.ios_trunk_min(3)),
             ("L3 Gateway Brand-FW", fw, "show interface ip brief", dg.asa_gateways(s)),
             ("Dịch vụ: dhcpd", fw, "show dhcpd state", dg.asa_dhcpd_state),
             ("Ứng dụng: lease", fw, "show dhcpd binding", dg.asa_dhcpd_binding),
@@ -290,7 +290,7 @@ def diagnose_branch(site: str) -> Result:
     steps = [
         ("WAN Brand-FW (track SLA)", fw, "show track", dg.asa_tracks),
         ("L3 Gateway Brand-FW", fw, "show interface ip brief", dg.asa_gateways(s)),
-        ("L2 Trunk SwitchBrand", sw, "show interfaces trunk", dg.ios_trunk),
+        ("L2 Trunk SwitchBrand", sw, "show interfaces trunk", dg.ios_trunk_min(3)),
         (f"L2 Uplink {a1}", a1, "show interfaces trunk", dg.trunk(f"L2 Uplink {a1}")),
         (f"L2 Uplink {a2}", a2, "show interfaces trunk", dg.trunk(f"L2 Uplink {a2}")),
         ("Dịch vụ: dhcpd", fw, "show dhcpd state", dg.asa_dhcpd_state),

@@ -34,6 +34,7 @@ GigabitEthernet0/1         10.2.1.1        YES CONFIG up                    up
 TRUNK = """Port        Mode             Encapsulation  Status        Native vlan
 Et0/0       on               802.1q         trunking      1
 """
+TRUNK3 = TRUNK + "Et0/1       on               802.1q         trunking      1\nEt0/2       on               802.1q         trunking      1\n"
 DHCPD = "Interface vlan60, Configured for DHCP SERVER\nInterface vlan70, Configured for DHCP SERVER\n"
 BINDING = "IP address       Client-ID         Lease expiration        Type\n10.2.60.100  0100.5079.6668.2b   86000 seconds  Automatic\n"
 EDGES = [{"host-name": "vEdge1-S200", "system-ip": "10.200.2.1", "site-id": "200", "reachability": "reachable",
@@ -62,6 +63,13 @@ class TestParsers(unittest.TestCase):
         c = dg.trunk("L2 Uplink SW-S200-1")(TRUNK)
         self.assertEqual((c.layer, c.status), ("L2 Uplink SW-S200-1", dg.OK))
 
+    def test_switchbrand_missing_trunk_port(self):
+        # 15/11: shutdown Et0/0 của SwitchBrand, đầu switch truy cập (IOL) vẫn báo trunking → phải đếm ở SwitchBrand
+        c = dg.ios_trunk_min(3)(TRUNK3.replace("Et0/0       on               802.1q         trunking      1\n", ""))
+        self.assertEqual(c.status, dg.FAIL)
+        self.assertIn("2/3", c.summary)
+        self.assertEqual(dg.ios_trunk_min(3)(TRUNK3).status, dg.OK)
+
     def test_dtp_trunk_is_warning(self):
         # SW-S400-1 thật (30/10): uplink trunk do DTP, không cấu hình tường minh
         out = "Port        Mode             Encapsulation  Status        Native vlan\nEt0/0       auto             n-802.1q       trunking      1\n"
@@ -79,7 +87,9 @@ class FakeConsole:
         self.opened.append(dev.name)
         if dev.name in self.fail:
             raise ConsoleError(f"SSH {dev.name} không kết nối được")
-        table = {"show track": TRACK, "show interface ip brief": IP_BRIEF, "show interfaces trunk": TRUNK,
+        # SwitchBrand có 3 cổng trunk (2 switch truy cập + Brand-FW); switch truy cập chỉ có 1 uplink
+        table = {"show track": TRACK, "show interface ip brief": IP_BRIEF,
+                 "show interfaces trunk": TRUNK3 if dev.name.startswith("SwitchBrand") else TRUNK,
                  "show dhcpd state": DHCPD, "show dhcpd binding": BINDING}
         return [table[c] for c in cmds]
 

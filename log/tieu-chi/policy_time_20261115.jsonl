@@ -1,0 +1,6 @@
+{"test": "data-policy", "run": 1, "sent": 1000, "recv": 683, "interval": 0.05, "commit_ap_s": 0.13, "commit_go_s": 0.06, "t_ap_s": 4.57, "t_go_s": 5.12, "chan_s": 15.85, "truoc_commit_mat": 0, "ts": "2026-11-15 02:57:52"}
+{"test": "data-policy", "run": 2, "sent": 1000, "recv": 700, "interval": 0.05, "commit_ap_s": 0.08, "commit_go_s": 0.05, "t_ap_s": 4.98, "t_go_s": 4.75, "chan_s": 15.0, "truoc_commit_mat": 0, "ts": "2026-11-15 02:58:54"}
+{"test": "data-policy", "run": 3, "sent": 1000, "recv": 678, "interval": 0.05, "commit_ap_s": 0.07, "commit_go_s": 0.06, "t_ap_s": 4.39, "t_go_s": 5.25, "chan_s": 16.1, "truoc_commit_mat": 0, "ts": "2026-11-15 02:59:55"}
+{"test": "data-policy", "run": 4, "sent": 1000, "recv": 700, "interval": 0.05, "commit_ap_s": 0.05, "commit_go_s": 0.05, "t_ap_s": 4.91, "t_go_s": 4.7, "chan_s": 15.0, "truoc_commit_mat": 0, "ts": "2026-11-15 03:00:57"}
+{"test": "data-policy", "run": 5, "sent": 1000, "recv": 684, "interval": 0.05, "commit_ap_s": 0.05, "commit_go_s": 0.06, "t_ap_s": 4.61, "t_go_s": 5.15, "chan_s": 15.8, "truoc_commit_mat": 0, "ts": "2026-11-15 03:01:58"}
+{"test": "ket-thuc", "sequence5_con": false, "ts": "2026-11-15 03:02:08"}

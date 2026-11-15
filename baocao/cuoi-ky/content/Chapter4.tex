@@ -1274,9 +1274,59 @@ Bot đã phát huy tác dụng trong sự cố ngày 01/11/2026: Telegram nhận
 
 Cả 30 kịch bản đều đạt. Bốn kịch bản T10, T12, T22, T29 chỉ đạt sau khi đo đầy đủ dưới tải cao, tại mọi chi nhánh và sửa các lỗi phát hiện được trong quá trình đo. Năm nội dung của đề tài đều đã được hiện thực và kiểm chứng: mạng Campus ba tầng Core--Distribution--Access; phân chia VLAN theo khoa và khối hành chính; SDN Controller điều khiển toàn bộ switch lớp 2 của Campus chính; SD-WAN kết nối Campus chính với các cơ sở phụ; tích hợp RSTP, OSPF, DHCP, ACL và dự phòng liên kết ở mọi tầng. Ngoài ra hệ thống có truy cập Internet tại chỗ có dự phòng, các dịch vụ DNS, Web, Mail, Syslog dùng được từ mọi cơ sở, cảnh báo email và trợ lý vận hành qua Telegram.
 
+\subsubsection{Các phép đo theo tiêu chí vận hành}\label{sec:do_van_hanh}
+
+Năm tiêu chí của đề cương gắn với vận hành được đo riêng bằng script chạy trên máy chủ mô phỏng, máy trạm là các network namespace nối vào cổng Access, Server Farm và mạng LAN của vEdge; kết quả ở Bảng~\ref{tab:do_van_hanh} và Bảng~\ref{tab:xu_ly_su_co}.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Kết quả đo các tiêu chí vận hành}
+    \label{tab:do_van_hanh}
+    \begin{tabularx}{\textwidth}{|L{2.7cm}|Y|Y|}
+        \hline
+        \textbf{Tiêu chí} & \textbf{Cách đo} & \textbf{Kết quả} \\
+        \hline
+        Thời gian thêm Site & Nạp lại toàn bộ cấu hình vEdge2 Site 500 (89 dòng) qua console rồi commit, 3 lần. Tắt cả hai vEdge Site 500 rồi bật lại, 5 lần, mốc 0 là lúc bật nguồn & Nạp cấu hình và commit: 7,3--11,7 giây. Kết nối điều khiển đầu tiên sau 190--200 giây; ping từ Server Farm tới LAN Site 500 thông sau 194--204 giây; đủ OMP và BFD của hai vEdge sau 200--214 giây \\
+        \hline
+        Thời gian áp chính sách SD-WAN & Thêm rồi gỡ một sequence chặn ICMP trong data policy \texttt{DP\_BRANCH} trên vSmart, 5 lần; luồng 20 gói/giây từ Server Farm tới máy trạm Site 200 cho biết lúc vEdge bắt đầu chặn & Lệnh commit trên vSmart: 0,05--0,13 giây. Có hiệu lực tại vEdge sau 4,4--5,0 giây khi áp và 4,7--5,3 giây khi gỡ \\
+        \hline
+        Tỷ lệ thỏa SLA & 624.214 bản ghi app-route của 112 đường hầm lấy từ API vManage, 200,8 giờ hệ thống chạy; so từng bản ghi với ngưỡng của hai lớp SLA & \texttt{SLA\_REALTIME}: 96,3\% bản ghi thỏa (MPLS 95,6\%, Internet 97,1\%); \texttt{SLA\_BUSINESS}: 98,2\%. Tính theo cặp site và cửa sổ 10 phút, 100\% (12.041/12.041) có ít nhất một đường hầm thỏa cả hai lớp \\
+        \hline
+        Mức sử dụng băng thông LAN & Đọc phần trăm sử dụng cổng từ API của Console khi rảnh (5 phút) và khi phát UDP liên VLAN 10, 50, 100, 150~Mbit/s & Rảnh: uplink Access--Distribution 0,3~Mbit/s (kênh điều khiển), tức 0,3\% tốc độ danh định 100~Mbit/s. Có tải: 9,8\%, 48\%, 93\%, 144\%; mất gói 0\%, 0,03\%, 0,05\%, 1,0\% \\
+        \hline
+        Mức sử dụng băng thông WAN & Đọc bộ đếm cổng transport của vEdge trên máy chủ khi rảnh và khi phát UDP giữa LAN Site 300 và Site 400 qua MPLS & Rảnh: 20--50~kbit/s mỗi chiều (BFD, điều khiển), tức 1--2,5\% của trần 2~Mbit/s. Phát 0,5; 1; 1,5; 2~Mbit/s: nhận đủ, mất không quá 0,1\%, mức sử dụng 26\%, 52\%, 78\%, 100\%. Phát 3~Mbit/s: chỉ nhận 1,97~Mbit/s, mất 34\% \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Thời gian thêm site chủ yếu là thời gian khởi động vEdge ảo (hơn 3 phút); phần cấu hình chỉ mất khoảng 10 giây vì vEdge mới dùng lại khuôn của các site trước. Con số này chưa gồm bước ký chứng chỉ và đưa số serial vào danh sách cho phép, là thao tác thủ công làm một lần cho mỗi thiết bị. Tỷ lệ thỏa SLA tính trên cả những khoảng thời gian liên kết bị cắt hoặc làm suy giảm có chủ đích để đo failover và AAR, nên phản ánh cận dưới. Console tính phần trăm theo tốc độ danh định 100~Mbit/s vì cổng ảo không có tốc độ vật lý; do đó giá trị có thể vượt 100\% và ngưỡng cảnh báo 70\%, 90\% của Console mang ý nghĩa tương đối.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption{Thời gian xử lý bốn sự cố gây chủ đích (mỗi sự cố 3 lần)}
+    \label{tab:xu_ly_su_co}
+    \begin{tabularx}{\textwidth}{|L{3.2cm}|L{2.6cm}|Y|P{1.8cm}|L{2.3cm}|}
+        \hline
+        \textbf{Sự cố} & \textbf{Phát hiện} & \textbf{Chẩn đoán theo lớp} & \textbf{Sửa} & \textbf{Xác nhận phục hồi} \\
+        \hline
+        Đứt uplink Access-SW1 -- Dist-SW1 & 1,7--2,3 s (Controller) & 0,1 s; chỉ đúng lớp liên kết OVS, 12/13 liên kết & dưới 0,1 s & 3,1 s \\
+        \hline
+        Đứt đường MPLS của vEdge1 Site 200 & 17,2--22,5 s (alarm vManage) & 6,5--7,0 s; dừng ở lớp kết nối điều khiển & dưới 0,1 s & 7,2--16,7 s \\
+        \hline
+        Cổng xuống switch truy cập của SwitchBrand Site 200 bị shutdown & Không có cảnh báo & 5,2 s; chỉ đúng lớp trunk của SwitchBrand, 2/3 cổng & 0,3 s & 12,4--13,3 s \\
+        \hline
+        Mất \texttt{ip helper-address} trên SVI VLAN 10 của Core-SW1 & Không có cảnh báo & 3,0 s; chỉ đúng lớp DHCP relay, 3/4 SVI & 0,3 s & 4,7--5,3 s \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Bảng~\ref{tab:xu_ly_su_co} đo phần việc của công cụ: thời gian tới khi hệ thống giám sát ghi nhận, thời gian chạy bài chẩn đoán theo lớp của NetOps Bot, thời gian thực hiện thao tác sửa đã biết và thời gian tới khi bài chẩn đoán sạch trở lại; thời gian phản ứng và ra quyết định của người vận hành không được tính, và bot đọc alarm theo chu kỳ 60 giây nên tin nhắn Telegram có thể tới chậm hơn mốc phát hiện tối đa một chu kỳ. Hai sự cố cấu hình không sinh cảnh báo nào, chỉ lộ ra khi người dùng báo hoặc khi chạy chẩn đoán. Phép đo cũng làm lộ một thiếu sót: khi cổng của SwitchBrand bị shutdown, đầu switch truy cập vẫn báo trunk hoạt động nên bản chẩn đoán ban đầu bỏ sót lỗi; sau khi bổ sung kiểm tra đủ ba cổng trunk trên SwitchBrand, lỗi được chỉ đúng lớp. Với sự cố đứt MPLS, bài chẩn đoán dừng ở lớp kết nối điều khiển chứ không chỉ ra cổng, vì cổng ảo không báo mất liên kết và BGP chưa hết thời gian chờ.
+
 \subsubsection{Đối chiếu với các tiêu chí đánh giá của đề cương}
 
-Bảng~\ref{tab:doi_chieu_tieu_chi} đối chiếu kết quả với bảy nhóm tiêu chí đánh giá của đề cương; các tiêu chí chưa có số đo được ghi rõ.
+Bảng~\ref{tab:doi_chieu_tieu_chi} đối chiếu kết quả với bảy nhóm tiêu chí đánh giá của đề cương.
 
 \begingroup
 \setlength{\tabcolsep}{4pt}
@@ -1304,7 +1354,7 @@ Bảng~\ref{tab:doi_chieu_tieu_chi} đối chiếu kết quả với bảy nhóm
     \hline
     Thời gian thêm VLAN & 3,8 ms phần SDN; 5,3 giây gồm cả hai Core; máy trạm dùng được sau khoảng 40 giây & Hình~\ref{fig:bd_vlan} \\
     \hline
-    Thời gian thêm Site & Chưa đo thời gian đầu--cuối. Khối lượng: 85 dòng mỗi vEdge (9--10 dòng khác khuôn), khoảng 10 dòng mỗi router nhà cung cấp, một sequence trên vSmart & Mục kiểm thử SD-WAN \\
+    Thời gian thêm Site & Nạp cấu hình vEdge khoảng 10 giây; site thông đầu--cuối sau 194--204 giây kể từ lúc bật nguồn, đủ dự phòng sau 200--214 giây. Khối lượng: 85 dòng mỗi vEdge (9--10 dòng khác khuôn), khoảng 10 dòng mỗi router nhà cung cấp, một sequence trên vSmart & Bảng~\ref{tab:do_van_hanh} \\
     \hline
     Thời gian cấu hình, số lệnh CLI & Thêm VLAN: một lệnh API cho sáu OVS, so với 18 lệnh CLI trên mỗi Core (script đẩy 1,2 giây/thiết bị) & Bảng~\ref{tab:sdn_muc_tieu} \\
     \hline
@@ -1322,7 +1372,7 @@ Bảng~\ref{tab:doi_chieu_tieu_chi} đối chiếu kết quả với bảy nhóm
     \hline
     Số bước cấu hình, mức độ tự động hóa & VLAN và chính sách SDN: một lệnh API hoặc một biểu mẫu trên Console; chính sách SD-WAN khai một lần trên vSmart cho mọi chi nhánh; phép đo chạy bằng script; NetOps Bot thay đổi cấu hình có duyệt và tự hoàn tác & Mục~\ref{sec:sdn_console}, \ref{sec:netops_bot} \\
     \hline
-    Thời gian triển khai, xử lý sự cố & Thêm VLAN 5,3 giây. Chẩn đoán theo lớp bằng lệnh \texttt{/diag} dừng ở lớp lỗi đầu tiên; thời gian xử lý sự cố chưa được đo & Mục~\ref{sec:netops_bot} \\
+    Thời gian triển khai, xử lý sự cố & Thêm VLAN 5,3 giây. Chẩn đoán theo lớp bằng lệnh \texttt{/diag} dừng ở lớp lỗi đầu tiên; bốn sự cố gây chủ đích được chỉ ra lớp lỗi sau 0,1--7 giây, xác nhận phục hồi sau 3--17 giây & Bảng~\ref{tab:xu_ly_su_co}, Mục~\ref{sec:netops_bot} \\
     \hline
     \multicolumn{3}{|l|}{\textbf{5. Bảo mật}} \\
     \hline
@@ -1332,15 +1382,15 @@ Bảng~\ref{tab:doi_chieu_tieu_chi} đối chiếu kết quả với bảy nhóm
     \hline
     ACL Efficiency & ACL biên chặn cổng không công bố (8080), chỉ mở Web, Mail vào DMZ; data policy chặn Telnet/SSH từ chi nhánh, bộ đếm tăng đúng số gói thử & Bảng~\ref{tab:kiem_thu_chinh_sach} \\
     \hline
-    Policy Enforcement Time & SDN: áp 8,0--12,6 ms, gỡ 5,2--10,8 ms trên bốn Access. SD-WAN: chưa đo & Bảng~\ref{tab:sdn_muc_tieu} \\
+    Policy Enforcement Time & SDN: áp 8,0--12,6 ms, gỡ 5,2--10,8 ms trên bốn Access. SD-WAN: áp 4,4--5,0 giây, gỡ 4,7--5,3 giây kể từ lệnh commit trên vSmart & Bảng~\ref{tab:sdn_muc_tieu}, \ref{tab:do_van_hanh} \\
     \hline
     \multicolumn{3}{|l|}{\textbf{6. QoS}} \\
     \hline
-    SLA Satisfaction & Đường MPLS thỏa \texttt{SLA\_REALTIME} (0\%, 37 ms, 6 ms); khi trễ vượt 150 ms, AAR chuyển đường sau 5,5--7 phút, mất 0,05\%. Tỷ lệ thỏa SLA theo thời gian chưa tính & Mục kiểm thử SD-WAN \\
+    SLA Satisfaction & Đường MPLS thỏa \texttt{SLA\_REALTIME} (0\%, 37 ms, 6 ms); khi trễ vượt 150 ms, AAR chuyển đường sau 5,5--7 phút, mất 0,05\%. Trong 200,8 giờ: 96,3\% bản ghi thỏa \texttt{SLA\_REALTIME}, 98,2\% thỏa \texttt{SLA\_BUSINESS}; mọi cặp site luôn có đường hầm thỏa & Bảng~\ref{tab:do_van_hanh} \\
     \hline
     VoIP MOS, Video Quality & MOS ước lượng khoảng 4,4 (E-model). Chất lượng video không đo vì WAN mô phỏng chỉ khoảng 2 Mbit/s & Mục kiểm thử SD-WAN \\
     \hline
-    Bandwidth Utilization & Console hiển thị phần trăm sử dụng từng cổng theo thời gian thực; chưa tổng hợp thành số liệu & Mục~\ref{sec:sdn_console} \\
+    Bandwidth Utilization & LAN: uplink Access 0,3\% khi rảnh, 9,8--93\% ở tải 10--100~Mbit/s. WAN: 1--2,5\% khi rảnh, 26--100\% ở tải 0,5--2~Mbit/s, bão hòa ở 2~Mbit/s & Bảng~\ref{tab:do_van_hanh} \\
     \hline
     \multicolumn{3}{|l|}{\textbf{7. Khả năng mở rộng hệ thống}} \\
     \hline
@@ -1356,7 +1406,7 @@ Bảng~\ref{tab:doi_chieu_tieu_chi} đối chiếu kết quả với bảy nhóm
 
 \begingroup
 \setlength{\tabcolsep}{3pt}
-\begin{longtable}{|L{2.2cm}|L{2.9cm}|L{3.2cm}|L{2.9cm}|L{3.3cm}|}
+\begin{longtable}{|L{2.2cm}|L{2.9cm}|L{3.2cm}|L{2.9cm}|L{3.15cm}|}
     \caption{So sánh mô hình đề xuất với các mô hình đối chứng}\label{tab:so_sanh_mo_hinh} \\
     \hline
     \textbf{Tiêu chí} & \textbf{Flat, Two-Tier} & \textbf{Three-Tier truyền thống} & \textbf{VXLAN EVPN} & \textbf{Đề xuất (SDN + SD-WAN)} \\

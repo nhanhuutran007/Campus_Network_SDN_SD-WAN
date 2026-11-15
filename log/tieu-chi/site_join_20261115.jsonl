@@ -1,0 +1,14 @@
+{"test": "truoc", "run": 1, "ctrl": ["10.200.50.1", "10.200.50.2"], "omp": ["10.200.50.1", "10.200.50.2"], "bfd": 2, "ts": "2026-11-15 03:04:50"}
+{"start_cmd_s": 5.2, "ctrl_1": 192.7, "ctrl_2": 195.0, "omp_1": 195.0, "omp_2": 197.5, "bfd_1": 197.5, "bfd_all": 199.8, "test": "join", "run": 1, "bfd_muc_tieu": 2, "start": ["65 started", "23 started"], "ping_s": null, "mat_sau_tat_s": null, "ts": "2026-11-15 03:10:07"}
+{"test": "truoc", "run": 2, "ctrl": ["10.200.50.1", "10.200.50.2"], "omp": ["10.200.50.1", "10.200.50.2"], "bfd": 2, "ts": "2026-11-15 03:11:08"}
+{"start_cmd_s": 5.2, "ctrl_1": 198.9, "omp_1": 201.3, "bfd_1": 203.7, "ctrl_2": 208.9, "omp_2": 211.3, "bfd_all": 213.7, "test": "join", "run": 2, "bfd_muc_tieu": 2, "start": ["65 started", "23 started"], "ping_s": null, "mat_sau_tat_s": null, "ts": "2026-11-15 03:16:40"}
+{"test": "truoc", "run": 3, "ctrl": ["10.200.50.1", "10.200.50.2"], "omp": ["10.200.50.1", "10.200.50.2"], "bfd": 2, "ts": "2026-11-15 03:17:41"}
+{"start_cmd_s": 5.2, "ctrl_1": 196.7, "ctrl_2": 196.7, "omp_1": 199.1, "omp_2": 199.1, "bfd_1": 203.9, "bfd_all": 203.9, "test": "join", "run": 3, "bfd_muc_tieu": 2, "start": ["65 started", "23 started"], "ping_s": null, "mat_sau_tat_s": null, "ts": "2026-11-15 03:23:03"}
+{"test": "truoc", "run": 1, "ctrl": ["10.200.50.1", "10.200.50.2"], "omp": ["10.200.50.1", "10.200.50.2"], "bfd": 2, "ts": "2026-11-15 03:23:49"}
+{"test": "ket-thuc", "ts": "2026-11-15 03:24:05"}
+{"test": "ket-thuc", "ts": "2026-11-15 03:26:02"}
+{"test": "truoc", "run": 1, "ctrl": ["10.200.50.1", "10.200.50.2"], "omp": ["10.200.50.1", "10.200.50.2"], "bfd": 2, "ts": "2026-11-15 03:33:13"}
+{"start_cmd_s": 5.2, "ctrl_1": 190.4, "omp_1": 192.8, "ctrl_2": 197.6, "bfd_1": 197.6, "omp_2": 200.1, "bfd_all": 205.0, "test": "join", "run": 1, "bfd_muc_tieu": 2, "start": ["65 started", "23 started"], "ping_s": 194.0, "mat_sau_tat_s": 0.4, "ts": "2026-11-15 03:38:37"}
+{"test": "truoc", "run": 2, "ctrl": ["10.200.50.1", "10.200.50.2"], "omp": ["10.200.50.1", "10.200.50.2"], "bfd": 2, "ts": "2026-11-15 03:39:38"}
+{"start_cmd_s": 5.2, "ctrl_1": 199.6, "ctrl_2": 199.6, "omp_1": 199.6, "omp_2": 202.4, "bfd_1": 204.9, "bfd_all": 204.9, "test": "join", "run": 2, "bfd_muc_tieu": 2, "start": ["65 started", "23 started"], "ping_s": 203.9, "mat_sau_tat_s": 0.4, "ts": "2026-11-15 03:45:01"}
+{"test": "ket-thuc", "ts": "2026-11-15 03:46:03"}

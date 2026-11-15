@@ -249,6 +249,21 @@ def asa_tracks(out: str) -> Check:
     return Check(layer, OK, ", ".join(ev))
 
 
+def ios_trunk_min(expected: int):
+    """ios_trunk + đếm cổng: SwitchBrand phải có đủ `expected` cổng trunk (2 switch truy cập + Brand-FW).
+    IOL không báo link down cho đầu đối diện khi một đầu bị shutdown, nên phải đếm ở chính SwitchBrand."""
+    def parse(out: str) -> Check:
+        c = ios_trunk(out)
+        rows = re.findall(r"^(\S+)\s+(?:on|auto|desirable)\s+(?:n-)?802\.1q\s+trunking", out, re.M | re.I)
+        if c.status != FAIL and len(rows) < expected:
+            return Check("L2 Trunk SwitchBrand", FAIL, f"chỉ {len(rows)}/{expected} cổng trunk đang chạy: {', '.join(rows)}",
+                         [l for l in out.splitlines() if "trunking" in l][:4],
+                         "Một cổng xuống switch truy cập hoặc lên Brand-FW đang down/shutdown hay không còn trunk: "
+                         "`show interfaces status`, `show running-config interface <cổng>`.")
+        return c
+    return parse
+
+
 def trunk(layer: str):
     """ios_trunk với tên lớp riêng (dùng cho từng switch truy cập)."""
     def parse(out: str) -> Check:
