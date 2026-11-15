@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>Topology logic</title>
+<style>
+  :root{--navy:#0B2545;--brand:#2A78D6;--brandSoft:#E8F1FC;--accent:#EB6834;--accentSoft:#FDEEE7;
+        --ok:#0E8A4F;--okSoft:#E6F4EC;--ink:#1F2933;--inkSoft:#52606D;--line:#D9E2EC;--paper:#F5F7FA}
+  html,body{margin:0;padding:0;background:#fff}
+  #c{position:relative;width:1600px;height:900px;background:#fff;font-family:"Segoe UI",Arial,sans-serif;color:var(--ink);overflow:hidden}
+  svg{position:absolute;left:0;top:0}
+  .box{position:absolute;box-sizing:border-box;border-radius:14px;text-align:center;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+  .hd{flex-shrink:0;font-weight:700;font-size:23px;padding:9px 10px;color:#fff}
+  .bd{padding:10px 14px;font-size:19px;line-height:1.5;flex:1;display:flex;flex-direction:column;justify-content:center}
+  code{font-family:Consolas,"Cascadia Mono",monospace;font-size:18px;color:var(--navy);background:rgba(11,37,69,.06);padding:1px 5px;border-radius:4px}
+  .ctl{border:2.5px solid var(--navy);background:var(--brandSoft)} .ctl .hd{background:var(--navy)}
+  .hq{border:3px solid var(--brand);background:#fff} .hq .hd{background:var(--brand)}
+  .br{border:2.5px solid var(--ok);background:var(--okSoft)} .br .hd{background:var(--ok)}
+  .ex{border:2.5px solid var(--accent);background:var(--accentSoft)} .ex .hd{background:var(--accent)}
+  .tr{border:2.5px solid var(--inkSoft);background:var(--paper);justify-content:center}
+  .tr b{font-size:24px} .tr div{font-size:18px;color:var(--inkSoft);margin-top:4px}
+  .sub{color:var(--inkSoft);font-size:17px}
+  .as{display:inline-block;font-weight:600;font-size:17px;color:var(--navy);background:#fff;border:1px solid var(--line);border-radius:999px;padding:0 10px;margin-bottom:4px}
+  .lg{position:absolute;left:0;right:0;top:835px;display:flex;justify-content:center;gap:42px;font-size:18px;color:var(--inkSoft);align-items:center}
+  .lg span{display:flex;align-items:center;gap:10px}
+  .tag{position:absolute;font-size:16px;font-weight:600;background:#fff;padding:1px 8px;border-radius:6px}
+</style></head><body>
+<div id="c">
+<svg width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0B2545"/></marker>
+  </defs>
+  <g fill="none" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Internet -> Site 900 / Site 100 -->
+    <path d="M210,250 V92 H440" stroke="#2A78D6" stroke-width="4"/>
+    <path d="M360,300 H470" stroke="#2A78D6" stroke-width="4"/>
+    <!-- MPLS -> Site 900 / Site 100 -->
+    <path d="M1390,250 V92 H1160" stroke="#EB6834" stroke-width="4"/>
+    <path d="M1240,300 H1130" stroke="#EB6834" stroke-width="4"/>
+    <!-- Internet bus to branches -->
+    <path d="M210,350 V585" stroke="#2A78D6" stroke-width="4"/>
+    <path d="M210,470 H1320" stroke="#2A78D6" stroke-width="4"/>
+    <!-- MPLS bus -->
+    <path d="M1390,350 V512" stroke="#EB6834" stroke-width="4"/>
+    <path d="M1430,585 V512 H320 V585" stroke="#EB6834" stroke-width="4"/>
+    <g stroke="#EB6834" stroke-width="4"><path d="M690,512 V585"/><path d="M1060,512 V585"/></g>
+    <g stroke="#2A78D6" stroke-width="4">
+      <path d="M580,470 V585"/><path d="M580,503 V521" stroke="#fff" stroke-width="14"/><path d="M580,498 V526"/>
+      <path d="M950,470 V585"/><path d="M950,503 V521" stroke="#fff" stroke-width="14"/><path d="M950,498 V526"/>
+      <path d="M1320,470 V585"/><path d="M1320,503 V521" stroke="#fff" stroke-width="14"/><path d="M1320,498 V526"/>
+    </g>
+    <!-- control plane -->
+    <path d="M800,150 V206" stroke="#0B2545" stroke-width="3" stroke-dasharray="9 7" marker-end="url(#ar)"/>
+  </g>
+  <g fill="#2A78D6"><circle cx="210" cy="470" r="6"/><circle cx="580" cy="470" r="6"/><circle cx="950" cy="470" r="6"/></g>
+  <g fill="#EB6834"><circle cx="690" cy="512" r="6"/><circle cx="1060" cy="512" r="6"/><circle cx="1390" cy="512" r="6"/></g>
+</svg>
+
+<div class="box ctl" style="left:440px;top:30px;width:720px;height:120px">
+  <div class="hd">Site 900 — Trung tâm điều khiển SD-WAN</div>
+  <div class="bd"><div>vManage <code>10.9.0.10</code> · vSmart <code>10.9.0.11</code> · vBond <code>10.9.0.12</code></div></div>
+</div>
+
+<div class="tag" style="left:812px;top:164px;color:var(--navy)">DTLS / OMP tới mọi vEdge</div>
+
+<div class="box tr" style="left:60px;top:250px;width:300px;height:100px"><b style="color:var(--brand)">Internet</b><div>AS 64511 · color <code>biz-internet</code></div></div>
+<div class="box tr" style="left:1240px;top:250px;width:300px;height:100px"><b style="color:var(--accent)">MPLS</b><div>AS 64512 · color <code>mpls</code></div></div>
+
+<div class="box hq" style="left:470px;top:210px;width:660px;height:190px">
+  <div class="hd">Site 100 — Campus chính · AS 65000</div>
+  <div class="bd">
+    <div>2 vEdge, mỗi Edge 2 TLOC (Internet + MPLS)</div>
+    <div>FW-ASAv HA — Core-SW1/2 (VRRP, OSPF)</div>
+    <div>Ryu SDN điều khiển 6 OVS · VLAN 10/20/30/40/90/99</div>
+  </div>
+</div>
+
+<div class="box br" style="left:80px;top:585px;width:330px;height:200px">
+  <div class="hd">Site 200 — Cần Thơ</div>
+  <div class="bd"><div><span class="as">AS 65010</span></div><div>VLAN 60 Nông nghiệp</div><div>VLAN 70 Y tế</div></div>
+</div>
+<div class="box br" style="left:450px;top:585px;width:330px;height:200px">
+  <div class="hd">Site 300 — Đà Nẵng</div>
+  <div class="bd"><div><span class="as">AS 65020</span></div><div>VLAN 80 Du lịch</div><div>VLAN 90 Tài chính</div></div>
+</div>
+<div class="box br" style="left:820px;top:585px;width:330px;height:200px">
+  <div class="hd">Site 400 — Nha Trang</div>
+  <div class="bd"><div><span class="as">AS 65030</span></div><div>VLAN 50 Thủy sản</div><div>VLAN 60 Lữ hành</div></div>
+</div>
+<div class="box ex" style="left:1190px;top:585px;width:330px;height:200px">
+  <div class="hd">Site 500 — Mở rộng</div>
+  <div class="bd"><div><span class="as">AS 65040</span></div><div>Kiểm chứng khả năng</div><div>thêm cơ sở mới</div></div>
+</div>
+
+<div class="lg">
+  <span><svg width="46" height="8" style="position:static"><line x1="0" y1="4" x2="46" y2="4" stroke="#2A78D6" stroke-width="4"/></svg>Internet</span>
+  <span><svg width="46" height="8" style="position:static"><line x1="0" y1="4" x2="46" y2="4" stroke="#EB6834" stroke-width="4"/></svg>MPLS</span>
+  <span><svg width="46" height="10" style="position:static"><line x1="0" y1="5" x2="46" y2="5" stroke="#0B2545" stroke-width="3" stroke-dasharray="9 7"/></svg>Kết nối điều khiển DTLS/OMP</span>
+  <span>Chi nhánh: vEdge1 qua MPLS · vEdge2 qua Internet · Brand-FW làm gateway</span>
+</div>
+</div>
+</body></html>

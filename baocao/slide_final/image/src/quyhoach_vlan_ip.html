@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>IP plan</title>
+<style>
+  html,body{margin:0;background:#fff}
+  #c{width:1800px;height:930px;box-sizing:border-box;padding:14px 16px;display:flex;gap:26px;font-family:"Segoe UI",Arial,sans-serif;color:#1F2933;background:#fff}
+  code{font-family:Consolas,monospace;color:#0B2545}
+  .left{width:560px;display:flex;flex-direction:column;gap:18px}
+  .card{border:2px solid #D9E2EC;border-radius:16px;overflow:hidden;background:#fff}
+  .card h3{margin:0;padding:12px 20px;background:#2A78D6;color:#fff;font-size:24px}
+  .card ul{margin:0;padding:14px 20px 16px 42px;font-size:20px;line-height:1.55}
+  .card li{margin:3px 0}
+  .card li code{font-size:19px}
+  .soft{border-radius:16px;background:#FDEEE7;border-left:7px solid #EB6834;padding:16px 20px;font-size:20px;line-height:1.5}
+  .addr{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:2px solid #0B2545;border-radius:12px;overflow:hidden;text-align:center;font-family:Consolas,monospace;font-size:26px;font-weight:700}
+  .addr div{padding:8px 0 6px}
+  .addr small{display:block;font-family:"Segoe UI",Arial;font-size:15px;font-weight:600;color:#52606D;margin-top:2px}
+  .right{flex:1}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:19.5px;border:2px solid #D9E2EC;border-radius:16px;overflow:hidden}
+  th{background:#0B2545;color:#fff;text-align:left;padding:10px 12px;font-size:19px}
+  td{padding:5px 12px;line-height:1.3;border-top:1px solid #E4EAF1}
+  td code{font-size:18.5px}
+  tr.g td{background:#E8F1FC;color:#2A78D6;font-weight:700;font-size:18px;padding:6px 12px;letter-spacing:.2px}
+  tr.g.o td{background:#FDEEE7;color:#C2521F}
+  tr.g.n td{background:#EEF1F6;color:#0B2545}
+  td.v{font-weight:700;width:92px}
+  .muted{color:#52606D}
+</style></head><body>
+<div id="c">
+  <div class="left">
+    <div class="card">
+      <h3>Quy tắc thống nhất trong <code style="color:#fff">10.0.0.0/8</code></h3>
+      <div style="padding:16px 20px 0">
+        <div class="addr">
+          <div style="background:#F5F7FA">10<small>cố định</small></div>
+          <div style="background:#E8F1FC;color:#2A78D6">‹site›<small>mã site</small></div>
+          <div style="background:#E6F4EC;color:#0E8A4F">‹VLAN›<small>VLAN ID</small></div>
+          <div style="background:#FDF4E3;color:#B7791F">host<small>.1 gateway</small></div>
+        </div>
+      </div>
+      <ul>
+        <li>Mã site: <b>1</b> Campus chính · <b>2</b> Cần Thơ · <b>3</b> Đà Nẵng · <b>4</b> Nha Trang · <b>5</b> Site 500 · <b>9</b> Site 900</li>
+        <li><code>.1</code> gateway · <code>.10/.11</code> máy chủ · <code>.100–.199</code> DHCP</li>
+        <li>Điểm–điểm <code>/30</code> · transit tường lửa <code>/29</code></li>
+        <li>Underlay: Internet <code>203.0.113.0/24</code> · MPLS <code>100.64.0.0/10</code></li>
+        <li>System-IP <code>10.200.‹site›.‹n›</code> (300/400/500 → 30/40/50)</li>
+      </ul>
+    </div>
+    <div class="soft"><b style="color:#C2521F">Mở rộng dễ dàng:</b> site mới chỉ cần cấp Site-ID, System-IP, dải subnet và ASN — đã kiểm chứng với Site 500 (<code>10.5.0.0/16</code>, AS 65040).</div>
+    <div class="card" style="flex:1">
+      <h3 style="background:#0E8A4F">Đọc địa chỉ là biết vị trí</h3>
+      <div style="padding:16px 20px;font-size:20px;line-height:1.7">
+        <div><code style="font-size:22px;font-weight:700">10.2.60.105</code> → Site 200 · VLAN 60 · máy DHCP</div>
+        <div><code style="font-size:22px;font-weight:700">10.1.90.10</code> → Site 100 · VLAN 90 · DHCP/DNS</div>
+        <div><code style="font-size:22px;font-weight:700">10.200.30.1</code> → System-IP vEdge1 Site 300</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <table>
+      <tr><th>VLAN</th><th>Khu vực</th><th>Subnet</th><th>Gateway / ghi chú</th></tr>
+      <tr class="g"><td colspan="4">CAMPUS CHÍNH — SITE 100</td></tr>
+      <tr><td class="v">10</td><td>Khoa Công nghệ thông tin</td><td><code>10.1.10.0/24</code></td><td>VRRP <code>.1</code> · DHCP</td></tr>
+      <tr><td class="v">20</td><td>Khoa Toán – Thống kê</td><td><code>10.1.20.0/24</code></td><td>VRRP <code>.1</code> · DHCP</td></tr>
+      <tr><td class="v">30</td><td>Khoa Luật</td><td><code>10.1.30.0/24</code></td><td>VRRP <code>.1</code> · DHCP</td></tr>
+      <tr><td class="v">40</td><td>Khối Hành chính</td><td><code>10.1.40.0/24</code></td><td>VRRP <code>.1</code> · DHCP</td></tr>
+      <tr><td class="v">90</td><td>Server Farm</td><td><code>10.1.90.0/24</code></td><td>DHCP/DNS <code>.10</code> · Syslog <code>.11</code></td></tr>
+      <tr><td class="v">99</td><td>Quản trị, kênh SDN</td><td><code>10.1.99.0/24</code></td><td>Core-SW1 <code>.1</code> · Controller <code>.10</code></td></tr>
+      <tr><td class="v">101–102</td><td>Transit FW – Core</td><td><code>10.1.2.0/29</code><br><code>10.1.2.8/29</code></td><td>OSPF Area 0</td></tr>
+      <tr><td class="v">103–104</td><td>Transit FW – vEdge</td><td><code>10.1.3.0/29</code><br><code>10.1.3.8/29</code></td><td>OSPF Area 0</td></tr>
+      <tr><td class="v">DMZ</td><td>Web, Mail</td><td><code>10.1.1.0/28</code></td><td>FW <code>.1</code> · Web <code>.10</code> · Mail <code>.11</code></td></tr>
+      <tr class="g o"><td colspan="4">CƠ SỞ PHỤ VÀ MỞ RỘNG — gateway là Brand-FW</td></tr>
+      <tr><td class="v">60 / 70</td><td>Site 200: Nông nghiệp / Y tế</td><td><code>10.2.60.0/24<br>10.2.70.0/24</code></td><td>Brand-FW <code>.1</code> · DHCP</td></tr>
+      <tr><td class="v">80 / 90</td><td>Site 300: Du lịch / Tài chính</td><td><code>10.3.80.0/24<br>10.3.90.0/24</code></td><td>Brand-FW <code>.1</code> · DHCP</td></tr>
+      <tr><td class="v">50 / 60</td><td>Site 400: Thủy sản / Lữ hành</td><td><code>10.4.50.0/24<br>10.4.60.0/24</code></td><td>Brand-FW <code>.1</code> · DHCP</td></tr>
+      <tr><td class="v">10</td><td>Site 500: người dùng</td><td><code>10.5.10.0/24</code></td><td>Brand-FW-S500 <code>.1</code> · DHCP</td></tr>
+      <tr><td class="v">99</td><td>Quản trị mỗi chi nhánh</td><td><code>10.‹site›.99.0/24</code></td><td>Brand-FW <code>.1</code> · tĩnh</td></tr>
+      <tr class="g n"><td colspan="4">SITE 900 — CONTROLLER SD-WAN</td></tr>
+      <tr><td class="v">—</td><td>Controller LAN</td><td><code>10.9.0.0/24</code></td><td>Switch LAN <code>.2</code> · vManage/vSmart/vBond <code>.10/.11/.12</code></td></tr>
+      <tr><td class="v">—</td><td>Mặt quản trị</td><td><code>10.9.1.0/24</code></td><td>Switch quản trị <code>.1</code></td></tr>
+    </table>
+  </div>
+</div>
+</body></html>

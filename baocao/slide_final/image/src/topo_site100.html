@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>Site 100</title>
+<style>
+  html,body{margin:0;background:#fff}
+  #c{position:relative;width:1400px;height:1200px;background:#fff;font-family:"Segoe UI",Arial,sans-serif;color:#1F2933;overflow:hidden}
+  svg{position:absolute;left:0;top:0}
+  .b{position:absolute;box-sizing:border-box;border-radius:12px;border:2.5px solid;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:19px;line-height:1.35;transform:translate(-50%,-50%);z-index:2}
+  .b b{font-size:22px}
+  .s{color:#52606D;font-size:17px}
+  code{font-family:Consolas,monospace;font-size:17px}
+  .wan{border-color:#52606D;background:#F5F7FA}
+  .edge{border-color:#EB6834;background:#FDEEE7}
+  .l2{border-color:#52606D;background:#F5F7FA}
+  .fw{border-color:#B7791F;background:#FDF4E3}
+  .core{border-color:#2A78D6;background:#E8F1FC}
+  .ovs{border-color:#0E8A4F;background:#E6F4EC}
+  .srv{border-color:#9AA5B1;background:#fff}
+  .lbl{position:absolute;transform:translate(-50%,-50%);background:#fff;font-size:16px;font-weight:600;padding:0 6px;border-radius:4px;z-index:3;white-space:nowrap}
+  .zone{position:absolute;border:2px dashed #0E8A4F;border-radius:18px;background:rgba(14,138,79,.035);z-index:0}
+  .zt{position:absolute;font-size:17px;font-weight:700;color:#0E8A4F;background:#fff;padding:0 8px;z-index:3}
+  .lg{position:absolute;left:0;right:0;top:1158px;display:flex;justify-content:center;gap:40px;font-size:18px;color:#52606D;align-items:center}
+  .lg span{display:flex;align-items:center;gap:10px}
+</style></head><body>
+<div id="c">
+<svg id="g" width="1400" height="1200"></svg>
+
+<div class="zone" style="left:30px;top:820px;width:1340px;height:285px"></div>
+<div class="zt" style="left:56px;top:1093px">Khối SDN — Ryu điều khiển 6 OVS qua OpenFlow 1.3 (VLAN 99)</div>
+
+<div id="inet" class="b wan" style="left:540px;top:50px;width:230px;height:66px"><b>Internet</b><span class="s">AS 64511</span></div>
+<div id="mpls" class="b wan" style="left:860px;top:50px;width:230px;height:66px"><b>MPLS</b><span class="s">AS 64512</span></div>
+
+<div id="ve1" class="b edge" style="left:220px;top:170px;width:300px;height:78px"><b>vEdge1-S100</b><span class="s">System-IP <code>10.200.100.1</code></span></div>
+<div id="ve2" class="b edge" style="left:1180px;top:170px;width:300px;height:78px"><b>vEdge2-S100</b><span class="s">System-IP <code>10.200.100.2</code></span></div>
+
+<div id="w1" class="b l2" style="left:220px;top:305px;width:300px;height:70px"><b>SW-WAN-Edge1</b><span class="s">VLAN 103</span></div>
+<div id="w2" class="b l2" style="left:1180px;top:305px;width:300px;height:70px"><b>SW-WAN-Edge2</b><span class="s">VLAN 104</span></div>
+
+<div id="fa" class="b fw" style="left:220px;top:490px;width:300px;height:78px"><b>FW-ASAv Active</b><span class="s">Primary</span></div>
+<div id="fs" class="b fw" style="left:1180px;top:490px;width:300px;height:78px"><b>FW-ASAv Standby</b><span class="s">Secondary</span></div>
+<div id="dmz" class="b srv" style="left:700px;top:510px;width:300px;height:66px"><b>DMZ</b><span class="s">Web (Nginx) · Mail</span></div>
+
+<div id="c1" class="b core" style="left:220px;top:690px;width:300px;height:78px"><b>Core-SW1</b><span class="s">VRRP Master · OSPF</span></div>
+<div id="c2" class="b core" style="left:1180px;top:690px;width:300px;height:78px"><b>Core-SW2</b><span class="s">VRRP Backup · OSPF</span></div>
+<div id="farm" class="b srv" style="left:700px;top:740px;width:330px;height:80px"><b>Server Farm</b><span class="s">VLAN 90: DHCP/DNS, Syslog<br>VLAN 99: Ryu <code>10.1.99.10</code></span></div>
+
+<div id="d1" class="b ovs" style="left:460px;top:895px;width:270px;height:62px"><b>Dist-SW1 (OVS)</b></div>
+<div id="d2" class="b ovs" style="left:940px;top:895px;width:270px;height:62px"><b>Dist-SW2 (OVS)</b></div>
+
+<div id="a1" class="b ovs" style="left:190px;top:1045px;width:240px;height:72px"><b>Access-SW1</b><span class="s">VLAN 10 · CNTT</span></div>
+<div id="a2" class="b ovs" style="left:540px;top:1045px;width:240px;height:72px"><b>Access-SW2</b><span class="s">VLAN 20 · Toán-TK</span></div>
+<div id="a3" class="b ovs" style="left:860px;top:1045px;width:240px;height:72px"><b>Access-SW3</b><span class="s">VLAN 30 · Luật</span></div>
+<div id="a4" class="b ovs" style="left:1210px;top:1045px;width:240px;height:72px"><b>Access-SW4</b><span class="s">VLAN 40 · Hành chính</span></div>
+
+<div class="lg">
+  <span><svg width="46" height="8" style="position:static"><line x1="0" y1="4" x2="46" y2="4" stroke="#1F2933" stroke-width="3.5"/></svg>Đường đang dùng</span>
+  <span><svg width="46" height="8" style="position:static"><line x1="0" y1="4" x2="46" y2="4" stroke="#7B8794" stroke-width="2.5" stroke-dasharray="9 6"/></svg>Dự phòng / cạnh bị Controller chặn</span>
+</div>
+</div>
+<script>
+const g=document.getElementById('g'),C=document.getElementById('c');
+function R(id){const e=document.getElementById(id);const x=parseFloat(e.style.left),y=parseFloat(e.style.top),w=parseFloat(e.style.width),h=parseFloat(e.style.height);return{x,y,w,h,l:x-w/2,r:x+w/2,t:y-h/2,b:y+h/2}}
+function L(x1,y1,x2,y2,kind,color){const p=document.createElementNS('http://www.w3.org/2000/svg','line');
+  p.setAttribute('x1',x1);p.setAttribute('y1',y1);p.setAttribute('x2',x2);p.setAttribute('y2',y2);
+  if(kind==='stb'){p.setAttribute('stroke','#7B8794');p.setAttribute('stroke-width','2.5');p.setAttribute('stroke-dasharray','9 6')}
+  else{p.setAttribute('stroke',color||'#1F2933');p.setAttribute('stroke-width',kind==='thick'?'5':'3.5')}
+  p.setAttribute('stroke-linecap','round');g.appendChild(p)}
+function T(x,y,txt,color){const d=document.createElement('div');d.className='lbl';d.style.left=x+'px';d.style.top=y+'px';d.style.color=color||'#52606D';d.textContent=txt;C.appendChild(d)}
+const inet=R('inet'),mpls=R('mpls'),ve1=R('ve1'),ve2=R('ve2'),w1=R('w1'),w2=R('w2'),fa=R('fa'),fs=R('fs'),dmz=R('dmz'),c1=R('c1'),c2=R('c2'),farm=R('farm'),d1=R('d1'),d2=R('d2');
+// WAN
+L(inet.x-40,inet.b,ve1.r-130,ve1.t);L(inet.x+40,inet.b,ve2.l+40,ve2.t);
+L(mpls.x-40,mpls.b,ve1.r-40,ve1.t);L(mpls.x+40,mpls.b,ve2.l+130,ve2.t);
+// vEdge - SW
+L(ve1.x,ve1.b,w1.x,w1.t);T(ve1.x,(ve1.b+w1.t)/2,'OSPF');
+L(ve2.x,ve2.b,w2.x,w2.t);T(ve2.x,(ve2.b+w2.t)/2,'OSPF');
+// SW - FW
+L(w1.x,w1.b,fa.x,fa.t);L(w2.r-40,w2.b,fs.r-40,fs.t,'stb');
+L(w2.l+20,w2.b,fa.r-20,fa.t);L(w1.r-20,w1.b,fs.l+20,fs.t,'stb');
+// failover
+L(fa.r,fa.y-22,fs.l,fs.y-22,'thick','#B7791F');T(700,fa.y-22,'failover (stateful)','#B7791F');
+// DMZ
+L(fa.r,dmz.y+8,dmz.l,dmz.y+8);L(dmz.r,dmz.y+8,fs.l,dmz.y+8,'stb');
+// FW - Core
+L(fa.x,fa.b,c1.x,c1.t);T(fa.x,(fa.b+c1.t)/2,'VLAN 101');
+L(fs.x,fs.b,c2.x,c2.t,'stb');T(fs.x,(fs.b+c2.t)/2,'VLAN 101');
+L(fa.x+90,fa.b,c2.x-90,c2.t);L(fs.x-90,fs.b,c1.x+90,c1.t,'stb');
+{const f=0.17,ax=fa.x+90,ay=fa.b,bx=c2.x-90,by=c2.t;T(ax+(bx-ax)*f,ay+(by-ay)*f,'VLAN 102');
+ const cx=fs.x-90,cy=fs.b,dx=c1.x+90,dy=c1.t;T(cx+(dx-cx)*f,cy+(dy-cy)*f,'VLAN 102');}
+// Po10
+L(c1.r,c1.y-20,c2.l,c2.y-20,'thick','#2A78D6');T(700,c1.y-20,'Po10 (LACP): VLAN 10–40, 100–102','#2A78D6');
+// Farm
+L(c1.r,farm.y,farm.l,farm.y);L(farm.r,farm.y,c2.l,farm.y);
+// Core - Dist
+L(c1.x,c1.b,d1.x-60,d1.t);L(c1.x+80,c1.b,d2.l+30,d2.t);
+L(c2.x,c2.b,d2.x+60,d2.t,'stb');L(c2.x-80,c2.b,d1.r-30,d1.t,'stb');
+L(d1.r,d1.y,d2.l,d2.y,'stb');
+// Dist - Access
+['a1','a2','a3','a4'].forEach((id,i)=>{const a=R(id);L(d1.l+50+i*56,d1.b,a.x-30,a.t);L(d2.l+50+i*56,d2.b,a.x+30,a.t,'stb')});
+</script>
+</body></html>

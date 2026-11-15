@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>Branch</title>
+<style>
+  html,body{margin:0;background:#fff}
+  #c{position:relative;width:1800px;height:1010px;background:#fff;font-family:"Segoe UI",Arial,sans-serif;color:#1F2933;overflow:hidden}
+  svg{position:absolute;left:0;top:0}
+  .p{position:absolute;top:10px;height:990px;border-radius:18px;border:2px solid #D9E2EC;background:#FBFCFD;box-sizing:border-box}
+  .ph{position:absolute;top:10px;height:50px;border-radius:16px 16px 0 0;color:#fff;font-weight:700;font-size:22px;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+  .b{position:absolute;box-sizing:border-box;border-radius:11px;border:2.5px solid;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:17px;line-height:1.3;transform:translate(-50%,-50%);z-index:2}
+  .b b{font-size:19px}
+  .s{color:#52606D;font-size:15.5px}
+  code{font-family:Consolas,monospace;font-size:15.5px;color:#0B2545}
+  .wan{border-color:#52606D;background:#F5F7FA}
+  .edge{border-color:#EB6834;background:#FDEEE7}
+  .fw{border-color:#B7791F;background:#FDF4E3}
+  .sw{border-color:#2A78D6;background:#E8F1FC}
+  .ctl{border-color:#0B2545;background:#E8F1FC}
+  .pc{border-color:#9AA5B1;background:#fff}
+  .lbl{position:absolute;transform:translate(-50%,-50%);background:#FBFCFD;font-size:15px;font-weight:600;color:#52606D;padding:0 5px;z-index:3;white-space:nowrap}
+  .lbl code{font-size:14.5px;color:#52606D}
+  .note{position:absolute;box-sizing:border-box;border-radius:12px;background:#fff;border:1.5px solid #D9E2EC;padding:12px 16px;font-size:16.5px;line-height:1.45;z-index:2}
+  .note ul{margin:0;padding-left:20px}
+  table{border-collapse:collapse;width:100%;font-size:16.5px}
+  th{font-size:15px;color:#52606D;text-align:left;font-weight:600;border-bottom:1.5px solid #D9E2EC;padding:3px 6px}
+  td{padding:4px 6px;border-bottom:1px solid #EEF2F6}
+  td code{font-size:15.5px}
+</style></head><body>
+<div id="c">
+<!-- panels -->
+<div class="p" style="left:10px;width:780px"></div>
+<div class="ph" style="left:10px;width:780px;background:#0E8A4F">Khuôn chi nhánh Firewall-as-Core — Site 200 / 300 / 400</div>
+<div class="p" style="left:805px;width:455px"></div>
+<div class="ph" style="left:805px;width:455px;background:#EB6834">Site 500 — cơ sở mở rộng · AS 65040</div>
+<div class="p" style="left:1275px;width:515px"></div>
+<div class="ph" style="left:1275px;width:515px;background:#0B2545">Site 900 — trung tâm điều khiển SD-WAN</div>
+
+<svg id="g" width="1800" height="1010"></svg>
+
+<!-- ===== Panel A ===== -->
+<div id="am" class="b wan" style="left:200px;top:120px;width:220px;height:62px"><b>MPLS</b><span class="s">AS 64512</span></div>
+<div id="ai" class="b wan" style="left:600px;top:120px;width:220px;height:62px"><b>Internet</b><span class="s">AS 64511</span></div>
+<div id="av1" class="b edge" style="left:200px;top:250px;width:240px;height:76px"><b>vEdge1</b><span class="s">TLOC <code>mpls</code><br>System-IP <code>10.200.‹s›.1</code></span></div>
+<div id="av2" class="b edge" style="left:600px;top:250px;width:240px;height:76px"><b>vEdge2</b><span class="s">TLOC <code>biz-internet</code><br>System-IP <code>10.200.‹s›.2</code></span></div>
+<div id="afw" class="b fw" style="left:400px;top:400px;width:330px;height:90px"><b>Brand-FW (ASAv)</b><span class="s">gateway <code>.1</code> các VLAN · DHCP <code>.100–.199</code><br>IP SLA + track chọn vEdge</span></div>
+<div id="asb" class="b sw" style="left:400px;top:535px;width:270px;height:64px"><b>SwitchBrand (L2)</b><span class="s">quản trị <code>10.‹x›.99.2</code></span></div>
+<div id="as1" class="b sw" style="left:200px;top:655px;width:230px;height:64px"><b>Switch khối 1</b><span class="s">quản trị <code>10.‹x›.99.11</code></span></div>
+<div id="as2" class="b sw" style="left:600px;top:655px;width:230px;height:64px"><b>Switch khối 2</b><span class="s">quản trị <code>10.‹x›.99.12</code></span></div>
+<div id="ap1" class="b pc" style="left:200px;top:765px;width:230px;height:50px">2 máy trạm VLAN A</div>
+<div id="ap2" class="b pc" style="left:600px;top:765px;width:230px;height:50px">2 máy trạm VLAN B</div>
+<div class="note" style="left:30px;top:812px;width:740px;height:170px;padding:8px 14px">
+<table>
+<tr><th>Site</th><th>‹x›</th><th>‹s›</th><th>ASN</th><th>VLAN A</th><th>VLAN B</th></tr>
+<tr><td><b>200</b> Cần Thơ</td><td><code>2</code></td><td><code>200</code></td><td>65010</td><td>60 Nông nghiệp</td><td>70 Y tế</td></tr>
+<tr><td><b>300</b> Đà Nẵng</td><td><code>3</code></td><td><code>30</code></td><td>65020</td><td>80 Du lịch</td><td>90 Tài chính</td></tr>
+<tr><td><b>400</b> Nha Trang</td><td><code>4</code></td><td><code>40</code></td><td>65030</td><td>50 Thủy sản</td><td>60 Lữ hành</td></tr>
+</table>
+<div class="s" style="margin-top:6px">Subnet VLAN: <code>10.‹x›.‹VLAN›.0/24</code> · quản trị VLAN 99: <code>10.‹x›.99.0/24</code></div>
+</div>
+
+<!-- ===== Panel B: Site 500 ===== -->
+<div id="bm" class="b wan" style="left:925px;top:120px;width:190px;height:62px"><b>MPLS</b><span class="s">AS 64512</span></div>
+<div id="bi" class="b wan" style="left:1140px;top:120px;width:190px;height:62px"><b>Internet</b><span class="s">AS 64511</span></div>
+<div id="bv1" class="b edge" style="left:925px;top:250px;width:205px;height:76px"><b>vEdge1-S500</b><span class="s">TLOC <code>mpls</code><br><code>10.200.50.1</code></span></div>
+<div id="bv2" class="b edge" style="left:1140px;top:250px;width:205px;height:76px"><b>vEdge2-S500</b><span class="s">TLOC <code>biz-internet</code><br><code>10.200.50.2</code></span></div>
+<div id="bfw" class="b fw" style="left:1032px;top:400px;width:300px;height:90px"><b>Brand-FW-S500 (ASAv)</b><span class="s">gateway <code>10.5.10.1</code><br>DHCP <code>10.5.10.100–199</code></span></div>
+<div id="bsw" class="b sw" style="left:1032px;top:535px;width:250px;height:64px"><b>SW-S500 (L2)</b><span class="s">quản trị <code>10.5.99.2</code></span></div>
+<div id="bp" class="b pc" style="left:1032px;top:655px;width:250px;height:50px">2 máy trạm VLAN 10</div>
+<div class="note" style="left:825px;top:790px;width:415px;height:192px">
+<b style="color:#EB6834">Dùng lại đúng khuôn chi nhánh</b>
+<ul>
+<li>Chỉ cấp mới: Site-ID 500, System-IP <code>10.200.50.x</code>, dải <code>10.5.0.0/16</code>, AS 65040.</li>
+<li>Không cần sửa chính sách: vSmart áp sẵn cho <code>site-id 200–500</code>.</li>
+<li>Mạng phẳng: 1 VLAN người dùng + VLAN 99.</li>
+</ul>
+</div>
+
+<!-- ===== Panel C: Site 900 ===== -->
+<div id="ci" class="b wan" style="left:1405px;top:120px;width:200px;height:62px"><b>Internet</b><span class="s">AS 64511</span></div>
+<div id="cm" class="b wan" style="left:1660px;top:120px;width:200px;height:62px"><b>MPLS</b><span class="s">AS 64512</span></div>
+<div id="csw" class="b sw" style="left:1532px;top:265px;width:340px;height:78px"><b>Switch LAN Site 900 (L3)</b><span class="s">gateway <code>10.9.0.2</code> · ACL <code>SITE900_EGRESS</code></span></div>
+<div id="c1" class="b ctl" style="left:1340px;top:420px;width:112px;height:84px"><b>vManage</b><code>10.9.0.10</code><code>10.9.1.10</code></div>
+<div id="c2" class="b ctl" style="left:1468px;top:420px;width:112px;height:84px"><b>vSmart</b><code>10.9.0.11</code><code>10.9.1.11</code></div>
+<div id="c3" class="b ctl" style="left:1596px;top:420px;width:112px;height:84px"><b>vBond</b><code>10.9.0.12</code><code>10.9.1.12</code></div>
+<div id="c4" class="b pc" style="left:1724px;top:420px;width:112px;height:84px"><b>Máy trạm<br>quản trị</b><code>10.9.0.20</code></div>
+<div id="cmg" class="b sw" style="left:1468px;top:575px;width:330px;height:64px"><b>Switch quản trị Site 900</b><span class="s">gateway <code>10.9.1.1</code></span></div>
+<div id="clab" class="b pc" style="left:1468px;top:680px;width:330px;height:54px"><b>Mạng thật phòng lab</b><span class="s">DHCP · truy cập web vManage</span></div>
+<div class="note" style="left:1295px;top:790px;width:475px;height:192px">
+<ul>
+<li>Controller LAN <code>10.9.0.0/24</code> tới được từ <b>cả hai transport</b> (tuyến tĩnh CE–PE).</li>
+<li>Ra Internet <b>có kiểm soát</b>: chỉ DNS, NTP, HTTPS, ping và SMTP 587 của vManage.</li>
+<li>System-IP: vManage <code>10.9.3.10</code> · vSmart <code>10.9.0.13</code> · vBond <code>10.9.3.12</code>.</li>
+</ul>
+</div>
+</div>
+<script>
+const g=document.getElementById('g'),C=document.getElementById('c');
+function R(id){const e=document.getElementById(id);const x=parseFloat(e.style.left),y=parseFloat(e.style.top),w=parseFloat(e.style.width),h=parseFloat(e.style.height);return{x,y,w,h,l:x-w/2,r:x+w/2,t:y-h/2,b:y+h/2}}
+function L(x1,y1,x2,y2,o={}){const p=document.createElementNS('http://www.w3.org/2000/svg','line');
+  p.setAttribute('x1',x1);p.setAttribute('y1',y1);p.setAttribute('x2',x2);p.setAttribute('y2',y2);
+  p.setAttribute('stroke',o.c||'#1F2933');p.setAttribute('stroke-width',o.w||3);p.setAttribute('stroke-linecap','round');
+  if(o.d)p.setAttribute('stroke-dasharray',o.d);g.appendChild(p)}
+function T(x,y,h){const d=document.createElement('div');d.className='lbl';d.style.left=x+'px';d.style.top=y+'px';d.innerHTML=h;C.appendChild(d)}
+const B='#2A78D6',O='#EB6834';
+// Panel A
+let am=R('am'),ai=R('ai'),v1=R('av1'),v2=R('av2'),fw=R('afw'),sb=R('asb'),s1=R('as1'),s2=R('as2'),p1=R('ap1'),p2=R('ap2');
+L(am.x,am.b,v1.x,v1.t,{c:O,w:4});T(am.x,(am.b+v1.t)/2,'eBGP · <code>100.64.‹s›.1/30</code>');
+L(ai.x,ai.b,v2.x,v2.t,{c:B,w:4});T(ai.x,(ai.b+v2.t)/2,'eBGP · <code>203.0.113.9 / .13 / .17</code>');
+L(v1.r,v1.y,v2.l,v2.y);T(400,v1.y,'<code>10.‹x›.2.0/30</code>');
+L(v1.x,v1.b,fw.l+40,fw.t);T((v1.x+fw.l+40)/2-28,(v1.b+fw.t)/2,'outside1 · <code>10.‹x›.1.0/30</code>');
+L(v2.x,v2.b,fw.r-40,fw.t);T((v2.x+fw.r-40)/2+28,(v2.b+fw.t)/2,'outside2 · <code>10.‹x›.1.4/30</code>');
+L(fw.x,fw.b,sb.x,sb.t);T(fw.x,(fw.b+sb.t)/2,'trunk VLAN A, B, 99');
+L(sb.l+30,sb.b,s1.x,s1.t);T((sb.l+30+s1.x)/2-20,(sb.b+s1.t)/2,'trunk A, 99');
+L(sb.r-30,sb.b,s2.x,s2.t);T((sb.r-30+s2.x)/2+20,(sb.b+s2.t)/2,'trunk B, 99');
+L(s1.x,s1.b,p1.x,p1.t);T(s1.x,(s1.b+p1.t)/2,'access A');
+L(s2.x,s2.b,p2.x,p2.t);T(s2.x,(s2.b+p2.t)/2,'access B');
+// Panel B
+let bm=R('bm'),bi=R('bi'),b1=R('bv1'),b2=R('bv2'),bf=R('bfw'),bs=R('bsw'),bp=R('bp');
+L(bm.x,bm.b,b1.x,b1.t,{c:O,w:4});T(bm.x,(bm.b+b1.t)/2,'<code>100.64.50.1/30</code>');
+L(bi.x,bi.b,b2.x,b2.t,{c:B,w:4});T(bi.x,(bi.b+b2.t)/2,'<code>203.0.113.21/30</code>');
+L(b1.x,b1.b,bf.l+40,bf.t);T(b1.x-12,(b1.b+bf.t)/2+4,'outside1<br><code>10.5.1.0/30</code>');
+L(b2.x,b2.b,bf.r-40,bf.t);T(b2.x+12,(b2.b+bf.t)/2+4,'outside2<br><code>10.5.1.4/30</code>');
+L(bf.x,bf.b,bs.x,bs.t);T(bf.x,(bf.b+bs.t)/2,'trunk VLAN 10, 99');
+L(bs.x,bs.b,bp.x,bp.t);T(bs.x,(bs.b+bp.t)/2,'access VLAN 10');
+// Panel C
+let ci=R('ci'),cm=R('cm'),sw=R('csw'),mg=R('cmg'),lab=R('clab');
+L(ci.x,ci.b,sw.l+60,sw.t,{c:B,w:4});T((ci.x+sw.l+60)/2-30,(ci.b+sw.t)/2,'<code>203.0.113.249/30</code>');
+L(cm.x,cm.b,sw.r-60,sw.t,{c:O,w:4});T((cm.x+sw.r-60)/2+30,(cm.b+sw.t)/2,'<code>100.64.255.249/30</code>');
+const busY=355;L(1340,busY,1724,busY);L(sw.x,sw.b,sw.x,busY);
+['c1','c2','c3','c4'].forEach(id=>{const r=R(id);L(r.x,busY,r.x,r.t)});
+T(1660,busY-14,'<code>10.9.0.0/24</code>');
+const bus2=510;L(1340,bus2,1596,bus2,{d:'8 6',c:'#52606D'});L(mg.x,bus2,mg.x,mg.t,{d:'8 6',c:'#52606D'});
+['c1','c2','c3'].forEach(id=>{const r=R(id);L(r.x,r.b,r.x,bus2,{d:'8 6',c:'#52606D'})});
+T(1655,bus2+22,'<code>10.9.1.0/24</code> (mặt quản trị)');
+L(mg.x,mg.b,lab.x,lab.t);
+</script>
+</body></html>
