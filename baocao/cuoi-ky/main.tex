@@ -48,10 +48,7 @@
     \include{content/Chapter3}
 	\newpage
 
-    \include{content/Chapter4}
-	\newpage
-
-    \include{content/Chapter5}
+    \include{content/Chapter4} % Chương 4 gồm cả kết luận và hướng phát triển
 	\newpage
         
 	% --- PHẦN CUỐI CỦA BÁO CÁO ---
@@ -59,7 +56,10 @@
 	% Tự động tạo TÀI LIỆU THAM KHẢO
 	% Lệnh này ép buộc hiển thị TẤT CẢ tài liệu trong file .bib
     \nocite{*}
-    \bibliography{tailieuthamkhao}
+    % Giữ tài liệu tham khảo trong đúng một trang: dãn dòng đơn, khoảng cách giữa các mục nhỏ
+    {\linespread{1.1}\selectfont
+    \setlength{\bibitemsep}{2pt}
+    \bibliography{tailieuthamkhao}}
 	
 	\input{appendix} % Phụ lục mã nguồn
 	

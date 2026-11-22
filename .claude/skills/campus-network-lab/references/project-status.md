@@ -4,6 +4,16 @@
 
 ## Kiểm tra cục bộ đã làm (20/09, đáng tin nhất)
 
+- **22/11/2026 — Rút gọn báo cáo cuối kỳ còn 4 chương (chưa commit)**: theo yêu cầu thầy, nội dung chính ≤ 70 trang (người dùng chọn tính Ch1–Ch4, không tính bìa/mục lục/TLTK/phụ lục). Kết quả: `main.pdf` 81 trang, Ch1–Ch4 = trang 1–61 (Ch1 4, Ch2 7, Ch3 16, Ch4 ~34), TLTK đúng 1 trang (62), phụ lục từ 63. Đã làm:
+  - Ch4 + Ch5 cũ gộp thành Ch4 "Triển khai, đánh giá và kết luận" (kết luận ở mục 4.10); `Chapter5.tex` không còn được `main.tex` gọi, chưa xoá (chờ người dùng quyết).
+  - Bìa/phụ bìa: `\de` cố định 2 dòng; cỡ chữ đồng nhất hai trang (đề tài 24pt, môn/ngành 22pt, dòng ngành tự thu về ~19pt cho vừa một dòng).
+  - Danh mục viết tắt sắp alphabet, 42 mục, 1 trang. Ch1 ghi đầy đủ tên tiếng Anh rồi viết tắt; Ch2–4 và tóm tắt chỉ dùng chữ viết tắt.
+  - Tóm tắt tiếng Việt viết lại theo 4 mục (vấn đề, hướng tiếp cận, cách giải quyết, kết quả), 2 trang; Abstract rút còn 1 trang.
+  - Ch3 thêm mục 3.3 "Sơ đồ vật lý và sơ đồ logic" (Hình 3.2 sơ đồ logic vẽ TikZ); các hình Ch3 dùng `[H]` để đúng thứ tự; bảng Ch3/Ch4 đã chia lại cột (VLAN chi nhánh và System-IP mỗi dòng một mục).
+  - Ch4 bỏ mục "Các vấn đề kỹ thuật SDN" (bảng lỗi SDN); giữ bảng lỗi SD-WAN. Thêm lại 10 ảnh chụp màn hình (Console Tổng quan/Chính sách/Kịch bản, BFD vEdge2 S200, DHCP scope, DNS zone, hMail, web nội bộ, Thunderbird, Kiwi Syslog). Hình 2.1/2.2 phóng to.
+  - Phụ lục bỏ 2 trích đoạn Ryu và mục ACL; mục C là cấu hình Brand-FW.
+  - Build: người dùng yêu cầu build thẳng trong `baocao/cuoi-ky/` (3 lượt pdflatex, không bibtex); bản cũ người dùng giữ ở `BaoCaoBanCu_157trang.pdf` (untracked).
+  - Còn mở: commit/push khi người dùng bảo; slide bảo vệ (`slide_final`, Canva) vẫn theo bố cục 5 chương cũ.
 - **15/11/2026 (chiều) — Slide bảo vệ cuối kỳ (commit `8056b42`, đã push)**: `baocao/slide-tuan/` đổi tên thành `baocao/slide_final/`; `report.tex` viết lại trên giao diện Beamer cũ thành slide bảo vệ 43 trang nội dung theo 5 chương của `baocao/cuoi-ky` (tổng quan, lý thuyết, mô hình đề xuất, triển khai–kiểm thử, đánh giá–kết luận), số liệu lấy từ báo cáo 158 trang; ảnh dùng chung đọc từ `../cuoi-ky/image/`. `report.pdf` đã build (50 trang, không còn tràn khung), `kichban.docx` viết lại theo từng slide (~20 phút, có bản rút gọn). 5 ảnh cũ trong `slide_final/image/` không còn dùng (`sosanh_delay*.png`, `tincay_failover.png`, `vmanage_devices.png`, `vmanage_tunnels.png`) — chưa xoá, chờ người dùng quyết.
 - **15/11/2026 — Đo 5 tiêu chí vận hành còn thiếu, báo cáo 158 trang (commit `dbc7d06`, đã push)**: qua VPN trường (`EVE_H3=10.215.26.50`; Tailscale laptop vẫn không lên). vManage (33) bị tắt từ 12/11 23:17 UTC, đã bật lại cùng cụm Site 100 + Site 200 để đo rồi **tắt lại như cũ** (`/root/loadtest/start1115.sh`, `stop1115.sh`; còn 19 node: cụm SD-WAN + 36, 76, 77). Kết quả (log `log/tieu-chi/*_20261115.*`, báo cáo Ch4 mục "Các phép đo theo tiêu chí vận hành", Bảng `tab:do_van_hanh`, `tab:xu_ly_su_co`):
   - **Thêm Site**: nạp 89 dòng cấu hình vEdge2-S500 qua console + commit 7,3–11,7 s (`cfgload_test.py`; dòng `khop_cau_hinh: false` trong log là lỗi phân tích do thông báo hệ thống chen vào console, đã đọc lại: khớp); tắt/bật cả 2 vEdge S500 5 lần (`site_join_test.py`): control 190–200 s, ping Farm → `10.5.1.1` 194–204 s (2 lần), đủ OMP + BFD 200–214 s. Không gồm PKI.

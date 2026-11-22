@@ -1,215 +1,81 @@
 \section{CƠ SỞ LÝ THUYẾT}\label{sec:co_so_ly_thuyet}
 
-Chương này trình bày các nền tảng lý thuyết được sử dụng trực tiếp trong mô hình của đề tài. Nội dung đi từ kiến trúc mạng Campus truyền thống (phân cấp, VLAN, dự phòng lớp 2 và lớp 3, định tuyến, dịch vụ mạng, tường lửa) đến hai công nghệ điều khiển bằng phần mềm là SDN và SD-WAN. Mỗi mục đều được liên hệ với vai trò tương ứng trong hệ thống được triển khai ở Chương~\ref{sec:mo_hinh_de_xuat} và Chương~\ref{sec:trien_khai_danh_gia}.
+Chương này trình bày các nền tảng lý thuyết được dùng trực tiếp trong mô hình: kiến trúc mạng Campus truyền thống (phân cấp, VLAN, dự phòng, định tuyến, dịch vụ, tường lửa) và hai công nghệ điều khiển bằng phần mềm SDN, SD-WAN.
 
-\subsection{Tổng quan về mạng Campus}
+\subsection{Mạng Campus và mô hình phân cấp}
 
-Mạng Campus là hệ thống mạng nội bộ được triển khai trong phạm vi một khuôn viên tổ chức như trường đại học, viện nghiên cứu, doanh nghiệp hoặc cơ quan hành chính. Trong môi trường trường đại học, mạng Campus kết nối các khoa, phòng ban, phòng học, phòng máy, thư viện, khu vực hành chính và hệ thống máy chủ nội bộ. Khác với một mạng LAN nhỏ, mạng Campus có số lượng người dùng lớn, nhiều nhóm thiết bị với mức độ tin cậy khác nhau và yêu cầu cao về hiệu năng, tính sẵn sàng, khả năng mở rộng cũng như bảo mật.
+Mạng Campus là mạng nội bộ trong phạm vi một khuôn viên như trường đại học, kết nối khoa, phòng ban, phòng máy, thư viện và hệ thống máy chủ. Khi trường có nhiều cơ sở, bài toán mở rộng thành mạng đa cơ sở (multi-site): ngoài LAN của từng cơ sở còn cần hạ tầng WAN để cơ sở phụ dùng các dịch vụ đặt tại cơ sở chính. Mạng Campus hiện đại phải đáp ứng năm yêu cầu: hiệu năng, tính sẵn sàng (không có điểm lỗi đơn tại gateway, lõi, tường lửa, WAN), phân đoạn và bảo mật, quản trị tập trung, khả năng mở rộng.
 
-Khi trường đại học có nhiều cơ sở đào tạo đặt tại các địa phương khác nhau, bài toán mạng Campus mở rộng thành bài toán mạng đa cơ sở (multi-site). Khi đó, ngoài mạng nội bộ của từng cơ sở, hệ thống còn cần một hạ tầng mạng diện rộng (WAN) để các cơ sở phụ truy cập được dịch vụ dùng chung đặt tại cơ sở chính như DNS, Web, Mail, hệ thống quản lý đào tạo và máy chủ lưu trữ.
-
-Một mạng Campus hiện đại thường phải đáp ứng các yêu cầu sau:
-\begin{itemize}
-    \item \textbf{Hiệu năng:} băng thông đủ lớn cho lưu lượng học tập, nghiên cứu và độ trễ thấp cho dịch vụ thời gian thực.
-    \item \textbf{Tính sẵn sàng:} không tồn tại điểm lỗi đơn tại các vị trí trọng yếu như gateway, lõi mạng, tường lửa và đường truyền WAN.
-    \item \textbf{Phân đoạn và bảo mật:} tách biệt các nhóm người dùng, vùng máy chủ, vùng dịch vụ công khai và vùng quản trị.
-    \item \textbf{Khả năng quản trị:} giám sát tập trung, thu thập nhật ký và thay đổi chính sách nhất quán trên toàn hệ thống.
-    \item \textbf{Khả năng mở rộng:} bổ sung VLAN, khoa hoặc cơ sở mới mà không phải thiết kế lại toàn bộ.
-\end{itemize}
-
-Các yêu cầu này là lý do đề tài kết hợp mô hình mạng phân cấp truyền thống với hai công nghệ quản lý hiện đại: SDN cho mạng nội bộ tại cơ sở chính và SD-WAN cho kết nối liên cơ sở.
-
-\subsection{Mô hình mạng phân cấp Core--Distribution--Access}
-
-Mô hình Core--Distribution--Access (Hình~\ref{fig:core_distribution_access}) là kiến trúc phổ biến trong thiết kế mạng Campus vì chia hệ thống thành các tầng có chức năng rõ ràng. Cách phân tầng này giúp quá trình thiết kế, vận hành và mở rộng mạng trở nên có tổ chức, đồng thời giới hạn phạm vi ảnh hưởng khi xảy ra sự cố.
+Mô hình Core--Distribution--Access (Hình~\ref{fig:core_distribution_access}) chia mạng thành các tầng có chức năng rõ ràng, giúp thiết kế, vận hành và giới hạn phạm vi ảnh hưởng của sự cố. \textbf{Tầng Access} kết nối thiết bị đầu cuối, gán VLAN cho cổng. \textbf{Tầng Distribution} tập trung đường lên từ Access và là điểm đặt cơ chế dự phòng; với mạng quy mô vừa, định tuyến liên VLAN có thể dồn lên Core (\textit{collapsed core}). \textbf{Tầng Core} là xương sống chuyển tiếp tốc độ cao và nối ra biên mạng, cần đơn giản và có dự phòng. Trong đề tài, cơ sở chính dùng đủ ba tầng; các cơ sở phụ quy mô nhỏ dùng mô hình rút gọn, trong đó tường lửa chi nhánh kiêm lõi định tuyến (\textit{Firewall-as-Core}).
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.80\textwidth]{image/mohinh.png}
+    \includegraphics[width=0.78\textwidth]{image/mohinh.png}
     \caption{Mô hình mạng phân cấp Core--Distribution--Access}
     \label{fig:core_distribution_access}
 \end{figure}
 
-\textbf{Tầng Access} là tầng gần người dùng cuối nhất, kết nối trực tiếp máy tính, điện thoại IP, camera, máy in và các thiết bị đầu cuối khác. Tại tầng này, quản trị viên cấu hình cổng access, gán VLAN và áp dụng các chính sách bảo vệ cổng. Do số lượng cổng lớn, khả năng chuẩn hóa cấu hình là yêu cầu quan trọng của tầng Access.
-
-\textbf{Tầng Distribution} tập trung lưu lượng từ nhiều switch Access, tổng hợp liên kết và là điểm triển khai các cơ chế dự phòng đường lên. Trong nhiều thiết kế, tầng Distribution đồng thời đặt gateway mặc định và định tuyến liên VLAN. Tuy nhiên, với mạng có quy mô vừa, chức năng định tuyến liên VLAN có thể được dồn lên tầng Core theo mô hình \textit{collapsed core}, khi đó tầng Distribution chỉ còn nhiệm vụ chuyển mạch lớp 2 và tổng hợp đường lên.
-
-\textbf{Tầng Core} là xương sống của mạng, chịu trách nhiệm chuyển tiếp tốc độ cao giữa các khối chức năng và kết nối đến biên mạng (tường lửa, WAN). Tầng Core cần đơn giản, ổn định và có dự phòng thiết bị lẫn liên kết.
-
-Trong đề tài, cơ sở chính áp dụng đầy đủ ba tầng: hai Core Switch đảm nhận định tuyến liên VLAN và gateway dự phòng; hai Distribution Switch và bốn Access Switch là switch ảo Open vSwitch do SDN Controller điều khiển. Các cơ sở phụ có quy mô nhỏ nên áp dụng mô hình rút gọn, trong đó tường lửa chi nhánh đảm nhận luôn vai trò lõi định tuyến (\textit{Firewall-as-Core}).
-
 \subsection{VLAN, trunk 802.1Q và định tuyến liên VLAN}
 
-VLAN (Virtual LAN) là kỹ thuật chia một hạ tầng switch vật lý thành nhiều mạng logic độc lập. Mỗi VLAN là một miền quảng bá riêng, nhờ đó lưu lượng broadcast được giới hạn và các nhóm người dùng được tách biệt về mặt logic. Trong mạng Campus, VLAN thường được phân chia theo chức năng: VLAN cho từng khoa, VLAN hành chính, VLAN máy chủ và VLAN quản trị thiết bị.
-
-Cổng \textbf{access} kết nối thiết bị đầu cuối và chỉ thuộc một VLAN; frame đi ra cổng access không mang thẻ VLAN. Cổng \textbf{trunk} truyền lưu lượng của nhiều VLAN giữa các switch hoặc giữa switch và thiết bị định tuyến. Chuẩn IEEE 802.1Q chèn vào frame Ethernet một thẻ 4 byte gồm TPID \texttt{0x8100} và trường VLAN ID 12 bit, cho phép tối đa 4094 VLAN. Danh sách VLAN được phép (\textit{allowed VLAN}) trên trunk cần được giới hạn đúng nhu cầu (VLAN pruning) để thu hẹp miền quảng bá và tránh tạo vòng lặp không cần thiết.
-
-Vì mỗi VLAN là một mạng IP riêng, việc giao tiếp giữa các VLAN cần định tuyến liên VLAN. Có hai cách phổ biến:
-\begin{itemize}
-    \item \textbf{SVI (Switch Virtual Interface)} trên switch lớp 3: mỗi VLAN có một giao diện ảo \texttt{interface Vlan<ID>} mang địa chỉ gateway; switch định tuyến giữa các SVI bằng phần cứng. Đây là cách được dùng trên Core-SW1/2 tại cơ sở chính.
-    \item \textbf{Router-on-a-stick}: một cổng vật lý của router hoặc tường lửa được chia thành nhiều sub-interface, mỗi sub-interface gắn một VLAN qua 802.1Q. Đây là cách được dùng trên tường lửa chi nhánh (Brand-FW).
-\end{itemize}
-
-Phân đoạn bằng VLAN không chỉ giảm miền quảng bá mà còn là tiền đề của bảo mật: khi lưu lượng giữa các VLAN bắt buộc phải đi qua gateway, quản trị viên có thể kiểm soát nó bằng ACL, tường lửa hoặc chính sách của SDN Controller.
+VLAN chia một hạ tầng switch thành nhiều mạng logic, mỗi VLAN là một miền quảng bá riêng. Cổng \textbf{access} thuộc một VLAN và không gắn thẻ; cổng \textbf{trunk} mang nhiều VLAN, chuẩn IEEE 802.1Q chèn thẻ 4 byte gồm TPID \texttt{0x8100} và VLAN ID 12 bit. Danh sách VLAN được phép trên trunk cần giới hạn đúng nhu cầu để thu hẹp miền quảng bá. Giao tiếp giữa các VLAN cần định tuyến: dùng SVI trên switch lớp 3 (cách dùng trên Core-SW1/2) hoặc \textit{router-on-a-stick} với sub-interface 802.1Q (cách dùng trên tường lửa chi nhánh). Khi lưu lượng liên VLAN bắt buộc qua gateway, nó có thể được kiểm soát bằng ACL, tường lửa hoặc chính sách của Controller.
 
 \subsection{Cơ chế dự phòng lớp 2 và lớp 3}
 
-\subsubsection{Spanning Tree Protocol và Rapid-PVST+}
+\textbf{STP và Rapid-PVST+.} Kết nối dự phòng tạo vòng lặp lớp 2; vì frame Ethernet không có TTL, broadcast lặp vô hạn gây \textit{broadcast storm} và \textit{MAC flapping}. STP (IEEE 802.1D) bầu Root Bridge và chặn cổng dư để tạo cây không vòng; RSTP (IEEE 802.1w) rút thời gian hội tụ từ 30--50 giây xuống vài giây; Rapid-PVST+ chạy một tiến trình RSTP cho mỗi VLAN. STP chỉ hoạt động trên thiết bị trao đổi BPDU: khi một phần mạng do SDN Controller điều khiển và tắt STP (như OVS trong đề tài), Controller phải tự tính cây và chặn cạnh dư.
 
-Khi các switch được nối dự phòng, topology lớp 2 xuất hiện vòng lặp. Do frame Ethernet không có trường TTL, một frame broadcast có thể lặp vô hạn, gây \textit{broadcast storm}, làm bảng MAC dao động liên tục (\textit{MAC flapping}) và làm tê liệt mạng. STP (IEEE 802.1D) giải quyết vấn đề này bằng cách bầu một Root Bridge, tính chi phí đường đi và chặn (blocking) các cổng dư thừa để tạo ra một cây không vòng lặp. RSTP (IEEE 802.1w) rút ngắn thời gian hội tụ từ khoảng 30--50 giây xuống còn vài giây. Rapid-PVST+ của Cisco chạy một tiến trình RSTP riêng cho từng VLAN, cho phép chọn Root Bridge khác nhau theo VLAN bằng tham số \texttt{spanning-tree vlan <id> priority}.
+\textbf{EtherChannel và LACP.} EtherChannel gộp nhiều liên kết song song thành một Port-Channel có băng thông bằng tổng thành viên, STP xem như một cổng và vẫn chạy khi một thành viên lỗi. LACP (IEEE 802.3ad) là giao thức thương lượng theo chuẩn mở.
 
-Điểm cần lưu ý là STP chỉ hoạt động trên các thiết bị tham gia trao đổi BPDU. Khi một phần mạng được điều khiển bởi SDN Controller và tắt STP (như Open vSwitch trong đề tài), trách nhiệm chống vòng lặp chuyển sang controller: controller phải tự tính một cây chuyển tiếp và cài quy tắc chặn trên các cạnh dư.
+\textbf{VRRP.} Máy trạm chỉ khai một default gateway nên gateway hỏng làm cả VLAN mất kết nối. VRRP (RFC~5798 \citep{rfc5798_vrrpv3}) cho nhiều router chia sẻ một địa chỉ IP ảo; router có priority cao nhất là \textit{Master}, trả lời ARP bằng MAC ảo \texttt{0000.5e00.01xx}; khi Master ngừng quảng bá quá \textit{Master Down Interval}, \textit{Backup} tiếp quản mà máy trạm không phải đổi cấu hình.
 
-\subsubsection{EtherChannel và LACP}
+\subsection{Định tuyến}
 
-EtherChannel gộp nhiều liên kết vật lý song song thành một liên kết logic (Port-Channel). Liên kết logic này có băng thông bằng tổng các thành viên, được STP xem như một cổng duy nhất và tiếp tục hoạt động khi một thành viên bị lỗi. LACP (IEEE 802.3ad) là giao thức thương lượng EtherChannel theo chuẩn mở, với chế độ \texttt{active} chủ động gửi LACPDU. Port-Channel có thể hoạt động ở lớp 2 (trunk) hoặc lớp 3 (\texttt{no switchport} kèm địa chỉ IP).
+Thiết bị chọn tuyến theo \textit{longest prefix match}, rồi khoảng cách quản trị và metric; nhiều tuyến cùng metric có thể dùng song song (ECMP).
 
-\subsubsection{Giao thức dự phòng gateway VRRP}
+\textbf{OSPF} (RFC~2328 \citep{rfc2328_ospfv2}) là giao thức trạng thái liên kết: router trao đổi LSA để có cùng cơ sở dữ liệu topology trong một area rồi chạy Dijkstra tìm đường ngắn nhất; láng giềng ở trạng thái \texttt{FULL} khi đã đồng bộ; \texttt{default-information originate} quảng bá tuyến mặc định vào miền OSPF. Trong đề tài, OSPF Area~0 chạy giữa hai Core, tường lửa biên và hai vEdge của cơ sở chính.
 
-Máy trạm chỉ khai báo một default gateway, do đó nếu gateway gặp sự cố thì toàn bộ VLAN mất kết nối ra ngoài. VRRP (Virtual Router Redundancy Protocol, RFC~5798 \citep{rfc5798_vrrpv3}) cho phép nhiều router cùng chia sẻ một địa chỉ IP ảo (VIP). Router có độ ưu tiên (priority) cao nhất trở thành \textit{Master} và trả lời ARP cho VIP bằng địa chỉ MAC ảo \texttt{0000.5e00.01xx}; các router còn lại ở trạng thái \textit{Backup} và theo dõi bản tin quảng bá của Master. Khi Master ngừng gửi quảng bá trong khoảng thời gian \textit{Master Down Interval}, Backup có priority cao nhất sẽ tiếp quản VIP mà máy trạm không cần thay đổi cấu hình. Khác với HSRP là giao thức riêng của Cisco, VRRP là chuẩn mở của IETF.
+\textbf{BGP} (RFC~4271 \citep{rfc4271_bgp4}) định tuyến giữa các AS, chạy trên TCP 179 và chọn tuyến theo tập thuộc tính (AS\_PATH, NEXT\_HOP, LOCAL\_PREF\ldots), phù hợp thể hiện chính sách giữa khách hàng và nhà cung cấp; nhà cung cấp thường gửi tuyến mặc định cho khách hàng bằng \texttt{default-originate}. Đề tài dùng eBGP làm underlay của hai nhà cung cấp Internet và MPLS.
 
-\subsection{Định tuyến nội bộ và định tuyến liên miền}
-
-Định tuyến là quá trình xác định đường đi cho gói tin từ mạng nguồn đến mạng đích dựa trên bảng định tuyến. Bảng định tuyến có thể được xây dựng thủ công bằng tuyến tĩnh hoặc tự động bằng giao thức định tuyến động. Khi có nhiều tuyến đến cùng một đích, thiết bị chọn tuyến có prefix dài nhất (\textit{longest prefix match}); nếu độ dài prefix bằng nhau, thiết bị so sánh khoảng cách quản trị (administrative distance) rồi đến metric. Nhiều tuyến có cùng metric có thể được dùng song song theo cơ chế ECMP (Equal-Cost Multi-Path).
-
-\subsubsection{OSPF}
-
-OSPF (Open Shortest Path First, RFC~2328 \citep{rfc2328_ospfv2}) là giao thức định tuyến nội bộ theo trạng thái liên kết. Các router trao đổi LSA (Link-State Advertisement) để xây dựng cơ sở dữ liệu topology giống nhau trong một area, sau đó mỗi router chạy thuật toán Dijkstra để tính cây đường đi ngắn nhất. Hai router trở thành láng giềng khi thống nhất các tham số như area, hello/dead interval và mặt nạ mạng; trạng thái \texttt{FULL} cho biết cơ sở dữ liệu đã đồng bộ. Mỗi router được nhận dạng bằng một Router-ID 32 bit. Lệnh \texttt{default-information originate} cho phép một router (thường là thiết bị biên) quảng bá tuyến mặc định vào miền OSPF. OSPF hội tụ nhanh, hỗ trợ phân vùng và phù hợp với mạng phân cấp; trong đề tài, OSPF Area~0 chạy giữa hai Core Switch, tường lửa biên và hai vEdge của cơ sở chính.
-
-\subsubsection{BGP}
-
-BGP (Border Gateway Protocol, RFC~4271 \citep{rfc4271_bgp4}) là giao thức định tuyến giữa các hệ tự trị (Autonomous System, AS), được sử dụng làm giao thức định tuyến của Internet và của các nhà cung cấp dịch vụ MPLS. Mỗi AS được định danh bằng một số ASN; phiên BGP giữa hai AS khác nhau gọi là eBGP. BGP chạy trên TCP cổng 179, lựa chọn tuyến dựa trên tập thuộc tính đường đi (AS\_PATH, NEXT\_HOP, LOCAL\_PREF,...) thay vì một metric đơn lẻ, do đó phù hợp với việc thể hiện chính sách giữa khách hàng và nhà cung cấp. Trong mô hình khách hàng--nhà cung cấp (CE--PE), nhà cung cấp thường gửi tuyến mặc định cho khách hàng bằng tùy chọn \texttt{default-originate}. Đề tài dùng eBGP để mô phỏng hạ tầng underlay của hai nhà cung cấp Internet và MPLS.
-
-\subsubsection{Tuyến tĩnh, tuyến dự phòng và theo dõi đường đi}
-
-Tuyến tĩnh do quản trị viên khai báo, đơn giản và dễ kiểm soát. Khi khai báo hai tuyến mặc định với khoảng cách quản trị khác nhau, tuyến có giá trị lớn hơn chỉ được dùng khi tuyến chính biến mất; kỹ thuật này gọi là \textit{floating static route}. Tuy nhiên tuyến tĩnh chỉ biến mất khi giao diện đi ra bị down, trong khi lỗi thường nằm ở phía xa. Cơ chế \textit{IP SLA} (trên ASA gọi là \texttt{sla monitor}) định kỳ gửi gói ICMP đến một đích tham chiếu; đối tượng \texttt{track} gắn với kết quả đo sẽ gỡ tuyến chính khỏi bảng định tuyến khi đích không còn phản hồi, nhờ đó tuyến dự phòng được kích hoạt.
+\textbf{Tuyến tĩnh có theo dõi.} Hai tuyến mặc định với khoảng cách quản trị khác nhau tạo \textit{floating static route}: tuyến dự phòng chỉ dùng khi tuyến chính biến mất. Vì tuyến tĩnh chỉ mất khi cổng ra down, cơ chế IP SLA (trên ASA là \texttt{sla monitor}) định kỳ ping một đích tham chiếu; đối tượng \texttt{track} gỡ tuyến chính khi đích không phản hồi để tuyến dự phòng được kích hoạt.
 
 \subsection{Dịch vụ mạng nền tảng}
 
-\subsubsection{DHCP và DHCP Relay}
+\textbf{DHCP} cấp địa chỉ, gateway, DNS và tên miền qua bốn bản tin DORA. Vì DISCOVER là broadcast, khi máy chủ nằm ở VLAN khác thì gateway phải chạy \textit{DHCP Relay} (\texttt{ip helper-address}): relay chuyển bản tin thành unicast và ghi địa chỉ giao diện vào \texttt{giaddr} để máy chủ chọn đúng scope. Ở chi nhánh nhỏ, DHCP thường chạy ngay trên gateway để vẫn cấp địa chỉ khi WAN gián đoạn.
 
-DHCP cấp phát tự động địa chỉ IP, mặt nạ mạng, gateway, DNS và tên miền cho thiết bị đầu cuối qua bốn bản tin DISCOVER--OFFER--REQUEST--ACK (DORA). Vì DISCOVER là broadcast và không vượt qua router, khi máy chủ DHCP đặt ở một VLAN khác, gateway của VLAN người dùng phải chạy chức năng \textit{DHCP Relay} (\texttt{ip helper-address}). Relay chuyển bản tin thành unicast đến máy chủ và ghi địa chỉ giao diện nhận vào trường \texttt{giaddr}; máy chủ dựa vào \texttt{giaddr} để chọn đúng scope (dải địa chỉ) của VLAN tương ứng. Với mạng có nhiều gateway (ví dụ hai Core Switch chạy VRRP), cả hai đều có thể relay cùng một yêu cầu, máy chủ trả lời theo từng \texttt{giaddr}. Ở các chi nhánh nhỏ, DHCP thường được chạy ngay trên thiết bị gateway để máy trạm vẫn nhận địa chỉ khi đường WAN gián đoạn.
+\textbf{DNS} phân giải tên thành địa chỉ; máy chủ nội bộ quản lý zone thuận (A, MX) và zone ngược (PTR). Hậu tố \texttt{.local} được RFC~6762 dành cho Multicast DNS nên nhiều hệ điều hành không hỏi máy chủ DNS cho \texttt{*.local}; từ năm 2024, ICANN dành riêng hậu tố \texttt{.internal} cho mạng riêng.
 
-\subsubsection{DNS và không gian tên nội bộ}
+\textbf{Syslog, Web, Mail.} Syslog (UDP 514) tập trung nhật ký từ thiết bị về một máy chủ. Web hiện đại chạy HTTPS, chứng chỉ phải chứa đúng tên miền trong trường SAN. Mail gồm SMTP (TCP 25) giữa máy chủ, Submission (TCP 587, có xác thực) và IMAP (TCP 143/993); bản ghi MX chỉ định máy chủ nhận thư.
 
-DNS phân giải tên miền thành địa chỉ IP. Một máy chủ DNS nội bộ quản lý \textit{zone} thuận (bản ghi A, MX) và zone ngược (bản ghi PTR) cho tên miền của tổ chức. Việc chọn hậu tố tên miền nội bộ cần tránh xung đột với các cơ chế khác: hậu tố \texttt{.local} được RFC~6762 dành cho Multicast DNS, do đó nhiều hệ điều hành (Ubuntu, macOS) không gửi truy vấn \texttt{*.local} đến máy chủ DNS thông thường, và mDNS cũng không đi qua router hoặc WAN. Năm 2024, ICANN đã dành riêng hậu tố \texttt{.internal} cho mạng riêng, vì vậy đây là lựa chọn phù hợp cho tên miền nội bộ đa cơ sở.
+\subsection{Tường lửa trạng thái và DMZ}
 
-\subsubsection{Syslog, Web và Mail}
-
-Syslog (UDP 514) là cơ chế tập trung nhật ký sự kiện từ switch, router, tường lửa và máy chủ về một máy chủ thu thập, phục vụ giám sát và điều tra sự cố. Dịch vụ Web hiện đại cần chạy trên HTTPS (TLS), trong đó chứng chỉ phải chứa đúng tên miền trong trường Subject Alternative Name (SAN). Dịch vụ thư điện tử gồm SMTP (TCP 25) để chuyển thư giữa máy chủ, SMTP Submission (TCP 587, có xác thực) để máy khách gửi thư và IMAP (TCP 143/993) để máy khách đọc thư; bản ghi MX trong DNS chỉ định máy chủ nhận thư của tên miền.
-
-\subsection{Tường lửa trạng thái và vùng DMZ}
-
-Tường lửa trạng thái (stateful firewall) ghi nhớ từng phiên kết nối trong bảng kết nối (connection table) và tự động cho phép lưu lượng phản hồi của phiên hợp lệ. Trên Cisco ASA, mỗi giao diện có \texttt{nameif} và \texttt{security-level} từ 0 đến 100: mặc định lưu lượng được đi từ mức cao sang mức thấp, còn chiều ngược lại phải được cho phép bằng ACL gắn vào giao diện (\texttt{access-group ... in interface}). Cơ chế \textit{inspection} phân tích sâu một số giao thức (ICMP, DNS, SMTP,...) để mở đúng phiên phụ và kiểm tra tính hợp lệ. Số phiên đồng thời mà tường lửa chấp nhận còn phụ thuộc giấy phép; khi bảng kết nối đầy, các phiên mới bị từ chối dù chính sách cho phép.
-
-DMZ (Demilitarized Zone) là vùng mạng đặt các máy chủ công bố dịch vụ ra ngoài như Web, Mail. DMZ có security-level trung gian: bên ngoài chỉ được truy cập đúng cổng dịch vụ của DMZ, còn DMZ không được tự do khởi tạo kết nối vào mạng nội bộ. Nhờ đó, nếu một máy chủ DMZ bị xâm nhập, kẻ tấn công vẫn bị ngăn khỏi vùng nội bộ.
-
-Để loại bỏ điểm lỗi đơn tại biên, hai tường lửa có thể chạy chế độ \textit{Active/Standby failover}. Hai thiết bị trao đổi trạng thái qua một liên kết failover riêng; đơn vị Primary thường giữ vai trò Active, đơn vị Secondary giữ vai trò Standby và nhận bản sao cấu hình. Khi đơn vị Active lỗi, đơn vị Standby tiếp quản vai trò xử lý lưu lượng.
+Tường lửa trạng thái ghi nhớ từng phiên trong bảng kết nối và tự cho phép lưu lượng phản hồi của phiên hợp lệ. Trên Cisco ASA, mỗi giao diện có \texttt{nameif} và \texttt{security-level} 0--100: lưu lượng mặc định đi từ mức cao sang mức thấp, chiều ngược lại phải được ACL cho phép. Số phiên đồng thời còn phụ thuộc giấy phép. DMZ là vùng đặt máy chủ công bố dịch vụ (Web, Mail) với security-level trung gian: bên ngoài chỉ vào đúng cổng dịch vụ, DMZ không được tự do khởi tạo kết nối vào trong. Để loại điểm lỗi đơn tại biên, hai tường lửa chạy \textit{Active/Standby failover}, trao đổi trạng thái qua liên kết failover riêng; khi đơn vị Active lỗi, đơn vị Standby tiếp quản.
 
 \subsection{Công nghệ SDN}
 
-SDN (Software-Defined Networking) là mô hình mạng trong đó mặt phẳng điều khiển (control plane) được tách khỏi mặt phẳng chuyển tiếp dữ liệu (data plane). Trong mạng truyền thống, mỗi switch tự học địa chỉ, tự chạy STP và tự quyết định chuyển tiếp. Với SDN, các quyết định điều khiển được tập trung tại SDN Controller; thiết bị phía dưới chỉ thực thi các quy tắc (flow) do Controller cài xuống. Cách tiếp cận này giúp quản trị viên có cái nhìn toàn cục về mạng, lập trình được hành vi chuyển tiếp và thay đổi chính sách từ một điểm trung tâm.
-
-\subsubsection{Kiến trúc SDN ba lớp}
-
-Kiến trúc SDN thường được mô tả theo ba lớp (Hình~\ref{fig:sdn_architecture}): lớp ứng dụng, lớp điều khiển và lớp hạ tầng, liên kết với nhau qua các giao diện lập trình.
+SDN tách mặt phẳng điều khiển khỏi mặt phẳng dữ liệu: quyết định chuyển tiếp tập trung tại Controller, switch chỉ thực thi các flow được cài xuống. Kiến trúc gồm ba lớp (Hình~\ref{fig:sdn_architecture}): \textbf{lớp ứng dụng} (chuyển mạch, giám sát, bảo mật) giao tiếp với Controller qua \textit{northbound API}, thường là REST; \textbf{lớp điều khiển} thu thập topology, thống kê và chuyển yêu cầu thành flow; \textbf{lớp hạ tầng} gồm các switch chuyển tiếp theo bảng flow qua \textit{southbound API}.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.60\textwidth]{image/SDN_ARCHITECTURE.jpg}
+    \includegraphics[width=0.64\textwidth]{image/SDN_ARCHITECTURE.jpg}
     \caption{Kiến trúc tổng quan của SDN}
     \label{fig:sdn_architecture}
 \end{figure}
 
-\textbf{Lớp ứng dụng} (Application Layer) chứa các ứng dụng mạng như chuyển mạch, giám sát, bảo mật, cân bằng tải. Ứng dụng không cấu hình trực tiếp thiết bị mà giao tiếp với Controller qua \textit{northbound API}, thường là REST API.
+\textbf{OpenFlow 1.3} \citep{onf_openflow_134} là giao thức southbound tiêu chuẩn, chạy trên TCP 6653. Mỗi flow entry gồm trường so khớp (cổng vào, MAC, EtherType, VLAN, IP, cổng TCP/UDP), priority, tập lệnh (output, drop, push/pop VLAN, set-field), bộ đếm, timeout và \textit{cookie}. Flow priority 0 (\textit{table-miss}) quyết định gói chưa có quy tắc, thường gửi lên Controller. Switch gửi \texttt{Packet-In}; Controller trả \texttt{Packet-Out} và/hoặc \texttt{Flow-Mod}. VLAN trong OpenFlow 1.3 được so khớp bằng trường \texttt{vlan\_vid} có bit \texttt{OFPVID\_PRESENT} (0x1000); tên \texttt{dl\_vlan} chỉ thuộc OpenFlow 1.0. Khi mất Controller, switch ở chế độ \texttt{standalone} quay về học MAC truyền thống, còn ở chế độ \texttt{secure} chỉ dùng flow đang có. Kênh điều khiển có thể đi mạng riêng (\textit{out-of-band}) hoặc chung với dữ liệu (\textit{in-band}); với in-band, một số switch tự cài quy tắc ẩn để giữ kết nối Controller, có thể gây bão broadcast nếu mạng có vòng.
 
-\textbf{Lớp điều khiển} (Control Layer) là SDN Controller, đóng vai trò ``bộ não'' của mạng: thu thập topology, trạng thái cổng, thống kê lưu lượng và chuyển yêu cầu của ứng dụng thành các flow cụ thể gửi xuống thiết bị qua \textit{southbound API}.
+\textbf{OVS} là switch ảo mã nguồn mở hỗ trợ OpenFlow; mỗi bridge có DPID, phiên bản OpenFlow, địa chỉ Controller, fail mode, cổng mang \texttt{tag} (access) hoặc \texttt{trunks} (trunk). \textbf{Ryu} \citep{ryu_434_docs} là framework SDN viết bằng Python theo mô hình hướng sự kiện, kèm \texttt{ofctl\_rest} cung cấp REST API. \textbf{ONOS} là Controller phân tán viết bằng Java, có giao diện đồ họa và phát hiện topology qua LLDP, nhưng tốn nhiều CPU và bộ nhớ hơn Ryu.
 
-\textbf{Lớp hạ tầng} (Infrastructure Layer) gồm các switch vật lý hoặc ảo, chuyển tiếp gói tin theo bảng flow đã được cài đặt.
-
-\subsubsection{Nguyên lý hoạt động và giao thức OpenFlow 1.3}
-
-OpenFlow là giao thức southbound tiêu chuẩn do Open Networking Foundation phát triển \citep{onf_openflow_134}. Phiên bản 1.3 được sử dụng rộng rãi nhất và là phiên bản dùng trong đề tài. Controller và switch trao đổi bản tin trên kết nối TCP (cổng chuẩn 6653). Các khái niệm chính gồm:
-
-\begin{itemize}
-    \item \textbf{Flow table và flow entry:} mỗi flow entry gồm tập trường so khớp (\textit{match}: cổng vào, địa chỉ MAC, EtherType, VLAN ID, địa chỉ IP, cổng TCP/UDP,...), độ ưu tiên (\textit{priority}), tập lệnh (\textit{instructions/actions}: output, drop, push/pop VLAN, set-field), bộ đếm, thời gian sống (idle/hard timeout) và một giá trị \textit{cookie} do Controller gán để nhận diện nhóm flow. Gói tin khớp với flow có priority cao nhất.
-    \item \textbf{Table-miss:} flow priority 0 khớp mọi gói, quyết định cách xử lý gói chưa có quy tắc, thường là gửi lên Controller.
-    \item \textbf{Packet-In / Packet-Out / Flow-Mod:} switch gửi \texttt{Packet-In} khi gói khớp flow có hành động gửi lên Controller; Controller trả lời bằng \texttt{Packet-Out} để chuyển tiếp chính gói đó và/hoặc \texttt{Flow-Mod} để cài flow cho các gói sau. Cơ chế cài flow khi có lưu lượng được gọi là \textit{reactive}; cài trước khi có lưu lượng gọi là \textit{proactive}.
-    \item \textbf{Trường VLAN trong OpenFlow 1.3:} VLAN được so khớp bằng trường OXM \texttt{vlan\_vid}, trong đó bit \texttt{OFPVID\_PRESENT} (0x1000) phải được bật để biểu thị frame có thẻ; tên trường \texttt{dl\_vlan} chỉ thuộc OpenFlow 1.0. Việc gắn và bóc thẻ được thực hiện bằng các action \texttt{PUSH\_VLAN}, \texttt{SET\_FIELD} và \texttt{POP\_VLAN}.
-    \item \textbf{Echo, Port-Status và thống kê:} bản tin Echo kiểm tra kết nối; Port-Status báo thay đổi trạng thái cổng; các yêu cầu \texttt{PortStats}, \texttt{PortDesc}, \texttt{FlowStats} cho phép Controller thu thống kê lưu lượng.
-\end{itemize}
-
-Khi mất kết nối với Controller, switch hoạt động theo \textit{fail mode}. Ở chế độ \texttt{standalone}, switch quay về hành vi học MAC truyền thống (NORMAL); ở chế độ \texttt{secure}, switch chỉ dùng các flow đang có và không tự học, do đó không làm thay đổi chính sách của Controller nhưng cũng không chuyển được lưu lượng mới. Kênh điều khiển có thể đi trên mạng quản trị riêng (\textit{out-of-band}) hoặc đi chung với dữ liệu (\textit{in-band}). Khi dùng in-band, cần chú ý rằng một số switch tự cài các quy tắc ẩn để giữ kết nối tới Controller; nếu mạng có vòng lặp, các quy tắc này có thể gây bão broadcast.
-
-\subsubsection{Open vSwitch, Ryu và ONOS}
-
-\textbf{Open vSwitch (OVS)} là switch ảo mã nguồn mở hỗ trợ OpenFlow, gồm cơ sở dữ liệu cấu hình OVSDB và tiến trình chuyển tiếp \texttt{ovs-vswitchd}. Mỗi bridge của OVS có thể được gán Datapath ID (DPID), phiên bản OpenFlow, địa chỉ Controller và fail mode. Cổng của bridge có thể mang thuộc tính \texttt{tag} (cổng access) hoặc \texttt{trunks} (cổng trunk).
-
-\textbf{Ryu} là framework SDN viết bằng Python theo mô hình hướng sự kiện \citep{ryu_434_docs}. Ứng dụng Ryu đăng ký các bộ xử lý sự kiện như kết nối switch, Packet-In, thay đổi trạng thái cổng và trả lời thống kê. Ryu đi kèm ứng dụng \texttt{ofctl\_rest} cung cấp REST API để đọc và thay đổi flow, phù hợp cho việc xây dựng logic điều khiển tùy biến và ứng dụng giám sát.
-
-\textbf{ONOS} (Open Network Operating System) là Controller hướng đến môi trường nhà cung cấp dịch vụ, có kiến trúc phân tán, giao diện đồ họa trực quan, cơ chế phát hiện topology qua LLDP và hệ thống ứng dụng mở rộng. ONOS có thể được dùng như một lớp quan sát topology song song với Controller chuyển tiếp chính, nhưng chạy trên nền Java nên cần nhiều tài nguyên CPU và bộ nhớ hơn Ryu.
-
-\subsubsection{Phân loại mô hình SDN}
-
-\textbf{Open SDN} dùng giao thức mở như OpenFlow để Controller điều khiển trực tiếp hành vi chuyển tiếp của switch; phù hợp với môi trường nghiên cứu và yêu cầu kiểm soát chi tiết. \textbf{SDN thông qua API} tận dụng giao diện lập trình của thiết bị sẵn có (REST, NETCONF) để cấu hình từ xa. \textbf{SDN dựa trên overlay/hypervisor} ảo hóa mạng trong trung tâm dữ liệu. \textbf{Hybrid SDN} kết hợp mạng truyền thống với SDN, trong đó một phần thiết bị vận hành theo cơ chế cũ và một phần được Controller điều khiển. Mô hình của đề tài thuộc loại Hybrid SDN: lớp 2 (Distribution, Access) do Controller điều khiển qua OpenFlow, còn lớp 3 (Core, tường lửa) vẫn chạy VRRP, OSPF và STP truyền thống.
-
-\subsubsection{Ưu và nhược điểm của SDN}
-
-Ưu điểm lớn nhất của SDN là quản lý tập trung và khả năng lập trình. Controller có cái nhìn toàn cục về topology nên có thể tự tính cây chuyển tiếp, áp chính sách chặn hoặc cách ly một cổng từ một điểm, cung cấp API cho tự động hóa và giám sát. Thống kê lưu lượng có thể lấy trực tiếp qua OpenFlow mà không cần cài agent trên từng switch.
-
-Nhược điểm là Controller trở thành thành phần trọng yếu: nếu Controller hoặc kênh điều khiển gặp sự cố, switch ở chế độ \texttt{secure} không xử lý được lưu lượng mới (ARP, DHCP, máy trạm mới). Khi kênh điều khiển đi chung hạ tầng dữ liệu, bài toán ``switch cần Controller để chuyển tiếp, nhưng Controller chỉ tới được qua chính các switch'' phải được giải quyết bằng quy tắc khởi động (bootstrap) và cây quản trị không vòng lặp. Ngoài ra, việc triển khai SDN đòi hỏi kiến thức cả về mạng lẫn lập trình, và logic mà switch truyền thống có sẵn (chống vòng lặp, dự phòng) phải được Controller hiện thực lại.
+Theo cách triển khai, SDN gồm: Open SDN (Controller điều khiển trực tiếp qua OpenFlow), SDN qua API (REST, NETCONF), SDN overlay trong trung tâm dữ liệu và Hybrid SDN (một phần mạng giữ cơ chế truyền thống). Mô hình của đề tài là \textbf{Hybrid SDN}: lớp 2 do Controller điều khiển, lớp 3 vẫn chạy VRRP, OSPF và STP. Ưu điểm của SDN là cái nhìn toàn cục, lập trình được và áp chính sách từ một điểm; nhược điểm là Controller trở thành thành phần trọng yếu, và khi kênh điều khiển đi chung hạ tầng dữ liệu thì phải giải quyết bài toán ``switch cần Controller để chuyển tiếp nhưng Controller chỉ tới được qua chính các switch''.
 
 \subsection{Công nghệ SD-WAN}
 
-SD-WAN (Software-Defined WAN) áp dụng nguyên lý tách mặt phẳng điều khiển cho mạng diện rộng. Thay vì phụ thuộc vào một đường truyền riêng đắt tiền, SD-WAN tạo một mạng \textit{overlay} gồm các đường hầm mã hóa chạy trên nhiều loại đường truyền (\textit{transport}) như Internet, MPLS, 4G/5G, và lựa chọn đường truyền theo chính sách và chất lượng đo được.
+SD-WAN áp dụng nguyên lý tách mặt phẳng điều khiển cho mạng diện rộng: tạo overlay gồm các đường hầm mã hóa chạy trên nhiều \textit{transport} (Internet, MPLS, 4G/5G) và chọn đường theo chính sách và chất lượng đo được.
 
-\subsubsection{Kiến trúc Cisco SD-WAN (Viptela)}
+\textbf{Kiến trúc Cisco SD-WAN (Viptela)} gồm bốn thành phần: \textbf{vManage} (quản lý: giao diện, API, giám sát, chứng thư), \textbf{vSmart} (điều khiển: trung tâm OMP, phân phối tuyến, TLOC, khóa và chính sách), \textbf{vBond} (điều phối: điểm tiếp xúc đầu tiên, xác thực, hỗ trợ vượt NAT) và \textbf{vEdge/cEdge} (dữ liệu: router tại site, dựng đường hầm IPsec). Mỗi Edge có \textbf{System-IP} (định danh /32) và \textbf{Site-ID}; mọi thiết bị dùng chung \texttt{organization-name}. Edge chia bảng định tuyến thành VPN: \textbf{VPN 0} cho transport và underlay, \textbf{VPN 512} cho quản trị, VPN từ 1 trở lên là \textbf{VPN dịch vụ} chứa LAN người dùng.
 
-Giải pháp Cisco SD-WAN (nền tảng Viptela) gồm bốn thành phần:
-\begin{itemize}
-    \item \textbf{vManage} -- mặt phẳng quản lý: giao diện đồ họa và API để cấu hình, giám sát, thống kê và quản lý chứng thư thiết bị.
-    \item \textbf{vSmart} -- mặt phẳng điều khiển: trung tâm của giao thức OMP, nhận và phân phối tuyến, TLOC, khóa mã hóa và chính sách tập trung đến các Edge.
-    \item \textbf{vBond} -- mặt phẳng điều phối (orchestration): điểm tiếp xúc đầu tiên của Edge, xác thực thiết bị, thông báo địa chỉ của vManage/vSmart và hỗ trợ vượt NAT.
-    \item \textbf{vEdge/cEdge} -- mặt phẳng dữ liệu: router đặt tại từng site, thiết lập đường hầm IPsec với các Edge khác và thực thi chính sách.
-\end{itemize}
+\textbf{TLOC, OMP, BFD.} TLOC là điểm cuối đường hầm, định danh bởi (System-IP, color, encapsulation); \textit{color} (\texttt{mpls}, \texttt{biz-internet}\ldots) gán nhãn loại đường truyền. OMP \citep{cisco_sdwan_omp} chạy trong kênh DTLS/TLS giữa Edge và vSmart, mang tuyến, TLOC và thông tin dịch vụ; vSmart đóng vai trò tương tự route reflector. Mặc định các Edge dựng đường hầm full-mesh. BFD chạy trong mỗi đường hầm để phát hiện hỏng và đo trễ, jitter, mất gói; thời gian phát hiện bằng chu kỳ nhân hệ số, mặc định 1000~ms $\times$ 7, khoảng 7 giây.
 
-Mỗi Edge được nhận dạng bởi \textbf{System-IP} (địa chỉ /32 duy nhất, chỉ dùng làm định danh, không phải gateway) và \textbf{Site-ID} (các Edge cùng site có cùng Site-ID). Tất cả thiết bị trong fabric có chung \texttt{organization-name}.
-
-\subsubsection{Phân đoạn VPN trên Edge}
-
-Edge chia bảng định tuyến thành nhiều VPN (tương tự VRF): \textbf{VPN 0} là VPN transport chứa các giao diện WAN, tuyến underlay và giao thức với nhà cung cấp; \textbf{VPN 512} dành cho quản trị ngoài băng; các VPN từ 1 trở lên là \textbf{VPN dịch vụ} chứa mạng LAN của người dùng. Tuyến trong VPN dịch vụ được quảng bá qua OMP đến các site khác có cùng VPN, còn VPN 0 chỉ phục vụ kết nối underlay. Sự tách biệt này giúp địa chỉ của nhà cung cấp và địa chỉ nội bộ không lẫn vào nhau.
-
-\subsubsection{TLOC, color, OMP và BFD}
-
-\textbf{TLOC} (Transport Locator) là điểm kết cuối đường hầm, định danh bởi bộ ba (System-IP, color, encapsulation). \textbf{Color} gán nhãn cho loại đường truyền, ví dụ \texttt{mpls}, \texttt{biz-internet}. Color cũng quyết định cách Edge chọn địa chỉ để dựng đường hầm; nhãn phải khớp với bản chất đường truyền để các đường hầm chéo màu (ví dụ \texttt{mpls}--\texttt{biz-internet}) hình thành đúng.
-
-\textbf{OMP} (Overlay Management Protocol) chạy trong các kết nối DTLS/TLS giữa Edge và vSmart, mang ba loại thông tin: tuyến OMP (các prefix của VPN dịch vụ), TLOC và thông tin dịch vụ \citep{cisco_sdwan_omp}. vSmart đóng vai trò tương tự route reflector: nhận tuyến từ mọi Edge, áp chính sách điều khiển rồi phân phối lại. Mặc định, các Edge dựng đường hầm IPsec full-mesh giữa mọi cặp TLOC.
-
-\textbf{BFD} (Bidirectional Forwarding Detection) chạy bên trong mỗi đường hầm IPsec, gửi gói thăm dò định kỳ để phát hiện đường hầm hỏng và đo độ trễ, jitter, tỷ lệ mất gói. Thời gian phát hiện bằng chu kỳ thăm dò nhân với hệ số \textit{multiplier}; với giá trị mặc định 1000~ms $\times$ 7 là khoảng 7 giây, và có thể rút ngắn bằng cách giảm hai tham số này. Các số liệu này là đầu vào cho chính sách định tuyến theo ứng dụng.
-
-\subsubsection{Xác thực thiết bị và PKI}
-
-Mọi thiết bị trong fabric xác thực lẫn nhau bằng chứng thư số X.509. Mỗi Edge tạo CSR, được một CA tin cậy ký, cài chuỗi Root CA và chứng thư thiết bị. Ngoài chứng thư, controller còn duy trì danh sách Edge hợp lệ (whitelist) theo cặp chassis-number/serial-number; Edge không có trong danh sách của một controller sẽ không thiết lập được kết nối điều khiển với controller đó. Kênh điều khiển được mã hóa bằng DTLS (UDP) hoặc TLS, kênh dữ liệu bằng IPsec.
-
-\subsubsection{Chính sách tập trung}
-
-vSmart hỗ trợ ba nhóm chính sách tập trung chính:
-\begin{itemize}
-    \item \textbf{Control policy:} tác động lên tuyến và TLOC trong OMP, ví dụ thay đổi \textit{preference} để ưu tiên một Edge, lọc tuyến hoặc tạo topology hub-and-spoke.
-    \item \textbf{Application-Aware Routing (AAR):} định nghĩa \textit{SLA class} gồm ngưỡng mất gói, độ trễ, jitter; với từng lớp lưu lượng, chọn đường hầm thỏa SLA và ưu tiên một color. Khi đường ưu tiên vi phạm SLA, lưu lượng tự chuyển sang đường khác thỏa SLA.
-    \item \textbf{Data policy:} lọc và điều khiển lưu lượng theo 5-tuple, DSCP, prefix, với hành động accept, drop, đếm (count), đặt TLOC hoặc NAT.
-\end{itemize}
-
-Chính sách được khai báo trên vSmart và áp theo danh sách site (\texttt{site-list}); Edge nhận chính sách qua OMP mà không cần cấu hình riêng lẻ trên từng thiết bị.
-
-\subsubsection{Direct Internet Access}
-
-Trong mô hình truyền thống, lưu lượng Internet của chi nhánh được đưa về trung tâm rồi mới ra Internet (\textit{backhaul}). SD-WAN hỗ trợ \textit{Direct Internet Access} (DIA, hay local breakout): Edge tại chi nhánh thực hiện NAT trên giao diện Internet và đưa lưu lượng Internet thẳng ra ngoài, trong khi lưu lượng nội bộ vẫn đi overlay. Cách làm này giảm tải cho cơ sở chính nhưng đòi hỏi chính sách bảo mật tại từng chi nhánh. Khi giao diện WAN của Edge chỉ mang địa chỉ do nhà cung cấp cấp phát, lưu lượng được NAT thêm một lần tại nhà cung cấp (tương tự CGNAT) trước khi ra Internet công cộng.
+\textbf{Xác thực và chính sách.} Thiết bị xác thực lẫn nhau bằng chứng thư X.509: Edge tạo CSR, được CA ký, cài Root CA; controller còn giữ danh sách Edge hợp lệ theo cặp chassis/serial. vSmart hỗ trợ ba nhóm chính sách tập trung áp theo \texttt{site-list}: \textbf{control policy} (tác động tuyến và TLOC trong OMP, ví dụ đổi \textit{preference}), \textbf{AAR} (định nghĩa \textit{SLA class} gồm ngưỡng mất gói, trễ, jitter và chọn đường hầm thỏa SLA cho từng lớp lưu lượng) và \textbf{data policy} (lọc theo 5-tuple, DSCP, prefix với hành động accept, drop, count). \textbf{DIA} cho Edge chi nhánh NAT lưu lượng Internet ra thẳng tại chỗ thay vì đưa về trung tâm (\textit{backhaul}), giảm tải cho cơ sở chính nhưng đòi hỏi chính sách bảo mật tại từng chi nhánh.
 
 \subsection{Nền tảng mô phỏng EVE-NG}
 
-EVE-NG (Emulated Virtual Environment -- Next Generation) là nền tảng mô phỏng mạng đa hãng, cho phép chạy đồng thời nhiều loại thiết bị: Cisco IOL (IOS on Linux), vIOS, ASAv, các thành phần SD-WAN, máy ảo Linux và Windows trên QEMU/KVM, cùng máy trạm giả lập VPCS. Toàn bộ topology, liên kết và thông số node được lưu trong một tệp lab. EVE-NG hỗ trợ kết nối lab với mạng thật qua giao diện Cloud, nhờ đó quản trị viên có thể truy cập giao diện quản trị của thiết bị ảo. Do là môi trường ảo hóa, hiệu năng, đồng hồ hệ thống và hành vi khởi động của thiết bị có thể khác thiết bị vật lý; các kết quả đo trong lab phản ánh tính đúng đắn chức năng hơn là hiệu năng tuyệt đối.
-
-\subsection{Tổng kết chương}
-
-Chương này đã trình bày các nền tảng mạng Campus, gồm phân cấp, VLAN, dự phòng, định tuyến, dịch vụ mạng và bảo mật; đồng thời giới thiệu SDN và SD-WAN. Đây là cơ sở để thiết kế mô hình mạng Campus đa cơ sở tại Chương~\ref{sec:mo_hinh_de_xuat}.
+EVE-NG cho phép chạy đồng thời nhiều loại thiết bị: Cisco IOL, vIOS, ASAv, các thành phần SD-WAN, máy ảo Linux và Windows trên QEMU/KVM cùng máy trạm VPCS; toàn bộ topology lưu trong một tệp lab và có thể nối ra mạng thật qua giao diện Cloud. Do là môi trường ảo hóa, hiệu năng và hành vi khởi động khác thiết bị vật lý; kết quả đo phản ánh tính đúng đắn chức năng hơn là hiệu năng tuyệt đối.

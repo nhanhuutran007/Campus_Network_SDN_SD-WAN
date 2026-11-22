@@ -1,164 +1,136 @@
 \section{MÔ HÌNH MẠNG CAMPUS ĐỀ XUẤT}\label{sec:mo_hinh_de_xuat}
 
-Chương này trình bày thiết kế của hệ thống mạng Campus đa cơ sở: phân tích yêu cầu, kiến trúc tổng thể, topology chi tiết từng site, quy hoạch VLAN và địa chỉ IP, thiết kế định tuyến, thiết kế SDN, thiết kế SD-WAN, thiết kế dịch vụ và chính sách bảo mật. Mọi thông số trong chương đều thống nhất với cấu hình đang vận hành của các thiết bị trong mô hình.
+Chương này trình bày thiết kế hệ thống: yêu cầu, kiến trúc, sơ đồ vật lý và sơ đồ logic, quy hoạch địa chỉ, định tuyến, SDN, SD-WAN, dịch vụ và bảo mật. Mọi thông số thống nhất với cấu hình đang vận hành của thiết bị.
 
 \subsection{Phân tích bài toán và yêu cầu thiết kế}
 
-\subsubsection{Bối cảnh bài toán}
+Đề tài giả định một trường đại học có cơ sở chính và ba cơ sở phụ tại Cần Thơ, Đà Nẵng, Nha Trang. Cơ sở chính có các khoa Công nghệ thông tin, Toán -- Thống kê, Luật, khối Hành chính và toàn bộ dịch vụ dùng chung; mỗi cơ sở phụ có hai khối nghiệp vụ và cần dùng dịch vụ tại cơ sở chính. Mạng truyền thống bộc lộ ba vấn đề khi quy mô tăng: thay đổi chính sách phải làm trên nhiều thiết bị; không có cái nhìn toàn cục về lớp 2; WAN phụ thuộc một đường truyền. Bài toán đặt ra là điều khiển tập trung mạng nội bộ cơ sở chính bằng SDN, nối các cơ sở bằng overlay SD-WAN trên hai nhà cung cấp độc lập, đồng thời giữ VRRP, OSPF và tường lửa HA tại những vị trí cần độ ổn định cao.
 
-Đề tài giả định một trường đại học có một cơ sở chính và ba cơ sở phụ đặt tại Cần Thơ, Đà Nẵng và Nha Trang. Cơ sở chính tập trung các khoa Công nghệ thông tin, Toán -- Thống kê, Luật, khối Hành chính, cùng toàn bộ dịch vụ dùng chung (DHCP, DNS, Web, Mail, Syslog). Mỗi cơ sở phụ có hai khối nghiệp vụ riêng và cần truy cập các dịch vụ dùng chung tại cơ sở chính.
+\textbf{Yêu cầu chức năng:} máy trạm mọi cơ sở dùng được dịch vụ dùng chung; mỗi khoa/khối là một VLAN và một subnet, tách riêng vùng máy chủ, DMZ và quản trị; máy trạm nhận địa chỉ qua DHCP; DNS nội bộ \texttt{campus.internal}, Web HTTPS, Mail và Syslog; Controller quản lý toàn bộ switch lớp 2 cơ sở chính, chống vòng lặp, chặn cổng tập trung, có REST API và giám sát tải; Edge được xác thực bằng chứng thư, overlay IPsec trên hai transport, chính sách SLA/AAR và lọc tập trung; tường lửa chỉ mở dịch vụ cần thiết; người dùng ra Internet tại chỗ có dự phòng; giám sát và tự động cảnh báo sự cố WAN.
 
-Trong mô hình mạng truyền thống, mỗi switch tự học địa chỉ, tự chạy STP và được cấu hình thủ công; kết nối giữa các cơ sở thường dựa vào một đường truyền riêng với cấu hình định tuyến tĩnh tại từng router. Khi số VLAN, số thiết bị và số cơ sở tăng lên, cách quản trị này bộc lộ ba vấn đề: (1) thay đổi chính sách phải thực hiện trên nhiều thiết bị, dễ sai lệch; (2) không có cái nhìn toàn cục về trạng thái lớp 2 và lưu lượng; (3) kết nối WAN phụ thuộc một đường truyền, không tự chọn đường theo chất lượng.
-
-Bài toán đặt ra là xây dựng một mạng Campus đa cơ sở trong đó: mạng nội bộ cơ sở chính được điều khiển tập trung bằng SDN Controller; các cơ sở được kết nối qua overlay SD-WAN chạy trên hai nhà cung cấp độc lập (Internet và MPLS), có lựa chọn đường theo SLA và chính sách tập trung; đồng thời vẫn giữ các cơ chế truyền thống đã được kiểm chứng (VRRP, OSPF, tường lửa HA) tại những vị trí cần độ ổn định cao.
-
-\subsubsection{Yêu cầu chức năng}
-
-\begin{itemize}
-    \item \textbf{Kết nối:} máy trạm tại mọi cơ sở truy cập được dịch vụ dùng chung ở cơ sở chính; các cơ sở phụ liên lạc được với nhau khi chính sách cho phép.
-    \item \textbf{Phân đoạn:} mỗi khoa/khối nghiệp vụ là một VLAN và một subnet riêng; vùng máy chủ, vùng DMZ và vùng quản trị được tách biệt.
-    \item \textbf{Cấp phát địa chỉ:} máy trạm nhận địa chỉ động qua DHCP; máy chủ và thiết bị hạ tầng dùng địa chỉ tĩnh.
-    \item \textbf{Dịch vụ:} DNS nội bộ cho tên miền \texttt{campus.internal}, Web (HTTPS), Mail (SMTP/IMAP) và Syslog tập trung.
-    \item \textbf{Điều khiển SDN:} Controller quản lý toàn bộ chuyển mạch lớp 2 tại tầng Distribution và Access của cơ sở chính, chống vòng lặp, hỗ trợ chặn cổng tập trung, cung cấp REST API và giám sát tải cổng.
-    \item \textbf{SD-WAN:} các Edge được xác thực bằng chứng thư, hình thành overlay IPsec trên hai transport, phân phối tuyến qua OMP, áp chính sách SLA/AAR và lọc lưu lượng tập trung.
-    \item \textbf{Bảo mật biên:} tường lửa kiểm soát lưu lượng giữa nội bộ, DMZ và WAN theo nguyên tắc chỉ mở dịch vụ cần thiết.
-    \item \textbf{Truy cập Internet:} người dùng ra Internet tại chỗ, có đường dự phòng; vùng quản trị và controller chỉ ra Internet có kiểm soát.
-    \item \textbf{Giám sát và cảnh báo:} quan sát tập trung trạng thái lớp 2 của Campus chính và trạng thái fabric SD-WAN; tự động thông báo khi có sự cố WAN.
-\end{itemize}
-
-\subsubsection{Yêu cầu phi chức năng}
-
-\begin{itemize}
-    \item \textbf{Tính sẵn sàng:} không có điểm lỗi đơn tại gateway (VRRP), lõi (hai Core, EtherChannel), biên (tường lửa Active/Standby), WAN (hai Edge, hai transport) và lớp 2 (Access nối kép lên hai Distribution).
-    \item \textbf{Khả năng mở rộng:} quy tắc địa chỉ thống nhất theo site; một cơ sở mới chỉ cần cấp Site-ID, System-IP, subnet và dùng lại khuôn cấu hình chi nhánh.
-    \item \textbf{Khả năng quản trị:} vùng quản trị riêng, giao diện quản trị tập trung (ASDM, vManage, REST/GUI của SDN Controller), nhật ký tập trung.
-    \item \textbf{Tính nhất quán:} mỗi thiết bị có định danh, địa chỉ và vai trò rõ ràng, được ghi nhận trong các bảng quy hoạch.
-\end{itemize}
-
-\subsubsection{Phạm vi và giả định}
-
-Hệ thống được hiện thực trên nền tảng mô phỏng EVE-NG bằng các image thiết bị thương mại và mã nguồn mở. Hai nhà cung cấp dịch vụ được mô phỏng bằng hai router chạy BGP; mạng Internet công cộng được mô phỏng bằng dải địa chỉ tài liệu \texttt{203.0.113.0/24}, còn mạng MPLS dùng dải \texttt{100.64.0.0/10}; router nhà cung cấp Internet nối ra mạng thật của phòng lab để cung cấp Internet thật cho người dùng. Mạng không dây và xác thực 802.1X nằm ngoài phạm vi triển khai và được nêu ở phần hướng phát triển.
+\textbf{Yêu cầu phi chức năng:} không có điểm lỗi đơn tại gateway, lõi, biên, WAN và lớp 2; quy tắc địa chỉ thống nhất theo site để thêm cơ sở mới chỉ cần cấp Site-ID, System-IP, subnet và dùng lại khuôn cấu hình; quản trị tập trung qua ASDM, vManage và Controller; mỗi thiết bị có định danh, địa chỉ và vai trò rõ ràng.
 
 \subsection{Kiến trúc tổng thể}
 
-Hệ thống gồm sáu site và hai miền truyền tải, được tổng hợp trong Bảng~\ref{tab:cac_site}.
+Hệ thống gồm sáu site và hai miền truyền tải (Bảng~\ref{tab:cac_site}).
 
 \begin{table}[H]
     \centering
     \small
     \caption{Các site và vai trò trong mô hình}
     \label{tab:cac_site}
-    \begin{tabularx}{\textwidth}{|c|P{2.6cm}|c|Y|}
+    \begin{tabularx}{\textwidth}{|c|L{3.4cm}|c|Y|}
         \hline
         \textbf{Site-ID} & \textbf{Tên} & \textbf{ASN} & \textbf{Thành phần chính} \\
         \hline
-        100 & Campus chính & 65000 & Cặp tường lửa ASAv HA, Core-SW1/2, Dist-SW1/2 và Access-SW1--4 (Open vSwitch), SDN Controller (Ryu), Server Farm, DMZ, hai vEdge \\
+        100 & Campus chính & 65000 & Cặp ASAv HA, Core-SW1/2, Dist-SW1/2 và Access-SW1--4 (OVS), SDN Controller (Ryu), Server Farm, DMZ, hai vEdge \\
         \hline
-        200 & Cơ sở Cần Thơ & 65010 & Brand-FW, SwitchBrand, hai switch khối, hai vEdge; VLAN 60 Nông nghiệp, 70 Y tế \\
+        200 & Cơ sở Cần Thơ & 65010 & Brand-FW, SwitchBrand, hai switch khối, hai vEdge; VLAN 60, 70 \\
         \hline
-        300 & Cơ sở Đà Nẵng & 65020 & Cấu trúc như Site 200; VLAN 80 Du lịch, 90 Tài chính \\
+        300 & Cơ sở Đà Nẵng & 65020 & Như Site 200; VLAN 80, 90 \\
         \hline
-        400 & Cơ sở Nha Trang & 65030 & Cấu trúc như Site 200; VLAN 50 Thủy sản, 60 Lữ hành \\
+        400 & Cơ sở Nha Trang & 65030 & Như Site 200; VLAN 50, 60 \\
         \hline
-        500 & Cơ sở mở rộng & 65040 & Hai vEdge (MPLS, Internet), Brand-FW-S500, SW-S500, hai máy trạm \\
+        500 & Cơ sở mở rộng & 65040 & Hai vEdge, Brand-FW-S500, SW-S500, hai máy trạm \\
         \hline
-        900 & Trung tâm điều khiển SD-WAN & -- & vManage, vSmart, vBond, switch LAN controller, switch quản trị, máy trạm quản trị \\
+        900 & Trung tâm điều khiển SD-WAN & -- & vManage, vSmart, vBond, switch LAN, switch quản trị, máy trạm quản trị \\
         \hline
-        -- & Nhà cung cấp Internet & 64511 & Router Internet, color \texttt{biz-internet} \\
+        -- & Nhà cung cấp Internet & 64511 & Router vIOS, color \texttt{biz-internet}; nối ra mạng thật của phòng lab \\
         \hline
-        -- & Nhà cung cấp MPLS & 64512 & Router MPLS, color \texttt{mpls} \\
+        -- & Nhà cung cấp MPLS & 64512 & Router vIOS, color \texttt{mpls} \\
         \hline
     \end{tabularx}
 \end{table}
 
-Kiến trúc được tổ chức theo ba mặt phẳng:
-\begin{itemize}
-    \item \textbf{Mặt phẳng dữ liệu} gồm các switch, tường lửa, Edge và router nhà cung cấp, chuyển tiếp lưu lượng người dùng.
-    \item \textbf{Mặt phẳng điều khiển} gồm hai miền độc lập: SDN Controller điều khiển lớp 2 cơ sở chính qua OpenFlow 1.3 trên VLAN 99; vSmart điều khiển overlay SD-WAN qua OMP. Tại lớp 3 cơ sở chính, OSPF và VRRP vẫn là cơ chế điều khiển phân tán.
-    \item \textbf{Mặt phẳng quản trị} gồm VLAN 99 tại cơ sở chính (ASDM, REST/GUI của Controller, giám sát) và mạng \texttt{10.9.0.0/24}, \texttt{10.9.1.0/24} tại Site 900 (vManage).
-\end{itemize}
+Kiến trúc có ba mặt phẳng: \textbf{dữ liệu} (switch, tường lửa, Edge, router nhà cung cấp); \textbf{điều khiển} gồm hai miền độc lập --- SDN Controller điều khiển lớp 2 cơ sở chính qua OpenFlow 1.3 trên VLAN 99 và vSmart điều khiển overlay qua OMP, còn lớp 3 cơ sở chính vẫn dùng OSPF, VRRP phân tán; \textbf{quản trị} gồm VLAN 99 tại cơ sở chính và mạng \texttt{10.9.0.0/24}, \texttt{10.9.1.0/24} tại Site 900. Nguyên tắc phân vai: Core chỉ định tuyến liên VLAN và làm gateway; OVS chỉ chuyển mạch lớp 2 theo flow của Controller; tường lửa kiểm soát biên và DMZ; vEdge làm router WAN và đầu cuối overlay; tường lửa chi nhánh kiêm gateway và DHCP.
 
-Nguyên tắc phân vai quan trọng là \textit{mỗi thành phần chỉ làm đúng việc của mình}: Core Switch chỉ định tuyến liên VLAN và làm gateway; OVS chỉ chuyển mạch lớp 2 theo flow của Controller; tường lửa kiểm soát biên và DMZ; vEdge chỉ làm router WAN và đầu cuối overlay; tường lửa chi nhánh kiêm gateway và DHCP cho chi nhánh. Hình~\ref{fig:topology_mang_campus} trình bày topology logic ở mức site.
+\subsection{Sơ đồ vật lý và sơ đồ logic}\label{sec:so_do}
+
+\textbf{Sơ đồ vật lý} (Hình~\ref{fig:kien_truc_tong_the_campus}) thể hiện toàn bộ thiết bị và đấu nối cổng của hệ thống trên EVE-NG: 74 node, 107 phân đoạn mạng, nhãn cổng và địa chỉ giao diện.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{image/topo-vatly.jpg}
+    \caption{Sơ đồ vật lý của hệ thống trên EVE-NG}
+    \label{fig:kien_truc_tong_the_campus}
+\end{figure}
+
+\textbf{Sơ đồ logic} (Hình~\ref{fig:so_do_logic}) thể hiện hệ thống ở lớp 3: subnet và gateway của từng VLAN, các mạng transit, miền định tuyến (OSPF Area~0 tại Campus chính, eBGP underlay với hai nhà cung cấp, OMP và overlay IPsec giữa các Edge) và vị trí các dịch vụ.
 
 \begin{figure}[H]
     \centering
     \resizebox{\textwidth}{!}{%
     \begin{tikzpicture}[
-        font=\scriptsize,
-        >=stealth,
-        controller/.style={draw=purple!70!black, fill=purple!7, rounded corners, align=center, minimum height=1.35cm, text width=8.0cm},
-        transport/.style={draw=black!70, fill=gray!12, rounded corners, align=center, minimum height=0.9cm, text width=3.5cm},
-        campus/.style={draw=blue!65!black, fill=blue!5, rounded corners, align=center, minimum height=1.75cm, text width=6.2cm},
-        branch/.style={draw=teal!70!black, fill=teal!5, rounded corners, align=center, minimum height=1.55cm, text width=5.1cm},
-        controlLink/.style={draw=purple!75!black, dashed, ->, line width=0.7pt},
-        internetLink/.style={draw=blue!75!black, line width=0.9pt},
-        mplsLink/.style={draw=orange!85!black, line width=0.9pt}
+        font=\scriptsize, >=stealth,
+        box/.style={draw, rounded corners=2pt, align=center, line width=0.7pt, inner sep=3pt},
+        s100/.style={box, fill=blue!5, draw=blue!60!black, text width=6.0cm},
+        br/.style={box, fill=teal!5, draw=teal!60!black, text width=6.4cm},
+        tr/.style={box, fill=gray!12, draw=black!70, text width=3.0cm},
+        ctl/.style={box, fill=purple!7, draw=purple!70!black, text width=9.0cm},
+        inet/.style={draw=blue!75!black, line width=1.1pt},
+        mpls/.style={draw=orange!85!black, line width=1.1pt},
+        lan/.style={line width=0.8pt, black!70},
+        lbl/.style={font=\tiny, fill=white, inner sep=1pt, align=center}
     ]
-        \node[controller] (s900) at (0,5.1) {\textbf{Site 900 -- Mặt phẳng điều khiển SD-WAN}\\
-        vManage \texttt{10.9.0.10}; vSmart \texttt{10.9.0.11} (System-IP \texttt{10.9.0.13}); vBond \texttt{10.9.0.12}\\
-        Switch LAN gateway \texttt{10.9.0.2}; ra Internet có kiểm soát; cảnh báo email};
+        % Site 900 va hai nha cung cap
+        \node[ctl] (s900) at (0.4,9.6) {\textbf{Site 900 -- Controller LAN \texttt{10.9.0.0/24}} (gateway switch LAN \texttt{.2})\\
+            vManage \texttt{.10} \textperiodcentered{} vSmart \texttt{.11} \textperiodcentered{} vBond \texttt{.12} \textperiodcentered{} mặt quản trị \texttt{10.9.1.0/24}\\
+            Tuyến tĩnh CE--PE tới hai nhà cung cấp; ra Internet có kiểm soát};
+        \node[tr] (inet) at (-2.5,7.6) {\textbf{Internet} -- AS 64511\\\texttt{203.0.113.0/24}\\color \texttt{biz-internet}};
+        \node[tr] (mpls) at (3.3,7.6) {\textbf{MPLS} -- AS 64512\\\texttt{100.64.0.0/10}\\color \texttt{mpls}};
+        \draw[black!70, line width=0.8pt] (inet) -- node[lbl]{eBGP\\\texttt{100.64.254.0/30}} (mpls);
+        \draw[inet] (s900.south -| inet.north) -- (inet.north);
+        \draw[mpls] (s900.south -| mpls.north) -- (mpls.north);
 
-        \node[transport] (internet) at (-4.6,3.25) {\textbf{Internet underlay}\\AS 64511 -- color \texttt{biz-internet}};
-        \node[transport] (mpls) at (4.6,3.25) {\textbf{MPLS underlay}\\AS 64512 -- color \texttt{mpls}};
+        % Hai duong truc transport
+        \draw[inet] (inet.south) -- (-2.5,6.5) -- (-0.1,6.5) -- (-0.1,-4.2);
+        \draw[mpls] (mpls.south) -- (3.3,6.3) -- (0.7,6.3) -- (0.7,-4.2);
 
-        \node[campus] (s100) at (0,1.35) {\textbf{Site 100 -- Campus chính, AS 65000}\\
-        vEdge1/2: \texttt{10.200.100.1/.2}, mỗi Edge có TLOC Internet và MPLS\\
-        ASAv HA -- Core-SW1/2 -- Ryu \texttt{10.1.99.10} điều khiển 6 OVS -- VLAN 10/20/30/40/90/99};
+        % Site 100
+        \node[s100] (ve) at (-4.3,5.3) {\textbf{vEdge1/2-S100} -- AS 65000\\System-IP \texttt{10.200.100.1}, \texttt{10.200.100.2}\\mỗi vEdge hai TLOC; NAT ra Internet (DIA)\\VPN 1: beacon \texttt{10.1.255.1/32}};
+        \node[s100] (fw) at (-4.3,3.05) {\textbf{FW-ASAv HA} (Active/Standby)\\outside \texttt{10.1.3.0/29}, outside2 \texttt{10.1.3.8/29}\\DMZ \texttt{10.1.1.0/28}: Web \texttt{.10}, Mail \texttt{.11}};
+        \node[s100] (core) at (-4.3,1.2) {\textbf{Core-SW1/2}: SVI, VRRP VIP \texttt{.1}, DHCP Relay\\transit \texttt{10.1.2.0/29}, \texttt{10.1.2.8/29}\\Po10 \texttt{10.1.0.4/30}};
+        \node[s100] (vl) at (-4.3,-1.05) {VLAN 10 \texttt{10.1.10.0/24} -- CNTT\\VLAN 20 \texttt{10.1.20.0/24} -- Toán-TK\\VLAN 30 \texttt{10.1.30.0/24} -- Luật\\VLAN 40 \texttt{10.1.40.0/24} -- Hành chính\\VLAN 90 \texttt{10.1.90.0/24} -- DHCP/DNS \texttt{.10}, Syslog \texttt{.11}\\VLAN 99 \texttt{10.1.99.0/24} -- quản trị, Controller \texttt{.10}};
+        \node[s100, fill=green!7, draw=green!45!black] (sdn) at (-4.3,-3.35) {\textbf{Khối SDN lớp 2}: 6 OVS\\Ryu điều khiển qua OpenFlow 1.3 trên VLAN 99};
+        \draw[lan] (ve) -- node[lbl, right=1pt]{OSPF Area 0 (VPN 1)} (fw);
+        \draw[lan] (fw) -- node[lbl, right=1pt]{OSPF Area 0} (core);
+        \draw[lan] (core) -- node[lbl, right=1pt]{SVI} (vl);
+        \draw[lan] (vl) -- node[lbl, right=1pt]{trunk 802.1Q} (sdn);
+        \begin{scope}[on background layer]
+            \node[draw=blue!60!black, dashed, rounded corners, fill=blue!2, fit=(ve)(sdn), inner sep=5pt] (s100box) {};
+        \end{scope}
+        \node[font=\scriptsize\bfseries, blue!60!black, anchor=south west] at (s100box.north west) {Site 100 -- Campus chính, \texttt{10.1.0.0/16}};
+        \draw[inet] ([yshift=2mm]ve.east) -- ([yshift=2mm]ve.east -| -0.1,0);
+        \draw[mpls] ([yshift=-2mm]ve.east) -- ([yshift=-2mm]ve.east -| 0.7,0);
 
-        \node[branch] (s200) at (-6.1,-1.35) {\textbf{Site 200 -- Cần Thơ, AS 65010}\\
-        vEdge1 \texttt{10.200.200.1} (MPLS)\\vEdge2 \texttt{10.200.200.2} (Internet)\\Brand-FW -- VLAN 60/70};
-        \node[branch] (s300) at (0,-1.35) {\textbf{Site 300 -- Đà Nẵng, AS 65020}\\
-        vEdge1 \texttt{10.200.30.1} (MPLS)\\vEdge2 \texttt{10.200.30.2} (Internet)\\Brand-FW -- VLAN 80/90};
-        \node[branch] (s400) at (6.1,-1.35) {\textbf{Site 400 -- Nha Trang, AS 65030}\\
-        vEdge1 \texttt{10.200.40.1} (MPLS)\\vEdge2 \texttt{10.200.40.2} (Internet)\\Brand-FW -- VLAN 50/60};
+        % Chi nhanh
+        \node[br] (b200) at (5.0,5.2) {\textbf{Site 200 -- Cần Thơ}, AS 65010, \texttt{10.2.0.0/16}\\vEdge1 \texttt{10.200.200.1} (mpls)\\vEdge2 \texttt{10.200.200.2} (biz-internet)\\Brand-FW: \texttt{10.2.1.0/30}, \texttt{10.2.1.4/30}\\VLAN 60 \texttt{10.2.60.0/24}, VLAN 70 \texttt{10.2.70.0/24}};
+        \node[br] (b300) at (5.0,2.55) {\textbf{Site 300 -- Đà Nẵng}, AS 65020, \texttt{10.3.0.0/16}\\vEdge1 \texttt{10.200.30.1} (mpls)\\vEdge2 \texttt{10.200.30.2} (biz-internet)\\Brand-FW: \texttt{10.3.1.0/30}, \texttt{10.3.1.4/30}\\VLAN 80 \texttt{10.3.80.0/24}, VLAN 90 \texttt{10.3.90.0/24}};
+        \node[br] (b400) at (5.0,-0.1) {\textbf{Site 400 -- Nha Trang}, AS 65030, \texttt{10.4.0.0/16}\\vEdge1 \texttt{10.200.40.1} (mpls)\\vEdge2 \texttt{10.200.40.2} (biz-internet)\\Brand-FW: \texttt{10.4.1.0/30}, \texttt{10.4.1.4/30}\\VLAN 50 \texttt{10.4.50.0/24}, VLAN 60 \texttt{10.4.60.0/24}};
+        \node[br] (b500) at (5.0,-2.75) {\textbf{Site 500 -- cơ sở mở rộng}, AS 65040, \texttt{10.5.0.0/16}\\vEdge1 \texttt{10.200.50.1} (mpls)\\vEdge2 \texttt{10.200.50.2} (biz-internet)\\Brand-FW-S500: \texttt{10.5.1.0/30}, \texttt{10.5.1.4/30}\\VLAN 10 \texttt{10.5.10.0/24}};
+        \foreach \b in {b200,b300,b400,b500} {
+            \draw[mpls] ([yshift=2mm]\b.west) -- ([yshift=2mm]\b.west -| 0.7,0);
+            \draw[inet] ([yshift=-2mm]\b.west) -- ([yshift=-2mm]\b.west -| -0.1,0);
+        }
 
-        \begin{pgfonlayer}{background}
-            \draw[internetLink] (internet) -- (s100.north west);
-            \draw[internetLink] (internet.south) -- (s200.north);
-            \draw[internetLink] (internet.south east) -- (s300.north west);
-            \draw[internetLink] (internet.east) -- (s400.north west);
-            \draw[mplsLink] (mpls) -- (s100.north east);
-            \draw[mplsLink] (mpls.west) -- (s200.north east);
-            \draw[mplsLink] (mpls.south west) -- (s300.north east);
-            \draw[mplsLink] (mpls.south) -- (s400.north);
-            \draw[internetLink] (internet) -- (s900.south west);
-            \draw[mplsLink] (mpls) -- (s900.south east);
-
-            \draw[controlLink] (s900.south) -- (s100.north);
-            \draw[controlLink] (s900.south west) to[bend right=18] (s200.north);
-            \draw[controlLink] (s900.south) to[bend right=10] (s300.north);
-            \draw[controlLink] (s900.south east) to[bend left=18] (s400.north);
-        \end{pgfonlayer}
-
-        \node[branch, text width=7.6cm, minimum height=0.9cm] (s500) at (0,-3.25) {\textbf{Site 500 -- cơ sở mở rộng, AS 65040}: vEdge1 qua MPLS, vEdge2 qua Internet, Brand-FW-S500};
-
-        \node[align=center, font=\scriptsize] at (0,-4.35) {\textcolor{blue!75!black}{\rule{1.0cm}{0.8pt}} Internet \quad
-        \textcolor{orange!85!black}{\rule{1.0cm}{0.8pt}} MPLS \quad
-        \textcolor{purple!75!black}{- - - $\triangleright$} Kết nối điều khiển DTLS/OMP};
+        \node[align=center, font=\scriptsize, text width=14.5cm] at (0.4,-4.85) {\textcolor{blue!75!black}{\rule[0.5ex]{0.9cm}{1.1pt}} Internet (eBGP, \texttt{203.0.113.x/30}) \qquad
+            \textcolor{orange!85!black}{\rule[0.5ex]{0.9cm}{1.1pt}} MPLS (eBGP, \texttt{100.64.x.x/30})\\
+            Overlay IPsec full-mesh giữa các TLOC, OMP tới vSmart, BFD trong mỗi đường hầm. Gateway mọi VLAN là \texttt{.1}; VLAN 99 quản trị có ở mọi site};
     \end{tikzpicture}%
     }
-    \caption{Topology logic của hệ thống ở mức site}
-    \label{fig:topology_mang_campus}
+    \caption{Sơ đồ logic của hệ thống: subnet, gateway và miền định tuyến}
+    \label{fig:so_do_logic}
 \end{figure}
 
-Hình~\ref{fig:kien_truc_tong_the_campus} là topology vật lý đầy đủ của hệ thống trên EVE-NG, gồm 74 node và 107 phân đoạn mạng. Nhãn trên hình chỉ dùng để định hướng; các thông số địa chỉ chuẩn của từng thiết bị được trình bày trong các bảng quy hoạch ở Mục~\ref{sec:quy_hoach_ip}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{image/topo-vatly.jpg}
-    \caption{Topology vật lý của hệ thống trên EVE-NG}
-    \label{fig:kien_truc_tong_the_campus}
-\end{figure}
-
-\subsection{Thiết kế topology chi tiết}
+\subsection{Thiết kế chi tiết từng site}
 
 \subsubsection{Campus chính (Site 100)}
 
-Campus chính được thiết kế ba tầng, kèm biên tường lửa HA, vùng DMZ và vùng Server Farm như Hình~\ref{fig:topology_site100}.
+Hình~\ref{fig:topology_site100} là sơ đồ đấu nối chi tiết Campus chính.
 
 \begin{figure}[H]
     \centering
-    \resizebox{\textwidth}{!}{%
+    \resizebox{0.92\textwidth}{!}{%
     \begin{tikzpicture}[
         font=\small, >=stealth,
         dev/.style={draw, rounded corners=2pt, align=center, minimum height=1.1cm, text width=3.3cm, line width=0.8pt, font=\linespread{1}\small},
@@ -173,22 +145,18 @@ Campus chính được thiết kế ba tầng, kèm biên tường lửa HA, vù
         act/.style={line width=1.1pt},
         stb/.style={dashed, line width=0.7pt, black!60}
     ]
-        % WAN
         \node[wan] (inet) at (-3.5,17.0) {\textbf{Internet}\\AS 64511};
         \node[wan] (mpls) at (3.5,17.0) {\textbf{MPLS}\\AS 64512};
         \node[edge] (ve1) at (-6.8,15.2) {\textbf{vEdge1-S100}\\System-IP 10.200.100.1};
         \node[edge] (ve2) at (6.8,15.2) {\textbf{vEdge2-S100}\\System-IP 10.200.100.2};
         \node[l2] (swe1) at (-6.8,13.2) {\textbf{SW-WAN-Edge1}\\VLAN 103: 10.1.3.0/29};
         \node[l2] (swe2) at (6.8,13.2) {\textbf{SW-WAN-Edge2}\\VLAN 104: 10.1.3.8/29};
-        % Firewall HA; DMZ nam giua hai tuong lua
         \node[fw] (fwa) at (-6.8,9.8) {\textbf{FW-ASAv-Active}\\Primary (.1 / .9)};
         \node[fw] (fws) at (6.8,9.8) {\textbf{FW-ASAv-Standby}\\Secondary (.4 / .12)};
         \node[srv, text width=5.2cm] (dmz) at (0,9.45) {\textbf{DMZ} 10.1.1.0/28 (SwitchDMZ)\\Web-Server .10, Mail-Server .11};
-        % Core; Server Farm nam giua hai Core
         \node[core] (c1) at (-6.8,6.0) {\textbf{Core-SW1}\\VRRP Master, gốc cây};
         \node[core] (c2) at (6.8,6.0) {\textbf{Core-SW2}\\VRRP Backup};
         \node[srv, text width=5.2cm] (farm) at (0,5.3) {\textbf{SwitchServerFarm}\\VLAN 90: DHCP/DNS .10, Syslog .11\\VLAN 99: Controller .10,\\PC-Mgmt .50, FW Mgmt .33/.34};
-        % SDN
         \node[ovs] (d1) at (-3,1.6) {\textbf{Dist-SW1} (OVS)};
         \node[ovs] (d2) at (3,1.6) {\textbf{Dist-SW2} (OVS)};
         \node[ovs] (a1) at (-7.8,-1.2) {\textbf{Access-SW1}\\VLAN 10 -- CNTT};
@@ -202,20 +170,16 @@ Campus chính được thiết kế ba tầng, kèm biên tường lửa HA, vù
         \draw[act] (ve2) -- node[lbl]{OSPF} (swe2);
         \draw[act] (swe1) -- (fwa); \draw[stb] (swe1) -- (fws);
         \draw[act] (swe2) -- (fwa); \draw[stb] (swe2) -- (fws);
-        % Failover phia tren khoi DMZ
         \draw[act, orange!70!black] ([yshift=3.5mm]fwa.east) -- node[lbl, above=1pt]{failover Gi0/5} ([yshift=3.5mm]fws.west);
         \draw[act] (fwa.east |- dmz.west) -- node[lbl]{Gi0/4} (dmz.west);
         \draw[stb] (dmz.east) -- node[lbl]{Gi0/4} (fws.west |- dmz.east);
-        % Tuong lua - Core
         \draw[act] (fwa) -- node[lbl]{VLAN 101} (c1);
         \draw[act] (fwa) -- node[lbl, pos=0.62]{VLAN 102} (c2);
         \draw[stb] (fws) -- node[lbl, pos=0.62]{VLAN 102} (c1);
         \draw[stb] (fws) -- node[lbl]{VLAN 101} (c2);
-        % Po10 phia tren khoi Server Farm
         \draw[act, blue!65!black] ([yshift=3.5mm]c1.east) -- node[lbl, above=1pt]{Po10 (LACP): VLAN 10--40, 100--102} ([yshift=3.5mm]c2.west);
         \draw[act] (c1.east |- 0,5.75) -- node[lbl]{VLAN 90, 99} (farm.west |- 0,5.75);
         \draw[act] (farm.east |- 0,5.75) -- node[lbl]{VLAN 90} (c2.west |- 0,5.75);
-        % Core - Distribution
         \draw[act] (c1) -- node[lbl, pos=0.5]{D1-C1} (d1);
         \draw[act] (c1) -- node[lbl, pos=0.5]{D2-C1} (d2);
         \draw[stb] (c2) -- node[lbl, pos=0.5]{D1-C2} (d1);
@@ -226,447 +190,173 @@ Campus chính được thiết kế ba tầng, kèm biên tường lửa HA, vù
         \node[align=center, font=\small] at (0,-2.7) {\rule[0.5ex]{1cm}{1.1pt}~đường đang dùng (cây dữ liệu của Controller, tường lửa Active) \qquad - - -~đường dự phòng / cạnh bị Controller chặn};
     \end{tikzpicture}%
     }
-    \caption{Topology chi tiết Campus chính (Site 100)}
+    \caption{Sơ đồ đấu nối chi tiết Campus chính (Site 100)}
     \label{fig:topology_site100}
 \end{figure}
 
-\textbf{Tầng Access} gồm bốn switch OVS, mỗi switch phục vụ một khoa/khối và có hai cổng người dùng. Mỗi Access Switch nối kép (\textit{dual-home}) lên cả hai Distribution: cổng \texttt{ens4} lên Dist-SW1 và \texttt{ens5} lên Dist-SW2; cổng \texttt{ens6}, \texttt{ens7} là cổng access. Máy trạm kiểm thử gồm bảy máy VPCS và một máy Ubuntu có giao diện đồ họa (PC-HanhChinh-S100) dùng để kiểm thử dịch vụ Web/Mail bằng trình duyệt và ứng dụng thư.
+\textbf{Tầng Access và Distribution} là sáu OVS. Mỗi Access phục vụ một khoa/khối, nối kép lên cả hai Distribution (\texttt{ens4} lên Dist-SW1, \texttt{ens5} lên Dist-SW2) và có hai cổng người dùng. Mỗi Distribution có bốn cổng xuống Access, một liên kết chéo inter-dist và hai đường lên hai Core. Topology lớp 2 vì vậy có nhiều vòng; OVS không chạy STP, Controller tính cây chuyển tiếp và chặn cạnh dư (Mục~\ref{sec:thiet_ke_sdn}).
 
-\textbf{Tầng Distribution} gồm Dist-SW1 và Dist-SW2, cũng là OVS. Mỗi Distribution có bốn cổng xuống Access (\texttt{ens4}--\texttt{ens7}), một liên kết chéo giữa hai Distribution (\texttt{ens8}) và hai đường lên hai Core (\texttt{ens9}, \texttt{ens10}). Do đó topology lớp 2 có nhiều vòng: Access nối kép, liên kết chéo Distribution và bốn đường Distribution--Core. OVS không chạy STP; việc chống vòng lặp do SDN Controller đảm nhận bằng cách tính một cây chuyển tiếp và chặn các cạnh dư (Mục~\ref{sec:thiet_ke_sdn}).
+\textbf{Tầng Core} là hai switch lớp 3 Cisco IOL nối nhau bằng Port-Channel~10 (LACP) mang VLAN 100 (\texttt{10.1.0.4/30}), VLAN 101--102 (transit tới tường lửa) và VLAN 10--40. VLAN người dùng được đưa vào Po10 để hai Core luôn nghe VRRP của nhau, tránh split-brain khi Controller chặn đường lên Core-SW2. Core đảm nhận SVI và VRRP cho VLAN 10/20/30/40/90, DHCP Relay, OSPF và Rapid-PVST+. VLAN 99 chỉ có SVI trên Core-SW1 và được mang trên ba trunk của Core-SW1 (Server Farm, Dist-SW1, Dist-SW2); Core-SW2 không tham gia VLAN 99 vì hai router cùng một VLAN được OVS flood tĩnh sẽ định tuyến ngược gói của nhau và gây bão.
 
-\textbf{Tầng Core} gồm Core-SW1 và Core-SW2 là switch lớp 3 Cisco IOL. Hai Core nối với nhau bằng Port-Channel~10 (hai cổng E0/0, E0/1, LACP \texttt{active}) ở chế độ trunk 802.1Q, mang ba nhóm VLAN: VLAN 100 (\texttt{10.1.0.4/30}, liên kết định tuyến giữa hai Core qua SVI), VLAN 101 và 102 (hai mạng transit tới tường lửa) và VLAN 10--40. VLAN người dùng được đưa vào Po10 để hai Core luôn nghe được bản tin VRRP của nhau: khi cây dữ liệu của SDN Controller chặn đường lên Core-SW2, nếu Po10 không mang VLAN 10--40 thì Core-SW2 không nghe thấy Master và tự lên Master (split-brain). Core đảm nhận SVI và VRRP cho VLAN 10/20/30/40/90, DHCP Relay, OSPF với tường lửa và Rapid-PVST+ cho phần lớp 2 Cisco. Kết nối Core--Distribution là trunk 802.1Q theo mô hình chéo: mỗi Core nối cả hai Distribution.
+\textbf{Biên mạng} là cặp ASAv Active/Standby: mọi cổng dữ liệu của hai đơn vị nằm trên phân đoạn chung, đơn vị Active giữ địa chỉ chính, đơn vị Standby giữ địa chỉ dự phòng, nên khi chuyển vai trò thiết bị xung quanh không phải đổi cấu hình. Phía trong là hai transit \texttt{/29} (inside VLAN 101, inside2 VLAN 102 với OSPF cost 20); phía ngoài, SW-WAN-Edge1/2 nối outside/outside2 của cả hai tường lửa với vEdge1 và vEdge2. Tường lửa chạy OSPF Area~0 với hai Core và hai vEdge (hello 2 giây, dead 8 giây phía vEdge). Cổng Management0/0 ở chế độ \texttt{management-only} trong VLAN 99 chỉ phục vụ ASDM; sáu giao diện dữ liệu được giám sát với chu kỳ 1 giây, giữ 5 giây. \textbf{DMZ} (\texttt{10.1.1.0/28}) có Web (Ubuntu, Nginx) và Mail (hMailServer). \textbf{Server Farm} có DHCP/DNS (Windows Server 2012 R2) và Syslog (Kiwi Syslog); cùng SwitchServerFarm còn có Controller, cổng quản trị tường lửa và PC-Management trong VLAN 99.
 
-\textbf{Biên mạng} là cặp Cisco ASAv chạy Active/Standby theo mô hình doanh nghiệp: mọi cổng dữ liệu của hai đơn vị cùng nằm trên một phân đoạn chung, đơn vị Active giữ địa chỉ chính, đơn vị Standby giữ địa chỉ dự phòng, nên khi chuyển vai trò, các thiết bị xung quanh không phải đổi cấu hình. Phía trong có hai mạng transit \texttt{/29}: \texttt{inside} (VLAN 101, \texttt{10.1.2.0/29}) và \texttt{inside2} (VLAN 102, \texttt{10.1.2.8/29}, OSPF cost 20 làm đường dự phòng), cả hai Core đều có SVI trong hai VLAN này. Phía ngoài, hai switch lớp 2 SW-WAN-Edge1 (VLAN 103, \texttt{10.1.3.0/29}) và SW-WAN-Edge2 (VLAN 104, \texttt{10.1.3.8/29}) nối cổng \texttt{outside}/\texttt{outside2} của cả hai tường lửa với vEdge1 và vEdge2. Tường lửa trao đổi OSPF Area~0 với cả hai Core và hai vEdge (hello 2 giây, dead 8 giây phía vEdge), nên tuyến về Campus chính trên vEdge được học động thay vì tuyến tĩnh. Ngoài ra mỗi tường lửa có một cổng DMZ, một cổng Management0/0 trong VLAN 99 và cổng Gi0/5 dành cho liên kết failover; sáu giao diện dữ liệu đều được giám sát (\textit{monitored}) với chu kỳ thăm dò 1 giây, thời gian giữ 5 giây. Management0/0 đặt ở chế độ \texttt{management-only} (quản trị ngoài băng): cổng này chỉ phục vụ ASDM/HTTPS tới chính tường lửa, không tham gia chuyển tiếp dữ liệu; lưu lượng dữ liệu đến VLAN 99 đi qua inside đến Core-SW1.
+\subsubsection{Các cơ sở phụ, Site 500, Site 900 và nhà cung cấp}
 
-\textbf{Vùng DMZ} (\texttt{10.1.1.0/28}) gồm Web Server (Ubuntu, Nginx) và Mail Server (hMailServer), nối qua SwitchDMZ (VLAN nội bộ 101) đến cổng DMZ của hai tường lửa.
+Ba cơ sở phụ dùng chung khuôn \textit{Firewall-as-Core}: Brand-FW (ASAv) là thiết bị lớp 3 duy nhất, một cổng trunk chia sub-interface cho hai VLAN nghiệp vụ và VLAN 99, hai cổng outside nối vEdge1 (\texttt{10.x.1.0/30}, transport MPLS) và vEdge2 (\texttt{10.x.1.4/30}, transport Internet); hai vEdge nối nhau qua \texttt{10.x.2.0/30}. SwitchBrand (IOL lớp 2) nối Brand-FW với hai switch khối, mỗi switch khối có hai máy trạm. Khuôn này được chọn vì chi nhánh chỉ có hai VLAN nên một thiết bị lớp 3 là đủ, tường lửa vừa làm gateway vừa cấp DHCP và kiểm soát lưu lượng từ overlay, còn vEdge đã đảm nhận vai trò router WAN. Site 500 được thêm để kiểm chứng khả năng mở rộng theo đúng khuôn này.
 
-\textbf{Vùng Server Farm} nối Core qua SwitchServerFarm, gồm DHCP/DNS Server (Windows Server 2012 R2) và Syslog Server (Kiwi Syslog). Trên cùng switch này, các cổng VLAN 99 kết nối SDN Controller, hai cổng Management0/0 của tường lửa và máy PC-Management.
-
-Bảng~\ref{tab:cong_core_site100} tổng hợp ánh xạ cổng của hai Core.
-
-\begin{table}[H]
-    \centering
-    \small
-    \caption{Ánh xạ cổng của Core-SW1 và Core-SW2}
-    \label{tab:cong_core_site100}
-    \begin{tabularx}{\textwidth}{|c|Z|Z|}
-        \hline
-        \textbf{Cổng} & \textbf{Core-SW1} & \textbf{Core-SW2} \\
-        \hline
-        E0/0, E0/1 & Po10 trunk đến Core-SW2 (VLAN 10--40, 100--102); SVI Vlan100 \texttt{10.1.0.5/30} & Po10 trunk đến Core-SW1; SVI Vlan100 \texttt{10.1.0.6/30} \\
-        \hline
-        E0/2 & Trunk đến Dist-SW1 (VLAN 10--40, 99) & Trunk đến Dist-SW2 (VLAN 10--40) \\
-        \hline
-        E1/2 & Trunk đến Dist-SW2 (VLAN 10--40, 99) & Trunk đến Dist-SW1 (VLAN 10--40, 99) \\
-        \hline
-        E1/0 & Access VLAN 101 đến FW-Active Gi0/0 & Access VLAN 101 đến FW-Standby Gi0/0 \\
-        \hline
-        E0/3 & Access VLAN 102 đến FW-Standby Gi0/1 & Access VLAN 102 đến FW-Active Gi0/1 \\
-        \hline
-        SVI 101 / 102 & \texttt{10.1.2.2/29} / \texttt{10.1.2.11/29} & \texttt{10.1.2.3/29} / \texttt{10.1.2.10/29} \\
-        \hline
-        E1/1 & Trunk đến SwitchServerFarm (VLAN 90, 99) & Trunk đến SwitchServerFarm (VLAN 90) \\
-        \hline
-    \end{tabularx}
-\end{table}
-
-VLAN 90 không đi xuống Distribution vì máy chủ nối trực tiếp vào SwitchServerFarm. VLAN 99 chỉ có SVI trên Core-SW1 và được mang trên ba trunk của Core-SW1: E1/1 (Server Farm, nơi đặt Controller), E1/2 (Dist-SW2) và E0/2 (Dist-SW1). Như vậy mỗi Distribution có một đường quản trị riêng lên Core-SW1. Core-SW2 không tham gia VLAN 99 (SVI tắt, về \texttt{10.1.99.0/24} bằng tuyến tĩnh qua Po10; trunk E1/2 tuy cho phép VLAN 99 nhưng Dist-SW1 hủy mọi khung VLAN 99 trên cổng này) vì hai router cùng nằm trong một VLAN được OVS flood tĩnh sẽ định tuyến ngược gói của nhau và gây bão. Việc chống vòng lặp cho VLAN 99 bên trong khối OVS do Controller đảm nhận (Mục~\ref{sec:thiet_ke_sdn}).
-
-\subsubsection{Các cơ sở phụ (Site 200, 300, 400)}
-
-Ba cơ sở phụ dùng chung một khuôn thiết kế \textit{Firewall-as-Core}, minh họa trong Hình~\ref{fig:topology_chi_nhanh}. Brand-FW (ASAv) là thiết bị lớp 3 duy nhất của chi nhánh: một cổng trunk chia sub-interface cho hai VLAN nghiệp vụ và VLAN 99, hai cổng outside nối hai vEdge. SwitchBrand là switch tập trung lớp 2 nối Brand-FW và hai switch khối; mỗi switch khối có hai cổng access cho hai máy trạm.
-
-\begin{figure}[H]
-    \centering
-    \resizebox{0.9\textwidth}{!}{%
-    \begin{tikzpicture}[
-        font=\footnotesize, >=stealth,
-        dev/.style={draw, rounded corners=2pt, align=center, minimum height=1.05cm, text width=3.3cm, line width=0.8pt},
-        wan/.style={dev, fill=gray!10, draw=black!70},
-        edge/.style={dev, fill=red!5, draw=red!60!black},
-        fw/.style={dev, fill=orange!8, draw=orange!70!black, text width=3.8cm},
-        sw/.style={dev, fill=blue!5, draw=blue!55!black},
-        pc/.style={dev, fill=white, draw=black!50, text width=2.9cm, minimum height=0.8cm},
-        lbl/.style={font=\scriptsize, fill=white, inner sep=1pt},
-        ln/.style={line width=1.1pt}
-    ]
-        \node[wan] (mpls) at (-3.4,7.6) {\textbf{MPLS} (AS 64512)\\color \texttt{mpls}};
-        \node[wan] (inet) at (3.4,7.6) {\textbf{Internet} (AS 64511)\\color \texttt{biz-internet}};
-        \node[edge] (v1) at (-3.4,5.4) {\textbf{vEdge1}\\TLOC MPLS\\System-IP 10.200.x.1};
-        \node[edge] (v2) at (3.4,5.4) {\textbf{vEdge2}\\TLOC Internet\\System-IP 10.200.x.2};
-        \node[fw] (fw) at (0,3.0) {\textbf{Brand-FW} (ASAv)\\gateway .1 các VLAN, DHCP\\SLA/track chọn vEdge};
-        \node[sw] (sb) at (0,0.8) {\textbf{SwitchBrand} (IOL L2)\\quản trị 10.x.99.2};
-        \node[sw] (s1) at (-3.6,-1.4) {\textbf{Switch khối 1}\\quản trị 10.x.99.11};
-        \node[sw] (s2) at (3.6,-1.4) {\textbf{Switch khối 2}\\quản trị 10.x.99.12};
-        \node[pc] (p1) at (-3.6,-3.3) {2 máy trạm VLAN A};
-        \node[pc] (p2) at (3.6,-3.3) {2 máy trạm VLAN B};
-        \draw[ln] (mpls) -- node[lbl]{eBGP, 100.64.x.x/30} (v1);
-        \draw[ln] (inet) -- node[lbl]{eBGP, 203.0.113.x/30} (v2);
-        \draw[ln] (v1) -- node[lbl]{10.x.2.0/30} (v2);
-        \draw[ln] (v1) -- node[lbl]{outside1 10.x.1.0/30} (fw);
-        \draw[ln] (v2) -- node[lbl]{outside2 10.x.1.4/30} (fw);
-        \draw[ln] (fw) -- node[lbl]{trunk VLAN A, B, 99} (sb);
-        \draw[ln] (sb) -- node[lbl]{trunk A, 99} (s1);
-        \draw[ln] (sb) -- node[lbl]{trunk B, 99} (s2);
-        \draw[ln] (s1) -- node[lbl]{access A} (p1);
-        \draw[ln] (s2) -- node[lbl]{access B} (p2);
-    \end{tikzpicture}%
-    }
-    \caption{Khuôn thiết kế chi nhánh Firewall-as-Core}
-    \label{fig:topology_chi_nhanh}
-\end{figure}
-
-Lý do chọn Firewall-as-Core cho chi nhánh: (1) chi nhánh chỉ có hai VLAN nên một thiết bị lớp 3 là đủ; (2) tường lửa vừa làm gateway vừa cấp DHCP và kiểm soát lưu lượng từ overlay vào LAN, giảm số hop và số điểm lỗi; (3) vEdge đã đảm nhận vai trò router WAN nên không cần thêm router chi nhánh. Phương án thay SwitchBrand bằng router đã được cân nhắc và loại bỏ vì làm tăng số thiết bị mà không thêm chức năng. Hai kiến trúc khác nhau (ba tầng tại cơ sở chính, Firewall-as-Core tại chi nhánh) cùng tồn tại một cách có chủ đích, phản ánh thực tế quy mô khác nhau giữa các cơ sở.
-
-Ánh xạ thiết bị và máy trạm của từng chi nhánh được trình bày trong Bảng~\ref{tab:thiet_bi_chi_nhanh}.
-
-\begin{table}[H]
-    \centering
-    \scriptsize
-    \caption{Thiết bị và máy trạm tại các cơ sở phụ}
-    \label{tab:thiet_bi_chi_nhanh}
-    \begin{tabularx}{\textwidth}{|c|P{2.9cm}|P{3.2cm}|Z|}
-        \hline
-        \textbf{Site} & \textbf{Brand-FW} & \textbf{Switch} & \textbf{Máy trạm theo VLAN} \\
-        \hline
-        200 & Gi0/0 trunk; Gi0/1 outside1 \texttt{10.2.1.1}; Gi0/2 outside2 \texttt{10.2.1.5} & SwitchBrand \texttt{10.2.99.2}; SW55 \texttt{.11} (VLAN 60); SW56 \texttt{.12} (VLAN 70) & VLAN 60: PC-NongNghiep-S200-1, -2; VLAN 70: PC-YTe-S200-2 (VPCS), PC-YTe-S200 (Ubuntu) \\
-        \hline
-        300 & Gi0/2 trunk; Gi0/1 outside1 \texttt{10.3.1.1}; Gi0/0 outside2 \texttt{10.3.1.5} & SwitchBrand \texttt{10.3.99.2}; SW58 \texttt{.11} (VLAN 80); SW59 \texttt{.12} (VLAN 90) & VLAN 80: PC-DuLich-S300-1, -2; VLAN 90: PC-TaiChinh-S300-2 (VPCS), PC-TaiChinh-S300 (Ubuntu) \\
-        \hline
-        400 & Gi0/2 trunk; Gi0/0 outside1 \texttt{10.4.1.1}; Gi0/1 outside2 \texttt{10.4.1.5} & SwitchBrand \texttt{10.4.99.2}; SW60 \texttt{.11} (VLAN 50); SW57 \texttt{.12} (VLAN 60) & VLAN 50: PC-ThuySan-S400-1, -2; VLAN 60: PC-LuHanh-S400-2 (VPCS), PC-LuHanh-S400 (Ubuntu) \\
-        \hline
-    \end{tabularx}
-\end{table}
-
-\subsubsection{Trung tâm điều khiển SD-WAN (Site 900) và nhà cung cấp}
-
-Site 900 đặt ba controller trên mạng LAN \texttt{10.9.0.0/24} do switch LAN Site 900 làm gateway (\texttt{10.9.0.2}). Đây là switch lớp 3 IOL có hai SVI nối ra hai nhà cung cấp: \texttt{203.0.113.249/30} về router Internet và \texttt{100.64.255.249/30} về router MPLS. Kết nối giữa Site 900 và nhà cung cấp dùng tuyến tĩnh (CE--PE static): switch này có tuyến mặc định về Internet, tuyến \texttt{100.64.0.0/16} về MPLS; ngược lại hai router nhà cung cấp có tuyến \texttt{10.9.0.0/16} trỏ về switch LAN Site 900. Nhờ vậy vBond, vSmart, vManage tới được từ cả hai transport. Controller được ra Internet \textit{có kiểm soát} (chỉ DNS, NTP, HTTPS, ping chẩn đoán và SMTP gửi cảnh báo của vManage) như trong thực tế doanh nghiệp, nơi controller cần đồng bộ thời gian, phân giải tên và gửi thông báo.
-
-Mạng \texttt{10.9.1.0/24} do switch quản trị Site 900 làm gateway là mặt quản trị thứ hai của controller. Switch này có một cổng định tuyến nhận địa chỉ DHCP từ mạng thật của phòng lab, cho phép truy cập giao diện web của vManage từ máy tính bên ngoài EVE-NG.
-
-Hai router nhà cung cấp là Cisco vIOS. Router Internet (AS 64511) có tám liên kết khách hàng: hai vEdge Site 100, ba vEdge2 chi nhánh, vEdge2 Site 500, switch LAN Site 900 và router MPLS; cổng Gi0/0 nối ra mạng thật của phòng lab, nhận địa chỉ bằng DHCP và thực hiện PAT cho khách hàng, đóng vai trò cổng Internet của nhà cung cấp. Router MPLS (AS 64512) có bảy liên kết: hai vEdge Site 100, ba vEdge1 chi nhánh, vEdge1 Site 500 và switch LAN Site 900. Hai nhà cung cấp trao đổi tuyến qua eBGP trên \texttt{100.64.254.0/30}; router Internet gửi tuyến mặc định cho router MPLS, nhờ đó transport MPLS cũng có đường ra Internet (mô hình MPLS có Internet tập trung tại nhà cung cấp).
-
-\subsubsection{Cơ sở mở rộng (Site 500)}
-
-Site 500 được thêm để kiểm chứng khả năng mở rộng, theo khuôn hai vEdge và Brand-FW như các chi nhánh: vEdge1-S500 (System-IP \texttt{10.200.50.1}) nối MPLS qua \texttt{100.64.50.1/30}, vEdge2-S500 (\texttt{10.200.50.2}) nối Internet qua \texttt{203.0.113.21/30}, eBGP AS 65040. Phía LAN, Brand-FW-S500 nối hai vEdge qua \texttt{10.5.1.0/30} và \texttt{10.5.1.4/30}, là gateway \texttt{10.5.10.1} và cấp DHCP cho hai máy trạm qua SW-S500.
+Site 900 đặt ba controller trên \texttt{10.9.0.0/24}, gateway là switch lớp 3 IOL nối ra hai nhà cung cấp bằng tuyến tĩnh CE--PE, nhờ đó controller tới được từ cả hai transport. Mạng \texttt{10.9.1.0/24} là mặt quản trị thứ hai, nối ra mạng thật của phòng lab để truy cập vManage. System-IP của controller (vManage \texttt{10.9.3.10}, vSmart \texttt{10.9.0.13}, vBond \texttt{10.9.3.12}) đặt khác địa chỉ giao diện vì Viptela không cho trùng với giao diện trong VPN 0. Hai router nhà cung cấp là Cisco vIOS: router Internet có tám liên kết khách hàng, nối ra mạng thật bằng DHCP và PAT cho khách hàng; router MPLS có bảy liên kết. Hai nhà cung cấp trao đổi tuyến qua eBGP; router Internet gửi tuyến mặc định cho router MPLS nên transport MPLS cũng có đường ra Internet.
 
 \subsubsection{Luồng lưu lượng}
 
-\textbf{Nội bộ Campus chính:} máy trạm VLAN 10 gửi gói đến Access-SW1, lên Dist-SW1 theo cây dữ liệu của Controller, rồi đến Core-SW1 (Master VRRP). Core định tuyến sang SVI của VLAN đích hoặc sang Server Farm. Lưu lượng DHCP được Core relay đến \texttt{10.1.90.10}.
-
-\textbf{Campus chính ra WAN:} Core học tuyến mặc định từ OSPF do tường lửa Active quảng bá; tường lửa chuyển gói đến vEdge1 (tuyến chính) hoặc vEdge2 (tuyến dự phòng). Lưu lượng đến site khác được vEdge đóng gói IPsec và gửi qua TLOC được chọn theo chính sách AAR; lưu lượng Internet được vEdge NAT và đưa thẳng ra cổng \texttt{biz-internet}.
-
-\textbf{Chi nhánh về Campus chính:} máy trạm chi nhánh gửi gói đến Brand-FW (gateway \texttt{.1}); với đích nội bộ \texttt{10.0.0.0/8}, Brand-FW chọn vEdge1 (MPLS) khi đường chính còn tốt, ngược lại chọn vEdge2 (Internet); vEdge chuyển gói qua overlay đến vEdge1-S100 (ưu tiên theo control policy), qua tường lửa biên và Core đến đích. Lưu lượng đến DMZ được tường lửa biên kiểm tra theo ACL \texttt{SDWAN\_IN}.
-
-\textbf{Chi nhánh ra Internet:} Brand-FW chuyển lưu lượng Internet đến vEdge2, vEdge2 NAT trên cổng \texttt{biz-internet} và đưa thẳng ra nhà cung cấp mà không đi vòng qua Campus chính (DIA); khi đường Internet của chi nhánh hỏng, Brand-FW chuyển sang vEdge1 để ra Internet qua transport MPLS.
-
-\textbf{Chi nhánh với chi nhánh:} overlay full-mesh cho phép hai chi nhánh dựng đường hầm trực tiếp mà không đi vòng qua Campus chính, lưu lượng vẫn chịu chính sách dữ liệu tập trung.
+\textbf{Nội bộ Campus chính:} máy trạm $\rightarrow$ Access $\rightarrow$ Dist-SW1 (theo cây của Controller) $\rightarrow$ Core-SW1 (Master VRRP) $\rightarrow$ SVI đích hoặc Server Farm; DHCP được Core relay tới \texttt{10.1.90.10}. \textbf{Campus chính ra WAN:} Core học tuyến mặc định qua OSPF từ tường lửa; tường lửa chuyển tới vEdge1 (chính) hoặc vEdge2 (dự phòng); lưu lượng liên site được đóng gói IPsec theo AAR, lưu lượng Internet được vEdge NAT ra cổng \texttt{biz-internet}. \textbf{Chi nhánh về Campus chính:} Brand-FW chọn vEdge1 (MPLS) khi đường chính còn tốt, ngược lại vEdge2; gói qua overlay tới vEdge1-S100, tường lửa biên kiểm tra theo ACL \texttt{SDWAN\_IN}. \textbf{Chi nhánh ra Internet:} qua vEdge2 tại chỗ (DIA), dự phòng qua vEdge1 và transport MPLS. \textbf{Chi nhánh với chi nhánh:} đường hầm trực tiếp theo overlay full-mesh, vẫn chịu chính sách dữ liệu tập trung.
 
 \subsection{Quy hoạch VLAN và địa chỉ IP}\label{sec:quy_hoach_ip}
 
-Toàn bộ mạng nội bộ dùng dải \texttt{10.0.0.0/8} với các quy tắc:
-\begin{itemize}
-    \item Octet thứ hai là mã site: 1 -- Campus chính, 2 -- Cần Thơ, 3 -- Đà Nẵng, 4 -- Nha Trang, 5 -- Site 500, 9 -- Site 900.
-    \item Octet thứ ba của mạng người dùng trùng VLAN ID; mỗi VLAN là một subnet \texttt{/24}: \texttt{10.<site>.<VLAN>.0/24}.
-    \item Địa chỉ \texttt{.1} là gateway (VRRP VIP tại Campus chính, sub-interface Brand-FW tại chi nhánh); \texttt{.10/.11} dành cho máy chủ; dải \texttt{.100--.199} dành cho DHCP.
-    \item Liên kết điểm--điểm dùng \texttt{/30}; phía gần WAN (tường lửa, vEdge) giữ địa chỉ nhỏ hơn.
-    \item WAN Internet dùng \texttt{203.0.113.0/24}; WAN MPLS dùng \texttt{100.64.x.x/30}.
-\end{itemize}
-
-\subsubsection{VLAN tại Campus chính}
-
-Bảng~\ref{tab:vlan_campus_chinh} là phân hoạch VLAN tại Campus chính. Mô hình triển khai ba VLAN khoa và một VLAN hành chính; VLAN cho phòng học, phòng máy dùng cùng khuôn \texttt{10.1.<VLAN>.0/24} và được thêm bằng một lệnh API của Controller, như VLAN 50 trong phép đo thời gian thêm VLAN ở Chương~\ref{sec:trien_khai_danh_gia}.
+Toàn bộ mạng nội bộ dùng \texttt{10.0.0.0/8}: octet thứ hai là mã site (1 Campus chính, 2 Cần Thơ, 3 Đà Nẵng, 4 Nha Trang, 5 Site 500, 9 Site 900); mạng người dùng là \texttt{10.<site>.<VLAN>.0/24}; \texttt{.1} là gateway (VIP VRRP hoặc sub-interface Brand-FW), \texttt{.10/.11} cho máy chủ, \texttt{.100--.199} cho DHCP; liên kết điểm--điểm dùng \texttt{/30}, phía gần WAN giữ địa chỉ nhỏ hơn. Bảng~\ref{tab:vlan_campus_chinh} là phân hoạch tại Campus chính.
 
 \begin{table}[H]
     \centering
     \small
-    \caption{Phân hoạch VLAN tại Campus chính}
+    \caption{Phân hoạch VLAN và mạng hạ tầng tại Campus chính}
     \label{tab:vlan_campus_chinh}
-    \begin{tabularx}{\textwidth}{|c|P{3.4cm}|P{2.4cm}|P{3.1cm}|Z|}
+    \begin{tabularx}{\textwidth}{|c|L{2.9cm}|L{2.3cm}|L{2.0cm}|Y|}
         \hline
-        \textbf{VLAN} & \textbf{Khu vực} & \textbf{Subnet} & \textbf{Gateway} & \textbf{Phạm vi địa chỉ} \\
+        \textbf{VLAN} & \textbf{Khu vực} & \textbf{Subnet} & \textbf{Gateway} & \textbf{Địa chỉ đáng chú ý} \\
         \hline
-        10 & Khoa Công nghệ thông tin & 10.1.10.0/24 & 10.1.10.1 (VRRP) & DHCP .100--.199 \\
+        10 & CNTT & 10.1.10.0/24 & .1 (VRRP) & DHCP .100--.199 \\
         \hline
-        20 & Khoa Toán -- Thống kê & 10.1.20.0/24 & 10.1.20.1 (VRRP) & DHCP .100--.199 \\
+        20 & Toán -- Thống kê & 10.1.20.0/24 & .1 (VRRP) & DHCP .100--.199 \\
         \hline
-        30 & Khoa Luật & 10.1.30.0/24 & 10.1.30.1 (VRRP) & DHCP .100--.199 \\
+        30 & Luật & 10.1.30.0/24 & .1 (VRRP) & DHCP .100--.199 \\
         \hline
-        40 & Khối Hành chính & 10.1.40.0/24 & 10.1.40.1 (VRRP) & DHCP .100--.199 \\
+        40 & Hành chính & 10.1.40.0/24 & .1 (VRRP) & DHCP .100--.199 \\
         \hline
-        90 & Server Farm & 10.1.90.0/24 & 10.1.90.1 (VRRP) & DHCP/DNS .10, Syslog .11 \\
+        90 & Server Farm & 10.1.90.0/24 & .1 (VRRP) & DHCP/DNS .10, Syslog .11 \\
         \hline
-        99 & Quản trị, kênh điều khiển SDN & 10.1.99.0/24 & 10.1.99.1 (Core-SW1) & Thiết bị hạ tầng \\
+        99 & Quản trị, kênh SDN & 10.1.99.0/24 & .1 (Core-SW1) & Controller .10; Dist-SW .11, .12; Access-SW .21--.24; ASDM .33, .34; PC-Management .50 \\
         \hline
-        100 & Transit giữa hai Core & 10.1.0.4/30 & -- & Core .5 / .6 \\
+        100 & Transit hai Core & 10.1.0.4/30 & -- & Core-SW1 .5, Core-SW2 .6 \\
         \hline
-        101 & Transit inside & 10.1.2.0/29 & 10.1.2.1 (FW) & FW .1/.4; Core .2/.3 \\
+        101 & Transit inside & 10.1.2.0/29 & .1 (FW) & FW standby .4; Core-SW1 .2, Core-SW2 .3 \\
         \hline
-        102 & Transit inside2 & 10.1.2.8/29 & 10.1.2.9 (FW) & FW .9/.12; Core .11/.10 \\
+        102 & Transit inside2 & 10.1.2.8/29 & .9 (FW) & FW standby .12; Core-SW1 .11, Core-SW2 .10 \\
         \hline
-        103 & Transit outside & 10.1.3.0/29 & -- & FW .1/.4; vEdge1 .2 \\
+        103 & Transit outside & 10.1.3.0/29 & -- & FW .1 (standby .4); vEdge1 .2 \\
         \hline
-        104 & Transit outside2 & 10.1.3.8/29 & -- & FW .9/.12; vEdge2 .10 \\
+        104 & Transit outside2 & 10.1.3.8/29 & -- & FW .9 (standby .12); vEdge2 .10 \\
         \hline
-        DMZ & DMZ (cục bộ SwitchDMZ) & 10.1.1.0/28 & 10.1.1.1 (FW) & Web .10, Mail .11 \\
+        DMZ & DMZ (SwitchDMZ) & 10.1.1.0/28 & .1 (FW) & Web .10, Mail .11 \\
         \hline
-    \end{tabularx}
-\end{table}
-
-Tại VLAN 10--40 và 90, Core-SW1 dùng địa chỉ SVI \texttt{.2} với VRRP priority 150 (Master), Core-SW2 dùng \texttt{.3} với priority 100 (Backup); cả hai chia sẻ VIP \texttt{.1}. VLAN 99 không chạy VRRP: chỉ Core-SW1 có SVI \texttt{10.1.99.1}; địa chỉ \texttt{10.1.99.2} của Core-SW2 được giữ chỗ nhưng SVI tắt. Core không đưa mạng VLAN 99 vào OSPF; tường lửa biên có một tuyến tĩnh \texttt{10.1.99.0/24} qua Core-SW1 và phân phối lại riêng tuyến này vào OSPF để vEdge quảng bá cho chi nhánh, phục vụ các phiên quản trị liên site. Bảng~\ref{tab:vlan99} liệt kê địa chỉ trong VLAN 99.
-
-\begin{table}[H]
-    \centering
-    \small
-    \caption{Địa chỉ trong VLAN 99 (10.1.99.0/24)}
-    \label{tab:vlan99}
-    \begin{tabularx}{\textwidth}{|P{3.0cm}|Z|}
+        -- & Liên kết failover & 10.1.255.0/29 & -- & Primary .1, Secondary .2 \\
         \hline
-        \textbf{Địa chỉ} & \textbf{Thiết bị} \\
-        \hline
-        .1 & SVI Core-SW1 (.2 dành cho Core-SW2, SVI tắt) \\
-        \hline
-        .10 & SDN Controller (Ryu OpenFlow TCP 6653; REST API và Campus SDN Console TCP 8080) \\
-        \hline
-        .11 / .12 & Dist-SW1 / Dist-SW2 \\
-        \hline
-        .21 -- .24 & Access-SW1 -- Access-SW4 \\
-        \hline
-        .31 / .32 & SwitchDMZ / SwitchServerFarm \\
-        \hline
-        .33 / .34 & Management0/0 của FW-ASAv-Active / Standby (ASDM) \\
-        \hline
-        .50 & PC-Management \\
+        -- & Beacon SLA (VPN 1) & 10.1.255.1/32 & -- & loopback0 của hai vEdge Site 100 \\
         \hline
     \end{tabularx}
 \end{table}
 
-\subsubsection{Mạng hạ tầng tại Campus chính}
-
-Các mạng transit, DMZ và failover được liệt kê trong Bảng~\ref{tab:mang_bo_tro_campus}.
-
-\begin{table}[H]
-    \centering
-    \small
-    \caption{Các mạng hạ tầng tại Campus chính}
-    \label{tab:mang_bo_tro_campus}
-    \begin{tabularx}{\textwidth}{|P{2.6cm}|P{3.0cm}|Z|}
-        \hline
-        \textbf{Subnet} & \textbf{Liên kết} & \textbf{Địa chỉ hai đầu} \\
-        \hline
-        10.1.0.4/30 & Core-SW1 -- Core-SW2 (VLAN 100 qua Po10) & Vlan100: .5 / .6 \\
-        \hline
-        10.1.2.0/29 & Transit \texttt{inside} (VLAN 101) & FW Gi0/0 .1 (standby .4); Core-SW1 .2; Core-SW2 .3 \\
-        \hline
-        10.1.2.8/29 & Transit \texttt{inside2} (VLAN 102, OSPF cost 20) & FW Gi0/1 .9 (standby .12); Core-SW2 .10; Core-SW1 .11 \\
-        \hline
-        10.1.3.0/29 & Transit \texttt{outside} (VLAN 103, SW-WAN-Edge1) & FW Gi0/2 .1 (standby .4); vEdge1-S100 ge0/0 .2 \\
-        \hline
-        10.1.3.8/29 & Transit \texttt{outside2} (VLAN 104, SW-WAN-Edge2) & FW Gi0/3 .9 (standby .12); vEdge2-S100 ge0/1 .10 \\
-        \hline
-        10.1.1.0/28 & DMZ & FW Gi0/4 .1 (standby .14); Web .10; Mail .11 \\
-        \hline
-        10.1.255.0/29 & Liên kết failover Gi0/5 & Primary .1, Secondary .2 \\
-        \hline
-        10.1.255.1/32 & Beacon SLA (VPN 1) & \texttt{loopback0} trên vEdge1-S100 và vEdge2-S100; đích thăm dò của Brand-FW \\
-        \hline
-    \end{tabularx}
-\end{table}
-
-OSPF Router-ID của Core-SW1 và Core-SW2 lần lượt là \texttt{10.1.0.1} và \texttt{10.1.0.2}. Hai giá trị này chỉ là định danh OSPF, không gắn với giao diện Loopback.
-
-\subsubsection{VLAN tại các cơ sở phụ}
-
-Bảng~\ref{tab:vlan_chi_nhanh} là phân hoạch VLAN tại ba cơ sở phụ.
+Tại VLAN 10--40 và 90, Core-SW1 dùng SVI \texttt{.2}, VRRP priority 150 (Master); Core-SW2 dùng \texttt{.3}, priority 100 (Backup). VLAN 99 không chạy VRRP và không đưa vào OSPF; tường lửa có tuyến tĩnh \texttt{10.1.99.0/24} qua Core-SW1 và phân phối lại riêng tuyến này vào OSPF để chi nhánh tới được vùng quản trị. Bảng~\ref{tab:vlan_chi_nhanh} là phân hoạch tại các cơ sở phụ: gateway \texttt{.1} là sub-interface của Brand-FW, VLAN người dùng cấp DHCP dải \texttt{.100--.199}, VLAN 99 dùng địa chỉ tĩnh. VLAN ID có thể trùng giữa các site vì chỉ có ý nghĩa cục bộ, còn subnet luôn khác nhau nhờ octet mã site.
 
 \begin{table}[H]
     \centering
     \small
     \caption{Phân hoạch VLAN tại các cơ sở phụ}
     \label{tab:vlan_chi_nhanh}
-    \begin{tabularx}{\textwidth}{|c|c|P{2.5cm}|P{2.4cm}|P{2.2cm}|Z|}
+    \begin{tabularx}{\textwidth}{|c|c|Y|P{3.0cm}|P{3.6cm}|}
         \hline
-        \textbf{Site} & \textbf{VLAN} & \textbf{Khu vực} & \textbf{Subnet} & \textbf{Gateway} & \textbf{Phạm vi} \\
+        \textbf{Site} & \textbf{VLAN} & \textbf{Khu vực} & \textbf{Subnet} & \textbf{Cấp địa chỉ} \\
         \hline
-        200 & 60 & Nông nghiệp & 10.2.60.0/24 & 10.2.60.1 & DHCP .100--.199 \\
+        \multirow{3}{*}{200} & 60 & Nông nghiệp & 10.2.60.0/24 & DHCP .100--.199 \\
+        \cline{2-5}
+         & 70 & Y tế & 10.2.70.0/24 & DHCP .100--.199 \\
+        \cline{2-5}
+         & 99 & Quản trị & 10.2.99.0/24 & Tĩnh \\
         \hline
-        200 & 70 & Y tế & 10.2.70.0/24 & 10.2.70.1 & DHCP .100--.199 \\
+        \multirow{3}{*}{300} & 80 & Du lịch & 10.3.80.0/24 & DHCP .100--.199 \\
+        \cline{2-5}
+         & 90 & Tài chính & 10.3.90.0/24 & DHCP .100--.199 \\
+        \cline{2-5}
+         & 99 & Quản trị & 10.3.99.0/24 & Tĩnh \\
         \hline
-        200 & 99 & Quản trị & 10.2.99.0/24 & 10.2.99.1 & Tĩnh \\
+        \multirow{3}{*}{400} & 50 & Thủy sản & 10.4.50.0/24 & DHCP .100--.199 \\
+        \cline{2-5}
+         & 60 & Lữ hành & 10.4.60.0/24 & DHCP .100--.199 \\
+        \cline{2-5}
+         & 99 & Quản trị & 10.4.99.0/24 & Tĩnh \\
         \hline
-        300 & 80 & Du lịch & 10.3.80.0/24 & 10.3.80.1 & DHCP .100--.199 \\
-        \hline
-        300 & 90 & Tài chính & 10.3.90.0/24 & 10.3.90.1 & DHCP .100--.199 \\
-        \hline
-        300 & 99 & Quản trị & 10.3.99.0/24 & 10.3.99.1 & Tĩnh \\
-        \hline
-        400 & 50 & Thủy sản & 10.4.50.0/24 & 10.4.50.1 & DHCP .100--.199 \\
-        \hline
-        400 & 60 & Lữ hành & 10.4.60.0/24 & 10.4.60.1 & DHCP .100--.199 \\
-        \hline
-        400 & 99 & Quản trị & 10.4.99.0/24 & 10.4.99.1 & Tĩnh \\
+        500 & 10 & Người dùng & 10.5.10.0/24 & DHCP .100--.199 \\
         \hline
     \end{tabularx}
 \end{table}
 
-VLAN ID có thể trùng giữa các site (ví dụ VLAN 60 tại Site 200 và Site 400; VLAN 90 tại Site 100 và Site 300) vì VLAN chỉ có ý nghĩa cục bộ; subnet IP thì luôn khác nhau nhờ octet mã site, nên không xung đột khi quảng bá trên overlay. Tại mỗi chi nhánh, liên kết Brand-FW--vEdge1 dùng \texttt{10.x.1.0/30}, Brand-FW--vEdge2 dùng \texttt{10.x.1.4/30}, liên kết giữa hai vEdge dùng \texttt{10.x.2.0/30}.
-
-\subsubsection{Site 900}
-
-Địa chỉ của các controller và thiết bị Site 900 được trình bày trong Bảng~\ref{tab:dia_chi_site900}.
+System-IP của Edge có dạng \texttt{10.200.<site>.<n>/32}; Site 300, 400, 500 được rút gọn thành 30, 40, 50 vì octet không vượt quá 255 (Bảng~\ref{tab:system_ip_tloc}). Mỗi vEdge Site 100 có cả hai TLOC (vEdge1: \texttt{ge0/3} Internet, \texttt{ge0/2} MPLS; vEdge2 ngược lại); ở chi nhánh, vEdge1 chỉ nối MPLS và vEdge2 chỉ nối Internet.
 
 \begin{table}[H]
     \centering
     \small
-    \caption{Quy hoạch địa chỉ Site 900}
-    \label{tab:dia_chi_site900}
-    \begin{tabularx}{\textwidth}{|P{3.0cm}|P{3.3cm}|P{3.0cm}|Z|}
-        \hline
-        \textbf{Thiết bị} & \textbf{Controller LAN 10.9.0.0/24} & \textbf{Mặt quản trị 10.9.1.0/24} & \textbf{Ghi chú} \\
-        \hline
-        vManage & 10.9.0.10 & 10.9.1.10 & System-IP 10.9.3.10 \\
-        \hline
-        vSmart & 10.9.0.11 & 10.9.1.11 & System-IP 10.9.0.13 \\
-        \hline
-        vBond & 10.9.0.12 & 10.9.1.12 & System-IP 10.9.3.12; \texttt{vbond 10.9.0.12 local} \\
-        \hline
-        Switch LAN & 10.9.0.2 & -- & Gateway controller LAN; CE--PE tĩnh \\
-        \hline
-        Switch quản trị & -- & 10.9.1.1 & Cầu ra mạng thật của phòng lab \\
-        \hline
-        Máy trạm quản trị & 10.9.0.20 & -- & Truy cập vManage \\
-        \hline
-    \end{tabularx}
-\end{table}
-
-System-IP của controller được đặt khác địa chỉ giao diện vì Viptela không cho phép System-IP trùng với địa chỉ một giao diện trong VPN 0.
-
-\subsubsection{System-IP, TLOC và ASN}
-
-System-IP có dạng \texttt{10.200.<site>.<n>/32}. Site 300, 400 và 500 được rút gọn thành 30, 40, 50 vì octet IPv4 không vượt quá 255.
-
-\begin{table}[H]
-    \centering
-    \scriptsize
     \caption{Quy hoạch System-IP, TLOC và BGP của các vEdge}
     \label{tab:system_ip_tloc}
-    \begin{tabularx}{\textwidth}{|c|P{1.7cm}|P{2.2cm}|P{2.8cm}|P{2.8cm}|Z|}
+    \begin{tabularx}{\textwidth}{|c|c|P{2.6cm}|Z|Z|c|}
         \hline
-        \textbf{Site} & \textbf{Thiết bị} & \textbf{System-IP} & \textbf{TLOC biz-internet} & \textbf{TLOC mpls} & \textbf{BGP} \\
+        \textbf{Site} & \textbf{vEdge} & \textbf{System-IP} & \textbf{TLOC biz-internet} & \textbf{TLOC mpls} & \textbf{AS} \\
         \hline
-        100 & vEdge1 & 10.200.100.1 & ge0/3 203.0.113.1/30 & ge0/2 100.64.100.1/30 & AS 65000, 2 neighbor \\
+        100 & vEdge1 & 10.200.100.1 & 203.0.113.1/30 & 100.64.100.1/30 & 65000 \\
         \hline
-        100 & vEdge2 & 10.200.100.2 & ge0/2 203.0.113.5/30 & ge0/3 100.64.100.5/30 & AS 65000, 2 neighbor \\
+        100 & vEdge2 & 10.200.100.2 & 203.0.113.5/30 & 100.64.100.5/30 & 65000 \\
         \hline
-        200 & vEdge1 & 10.200.200.1 & -- & 100.64.200.1/30 & AS 65010 -- MPLS \\
+        200 & vEdge1 & 10.200.200.1 & -- & 100.64.200.1/30 & 65010 \\
         \hline
-        200 & vEdge2 & 10.200.200.2 & 203.0.113.9/30 & -- & AS 65010 -- Internet \\
+        200 & vEdge2 & 10.200.200.2 & 203.0.113.9/30 & -- & 65010 \\
         \hline
-        300 & vEdge1 & 10.200.30.1 & -- & 100.64.30.1/30 & AS 65020 -- MPLS \\
+        300 & vEdge1 & 10.200.30.1 & -- & 100.64.30.1/30 & 65020 \\
         \hline
-        300 & vEdge2 & 10.200.30.2 & 203.0.113.13/30 & -- & AS 65020 -- Internet \\
+        300 & vEdge2 & 10.200.30.2 & 203.0.113.13/30 & -- & 65020 \\
         \hline
-        400 & vEdge1 & 10.200.40.1 & -- & 100.64.40.1/30 & AS 65030 -- MPLS \\
+        400 & vEdge1 & 10.200.40.1 & -- & 100.64.40.1/30 & 65030 \\
         \hline
-        400 & vEdge2 & 10.200.40.2 & 203.0.113.17/30 & -- & AS 65030 -- Internet \\
+        400 & vEdge2 & 10.200.40.2 & 203.0.113.17/30 & -- & 65030 \\
         \hline
-        500 & vEdge1 & 10.200.50.1 & -- & 100.64.50.1/30 & AS 65040 -- MPLS \\
+        500 & vEdge1 & 10.200.50.1 & -- & 100.64.50.1/30 & 65040 \\
         \hline
-        500 & vEdge2 & 10.200.50.2 & 203.0.113.21/30 & -- & AS 65040 -- Internet \\
+        500 & vEdge2 & 10.200.50.2 & 203.0.113.21/30 & -- & 65040 \\
         \hline
     \end{tabularx}
 \end{table}
 
 \subsection{Thiết kế định tuyến}
 
-\subsubsection{Định tuyến tại Campus chính}
+\textbf{Campus chính.} OSPF Area~0 chạy giữa hai Core, tường lửa và hai vEdge (VPN 1). Tường lửa quảng bá tuyến mặc định (\texttt{default-information originate always}) và có hai tuyến mặc định tĩnh: qua vEdge1 khoảng cách 1, gắn \texttt{track} theo \texttt{sla monitor} ping \texttt{1.1.1.1} mỗi 3 giây; qua vEdge2 khoảng cách 2. Hai vEdge quảng bá tuyến OSPF vào OMP (\texttt{advertise ospf external}) và phân phối tuyến OMP vào OSPF với metric 10 (vEdge1) và 100 (vEdge2). Hai metric phải khác nhau rõ ràng để chiều đi trùng chiều về (đã được control policy ưu tiên vEdge1); nếu không, tường lửa trạng thái hủy gói vì hai chiều qua hai cổng khác nhau. VPN 1 có tuyến mặc định kiểu NAT (\texttt{ip route 0.0.0.0/0 vpn 0}) ra \texttt{biz-internet}; tuyến này không được quảng bá vào OMP.
 
-OSPF Area~0 chạy giữa Core-SW1, Core-SW2 và tường lửa Active. Mỗi Core quảng bá subnet của Port-Channel, hai liên kết đến tường lửa và các VLAN 10/20/30/40/90. Tường lửa quảng bá subnet inside, DMZ \texttt{10.1.1.0/28} và tuyến mặc định (\texttt{default-information originate always}). Trên tường lửa, hai tuyến mặc định tĩnh trỏ về hai vEdge: qua \texttt{outside} đến vEdge1 với khoảng cách 1 (tuyến chính) và qua \texttt{outside2} đến vEdge2 với khoảng cách 2 (tuyến dự phòng). Tuyến chính gắn với một đối tượng \texttt{track}: \texttt{sla monitor} gửi ICMP tới \texttt{1.1.1.1} qua vEdge1 mỗi 3 giây (một tuyến \texttt{/32} ghim gói thăm dò vào \texttt{outside}); khi mất phản hồi, tuyến chính bị gỡ và lưu lượng Internet chuyển sang vEdge2. Thêm một tuyến tĩnh \texttt{10.1.99.0/24} qua Core-SW1 để lưu lượng trả về VLAN 99 đi đúng giao diện inside (Mục~\ref{sec:bai_hoc_internet}).
+\textbf{Underlay.} Mỗi vEdge chạy eBGP trong VPN 0 với nhà cung cấp; nhà cung cấp gửi tuyến mặc định và quảng bá các subnet \texttt{/30} của khách hàng, hai nhà cung cấp trao đổi tuyến với nhau để đường hầm chéo màu hình thành. Router Internet áp prefix-list \texttt{NO\_DEFAULT\_IN} trên mọi láng giềng để không nhận lại tuyến mặc định từ khách hàng. Hai vEdge Site 100 có tuyến \texttt{10.9.0.0/24} tới controller qua \textit{cả hai} transport với cùng độ dài prefix; nếu chỉ một ngả có prefix cụ thể hơn, mọi phiên điều khiển bị kéo về ngả đó và color còn lại không lên được controller.
 
-Trên vEdge Site 100, VPN dịch vụ 1 chạy OSPF Area~0 với tường lửa trên cổng nối SW-WAN-Edge. Theo chiều Campus ra overlay, vEdge học các mạng Campus qua OSPF và quảng bá vào OMP (\texttt{advertise ospf external}). Theo chiều ngược lại, mỗi vEdge phân phối tuyến OMP của chi nhánh vào OSPF (\texttt{redistribute omp}) với metric khác nhau: vEdge1 metric 10, vEdge2 metric 100. Bình thường tường lửa gửi lưu lượng chi nhánh qua vEdge1, cùng hướng với lưu lượng chiều về đã được control policy ưu tiên vEdge1; khi vEdge1 mất, tuyến OSPF của nó hết hạn sau dead-interval và tường lửa chuyển sang tuyến của vEdge2. Hai metric phải khác nhau rõ ràng: nếu tường lửa chọn vEdge2 trong khi chiều về vẫn qua vEdge1, tường lửa trạng thái sẽ hủy gói vì hai chiều đi qua hai cổng khác nhau. VPN 1 còn có tuyến mặc định kiểu NAT (\texttt{ip route 0.0.0.0/0 vpn 0}) trỏ ra cổng \texttt{biz-internet} để người dùng ra Internet; tuyến loại này không được quảng bá vào OMP nên không lan sang site khác.
-
-\subsubsection{Định tuyến underlay}
-
-Mỗi vEdge chạy eBGP trong VPN 0 với router nhà cung cấp tương ứng (Bảng~\ref{tab:system_ip_tloc}); nhà cung cấp gửi tuyến mặc định bằng \texttt{default-originate} và quảng bá các subnet \texttt{/30} của khách hàng. Hai nhà cung cấp trao đổi tuyến với nhau qua eBGP, nhờ đó một TLOC Internet có thể tới một TLOC MPLS và các đường hầm chéo màu được hình thành. Theo thông lệ của nhà cung cấp, router Internet áp prefix-list \texttt{NO\_DEFAULT\_IN} chiều vào trên mọi láng giềng để không bao giờ nhận lại tuyến mặc định từ khách hàng; nếu thiếu bộ lọc này, tuyến mặc định do vEdge học từ MPLS và quảng bá ngược lên sẽ thắng tuyến mặc định DHCP của router và làm nhà cung cấp mất Internet.
-
-Riêng hai vEdge Site 100 có thêm tuyến tĩnh trong VPN 0: tuyến mặc định và tuyến \texttt{10.9.0.0/24} đến controller qua \textit{cả hai} transport. Tuyến \texttt{/24} được khai báo cùng độ dài trên cả hai ngả vì nếu chỉ một ngả có prefix cụ thể hơn thì theo longest-prefix match, mọi phiên điều khiển sẽ bị kéo về ngả đó và color còn lại không thể dựng kết nối DTLS đến controller.
-
-\subsubsection{Định tuyến tại chi nhánh}
-
-Brand-FW tách hai loại lưu lượng và theo dõi mỗi loại bằng một IP SLA riêng (Bảng~\ref{tab:tuyen_brandfw}).
+\textbf{Chi nhánh.} Brand-FW tách hai loại lưu lượng, mỗi loại theo dõi bằng một IP SLA (Bảng~\ref{tab:tuyen_brandfw}). Beacon \texttt{10.1.255.1} là \texttt{loopback0} trong VPN 1 của hai vEdge Site 100, quảng bá qua OMP, nên chỉ trả lời khi đường overlay về Campus chính còn thông; nhờ vậy chi nhánh phát hiện cả lỗi đường MPLS phía xa. Tuyến \texttt{/32} ghim gói thăm dò vào đúng cổng; đích thăm dò Internet chọn \texttt{9.9.9.9} thay vì \texttt{8.8.8.8} để không kéo lưu lượng DNS của người dùng theo. Trong VPN 1, mỗi vEdge chi nhánh có tuyến \texttt{10.x.0.0/16} trỏ thẳng về cổng Brand-FW nối với nó, nên khi MPLS đứt, chiều về qua vEdge2 đi vào đúng \texttt{outside2} mà Brand-FW đang dùng cho chiều đi.
 
 \begin{table}[H]
     \centering
     \small
     \caption{Tuyến và cơ chế theo dõi trên Brand-FW}
     \label{tab:tuyen_brandfw}
-    \begin{tabularx}{\textwidth}{|P{2.6cm}|P{3.4cm}|P{3.0cm}|Y|}
+    \begin{tabularx}{\textwidth}{|L{2.5cm}|Y|Y|Y|}
         \hline
         \textbf{Đích} & \textbf{Tuyến chính} & \textbf{Tuyến dự phòng} & \textbf{Theo dõi} \\
         \hline
-        Nội bộ \texttt{10.0.0.0/8} & \texttt{outside1} $\rightarrow$ vEdge1 (MPLS), \texttt{track 1} & \texttt{outside2} $\rightarrow$ vEdge2, khoảng cách 2 & SLA 10: ICMP mỗi 2 giây tới beacon \texttt{10.1.255.1} qua vEdge1 \\
+        Nội bộ \texttt{10.0.0.0/8} & outside1 $\rightarrow$ vEdge1 (MPLS), \texttt{track 1} & outside2 $\rightarrow$ vEdge2, khoảng cách 2 & SLA 10: ICMP mỗi 2 giây tới beacon \texttt{10.1.255.1} \\
         \hline
-        Internet \texttt{0.0.0.0/0} & \texttt{outside2} $\rightarrow$ vEdge2 (biz-internet, DIA), \texttt{track 2} & \texttt{outside1} $\rightarrow$ vEdge1 (DIA qua MPLS), khoảng cách 2 & SLA 20: ICMP mỗi 10 giây tới \texttt{9.9.9.9} qua vEdge2 \\
+        Internet \texttt{0.0.0.0/0} & outside2 $\rightarrow$ vEdge2 (DIA), \texttt{track 2} & outside1 $\rightarrow$ vEdge1 (DIA qua MPLS), khoảng cách 2 & SLA 20: ICMP mỗi 10 giây tới \texttt{9.9.9.9} \\
         \hline
     \end{tabularx}
 \end{table}
-
-Với lưu lượng nội bộ, \texttt{sla monitor 10} gửi một gói ICMP mỗi 2 giây, qua vEdge1, đến địa chỉ \textit{beacon} \texttt{10.1.255.1}. Địa chỉ này là giao diện \texttt{loopback0} (\texttt{/32}) trong VPN 1 của cả hai vEdge Site 100 và được quảng bá qua OMP, nên chỉ trả lời được khi đường overlay từ chi nhánh về Campus chính còn thông; một tuyến tĩnh \texttt{/32} ghim gói thăm dò luôn đi qua \texttt{outside1}. Khi mất phản hồi, \texttt{track 1} chuyển Down, tuyến chính bị gỡ và lưu lượng chuyển sang vEdge2; khi MPLS phục hồi, tuyến chính tự trở lại. Cơ chế này giúp chi nhánh phát hiện lỗi của cả đường MPLS phía xa chứ không chỉ lỗi cổng vật lý.
-
-Với lưu lượng Internet, \texttt{sla monitor 20} thăm dò \texttt{9.9.9.9} qua vEdge2; một tuyến \texttt{/32} ghim gói thăm dò luôn đi \texttt{outside2}, nếu không khi tuyến chính bị gỡ, gói thăm dò cũng chuyển sang vEdge1 và \texttt{track 2} sẽ không bao giờ Up lại. Đích thăm dò được chọn khác các máy chủ DNS mà người dùng hay dùng (\texttt{8.8.8.8}) vì tuyến \texttt{/32} ghim sẽ kéo cả lưu lượng người dùng tới đích đó vào vEdge2 ngay cả khi vEdge2 đã hỏng.
-
-Trong VPN 1 của chi nhánh, mỗi vEdge có tuyến tĩnh \texttt{10.x.0.0/16} trỏ thẳng về cổng Brand-FW nối với nó: vEdge1 về \texttt{outside1} (\texttt{10.x.1.1}), vEdge2 về \texttt{outside2} (\texttt{10.x.1.5}). Cả hai quảng bá tuyến vào OMP. Khi MPLS đứt, các site khác phát hiện đường hầm tới vEdge1 chết qua BFD và gửi chiều về qua vEdge2 vào \texttt{outside2}, trùng với cổng mà Brand-FW đang dùng cho chiều đi. Nhờ lưu lượng hai chiều cùng đi qua một cổng, tường lửa trạng thái không hủy gói phản hồi. Trước khi áp thiết kế này, vEdge2 chuyển lưu lượng LAN qua vEdge1 và Brand-FW chưa theo dõi đường MPLS, khiến chi nhánh mất kết nối hoàn toàn khi MPLS đứt.
-
-Ngoài ra, VPN 1 của cả hai vEdge chi nhánh có tuyến mặc định kiểu NAT ra transport của chính nó (vEdge2 qua \texttt{biz-internet}, vEdge1 qua MPLS). Tuyến mặc định \textit{không} được khai báo tĩnh trỏ sang vEdge còn lại, vì tuyến tĩnh trong VPN 1 bị \texttt{advertise static} quảng bá vào OMP và lan tuyến mặc định sang mọi site.
 
 \subsection{Thiết kế quản lý tập trung bằng SDN Controller}\label{sec:thiet_ke_sdn}
 
-\subsubsection{Phạm vi và kênh điều khiển}
+\textbf{Phạm vi và kênh điều khiển.} SDN Controller là máy ảo Ubuntu tại \texttt{10.1.99.10}, điều khiển sáu OVS; Core-SW1/2 không phải datapath OpenFlow (Hybrid SDN). Kênh OpenFlow đi trên chính VLAN 99 của hạ tầng (in-band). Mỗi OVS có bridge \texttt{br0} chứa cổng vật lý do Controller điều khiển và bridge \texttt{br-mgmt} mang địa chỉ quản trị, nối với \texttt{br0} qua cặp cổng patch VLAN 99. Thông số chung của \texttt{br0}: OpenFlow~1.3; DPID cố định theo mã node; \texttt{fail\_mode=secure} để không tự học MAC khi mất Controller; tắt STP vì STP của OVS chặn frame trước pipeline OpenFlow; \texttt{disable-in-band} để tắt quy tắc in-band ẩn; trunk mang VLAN 10, 20, 30, 40, 90, 99.
 
-SDN Controller là máy ảo Ubuntu tại \texttt{10.1.99.10}, nối cổng access VLAN 99 của SwitchServerFarm. Controller điều khiển sáu OVS: Dist-SW1, Dist-SW2 và Access-SW1--4. Core-SW1/2 không phải datapath OpenFlow; chúng tiếp tục đảm nhiệm SVI, VRRP, OSPF và STP. Đây là mô hình Hybrid SDN: lớp 2 do Controller lập trình, lớp 3 giữ cơ chế truyền thống.
-
-Kênh OpenFlow đi trên chính VLAN 99 của hạ tầng (không kéo dây điều khiển riêng đến từng switch), phản ánh cách triển khai trong doanh nghiệp. Mỗi OVS có hai bridge: \texttt{br0} chứa các cổng vật lý và được Controller điều khiển; \texttt{br-mgmt} mang địa chỉ quản trị, nối với \texttt{br0} qua cặp cổng patch gắn VLAN 99. Thông số của mỗi \texttt{br0} được trình bày trong Bảng~\ref{tab:dpid_sdn}.
-
-\begin{table}[H]
-    \centering
-    \small
-    \caption{Datapath OVS do SDN Controller quản lý}
-    \label{tab:dpid_sdn}
-    \begin{tabularx}{\textwidth}{|P{2.4cm}|P{3.4cm}|P{2.4cm}|Y|}
-        \hline
-        \textbf{Thiết bị} & \textbf{DPID} & \textbf{IP quản trị} & \textbf{Cổng} \\
-        \hline
-        Dist-SW1 & 0000000000000005 & 10.1.99.11 & ens4--7 xuống Access; ens8 inter-dist; ens9 Core-SW1; ens10 Core-SW2 \\
-        \hline
-        Dist-SW2 & 0000000000000008 & 10.1.99.12 & ens4--7 xuống Access; ens8 inter-dist; ens9 Core-SW2; ens10 Core-SW1 \\
-        \hline
-        Access-SW1 & 0000000000000044 & 10.1.99.21 & ens4/ens5 lên Dist-SW1/2; ens6, ens7 VLAN 10 \\
-        \hline
-        Access-SW2 & 0000000000000042 & 10.1.99.22 & ens6, ens7 VLAN 20 \\
-        \hline
-        Access-SW3 & 0000000000000046 & 10.1.99.23 & ens6, ens7 VLAN 30 \\
-        \hline
-        Access-SW4 & 0000000000000045 & 10.1.99.24 & ens6, ens7 VLAN 40 \\
-        \hline
-    \end{tabularx}
-\end{table}
-
-Thông số chung của các bridge \texttt{br0}: phiên bản OpenFlow~1.3 (\texttt{protocols});  DPID cố định (bằng mã định danh node dạng thập lục phân); chế độ \texttt{fail\_mode} là \texttt{secure} để switch không tự học MAC khi mất Controller, tránh vòng lặp; tắt STP (\texttt{stp\_enable}) vì STP của OVS chặn frame trước khi vào pipeline OpenFlow; tùy chọn \texttt{disable-in-band} để tắt các quy tắc in-band ẩn (Mục~\ref{sec:bai_hoc_sdn}); cổng trunk mang VLAN 10, 20, 30, 40, 90, 99; địa chỉ Controller \texttt{tcp:10.1.99.10:6653}.
-
-\subsubsection{Ứng dụng điều khiển chuyển mạch}
-
-Ứng dụng Ryu \texttt{campus\_switch\_13.py} do nhóm xây dựng đảm nhận toàn bộ logic lớp 2. Ứng dụng tổ chức flow thành hai bảng (Bảng~\ref{tab:pipeline_sdn}): bảng 0 cho các chức năng kiểm soát (thăm dò liên kết, kênh quản trị, chặn cạnh ngoài cây, chính sách), bảng 1 cho chuyển tiếp lớp 2.
-
+\textbf{Ứng dụng điều khiển} \texttt{campus\_switch\_13.py} do nhóm xây dựng tổ chức flow thành hai bảng (Bảng~\ref{tab:pipeline_sdn}) và thực hiện:
 \begin{enumerate}
-    \item \textbf{Học MAC theo VLAN:} bảng MAC được khóa theo cặp (VLAN, MAC). Flood chỉ diễn ra trong đúng VLAN, trên các cổng thuộc cây chuyển tiếp. Với gói unicast đã biết đích, ứng dụng cài flow khớp \texttt{in\_port}, \texttt{vlan\_vid} và MAC (thời gian chờ 300 giây).
-    \item \textbf{Xử lý thẻ VLAN:} table-miss gửi gói lên Controller; ứng dụng tự đọc thẻ 802.1Q trong dữ liệu Packet-In, suy ra VLAN của cổng access từ cấu hình và tạo hành động cho từng cổng ra: cổng trunk gắn thẻ (\texttt{PUSH\_VLAN} + \texttt{SET\_FIELD vlan\_vid}) nếu gói chưa có thẻ, cổng access bóc thẻ (\texttt{POP\_VLAN}).
-    \item \textbf{Cây chuyển tiếp tính tập trung:} Controller giữ đồ thị 13 liên kết của khối SDN (Bảng~\ref{tab:cay_du_lieu}) và tính cây bằng thuật toán Dijkstra từ gốc Core-SW1 (Core-SW2 làm gốc dự phòng). Các cạnh ngoài cây bị cài flow DROP theo cổng vào cho VLAN dữ liệu. Khi một liên kết hoặc thiết bị thay đổi trạng thái, cây được tính lại và chỉ những switch bị ảnh hưởng nhận flow mới.
-    \item \textbf{Thăm dò liên kết chủ động:} Controller gửi khung thăm dò (EtherType \texttt{0x88B5}) giữa các OVS mỗi 0,5 giây và ARP tới SVI của Core (Core không chạy OpenFlow) mỗi 1 giây; liên kết được coi là chết khi mất thăm dò quá 2 giây (OVS--OVS) hoặc 3,5 giây (OVS--Core). Nhờ vậy Controller phát hiện cả các lỗi ``đứt ngầm'' mà cổng vật lý vẫn báo up.
-    \item \textbf{Thông báo lại vị trí máy trạm:} sau mỗi lần cây đổi, Controller phát gói RARP thay cho các máy trạm theo đường mới để Core-SW1/2 (switch truyền thống) học lại vị trí MAC ngay; thiếu bước này, dữ liệu bị gián đoạn thêm khoảng 11--12 giây.
-    \item \textbf{Kênh quản trị VLAN 99} được cài tĩnh và độc lập với cây dữ liệu (mục kế tiếp).
-    \item \textbf{VLAN động:} thêm/xóa VLAN và gán cổng access bằng một lệnh API; Controller cài flow trên các OVS liên quan và sinh sẵn đoạn cấu hình IOS (SVI, VRRP, OSPF, trunk) cho Core-SW1/2.
-    \item \textbf{Chính sách tập trung:} luật cho phép/chặn theo VLAN, dải địa chỉ, giao thức và cổng được áp lên cả bốn Access bằng một lệnh API, có bộ đếm gói cho từng luật.
-    \item \textbf{Northbound API:} các endpoint REST của ứng dụng và \texttt{ryu.app.ofctl\_rest} tại TCP 8080 phục vụ giao diện Campus SDN Console và các công cụ kiểm thử tự động.
+    \item \textbf{Học MAC theo VLAN:} bảng MAC khóa theo (VLAN, MAC), flood chỉ trong đúng VLAN trên các cổng thuộc cây; unicast đã biết được cài flow khớp \texttt{in\_port}, \texttt{vlan\_vid}, MAC (timeout 300 giây). Controller tự đọc thẻ 802.1Q trong Packet-In và gắn/bóc thẻ theo từng cổng ra.
+    \item \textbf{Cây chuyển tiếp tập trung:} đồ thị 13 liên kết của khối SDN (bốn Access lên hai Distribution, inter-dist, bốn đường Distribution--Core), tính bằng Dijkstra từ gốc Core-SW1 (Core-SW2 dự phòng). Ở trạng thái bình thường, cây gồm D1-C1, D2-C1 và bốn Access treo dưới Dist-SW1; các cạnh còn lại bị cài flow DROP cho VLAN dữ liệu. Khi trạng thái thay đổi, cây được tính lại và chỉ switch bị ảnh hưởng nhận flow mới.
+    \item \textbf{Thăm dò liên kết chủ động:} khung thăm dò (EtherType \texttt{0x88B5}) giữa các OVS mỗi 0,5 giây và ARP tới SVI của Core mỗi 1 giây; liên kết bị coi là chết khi mất thăm dò quá 2 giây (OVS--OVS) hoặc 3,5 giây (OVS--Core), nhờ đó phát hiện cả lỗi ``đứt ngầm''. Sau mỗi lần cây đổi, Controller phát RARP thay máy trạm để Core học lại vị trí MAC ngay.
+    \item \textbf{VLAN động và chính sách:} thêm/xóa VLAN, gán cổng access bằng một lệnh API, kèm sinh sẵn đoạn cấu hình IOS cho hai Core; luật cho phép/chặn theo VLAN, dải địa chỉ, giao thức, cổng được áp lên bốn Access, có bộ đếm gói.
+    \item \textbf{Northbound API:} REST của ứng dụng và \texttt{ofctl\_rest} tại TCP 8080 phục vụ Campus SDN Console và công cụ kiểm thử tự động.
 \end{enumerate}
 
 \begin{table}[H]
@@ -674,227 +364,115 @@ Thông số chung của các bridge \texttt{br0}: phiên bản OpenFlow~1.3 (\te
     \small
     \caption{Tổ chức bảng flow trên các OVS}
     \label{tab:pipeline_sdn}
-    \begin{tabularx}{\textwidth}{|c|P{2.6cm}|Y|}
+    \begin{tabularx}{\textwidth}{|c|P{3.4cm}|Y|}
         \hline
         \textbf{Bảng} & \textbf{Ưu tiên} & \textbf{Nội dung} \\
         \hline
         0 & 65500 / 65000 & Mô phỏng cắt liên kết; khung thăm dò và ARP thăm dò gửi lên Controller \\
         \hline
-        0 & 60500 / 60000 & Chống phản xạ khung quản trị; kênh VLAN 99 tĩnh có hướng (Distribution) \\
-        \hline
-        0 & 45000 & Flow cố định của kênh quản trị trên Access (do dịch vụ khởi động cài) \\
+        0 & 60500 / 60000 / 45000 & Chống phản xạ khung quản trị; kênh VLAN 99 tĩnh có hướng (Distribution); flow quản trị cố định trên Access \\
         \hline
         0 & 40000 & Chặn cạnh ngoài cây cho VLAN dữ liệu \\
         \hline
-        0 & 20001--20999 & Chính sách: chặn $\rightarrow$ DROP, cho phép $\rightarrow$ sang bảng 1 (trên bốn Access) \\
+        0 & 20001--20999 & Chính sách: chặn $\rightarrow$ DROP, cho phép $\rightarrow$ bảng 1 \\
         \hline
-        0 & 0 & Chuyển sang bảng 1 \\
+        0 / 1 & 0 & Bảng 0: sang bảng 1; bảng 1: table-miss gửi lên Controller \\
         \hline
         1 & 1 & Unicast đã học \\
         \hline
-        1 & 0 & Table-miss $\rightarrow$ Controller \\
-        \hline
     \end{tabularx}
 \end{table}
 
-\begin{table}[H]
-    \centering
-    \small
-    \caption{Đồ thị liên kết và cây dữ liệu ở trạng thái bình thường}
-    \label{tab:cay_du_lieu}
-    \begin{tabularx}{\textwidth}{|P{4.6cm}|c|Y|}
-        \hline
-        \textbf{Liên kết} & \textbf{Trọng số} & \textbf{Vai trò trong cây} \\
-        \hline
-        D1-C1 (Dist-SW1 ens9 -- Core-SW1 E0/2) & 1 & Thuộc cây \\
-        \hline
-        D2-C1 (Dist-SW2 ens10 -- Core-SW1 E1/2) & 2 & Thuộc cây \\
-        \hline
-        A1..A4-D1 (Access ens4 -- Dist-SW1) & 1 & Thuộc cây: bốn Access treo dưới Dist-SW1 \\
-        \hline
-        A1..A4-D2 (Access ens5 -- Dist-SW2) & 2 & Dự phòng, bị chặn dữ liệu \\
-        \hline
-        D1-D2 (inter-dist, ens8) & 2 & Dự phòng, bị chặn dữ liệu \\
-        \hline
-        D1-C2, D2-C2 (lên Core-SW2) & 1 / 2 & Chỉ dùng khi Core-SW1 không còn liên kết nào \\
-        \hline
-    \end{tabularx}
-\end{table}
+\textbf{Kênh quản trị VLAN 99 không phụ thuộc STP.} Kênh OpenFlow đi qua chính các switch nó điều khiển, nên phải không vòng và còn đường khi mất bất kỳ một liên kết hoặc một Distribution. Trên Distribution, Controller cài quy tắc tĩnh có hướng thay vì flood: khung vào từ cổng Core không bao giờ ra cổng Core khác (Core-SW1 không nhận lại BPDU của chính nó); khung đi lên được đưa tới cổng Core của Distribution đó và qua inter-dist sang Distribution kia; khung đi xuống được đưa tới các Access; hai hướng trên inter-dist được phân biệt bằng mã VLAN nội bộ khác nhau; khung có MAC nguồn là MAC quản trị của OVS bị loại trên cổng Core để chống phản xạ. Nhờ vậy mỗi Access có bốn đường và mỗi Distribution có hai đường tới Controller cùng lúc.
 
-\subsubsection{Kênh quản trị VLAN 99 không phụ thuộc STP}
+\textbf{Khởi động và tự phục hồi.} Với \texttt{fail\_mode=secure}, switch cần flow để chuyển lưu lượng quản trị trước khi tới được Controller. Mỗi OVS có dịch vụ khởi động tạo lại bridge, gán DPID, địa chỉ, tắt in-band, đặt Controller và cài flow bootstrap VLAN 99 có \textit{cookie} riêng; sau khi kết nối, Ryu ghi đè (không xóa trước) bằng quy tắc quản trị đầy đủ. Khi tự phục hồi, Controller phân biệt mất kênh điều khiển với liên kết chết (nhiều switch cùng im lặng hơn 1 giây là sự cố kênh điều khiển), ``đóng băng'' Access mất kết nối làm lá trên liên kết cha cũ, và có ân hạn khi chính tiến trình Controller bị khựng.
 
-Kênh OpenFlow đi trong VLAN 99 qua chính các switch mà nó điều khiển, nên kênh quản trị phải không có vòng lặp và phải còn đường khi bất kỳ một liên kết hoặc một Distribution hỏng. Trên hai Distribution, Controller cài các quy tắc tĩnh có hướng thay vì flood:
-
-\begin{itemize}
-    \item \textbf{Không vòng qua Core:} khung vào từ cổng Core của một Distribution không bao giờ được đưa ra cổng Core nào. Do đó Core-SW1 không bao giờ nhận lại BPDU của chính nó qua khối OVS; cả hai cổng E0/2 và E1/2 đều ở trạng thái designated/forwarding và STP chỉ còn là lưới an toàn.
-    \item \textbf{Đi lên:} khung từ bridge quản trị của chính switch hoặc từ cổng Access được đưa lên cổng Core của Distribution đó và qua liên kết inter-dist sang Distribution kia (Distribution kia chỉ đưa lên cổng Core của nó). Mỗi Access gửi lên cả hai uplink, nên mỗi Access có tới bốn đường và mỗi Distribution có hai đường tới Controller cùng lúc, không cần chuyển mạch khi có sự cố.
-    \item \textbf{Đi xuống:} khung từ Core được đưa xuống các Access, vào bridge quản trị và qua inter-dist theo hướng ``đi xuống''. Hai hướng trên inter-dist được phân biệt bằng mã VLAN nội bộ khác nhau để Distribution nhận biết hướng của khung mà không tạo vòng.
-    \item \textbf{Chống phản xạ:} Core-SW1 flood khung của một OVS ra cổng Core còn lại, khiến khung quay về chính OVS đó; Controller cài flow (priority 60500) trên cổng Core để loại các khung có MAC nguồn là MAC quản trị của sáu OVS.
-\end{itemize}
-
-Access Switch là nút lá: khung VLAN 99 chỉ được chuyển giữa cổng quản trị và hai đường lên. Thiết kế được kiểm chứng bằng bộ kiểm thử đơn vị mô phỏng khung qua Distribution, Access và Core (không vòng, không phản xạ, mọi OVS vẫn tới Core khi mất bất kỳ một liên kết hoặc một Distribution).
-
-\subsubsection{Khởi động và phục hồi}
-
-Với \texttt{fail\_mode=secure}, switch cần flow để chuyển lưu lượng quản trị trước khi kết nối được Controller, nhưng Controller lại chỉ tới được qua chính các switch. Để giải quyết vòng phụ thuộc này, mỗi OVS có một dịch vụ khởi động (systemd, chạy một lần mỗi khi boot và có thể chạy lặp lại an toàn) thực hiện: tạo lại bridge nếu thiếu, gán DPID, địa chỉ quản trị, tắt in-band, đặt Controller và cài một số flow khởi động (bootstrap) cho VLAN 99 có \textit{cookie} riêng. Sau khi switch kết nối, ứng dụng Ryu thay flow bootstrap bằng các quy tắc quản trị ở trên; flow quản trị luôn được ghi đè chứ không xóa trước rồi cài lại, để switch không mất kênh điều khiển nếu kết nối đứt giữa chừng. Controller cũng có dịch vụ systemd khởi động Ryu cùng các ứng dụng và được ưu tiên CPU.
-
-\subsubsection{Tự phục hồi khi mất liên kết hoặc thiết bị}
-
-Khi thăm dò phát hiện một liên kết chết, Controller tính lại cây và cài flow mới, chờ \textit{barrier reply} của mọi switch bị ảnh hưởng để đo thời gian hội tụ. Ba nguyên tắc giúp quá trình này an toàn:
-\begin{itemize}
-    \item \textbf{Mất kênh điều khiển không đồng nghĩa liên kết chết:} khi nhiều switch cùng im lặng hơn 1 giây, Controller coi đó là sự cố kênh điều khiển chứ không kết luận liên kết hỏng.
-    \item \textbf{Access mất kết nối được ``đóng băng'':} một Access mất kết nối Controller vẫn có thể chạy bình thường nhờ flow cũ (\texttt{fail\_mode=secure}); Controller giữ nó làm lá trên liên kết cha cũ thay vì chặn cổng Distribution nối xuống nó.
-    \item \textbf{Ân hạn khi Controller bị khựng:} nếu chính tiến trình Controller bị trễ (ví dụ do máy ảo thiếu CPU), các switch không bị coi là im lặng và liên kết Core không bị báo chết giả.
-\end{itemize}
-
-\subsubsection{Giao diện giám sát tập trung}
-
-Ứng dụng \texttt{campus\_noc\_monitor.py} chạy cùng tiến trình Ryu và cung cấp giao diện web \textbf{Campus SDN Console} tại \texttt{http://10.1.99.10:8080/} cùng REST API. Giao diện gồm các trang: Tổng quan (switch và liên kết đang sống, thời gian hội tụ gần nhất, băng thông tổng), Topology (đồ thị liên kết, cây hiện hành, nút mô phỏng cắt liên kết), Khôi phục (ping liên tục từ Controller, vùng mất gói, bảng sự kiện), Lưu lượng (Mbps, pps, drop theo cổng), VLAN, Chính sách (kèm bộ đếm gói), Tải thiết bị (packet-in/s, số flow, CPU Core qua SNMP v2c chỉ đọc), Hiệu năng (ma trận RTT giữa các VLAN), Sức khỏe (trạng thái kênh điều khiển, đường quản trị đang dùng, vai trò STP VLAN 99 trên Core-SW1) và Kịch bản (chạy tự động các kịch bản cắt liên kết S1--S6 và kết luận đạt/không đạt). Số liệu được lấy định kỳ 5 giây qua PortStats, TableStats và FlowStats, có thể xuất CSV.
-
-ONOS 2.7 từng được triển khai song song trên cùng máy Controller với vai trò quan sát topology. Do ONOS chiếm hơn một vCPU và làm tiến trình Ryu bị khựng định kỳ (Mục~\ref{sec:bai_hoc_sdn}), ONOS đã được tắt; chức năng quan sát topology do Campus SDN Console đảm nhận.
+\textbf{Giao diện giám sát} Campus SDN Console (\texttt{http://10.1.99.10:8080/}) chạy trong tiến trình Ryu, gồm các trang Tổng quan, Topology (cắt/khôi phục liên kết), Khôi phục, Lưu lượng, VLAN, Chính sách, Tải thiết bị, Hiệu năng, Sức khỏe và Kịch bản (chạy tự động các kịch bản S1--S6); số liệu lấy mỗi 5 giây qua PortStats, TableStats, FlowStats. ONOS từng chạy song song để quan sát topology nhưng đã tắt vì chiếm CPU làm Ryu bị khựng.
 
 \subsection{Thiết kế kết nối các cơ sở bằng SD-WAN}
 
-\subsubsection{Mặt phẳng điều khiển và xác thực}
+\textbf{Mặt phẳng điều khiển và dữ liệu.} Ba controller dùng \texttt{organization-name site-900}, mọi Edge trỏ về vBond \texttt{10.9.0.12}. Root CA riêng của hệ thống ký chứng thư cho từng Edge; cặp chassis/serial được đăng ký trên cả vManage, vSmart và vBond. Mỗi vEdge có VPN 0 (transport, BGP), VPN 1 \texttt{LAN} (dịch vụ) và VPN 512 (quản trị); giao diện tunnel chỉ cho phép các dịch vụ cần thiết. Site 100 có bốn TLOC, mỗi chi nhánh hai TLOC khác màu; overlay full-mesh tạo 16 phiên BFD cho mỗi vEdge Site 100 và 10 phiên cho mỗi vEdge chi nhánh. Chu kỳ tổng hợp app-route đặt 120 giây thay vì 10 phút để AAR phản ứng nhanh hơn.
 
-Ba controller dùng chung \texttt{organization-name site-900}, mọi Edge trỏ về vBond \texttt{10.9.0.12}. Chuỗi tin cậy dựa trên một Root CA riêng của hệ thống: mỗi Edge tạo CSR, được CA ký, cài Root CA và chứng thư thiết bị; cặp chassis-number/serial-number của Edge được đăng ký vào danh sách thiết bị hợp lệ của cả vManage, vSmart và vBond. Chỉ Edge có chứng thư hợp lệ và có trong danh sách của controller tương ứng mới dựng được kết nối điều khiển.
-
-\subsubsection{Mặt phẳng dữ liệu}
-
-Mỗi vEdge có ba VPN: VPN 0 cho transport (giao diện WAN khai báo tunnel-interface, đóng gói IPsec, color tương ứng; BGP với nhà cung cấp), VPN 1 tên \texttt{LAN} là VPN dịch vụ chứa mạng nội bộ, VPN 512 cho quản trị ngoài băng. Trên giao diện tunnel chỉ các dịch vụ cần thiết được cho phép (BGP, DHCP, DNS, ICMP, NETCONF, NTP, STUN, HTTPS, SSH).
-
-Site 100 có hai Edge, mỗi Edge có hai TLOC, tổng cộng bốn TLOC; mỗi chi nhánh có hai Edge, mỗi Edge một TLOC khác màu. Với mười Edge và mười hai TLOC, overlay full-mesh tạo ra các phiên BFD giữa mọi cặp TLOC khác site: mỗi Edge Site 100 có 16 phiên (hai TLOC $\times$ tám TLOC chi nhánh), mỗi Edge chi nhánh có 10 phiên (một TLOC $\times$ bốn TLOC Site 100 và sáu TLOC của ba chi nhánh còn lại). Các Edge cùng site không dựng đường hầm với nhau vì có cùng Site-ID. Chu kỳ tổng hợp số liệu app-route được đặt 120 giây (\texttt{bfd app-route poll-interval 120000}) thay vì mặc định 10 phút để chính sách AAR phản ứng nhanh hơn.
-
-\subsubsection{Chính sách tập trung trên vSmart}
-
-Các chính sách được khai báo tập trung trên vSmart và áp theo danh sách site: \texttt{ALL\_EDGES} (site 100--500) và \texttt{BRANCHES} (site 200--500). Dải site được khai báo rộng sẵn để một cơ sở mới như Site 500 tự nhận chính sách khi vào fabric.
-
-\textbf{SLA class:} \texttt{SLA\_REALTIME} (mất gói $\le$ 2\%, trễ $\le$ 150~ms, jitter $\le$ 50~ms) cho lưu lượng thời gian thực; \texttt{SLA\_BUSINESS} (mất gói $\le$ 5\%, trễ $\le$ 300~ms, jitter $\le$ 100~ms) cho dịch vụ nghiệp vụ.
-
-Mỗi SLA class có thêm tiêu chí \texttt{fallback-best-tunnel} theo độ trễ và tỷ lệ mất gói: khi không đường hầm nào thỏa SLA, Edge vẫn chọn đường hầm tốt nhất theo hai tiêu chí này thay vì chuyển sang chia tải ngẫu nhiên.
-
-\textbf{Application-Aware Routing} \texttt{AAR\_LAN} áp cho VPN 1 trên \texttt{ALL\_EDGES}, chi tiết trong Bảng~\ref{tab:aar_policy}. Chính sách không cố định color ưu tiên mà để Edge chọn giữa mọi đường hầm thỏa SLA, kèm hành động \texttt{fallback-to-best-path} khi không đường nào thỏa. Việc không ghim color giúp chính sách AAR không mâu thuẫn với lựa chọn Edge của control policy bên dưới. Mỗi sequence có bộ đếm riêng để kiểm chứng lưu lượng đã được phân loại đúng; các sequence chiều về (41, 51) bảo đảm lưu lượng phản hồi từ DMZ cũng được áp SLA.
+\textbf{Chính sách tập trung trên vSmart} áp theo hai danh sách site \texttt{ALL\_EDGES} (100--500) và \texttt{BRANCHES} (200--500), khai báo theo dải để site mới tự nhận chính sách:
+\begin{itemize}
+    \item \textbf{SLA class:} \texttt{SLA\_REALTIME} (mất gói $\le$ 2\%, trễ $\le$ 150~ms, jitter $\le$ 50~ms) và \texttt{SLA\_BUSINESS} (5\%, 300~ms, 100~ms), kèm \texttt{fallback-best-tunnel} theo trễ và mất gói.
+    \item \textbf{AAR} \texttt{AAR\_LAN} cho VPN 1 (Bảng~\ref{tab:aar_policy}): không ghim color mà để Edge chọn mọi đường hầm thỏa SLA, kèm \texttt{fallback-to-best-path}; mỗi sequence có bộ đếm riêng.
+    \item \textbf{Data policy} \texttt{DP\_BRANCH} chiều \texttt{from-service} trên \texttt{BRANCHES}: chặn Telnet vào Server Farm (\texttt{TELNET\_TO\_FARM}), chặn SSH/Telnet vào DMZ (\texttt{ADMIN\_TO\_DMZ}), đếm ICMP, mặc định accept.
+    \item \textbf{Control policy} \texttt{PREFER-VE1}: tuyến OMP do vEdge1 của mỗi site khởi tạo được đặt \textit{preference} 200, nên mọi site gửi vào site khác qua vEdge1 của site đích, khớp với tuyến chính của tường lửa và tránh lưu lượng bất đối xứng.
+\end{itemize}
 
 \begin{table}[H]
     \centering
     \small
     \caption{Chính sách Application-Aware Routing AAR\_LAN}
     \label{tab:aar_policy}
-    \begin{tabularx}{\textwidth}{|c|Z|P{3.2cm}|P{3.2cm}|}
+    \begin{tabularx}{\textwidth}{|c|Y|P{3.0cm}|L{4.2cm}|}
         \hline
         \textbf{Seq} & \textbf{Điều kiện khớp} & \textbf{SLA class} & \textbf{Bộ đếm} \\
         \hline
-        10 & ICMP (protocol 1) & SLA\_REALTIME & AAR\_ICMP \\
-        \hline
-        20 & DSCP 46 (thoại) & SLA\_REALTIME & AAR\_VOICE \\
+        10 / 20 & ICMP / DSCP 46 (thoại) & SLA\_REALTIME & AAR\_ICMP / AAR\_VOICE \\
         \hline
         30 & Đích Server Farm 10.1.90.0/24 & SLA\_BUSINESS & AAR\_FARM \\
         \hline
-        40 / 41 & Web: đích DMZ cổng 80/443 / nguồn DMZ cổng 80/443 & SLA\_BUSINESS & AAR\_WEB, AAR\_WEB\_RET \\
+        40 / 41 & Web: tới / từ DMZ cổng 80, 443 & SLA\_BUSINESS & AAR\_WEB / AAR\_WEB\_RET \\
         \hline
-        50 / 51 & Mail: đích DMZ cổng 25/143/587/993 / chiều về & SLA\_BUSINESS & AAR\_MAIL, AAR\_MAIL\_RET \\
+        50 / 51 & Mail: tới / từ DMZ cổng 25, 143, 587, 993 & SLA\_BUSINESS & AAR\_MAIL / AAR\_MAIL\_RET \\
         \hline
     \end{tabularx}
 \end{table}
 
-\textbf{Data policy} \texttt{DP\_BRANCH} áp chiều \texttt{from-service} (lưu lượng từ LAN chi nhánh vào overlay) trên \texttt{BRANCHES}: sequence 10 chặn Telnet (TCP 23) vào Server Farm và đếm \texttt{TELNET\_TO\_FARM}; sequence 15 chặn SSH/Telnet (TCP 22, 23) vào DMZ và đếm \texttt{ADMIN\_TO\_DMZ}; sequence 20 cho phép và đếm ICMP; hành động mặc định là accept. Chính sách này thể hiện khả năng áp một quy tắc bảo mật lên nhiều chi nhánh cùng lúc từ một điểm.
+\textbf{Truy cập Internet trực tiếp.} vEdge có TLOC \texttt{biz-internet} bật \texttt{nat} và tuyến mặc định kiểu NAT trong VPN 1; router Internet PAT lần thứ hai ra mạng thật (tương tự CGNAT). vEdge1 chi nhánh cũng bật \texttt{nat} trên cổng MPLS để làm đường dự phòng (\texttt{track 2} trên Brand-FW). Máy trạm dùng DNS nội bộ \texttt{10.1.90.10}, máy chủ DNS chuyển tiếp tên ngoài tới \texttt{8.8.8.8}, \texttt{1.1.1.1}. VLAN 99 chỉ đi trong \texttt{10.0.0.0/8}; Server Farm và DMZ chỉ ra ngoài bằng HTTP, HTTPS, NTP; Site 900 chỉ dùng DNS, NTP, HTTPS, ping và SMTP của vManage.
 
-\textbf{Control policy} \texttt{PREFER-VE1} áp chiều ra đến \texttt{ALL\_EDGES}: tuyến OMP do vEdge1 của mỗi site khởi tạo (\texttt{10.200.100.1}, \texttt{10.200.200.1}, \texttt{10.200.30.1}, \texttt{10.200.40.1}, \texttt{10.200.50.1}) được đặt \textit{preference} 200, cao hơn tuyến cùng prefix của vEdge2. Như vậy ở trạng thái bình thường, mọi site đều gửi lưu lượng vào site khác qua vEdge1 của site đích. Điều này khớp với tuyến mặc định chính của tường lửa (tường lửa biên Campus chính và Brand-FW đều ra qua vEdge1), nên hai chiều lưu lượng đi qua cùng một cổng tường lửa và tránh lưu lượng bất đối xứng. vEdge2 chỉ được dùng khi vEdge1 hoặc đường truyền của nó hỏng.
-
-\subsubsection{Truy cập Internet trực tiếp}
-
-Người dùng tại mỗi cơ sở ra Internet tại chỗ (DIA), không đi vòng qua Campus chính:
-\begin{itemize}
-    \item \textbf{NAT hai tầng:} vEdge có TLOC \texttt{biz-internet} bật \texttt{nat} trên giao diện Internet và có tuyến mặc định kiểu NAT trong VPN 1; router nhà cung cấp Internet thực hiện PAT lần thứ hai từ dải \texttt{203.0.113.0/24} và \texttt{100.64.0.0/10} ra địa chỉ thật của phòng lab, tương tự CGNAT của nhà mạng.
-    \item \textbf{Dự phòng qua MPLS:} vEdge1 chi nhánh cũng bật \texttt{nat} trên cổng MPLS; vì nhà cung cấp MPLS nhận tuyến mặc định từ nhà cung cấp Internet, khi đường Internet của chi nhánh hỏng, Brand-FW chuyển lưu lượng Internet sang vEdge1 (\texttt{track 2}, Bảng~\ref{tab:tuyen_brandfw}). Phương án dự phòng qua Site 100 bằng OMP đã được xem xét và loại bỏ: tuyến NAT không được quảng bá qua OMP, còn tuyến tĩnh sẽ lan tuyến mặc định sang mọi site.
-    \item \textbf{Split DNS:} máy trạm vẫn dùng DNS nội bộ \texttt{10.1.90.10}; máy chủ DNS chuyển tiếp truy vấn tên ngoài tới \texttt{8.8.8.8} và \texttt{1.1.1.1}, tắt root hints; chỉ máy chủ DNS được gửi truy vấn DNS ra ngoài.
-    \item \textbf{Giới hạn theo vùng:} VLAN 99 (quản trị) chỉ đi trong \texttt{10.0.0.0/8}; Server Farm và DMZ chỉ ra ngoài bằng HTTP/HTTPS/NTP; Site 900 chỉ ra ngoài bằng DNS, NTP, HTTPS, ping và SMTP của vManage; chỉ cho phép chiều đi ra, không công bố dịch vụ từ Internet vào.
-\end{itemize}
-
-\subsubsection{Giám sát và cảnh báo sự cố}
-
-vManage thu trạng thái của toàn fabric (kết nối điều khiển, OMP, BFD, giao diện) và sinh alarm theo mức độ. Hệ thống cấu hình vManage tự gửi email khi có alarm mức Critical, Major hoặc Medium thuộc các loại BFD/Control/OMP Node/Site Down, các alarm phục hồi Up tương ứng và Interface State Change. Thư được gửi qua máy chủ SMTP bên ngoài (cổng 587, STARTTLS, xác thực bằng mật khẩu ứng dụng); vì vậy Site 900 được mở thêm đúng một luồng SMTP 587 cho riêng địa chỉ vManage và vManage được khai báo DNS để phân giải tên máy chủ thư. Nhược điểm của cách này là khi chính vManage hỏng thì không có thư cảnh báo; vì vậy NetOps Bot (Mục~\ref{sec:netops_bot}) được bổ sung làm kênh giám sát độc lập, đọc alarm qua API của vManage và báo cả khi vManage mất kết nối.
+\textbf{Giám sát và cảnh báo.} vManage tự gửi email (SMTP 587, STARTTLS) khi có alarm mức Critical, Major, Medium thuộc nhóm BFD/Control/OMP Node/Site Down, các alarm phục hồi Up và Interface State Change. Vì thư phụ thuộc chính vManage, NetOps Bot (Mục~\ref{sec:netops_bot}) được bổ sung làm kênh giám sát độc lập.
 
 \subsection{Thiết kế dịch vụ}
-
-Bảng~\ref{tab:dich_vu} tổng hợp các dịch vụ dùng chung, máy chủ và thiết kế của từng dịch vụ.
 
 \begin{table}[H]
     \centering
     \small
     \caption{Các dịch vụ trong hệ thống}
     \label{tab:dich_vu}
-    \begin{tabularx}{\textwidth}{|P{1.9cm}|P{2.2cm}|P{2.6cm}|Y|}
+    \begin{tabularx}{\textwidth}{|L{2.4cm}|P{1.9cm}|L{2.5cm}|Y|}
         \hline
         \textbf{Dịch vụ} & \textbf{Máy chủ} & \textbf{Nền tảng} & \textbf{Thiết kế} \\
         \hline
-        DHCP Campus & 10.1.90.10 & Windows Server 2012 R2 & Bốn scope cho VLAN 10--40, dải .100--.199, gateway .1, DNS 10.1.90.10, tên miền campus.internal; nhận yêu cầu qua relay của hai Core \\
+        DHCP Campus & 10.1.90.10 & Windows Server 2012 R2 & Bốn scope VLAN 10--40, dải .100--.199, gateway .1, DNS 10.1.90.10, tên miền campus.internal; nhận yêu cầu qua relay của hai Core \\
         \hline
-        DHCP chi nhánh & Brand-FW & ASAv \texttt{dhcpd} & Mỗi VLAN một pool .100--.199; DNS 10.1.90.10; tên miền campus.internal \\
+        DHCP chi nhánh & Brand-FW & ASAv \texttt{dhcpd} & Mỗi VLAN một pool .100--.199; DNS 10.1.90.10 \\
         \hline
-        DNS & 10.1.90.10 & Windows DNS Server & Zone \texttt{campus.internal} (www, web, mail, dns, dhcp, syslog; MX mail) và zone ngược cho DMZ; chuyển tiếp tên ngoài tới 8.8.8.8 và 1.1.1.1 \\
+        DNS & 10.1.90.10 & Windows DNS Server & Zone \texttt{campus.internal} (www, web, mail, dns, dhcp, syslog; MX), zone ngược cho DMZ; chuyển tiếp tên ngoài \\
         \hline
-        Web & 10.1.1.10 & Ubuntu 18.04, Nginx & HTTPS \texttt{www.campus.internal} với chứng chỉ có SAN; HTTP chuyển hướng sang HTTPS; trang \texttt{/whoami} trả địa chỉ máy khách để kiểm thử; nhật ký gửi Syslog \\
+        Web & 10.1.1.10 & Ubuntu 18.04, Nginx & HTTPS \texttt{www.campus.internal}, chứng chỉ có SAN; HTTP chuyển hướng HTTPS; trang \texttt{/whoami} trả địa chỉ máy khách \\
         \hline
-        Mail & 10.1.1.11 & Windows 7, hMailServer 5.6.8 & Tên miền campus.internal; SMTP 25, Submission 587 có xác thực, IMAP 143; năm hộp thư: admin, hanhchinh, yte, taichinh, luhanh \\
+        Mail & 10.1.1.11 & hMailServer 5.6.8 & SMTP 25, Submission 587 có xác thực, IMAP 143; năm hộp thư \\
         \hline
-        Syslog & 10.1.90.11 & Windows 7, Kiwi Syslog & Nhận UDP 514 từ Core, SwitchServerFarm, tường lửa HA và Web Server \\
+        Syslog & 10.1.90.11 & Kiwi Syslog & Nhận UDP 514 từ Core, tường lửa HA, Web Server \\
         \hline
     \end{tabularx}
 \end{table}
 
-Tên miền nội bộ \texttt{campus.internal} được chọn thay vì \texttt{campus.local} vì hậu tố \texttt{.local} thuộc Multicast DNS: máy trạm Ubuntu không gửi truy vấn \texttt{*.local} đến máy chủ DNS và mDNS cũng không đi qua overlay giữa các cơ sở.
+Tên miền \texttt{campus.internal} được chọn thay \texttt{campus.local} vì máy trạm Ubuntu không gửi truy vấn \texttt{*.local} tới máy chủ DNS và mDNS không đi qua overlay.
 
 \subsection{Thiết kế chính sách bảo mật}
 
-\subsubsection{Vùng bảo mật}
-
-Hệ thống được chia thành các vùng bảo mật sau: vùng người dùng Campus chính (VLAN 10, 20, 30, 40); vùng máy chủ nội bộ (VLAN 90); vùng DMZ (\texttt{10.1.1.0/28}); vùng quản trị (VLAN 99 tại Campus chính, VLAN 99 tại mỗi chi nhánh, Site 900); vùng người dùng chi nhánh; và vùng WAN (VPN 0 của các Edge, hai nhà cung cấp). Tường lửa biên Campus chính gán security-level 100 cho inside và management, 50 cho DMZ, 0 cho outside; cổng management chỉ dùng cho quản trị (\texttt{management-only}).
-
-\subsubsection{Chính sách trên tường lửa biên Campus chính}
-
-Ba danh sách truy cập theo hướng trên tường lửa biên được tóm tắt trong Bảng~\ref{tab:acl_fw}.
+Hệ thống chia thành các vùng: người dùng Campus chính (VLAN 10--40), máy chủ (VLAN 90), DMZ, quản trị (VLAN 99 mỗi site, Site 900), người dùng chi nhánh và WAN. Tường lửa biên gán security-level 100 cho inside, 50 cho DMZ, 0 cho outside. Ba ACL theo hướng được tóm tắt trong Bảng~\ref{tab:acl_fw}; các dòng từ chối ghi nhật ký về Syslog, thời gian chờ phiên DNS giảm còn 10 giây để bảo vệ bảng kết nối, ASDM chỉ được phép từ \texttt{10.1.99.0/24}.
 
 \begin{table}[H]
     \centering
     \small
     \caption{Danh sách truy cập trên tường lửa biên Campus chính}
     \label{tab:acl_fw}
-    \begin{tabularx}{\textwidth}{|P{2.3cm}|P{2.4cm}|Y|}
+    \begin{tabularx}{\textwidth}{|L{2.6cm}|L{3.3cm}|Y|}
         \hline
         \textbf{ACL} & \textbf{Áp vào} & \textbf{Nội dung} \\
         \hline
-        \texttt{SDWAN\_IN} & outside, outside2 (chiều vào) & Từ các site (10.0.0.0/8): chỉ cho phép Web (80/443) đến 10.1.1.10, Mail (25/587/143/993) đến 10.1.1.11, ICMP echo vào DMZ; từ chối và ghi nhật ký mọi lưu lượng khác vào DMZ; cho phép DNS đến 10.1.90.10; cho phép phần còn lại đến 10.1.0.0/16 \\
+        \texttt{SDWAN\_IN} & outside, outside2 (chiều vào) & Từ các site (10.0.0.0/8) chỉ vào được Web 80/443, Mail 25/587/143/993, ICMP trong DMZ; DNS tới 10.1.90.10; phần còn lại tới 10.1.0.0/16 \\
         \hline
-        \texttt{DMZ\_IN} & dmz (chiều vào) & Vào nội bộ: chỉ Syslog đến 10.1.90.11, DNS đến 10.1.90.10 và ICMP echo, từ chối và ghi nhật ký phần còn lại vào 10.0.0.0/8. Ra Internet: chỉ HTTP, HTTPS, NTP; từ chối và ghi nhật ký phần còn lại \\
+        \texttt{DMZ\_IN} & dmz (chiều vào) & Vào nội bộ chỉ Syslog, DNS, ICMP; ra Internet chỉ HTTP, HTTPS, NTP \\
         \hline
-        \texttt{INSIDE\_OUT} & inside, inside2 (chiều vào) & DNS: chỉ tới máy chủ nội bộ, riêng máy chủ DNS 10.1.90.10 được hỏi ra ngoài. VLAN 99: chỉ tới 10.0.0.0/8. Server Farm: tới 10.0.0.0/8, ra ngoài chỉ HTTP, HTTPS, NTP. Các VLAN người dùng: cho phép phần còn lại \\
+        \texttt{INSIDE\_OUT} & inside, inside2 (chiều vào) & Chỉ máy chủ DNS được hỏi tên ra ngoài; VLAN 99 chỉ đi trong 10.0.0.0/8; Server Farm ra ngoài chỉ HTTP, HTTPS, NTP \\
         \hline
     \end{tabularx}
 \end{table}
 
-Thời gian chờ phiên DNS được giảm xuống 10 giây (\texttt{class-map DNS\_CONN}) để bảo vệ bảng kết nối giới hạn của tường lửa (xem Mục~\ref{sec:bai_hoc_dich_vu}). Quản trị ASDM chỉ được phép từ \texttt{10.1.99.0/24} qua giao diện management. Các dòng từ chối đều ghi nhật ký mức \texttt{warnings} về Syslog Server.
-
-\subsubsection{Chính sách tại chi nhánh, Site 900 và trên overlay}
-
-Mỗi Brand-FW áp ACL \texttt{SDWAN\_IN} trên hai giao diện outside, chỉ cho phép lưu lượng từ \texttt{10.0.0.0/8} đến subnet của chính chi nhánh; lưu lượng khởi tạo từ LAN chi nhánh đi ra được cho phép theo security-level. ACL \texttt{VLAN99\_IN} trên giao diện VLAN 99 chỉ cho vùng quản trị chi nhánh đi trong \texttt{10.0.0.0/8}. Nhật ký mức \texttt{warnings} được gửi về Syslog Server tại Campus chính.
-
-Tại Site 900, switch LAN áp ACL \texttt{SITE900\_EGRESS} chiều vào trên SVI của mạng controller: lưu lượng tới \texttt{10.0.0.0/8}, \texttt{100.64.0.0/10} và \texttt{203.0.113.0/24} (fabric SD-WAN và nội bộ) được tự do; ra Internet chỉ DNS, NTP, HTTPS, ICMP echo và SMTP 587 từ riêng vManage; mọi thứ khác bị từ chối và ghi nhật ký. Router Internet chỉ NAT mạng controller \texttt{10.9.0.0/24}.
-
-Trên overlay, data policy \texttt{DP\_BRANCH} chặn Telnet vào Server Farm và SSH/Telnet vào DMZ từ mọi chi nhánh. Như vậy một luồng từ chi nhánh vào DMZ phải thỏa đồng thời chính sách overlay và ACL tường lửa biên --- hai lớp kiểm soát độc lập.
-
-\subsubsection{Bảo mật mặt phẳng điều khiển}
-
-\begin{itemize}
-    \item \textbf{SDN:} kênh OpenFlow nằm trong VLAN 99, tách khỏi các VLAN người dùng ở lớp 2; VLAN 99 không ra Internet (ACL \texttt{INSIDE\_OUT}). REST API và Console chưa có xác thực, nên trên giao diện nối mạng thật của máy Controller chỉ máy chủ quản trị được phép truy cập (iptables). OVS chạy \texttt{fail\_mode=secure} để không tự chuyển lưu lượng khi mất Controller. SNMP trên Core là v2c chỉ đọc, giới hạn bằng ACL chỉ cho Controller truy vấn.
-    \item \textbf{SD-WAN:} xác thực hai chiều bằng chứng thư và danh sách thiết bị hợp lệ; kênh điều khiển DTLS; dữ liệu IPsec; giao diện tunnel giới hạn dịch vụ được phép.
-    \item \textbf{Tường lửa:} failover dùng liên kết riêng; ASDM chỉ từ mạng quản trị; nhật ký gửi Syslog tập trung.
-\end{itemize}
-
-\subsubsection{Các biện pháp tăng cường theo định hướng}
-
-Các biện pháp sau thuộc thiết kế định hướng, chưa nằm trong cấu hình hiện tại: xác thực 802.1X tại cổng Access, DHCP Snooping và Dynamic ARP Inspection (có thể hiện thực bằng flow trên Controller), SSH thay Telnet cho toàn bộ thiết bị, SNMPv3, xác thực REST API của Controller, AAA tập trung và NTP thống nhất cho mọi thiết bị.
-
-\subsection{Tổng kết chương}
-
-Chương này đã trình bày mô hình mạng Campus đa cơ sở gồm Campus chính ba tầng với SDN, ba chi nhánh Firewall-as-Core, một cơ sở mở rộng và trung tâm điều khiển SD-WAN trên hai nhà cung cấp. Các thiết kế cụ thể gồm: quy hoạch địa chỉ theo mã site; định tuyến OSPF, BGP underlay và tuyến tĩnh có theo dõi; ứng dụng Ryu điều khiển lớp 2 với cây dữ liệu tính tập trung, thăm dò liên kết chủ động, kênh quản trị VLAN 99 không phụ thuộc STP và giao diện giám sát tập trung; overlay SD-WAN với SLA, AAR, data policy, control policy và cảnh báo qua email; truy cập Internet trực tiếp có dự phòng; các dịch vụ DHCP, DNS, Web, Mail, Syslog; và chính sách bảo mật nhiều lớp. Chương~\ref{sec:trien_khai_danh_gia} trình bày việc hiện thực và kết quả kiểm thử của thiết kế này.
+Tại chi nhánh, Brand-FW áp \texttt{SDWAN\_IN} trên hai cổng outside (chỉ cho \texttt{10.0.0.0/8} tới subnet của chính chi nhánh) và \texttt{VLAN99\_IN} giới hạn vùng quản trị trong \texttt{10.0.0.0/8}. Tại Site 900, ACL \texttt{SITE900\_EGRESS} chỉ cho controller ra Internet bằng DNS, NTP, HTTPS, ICMP và SMTP 587 từ riêng vManage. Trên overlay, \texttt{DP\_BRANCH} chặn Telnet/SSH từ chi nhánh, nên một luồng từ chi nhánh vào DMZ phải thỏa đồng thời chính sách overlay và ACL tường lửa biên. Mặt phẳng điều khiển được bảo vệ bằng: kênh OpenFlow nằm riêng trong VLAN 99 không ra Internet, REST API chỉ cho máy quản trị truy cập (iptables), SNMP v2c chỉ đọc giới hạn bằng ACL; SD-WAN xác thực hai chiều bằng chứng thư và whitelist, điều khiển qua DTLS, dữ liệu qua IPsec. Các biện pháp 802.1X, DHCP Snooping, Dynamic ARP Inspection, SSH thay Telnet, SNMPv3 và AAA tập trung thuộc thiết kế định hướng.

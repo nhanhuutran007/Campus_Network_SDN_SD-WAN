@@ -2,61 +2,52 @@
 
 \subsection{Lý do chọn đề tài}
 
-Trong môi trường đại học, hệ thống mạng Campus là hạ tầng nền tảng phục vụ học tập, giảng dạy, nghiên cứu, quản trị hành chính và cung cấp dịch vụ số. Khi nhà trường mở rộng thêm khoa, phòng máy và đặc biệt là các cơ sở đào tạo tại những địa phương khác nhau, hệ thống mạng phải đồng thời đáp ứng các yêu cầu về hiệu năng, tính sẵn sàng, bảo mật, khả năng quản trị và mở rộng.
+Mạng Campus là hạ tầng nền tảng của trường đại học, phục vụ học tập, nghiên cứu, quản trị và các dịch vụ số. Khi trường mở thêm cơ sở tại nhiều địa phương, hệ thống mạng phải đồng thời bảo đảm hiệu năng, tính sẵn sàng, bảo mật, khả năng quản trị và mở rộng. Mạng truyền thống được cấu hình riêng trên từng thiết bị: mỗi switch tự học địa chỉ và tự chạy Spanning Tree Protocol (STP), kết nối giữa các cơ sở phụ thuộc một đường truyền thuê riêng trên mạng diện rộng Wide Area Network (WAN). Mỗi thay đổi Virtual Local Area Network (VLAN) hay chính sách phải làm trên nhiều thiết bị, dễ sai lệch, thiếu cái nhìn toàn cục và không tự chọn đường theo chất lượng.
 
-Mạng truyền thống được cấu hình trực tiếp trên từng thiết bị: mỗi switch tự học địa chỉ và tự chạy STP, mỗi router được khai báo định tuyến riêng, còn kết nối giữa các cơ sở thường phụ thuộc vào một đường truyền thuê riêng. Với cách làm này, việc thay đổi VLAN, áp dụng chính sách truy cập hay xử lý sự cố phải thực hiện trên nhiều thiết bị, dễ sai lệch và khó có cái nhìn toàn cục về trạng thái mạng; kết nối liên cơ sở không tự chọn đường theo chất lượng và tốn kém khi cần dự phòng.
-
-Hai công nghệ điều khiển bằng phần mềm là SDN (Software-Defined Networking) và SD-WAN (Software-Defined WAN) giải quyết trực tiếp các hạn chế trên. SDN tách mặt phẳng điều khiển khỏi thiết bị chuyển mạch, cho phép một Controller lập trình, giám sát và áp chính sách tập trung cho mạng nội bộ. SD-WAN tạo một mạng overlay mã hóa trên nhiều đường truyền (Internet, MPLS), quản lý tập trung và lựa chọn đường theo chất lượng thực tế. Việc kết hợp kiến trúc Campus phân cấp với SDN và SD-WAN, đồng thời hiện thực và kiểm chứng trên một mô hình cụ thể, là lý do nhóm chọn đề tài ``Xây dựng Campus Network sử dụng SDN và SD-WAN''.
+Hai công nghệ Software-Defined Networking (SDN) và Software-Defined Wide Area Network (SD-WAN) giải quyết trực tiếp các hạn chế này. SDN tách mặt phẳng điều khiển khỏi thiết bị chuyển mạch để một Controller lập trình, giám sát và áp chính sách tập trung cho mạng nội bộ. SD-WAN tạo mạng overlay mã hóa trên nhiều đường truyền như Internet và Multiprotocol Label Switching (MPLS), quản lý tập trung và chọn đường theo chất lượng thực tế. Đó là lý do nhóm chọn đề tài ``Xây dựng Campus Network sử dụng SDN và SD-WAN''.
 
 \subsection{Mục tiêu thực hiện đề tài}
 
-Đề tài hướng đến việc thiết kế, triển khai và kiểm chứng một mô hình mạng Campus đa cơ sở cho trường đại học, trong đó mạng nội bộ cơ sở chính được điều khiển bằng SDN và các cơ sở được kết nối bằng SD-WAN. Các mục tiêu cụ thể gồm:
+Đề tài thiết kế, triển khai và kiểm chứng một mô hình mạng Campus đa cơ sở, trong đó mạng nội bộ cơ sở chính do SDN điều khiển và các cơ sở được kết nối bằng SD-WAN. Các mục tiêu cụ thể:
 
 \begin{itemize}
-    \item Thiết kế mạng Campus chính theo mô hình Core--Distribution--Access với gateway dự phòng VRRP, định tuyến OSPF, cặp tường lửa Active/Standby, vùng DMZ và Server Farm.
-    \item Thiết kế mô hình chi nhánh rút gọn (Firewall-as-Core) cho ba cơ sở phụ Cần Thơ, Đà Nẵng và Nha Trang.
-    \item Xây dựng quy hoạch VLAN, địa chỉ IP, System-IP, TLOC và ASN thống nhất cho toàn hệ thống.
-    \item Xây dựng ứng dụng SDN Controller (Ryu, OpenFlow 1.3) điều khiển toàn bộ chuyển mạch lớp 2 tại cơ sở chính: học MAC theo VLAN, cây chuyển tiếp tính tập trung kèm thăm dò liên kết chủ động, tự phục hồi khi mất liên kết hoặc thiết bị, kênh quản trị VLAN 99 không phụ thuộc STP, thêm VLAN và áp chính sách qua API, cùng giao diện giám sát tập trung (Campus SDN Console).
-    \item Đánh giá SDN theo năm tiêu chí định lượng: thời gian thêm VLAN, thời gian khôi phục khi mất liên kết, hiệu năng giữa các VLAN, tải Core/Distribution và thời gian áp chính sách tập trung.
-    \item Triển khai SD-WAN (Cisco Viptela) kết nối các site qua hai nhà cung cấp Internet và MPLS với BGP underlay, xác thực PKI, chính sách SLA, định tuyến theo ứng dụng, lọc lưu lượng tập trung và cảnh báo sự cố qua email.
-    \item Cho người dùng các cơ sở truy cập Internet trực tiếp tại chỗ (Direct Internet Access) có dự phòng, trong khi vùng quản trị và trung tâm điều khiển chỉ được ra Internet có kiểm soát.
-    \item Cung cấp các dịch vụ dùng chung DHCP, DNS, Web, Mail, Syslog cho mọi cơ sở và bảo vệ chúng bằng chính sách bảo mật nhiều lớp.
-    \item Kiểm thử theo lớp, đánh giá mức độ đáp ứng và ghi nhận trung thực các hạn chế.
+    \item Thiết kế Campus chính theo mô hình Core--Distribution--Access với gateway dự phòng Virtual Router Redundancy Protocol (VRRP), định tuyến Open Shortest Path First (OSPF), cặp tường lửa Cisco Adaptive Security Virtual Appliance (ASAv) chạy High Availability (HA), vùng Demilitarized Zone (DMZ) và Server Farm; thiết kế mô hình chi nhánh rút gọn Firewall-as-Core cho ba cơ sở Cần Thơ, Đà Nẵng, Nha Trang.
+    \item Xây dựng quy hoạch VLAN, địa chỉ IP, System-IP, Transport Locator (TLOC) và số hiệu hệ tự trị Autonomous System Number (ASN) thống nhất cho toàn hệ thống.
+    \item Phát triển ứng dụng Controller Ryu theo OpenFlow 1.3 điều khiển toàn bộ switch lớp 2 Open vSwitch (OVS) tại cơ sở chính: học MAC theo VLAN, cây chuyển tiếp tính tập trung, tự phục hồi, kênh quản trị VLAN 99 không phụ thuộc STP, thêm VLAN và áp chính sách qua Application Programming Interface (API), cùng giao diện giám sát Campus SDN Console.
+    \item Triển khai Cisco SD-WAN (Viptela) kết nối các site qua hai nhà cung cấp Internet và MPLS với underlay Border Gateway Protocol (BGP), xác thực bằng Public Key Infrastructure (PKI), giao thức Overlay Management Protocol (OMP), giám sát đường hầm bằng Bidirectional Forwarding Detection (BFD), chính sách Service Level Agreement (SLA), định tuyến theo ứng dụng Application-Aware Routing (AAR) và cảnh báo sự cố qua email.
+    \item Cho người dùng các cơ sở ra Internet tại chỗ theo Direct Internet Access (DIA) qua Network Address Translation (NAT), có dự phòng; cung cấp các dịch vụ dùng chung Dynamic Host Configuration Protocol (DHCP), Domain Name System (DNS), Web, Mail, Syslog và bảo vệ bằng Access Control List (ACL) nhiều lớp.
+    \item Kiểm thử theo lớp, đo các tiêu chí đánh giá của đề cương và ghi nhận trung thực các hạn chế.
 \end{itemize}
 
 \subsection{Đối tượng và phạm vi nghiên cứu}
 
-\textbf{Đối tượng nghiên cứu} là hệ thống mạng Campus đa cơ sở trong môi trường đại học, bao gồm: chuyển mạch và phân đoạn VLAN; cơ chế dự phòng lớp 2 và lớp 3; định tuyến nội bộ và liên miền; tường lửa và vùng DMZ; mạng điều khiển bằng phần mềm SDN với OpenFlow; mạng diện rộng SD-WAN; và các dịch vụ mạng nền tảng.
+\textbf{Đối tượng nghiên cứu} là hệ thống mạng Campus đa cơ sở trong môi trường đại học: chuyển mạch và phân đoạn VLAN, dự phòng lớp 2 và lớp 3, định tuyến nội bộ và liên miền, tường lửa và DMZ, SDN với OpenFlow, SD-WAN và các dịch vụ mạng nền tảng.
 
-\textbf{Phạm vi thực hiện} được giới hạn như sau:
+\textbf{Phạm vi thực hiện:}
 \begin{itemize}
-    \item Mô hình được hiện thực trên nền tảng mô phỏng EVE-NG với 74 node, gồm Campus chính (Site 100), ba cơ sở phụ (Site 200, 300, 400), trung tâm điều khiển SD-WAN (Site 900), hai router mô phỏng nhà cung cấp Internet, MPLS và một cơ sở mở rộng (Site 500).
-    \item SDN được áp dụng cho tầng Distribution và Access của Campus chính (sáu Open vSwitch); tầng Core và tường lửa giữ cơ chế truyền thống theo mô hình Hybrid SDN. Liên kết giữa các cơ sở do SD-WAN đảm nhận.
-    \item Mạng WAN giữa các site dùng dải \texttt{203.0.113.0/24} (dành cho tài liệu) và dải \texttt{100.64.0.0/10} (CGNAT); router nhà cung cấp Internet nối ra mạng thật của phòng lab để người dùng truy cập Internet. Mạng không dây và xác thực 802.1X nằm ngoài phạm vi triển khai và được nêu ở phần hướng phát triển.
-    \item Đánh giá theo các tiêu chí của đề cương (hiệu năng, khả năng mở rộng, độ tin cậy, quản trị, bảo mật, QoS, quy mô hệ thống), tập trung vào tính đúng đắn chức năng và khả năng phục hồi; thông lượng và độ trễ có được đo nhưng chịu giới hạn của môi trường ảo hóa nên không phản ánh hiệu năng thiết bị thật.
+    \item Mô hình được hiện thực trên nền tảng mô phỏng Emulated Virtual Environment -- Next Generation (EVE-NG) với 74 node: Campus chính (Site 100), ba cơ sở phụ (Site 200, 300, 400), trung tâm điều khiển SD-WAN (Site 900), hai router mô phỏng nhà cung cấp Internet, MPLS và một cơ sở mở rộng (Site 500). Switch Cisco dùng image IOS on Linux (IOL).
+    \item SDN áp dụng cho tầng Distribution và Access của Campus chính (sáu OVS); tầng Core và tường lửa giữ cơ chế truyền thống theo mô hình Hybrid SDN. Liên kết giữa các cơ sở do SD-WAN đảm nhận.
+    \item Mạng WAN mô phỏng dùng dải \texttt{203.0.113.0/24} và \texttt{100.64.0.0/10}; router nhà cung cấp Internet nối ra mạng thật của phòng lab. Mạng không dây và xác thực 802.1X nằm ngoài phạm vi.
+    \item Đánh giá theo bảy nhóm tiêu chí của đề cương (hiệu năng, mở rộng, độ tin cậy, quản trị, bảo mật, Quality of Service (QoS), quy mô); thông lượng và độ trễ đo trong môi trường ảo hóa nên không phản ánh hiệu năng thiết bị thật.
 \end{itemize}
 
 \subsection{Phương pháp nghiên cứu}
 
-Đề tài kết hợp nghiên cứu lý thuyết với thực nghiệm trên mô hình:
 \begin{itemize}
-    \item \textbf{Nghiên cứu tài liệu:} tìm hiểu các chuẩn và tài liệu kỹ thuật về OSPF, BGP, VRRP, BFD, OpenFlow 1.3, Open vSwitch, Ryu, ONOS, Cisco ASA và Cisco SD-WAN.
-    \item \textbf{Thiết kế:} phân tích yêu cầu, xây dựng kiến trúc, topology, quy hoạch địa chỉ, thiết kế định tuyến, SDN, SD-WAN, dịch vụ và chính sách bảo mật.
-    \item \textbf{Hiện thực:} cấu hình thiết bị theo trình tự từ dưới lên (underlay, controller, hạ tầng, dịch vụ, chính sách); phát triển ứng dụng Ryu bằng Python; quản lý cấu hình của mọi thiết bị bằng Git.
-    \item \textbf{Kiểm thử và chẩn đoán theo lớp:} kiểm tra lần lượt liên kết, lớp 2, lớp 3, dịch vụ và ứng dụng; mọi kết luận dựa trên đầu ra lệnh kiểm tra, thống kê hoặc bắt gói tin; ghi nhận kết quả theo ba mức Đạt, Đạt một phần và Chưa nghiệm thu.
+    \item \textbf{Nghiên cứu tài liệu:} các chuẩn và tài liệu kỹ thuật về OSPF, BGP, VRRP, BFD, OpenFlow 1.3, OVS, Ryu, Cisco ASA và Cisco SD-WAN.
+    \item \textbf{Thiết kế:} phân tích yêu cầu, xây dựng kiến trúc, sơ đồ vật lý và sơ đồ logic, quy hoạch địa chỉ, định tuyến, SDN, SD-WAN, dịch vụ và bảo mật.
+    \item \textbf{Hiện thực:} cấu hình từ dưới lên (underlay, controller, hạ tầng, dịch vụ, chính sách); phát triển ứng dụng Ryu bằng Python; quản lý cấu hình mọi thiết bị bằng Git.
+    \item \textbf{Kiểm thử theo lớp:} liên kết, lớp 2, lớp 3, dịch vụ, ứng dụng; mọi kết luận dựa trên đầu ra lệnh, bộ đếm hoặc bắt gói; các phép đo được tự động hóa bằng script để có thể chạy lại.
 \end{itemize}
 
-\subsection{Ý nghĩa thực tiễn của đề tài}
+\subsection{Ý nghĩa thực tiễn và bố cục báo cáo}
 
-Mô hình cho thấy cách kết hợp SDN và SD-WAN với các cơ chế truyền thống trong một hệ thống thống nhất: VRRP, OSPF và tường lửa HA bảo đảm ổn định tại lớp 3 và biên mạng; SDN mang lại khả năng lập trình, chống vòng lặp và quan sát tập trung cho lớp 2; SD-WAN cung cấp kết nối liên cơ sở an toàn, có dự phòng hai đường truyền và chính sách tập trung. Các nguyên nhân gốc của những sự cố đã gặp và cách khắc phục --- như vòng phụ thuộc giữa switch và Controller trong SDN in-band, quy tắc in-band ẩn gây bão broadcast, yêu cầu định tuyến tới controller cho từng màu TLOC, xung đột giữa tên miền \texttt{.local} và mDNS --- là kinh nghiệm có giá trị cho việc triển khai thực tế. Mô hình cũng có thể dùng làm nền tảng thực hành cho các học phần mạng máy tính và thử nghiệm chính sách mạng.
+Mô hình cho thấy cách kết hợp SDN và SD-WAN với các cơ chế truyền thống trong một hệ thống thống nhất; các nguyên nhân gốc của sự cố đã gặp (phụ thuộc vòng giữa switch và Controller trong SDN in-band, quy tắc in-band ẩn gây bão broadcast, định tuyến tới controller cho từng màu TLOC, xung đột tên miền \texttt{.local} với mDNS) là kinh nghiệm có giá trị cho triển khai thực tế. Mô hình cũng có thể dùng làm nền tảng thực hành cho các học phần mạng máy tính.
 
-\subsection{Bố cục báo cáo}
-
-Nội dung báo cáo gồm năm chương:
+Báo cáo gồm bốn chương:
 \begin{itemize}
-    \item \textbf{Chương 1 -- Mở đầu và tổng quan đề tài:} lý do chọn đề tài, mục tiêu, đối tượng, phạm vi, phương pháp nghiên cứu, ý nghĩa thực tiễn và bố cục báo cáo.
-    \item \textbf{Chương 2 -- Cơ sở lý thuyết:} mạng Campus phân cấp, VLAN, RSTP, EtherChannel, VRRP, OSPF, BGP, các dịch vụ mạng, tường lửa và DMZ, SDN với OpenFlow 1.3, Open vSwitch, Ryu, ONOS, SD-WAN với kiến trúc Viptela và nền tảng EVE-NG.
-    \item \textbf{Chương 3 -- Mô hình mạng Campus đề xuất:} phân tích yêu cầu, kiến trúc tổng thể, topology từng site, quy hoạch VLAN và địa chỉ IP, thiết kế định tuyến, thiết kế SDN, thiết kế SD-WAN, thiết kế dịch vụ và chính sách bảo mật.
-    \item \textbf{Chương 4 -- Triển khai, kiểm thử và đánh giá:} môi trường triển khai, hiện thực Campus chính, SDN, chi nhánh, SD-WAN và dịch vụ; các vấn đề kỹ thuật cùng nguyên nhân gốc; kết quả kiểm thử và đánh giá.
-    \item \textbf{Chương 5 -- Kết luận và hướng phát triển:} tổng kết kết quả, hạn chế và hướng phát triển.
+    \item \textbf{Chương 1 -- Mở đầu và tổng quan đề tài:} lý do, mục tiêu, phạm vi, phương pháp và bố cục.
+    \item \textbf{Chương 2 -- Cơ sở lý thuyết:} mạng Campus phân cấp, VLAN, dự phòng, định tuyến, dịch vụ, tường lửa, SDN, SD-WAN và EVE-NG.
+    \item \textbf{Chương 3 -- Mô hình mạng Campus đề xuất:} yêu cầu, kiến trúc, sơ đồ vật lý và sơ đồ logic, quy hoạch địa chỉ, thiết kế định tuyến, SDN, SD-WAN, dịch vụ và bảo mật.
+    \item \textbf{Chương 4 -- Triển khai, đánh giá và kết luận:} hiện thực, các vấn đề kỹ thuật, kết quả kiểm thử, đánh giá theo tiêu chí của đề cương, kết luận và hướng phát triển.
 \end{itemize}

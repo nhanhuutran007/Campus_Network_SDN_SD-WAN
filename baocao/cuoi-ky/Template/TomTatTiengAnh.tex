@@ -1,25 +1,9 @@
 \section*{BUILDING A CAMPUS NETWORK\\USING SDN AND SD-WAN\\ABSTRACT}
 
-\begin{itemize}
-    \item[-] \textbf{Research issues:}
+Multi-campus universities need a network that is highly available, secure, centrally managed and able to connect all sites reliably, while traditional networks are configured device by device and depend on a single WAN link. This project designs, implements and verifies a multi-campus network that combines a hierarchical campus design with SDN and SD-WAN on a 74-node EVE-NG lab: a main campus, three branch campuses, an expansion site, an SD-WAN control site and two simulated providers (Internet, MPLS). The report has four chapters: introduction, theoretical background, proposed design, and implementation, evaluation and conclusion.
 
-    Universities with several campuses need a network that is highly available, secure, centrally managed and able to connect all sites reliably. Traditional networks are configured device by device, lack a global view of the network and depend on a single WAN link. This project designs, implements and verifies a multi-campus network that combines a hierarchical campus design with Software-Defined Networking (SDN) and Software-Defined WAN (SD-WAN). The report includes 5 chapters:
-        \begin{itemize}
-        \item[•] Chapter 1 --- Introduction and Project Overview
-        \item[•] Chapter 2 --- Theoretical Background
-        \item[•] Chapter 3 --- Proposed Campus Network Design
-        \item[•] Chapter 4 --- Implementation, Testing and Evaluation
-        \item[•] Chapter 5 --- Conclusion and Future Work
-        \end{itemize}
-    \item[-] \textbf{Approach:}
-        \begin{itemize}
-        \item[•] Theory: Study VLAN, RSTP, EtherChannel, VRRP, OSPF, BGP, stateful firewalls and DMZ, OpenFlow 1.3, Open vSwitch, Ryu, ONOS and the Cisco SD-WAN (Viptela) architecture with OMP, TLOC, BFD, PKI and centralized policies.
-        \item[•] Practice: Build a 74-node lab on EVE-NG with a main campus (Site 100), three branch campuses (Sites 200, 300, 400), an SD-WAN control site (Site 900), two simulated service providers (Internet and MPLS) and an expansion site (Site 500); verify every function layer by layer with automated measurements.
-    \end{itemize}
-    \item[-] \textbf{How to solve problems:}
-    The main campus uses a Core--Distribution--Access design: two Cisco core switches provide VRRP gateways, OSPF and DHCP relay; an ASAv Active/Standby firewall pair protects the DMZ (Web, Mail) and the server farm (DHCP, DNS, Syslog). All six layer-2 switches are Open vSwitch instances controlled by a custom Ryu application (OpenFlow 1.3) that performs VLAN-aware MAC learning, a centrally computed forwarding tree with active link probing, a multi-path management channel (VLAN 99) independent of STP, self-healing after link or switch failures, VLAN and policy provisioning through an API, and a web-based Campus SDN Console. Branches use a Firewall-as-Core design. The sites are connected by Cisco SD-WAN 20.10.1 with ten vEdge routers over two transports, a BGP underlay, PKI authentication, IPsec overlay and vSmart policies (SLA classes, Application-Aware Routing, data policy and a control policy preferring each site's vEdge1); branch firewalls track the MPLS path with IP SLA to fail over to the Internet transport, and vManage sends e-mail alarms when an edge loses connectivity. Users at every site reach the Internet locally (Direct Internet Access) through NAT on the vEdge routers with an MPLS backup path, while the management zones and the controller site only have controlled Internet access.
-    \item[-] \textbf{Results achieved:}
-    All 30 test cases passed. API-based VLAN and campus-wide policy changes took 3.8 ms and 8.0--12.6 ms, respectively. All six SDN link-failure scenarios recovered within 3.6 seconds, and all ten vEdges joined the fabric with every BFD session up (112 tunnels, 99.957\% availability). Over 46 real link cuts at the branches, new flows recovered in 3.2--13.4 seconds when MPLS, the Internet link or one vEdge was lost. Under high load, Open vSwitch forwarded about 1.2 Gbit/s within an access switch and 170 Mbit/s between VLANs, and the controller handled 1000 new MAC addresses per second. Limitations include a single SDN controller, non-redundant SD-WAN controllers and the throughput limits of the emulated environment.
-\end{itemize}
+The main campus uses a Core--Distribution--Access design with VRRP, OSPF and an ASAv HA firewall pair. Its six layer-2 switches are OVS instances controlled by a custom Ryu application that provides VLAN-aware forwarding, a centrally computed loop-free tree, self-healing and API-based VLAN and policy provisioning. Branches use a Firewall-as-Core design and are connected by Cisco SD-WAN with ten vEdge routers over two transports, centralized SLA, AAR, data and control policies, and local Internet breakout (DIA) with backup.
+
+All 30 test cases passed. VLAN and campus-wide policy changes took 3.8 ms and 8.0--12.6 ms; SDN link failures recovered within 3.6 seconds; all BFD sessions were up (112 tunnels, 99.957\% availability); and over 46 real link cuts, new flows recovered in 3.2--13.4 seconds. Remaining limitations are a single SDN controller, non-redundant SD-WAN controllers and the performance limits of the emulated environment.
 
 \newpage
