@@ -1,0 +1,18 @@
+{
+ "VOICE UDP DSCP46": {
+  "AAR_ICMP": 2,
+  "AAR_VOICE": 50
+ },
+ "MAIL TCP": {
+  "AAR_ICMP": 15,
+  "AAR_MAIL": 24
+ },
+ "WEB TCP": {
+  "AAR_WEB": 3,
+  "AAR_ICMP": 2
+ },
+ "FARM TCP 80": {
+  "AAR_FARM": 3,
+  "AAR_ICMP": 1
+ }
+}

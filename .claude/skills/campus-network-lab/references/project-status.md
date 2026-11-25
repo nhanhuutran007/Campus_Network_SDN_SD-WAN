@@ -1,8 +1,17 @@
-# Ảnh chụp trạng thái dự án (2026-09-20, cập nhật 2026-11-09)
+# Ảnh chụp trạng thái dự án (2026-09-20, cập nhật 2026-11-26)
 
 **Đây là snapshot theo thời điểm, không phải sự thật hiện tại.** Nó tổng hợp từ: bảng tiến độ 05/09, `.opencode` summaries 18–19/09, `docs/huong-dan/PhucHoi…` 19/09, `git status`, và kiểm tra cục bộ ngày 20/09. Mọi mục "live" phải kiểm lại trước khi hành động hoặc báo cáo. Cập nhật file này (ghi ngày) cuối phiên có thay đổi đáng kể, thay vì viết nhật ký vào `SKILL.md`.
 
 ## Kiểm tra cục bộ đã làm (20/09, đáng tin nhất)
+
+- **25–26/11/2026 — Thư mục nộp ELIT `baocao/LeVietThanh_52300235_52300198/`** (cú pháp `GVHD_MSSV1_MSSV2`, nộp dạng `.zip` cùng tên; hạn nộp cuối kỳ 24/11–04/12/2026, phản biện 26–31/12/2026). Đã có:
+  - `BaoCao_Campus_SDN_SD-WAN.pdf` = bản sao `baocao/cuoi-ky/main.pdf` build 22/11 (81 trang, md5 khớp).
+  - `Poster_Campus_SDN_SD-WAN.pptx` của Hào (commit `e2d2176`), `git mv` từ `baocao/poster/`. Ảnh preview + `build_poster.py`/`render.py` vẫn ở `baocao/poster/`.
+  - File kế hoạch `KẾ HOẠCH KLTN_…xlsx` (người dùng thêm): sheet "File kế hoạch mẫu" đã điền tiêu đề, tên + MSSV, GVHD, tên đề tài, ngày bắt đầu 24/08; 15 tuần thứ Hai–Chủ nhật (24/08–06/12), giữa kỳ tuần 5–6, nộp cuối kỳ tuần 14–15, dòng phản biện 26–31/12, khổ in A4 ngang. Mốc thời gian lấy từ sheet "KẾ HOẠCH Dự án", công việc từng tuần lấy từ git log và file này. Số ĐT, email GV, mã đề tài để trống. `Link.txt` (người dùng thêm) = link Google Sheets của kế hoạch.
+  - Đã commit + push `bfdae51` (25/11): báo cáo, poster, kế hoạch, Link.txt.
+  - 26/11, **chưa commit**: `SourceCode/` (chỉ file git-tracked: `.unl`, `campus_network_sdn_sdwan.md`, `README.md`, `configs/`, `scripts/`, `web/`, `tools/campus-netops-bot/`, `bieu-do/ve_bieu_do.py`; 164 file), `Data/` (`log/` + `docs/ket-qua/` → `ket-qua-kiem-thu/`; 99 file), `DOC_TRUOC.txt` (mô tả nội dung thư mục).
+  - Còn mở: file kiểm tra đạo văn Turnitin; nén zip; có ẩn mật khẩu thiết bị trong `SourceCode/configs/` (~38 file) hay không; có commit `SourceCode/` + `Data/` (bản sao ~5 MB) hay không — chờ người dùng.
+  - Bẫy: máy không có LibreOffice (skill xlsx `recalc.py` lỗi `AF_UNIX`), tính lại xlsx bằng Excel COM (`DispatchEx`, bọc `try/finally` để không để lại EXCEL.EXE ẩn); không đặt được `PaperSize` qua COM khi không có máy in → sửa XML `pageSetup`. File đang mở trong Excel thì `git add` lỗi Permission denied.
 
 - **22/11/2026 — Rút gọn báo cáo cuối kỳ còn 4 chương (chưa commit)**: theo yêu cầu thầy, nội dung chính ≤ 70 trang (người dùng chọn tính Ch1–Ch4, không tính bìa/mục lục/TLTK/phụ lục). Kết quả: `main.pdf` 81 trang, Ch1–Ch4 = trang 1–61 (Ch1 4, Ch2 7, Ch3 16, Ch4 ~34), TLTK đúng 1 trang (62), phụ lục từ 63. Đã làm:
   - Ch4 + Ch5 cũ gộp thành Ch4 "Triển khai, đánh giá và kết luận" (kết luận ở mục 4.10); `Chapter5.tex` không còn được `main.tex` gọi, chưa xoá (chờ người dùng quyết).

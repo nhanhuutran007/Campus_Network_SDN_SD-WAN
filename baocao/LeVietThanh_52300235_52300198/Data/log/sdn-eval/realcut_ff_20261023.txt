@@ -1,0 +1,37 @@
+
+=== D1-C1 (vunl6_5_6) giu 25s: DAT 
+  10.1.10.100  cat: mat  28 goi, gian doan   2927 ms | khoi phuc: mat   8,   1038 ms
+  10.1.20.100  cat: mat  28 goi, gian doan   2921 ms | khoi phuc: mat   4,    502 ms
+  10.1.30.100  cat: mat  28 goi, gian doan   2920 ms | khoi phuc: mat   6,    730 ms
+  10.1.40.100  cat: mat  28 goi, gian doan   2927 ms | khoi phuc: mat   5,   1017 ms
+  ve day du sau 2371 ms; khung controller 4 lan; cay luc cat ['A1-D2', 'A2-D2', 'A3-D2', 'A4-D2', 'D1-D2', 'D2-C1']
+     +2.88s link_down        D1-C1 down (probe het han)
+    +26.50s link_up          D1-C1 up (probe phuc hoi)
+    +38.45s controller_stall Controller khung 955 ms - tam ngung ket luan lien ket chet
+    +39.68s controller_stall Controller khung 1170 ms - tam ngung ket luan lien ket chet
+    +47.90s controller_stall Controller khung 925 ms - tam ngung ket luan lien ket chet
+    +49.12s controller_stall Controller khung 1166 ms - tam ngung ket luan lien ket chet
+
+=== A4-D1 (vunl6_69_1) giu 25s: DAT 
+  10.1.10.100  cat: mat   9 goi, gian doan    706 ms | khoi phuc: mat   9,   1377 ms
+  10.1.20.100  cat: mat   9 goi, gian doan    705 ms | khoi phuc: mat   7,   1439 ms
+  10.1.30.100  cat: mat   5 goi, gian doan    603 ms | khoi phuc: mat  19,   1869 ms
+  10.1.40.100  cat: mat  14 goi, gian doan   1513 ms | khoi phuc: mat  18,   2395 ms
+  ve day du sau 6589 ms; khung controller 5 lan; cay luc cat ['A1-D1', 'A2-D1', 'A3-D1', 'A4-D2', 'D1-C1', 'D2-C1']
+     -0.21s controller_stall Controller khung 1304 ms - tam ngung ket luan lien ket chet
+     +3.36s link_down        A4-D1 down (probe het han)
+    +27.79s controller_stall Controller khung 1357 ms - tam ngung ket luan lien ket chet
+    +28.48s controller_stall Controller khung 599 ms - tam ngung ket luan lien ket chet
+    +30.14s link_up          A4-D1 up (probe phuc hoi)
+    +44.94s controller_stall Controller khung 883 ms - tam ngung ket luan lien ket chet
+    +46.62s controller_stall Controller khung 1654 ms - tam ngung ket luan lien ket chet
+Traceback (most recent call last):
+  File "D:\OneDrive\HUUNHAN\STUDENT\NAM3(HK3)\DuAnCNTT\Campus_Network_SDN_SD-WAN\.claude\skills\campus-network-lab\scripts\lab\sdn_realcut_test.py", line 162, in <module>
+    main()
+  File "D:\OneDrive\HUUNHAN\STUDENT\NAM3(HK3)\DuAnCNTT\Campus_Network_SDN_SD-WAN\.claude\skills\campus-network-lab\scripts\lab\sdn_realcut_test.py", line 117, in main
+    if t_ok is not None and api.now() - t1 >= a.gap:
+                            ^^^^^^^^^
+  File "D:\OneDrive\HUUNHAN\STUDENT\NAM3(HK3)\DuAnCNTT\Campus_Network_SDN_SD-WAN\.claude\skills\campus-network-lab\scripts\lab\sdn_realcut_test.py", line 56, in now
+    return self.get("/campus/health")["ts"]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+TypeError: 'NoneType' object is not subscriptable

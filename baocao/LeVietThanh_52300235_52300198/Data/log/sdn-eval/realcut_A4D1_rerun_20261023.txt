@@ -1,0 +1,13 @@
+
+=== A4-D1 (vunl6_69_1) giu 25s: KHONG DAT gian doan khi cat 8.3 s > 5 s
+  10.1.10.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.20.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.30.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.40.100  cat: mat  50 goi, gian doan   8346 ms | khoi phuc: mat   0,      0 ms
+  ve day du sau 2406 ms; khung controller 4 lan; cay luc cat ['A1-D1', 'A2-D1', 'A3-D1', 'A4-D2', 'D1-C1', 'D2-C1']
+     +3.46s controller_stall Controller khung 1372 ms - tam ngung ket luan lien ket chet
+     +4.71s controller_stall Controller khung 1198 ms - tam ngung ket luan lien ket chet
+     +8.26s link_down        A4-D1 down (probe het han)
+    +26.54s link_up          A4-D1 up (probe phuc hoi)
+    +41.50s controller_stall Controller khung 4848 ms - tam ngung ket luan lien ket chet
+    +43.46s controller_stall Controller khung 1883 ms - tam ngung ket luan lien ket chet

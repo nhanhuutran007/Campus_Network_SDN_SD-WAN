@@ -1,0 +1,16 @@
+# Gói tối thiểu cho NetOps-Server (DHCP-Server 72, Windows Server 2012 R2, Python 3.11 embeddable).
+# Pin đúng bản đã chạy 48 test trên laptop. Không gồm netmiko/pynetbox/mcp (không dùng trên máy chủ).
+python-telegram-bot==22.8
+langgraph==0.3.21
+langgraph-prebuilt==0.1.7
+langgraph-checkpoint==2.0.23
+langchain==0.3.21
+langchain-core==0.3.49
+langchain-openai==0.3.11
+openai==1.69.0
+tiktoken==0.14.0
+paramiko==3.5.1
+requests==2.32.3
+python-dotenv==1.1.0
+urllib3==2.3.0
+httpx==0.28.1

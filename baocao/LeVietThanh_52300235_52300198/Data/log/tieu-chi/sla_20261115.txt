@@ -1,0 +1,38 @@
+# Ty le thoa SLA tu vManage API (statistics/approute), lay 15/11/2026 03:04 UTC
+ban ghi 624214; tu 06/11 13:54 den 15/11 02:49 UTC; 1205 cua so 10 phut co du lieu = 200.8 gio
+== SLA_REALTIME (mat <= 2%, tre <= 150 ms, jitter <= 50 ms)
+  moi ban ghi: 96.292% (601071/624214)
+  mau biz-internet  97.068% (279751/288200)
+  mau mpls          95.627% (321320/336014)
+  cap site x cua so 10 phut: co duong ham thoa 100.000% (12041/12041); rieng mpls-mpls thoa 99.792%
+    100-200: 100.00% (1205/1205)
+    100-300: 100.00% (1204/1204)
+    100-400: 100.00% (1204/1204)
+    100-500: 100.00% (1204/1204)
+    200-300: 100.00% (1204/1204)
+    200-400: 100.00% (1204/1204)
+    200-500: 100.00% (1204/1204)
+    300-400: 100.00% (1204/1204)
+    300-500: 100.00% (1204/1204)
+    400-500: 100.00% (1204/1204)
+== SLA_BUSINESS (mat <= 5%, tre <= 300 ms, jitter <= 100 ms)
+  moi ban ghi: 98.210% (613040/624214)
+  mau biz-internet  98.533% (283973/288200)
+  mau mpls          97.933% (329067/336014)
+  cap site x cua so 10 phut: co duong ham thoa 100.000% (12041/12041); rieng mpls-mpls thoa 99.875%
+    100-200: 100.00% (1205/1205)
+    100-300: 100.00% (1204/1204)
+    100-400: 100.00% (1204/1204)
+    100-500: 100.00% (1204/1204)
+    200-300: 100.00% (1204/1204)
+    200-400: 100.00% (1204/1204)
+    200-500: 100.00% (1204/1204)
+    300-400: 100.00% (1204/1204)
+    300-500: 100.00% (1204/1204)
+    400-500: 100.00% (1204/1204)
+phan bo mat goi %, mau mpls: trung vi 0, p95 0, p99 0.84, max 100
+phan bo mat goi %, mau biz-internet: trung vi 0, p95 0.833, p99 0.909, max 100
+phan bo tre ms, mau mpls: trung vi 2, p95 32, p99 104, max 7426
+phan bo tre ms, mau biz-internet: trung vi 20, p95 41, p99 74, max 7049
+phan bo jitter ms, mau mpls: trung vi 0, p95 39, p99 117, max 3724
+phan bo jitter ms, mau biz-internet: trung vi 2, p95 19, p99 86, max 1708

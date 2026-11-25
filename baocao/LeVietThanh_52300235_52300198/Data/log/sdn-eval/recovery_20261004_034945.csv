@@ -1,0 +1,5 @@
+link,mode,detect_ms,converge_ms,total_ms,switches,flow_mods,announced,lost_on_cut,outage_cut_ms,restore_converge_ms,lost_on_restore,outage_restore_ms
+A4-D1,silent,1751.1,6.0,1757.1,6,10,2,18,1816.9,12.5,0,0
+A4-D1,admin,8.8,15.8,24.6,6,10,2,3,302.2,14.3,6,302.5
+D1-C1,silent,3385.5,13.8,3399.3,6,25,2,34,3423.1,8.4,3,301.6
+D1-C1,admin,6.1,8.7,14.8,6,25,2,0,0,7.4,4,402.5

@@ -1,0 +1,221 @@
+# Cấu hình thiết bị cho lab EVE-NG — Campus Network SDN + SD-WAN
+
+Bộ file cấu hình startup cho từng node trong lab `Campus Network SDN SD-WAN.unl`.
+Sinh trực tiếp từ bảng quy hoạch IP trong `campus_network_sdn_sdwan.md` (mục 2.1, 2.2, 2.3, 2.4).
+
+---
+
+## 1. Cấu trúc thư mục
+
+```
+configs/
+├── README.md                  ← file này
+├── 01-Site100-Campus/         ← Core, FW, Server Farm, DMZ, vEdge, VPC, script OVS
+├── 02-Site200-CanTho/         ← Brand-FW, vEdge1/2, SwitchBrand, SW55/56, VPC
+├── 03-Site300-DaNang/         ← Brand-FW, vEdge1/2, SwitchBrand, SW58/59, VPC
+├── 04-Site400-NhaTrang/       ← Brand-FW, vEdge1/2, SwitchBrand, SW60/57, VPC
+├── 05-Site900-Controller/     ← vManager-33, vSmart-34, vBond-35 (running-config thật), Switch32, Switch61, vEdge-Spare (23)
+├── 06-ServiceProvider/        ← Internet, MPLS
+└── 07-Site500/                ← vEdge65 (node 65 nối Site 500, xem mục 7), SP-changes.txt
+```
+
+Mỗi thư mục thiết bị chứa `config.cfg` (hoặc `config.txt` cho VPC, `.sh` cho node Linux/OVS).
+
+## 2. Bảng ánh xạ tên thiết bị → Node ID trong EVE-NG
+
+> Đường dẫn upload: `/opt/unetlab/labs/<user>/Campus Network SDN SD-WAN/<node-id>/`
+> (thay `<user>` bằng tài khoản trên server EVE, thường là `root`).
+
+| Thiết bị (thư mục trong repo) | Node ID | Template |
+|---|---|---|
+| FW-ASAv-Active | 1 | asav |
+| FW-ASAv-Standby | 2 | asav |
+| Core-SW1 | 3 | **iol** (chuyển từ viosl2 ngày 11/08/2026) |
+| Core-SW2 | 4 | **iol** (chuyển từ viosl2 ngày 11/08/2026) |
+| Dist-SW1 | 5 | linux (OVS script) |
+| vEdge2-S100 | 6 | vtedge |
+| SwitchDMZ | 7 | iol |
+| Dist-SW2 | 8 | linux (OVS script) |
+| SDN_CONTROLLER | 9 | linux (OVS script) |
+| SW-S500 (Site 500) | 10 | iol (config="0"; cấu hình tay, file `07-Site500/SW-S500`) |
+| VPC11 (Site 500, DHCP VLAN 10) | 11 | vpcs |
+| vEdge2-S500 (tên node `vEdge-Test`) | 23 | vtedge (config="0", NIC e1000) |
+| Linux (Site 500) | 64 | linux (config="0") |
+| Brand-FW-S500 (tên node `ASAv`) | 67 | asav (config="0") |
+| VPC11 / VPC12 (Site 500) | 11, 12 | vpcs (config="0") |
+| Mail-Server | 13 | win (cấu hình tay) |
+| PC-CNTT-S100-1 (thư mục VPC14, VLAN10) | 14 | vpcs |
+| PC-Luat-S100-1 (thư mục VPC15, VLAN30) | 15 | vpcs |
+| PC-Luat-S100-2 (thư mục VPC16, VLAN30) | 16 | vpcs |
+| PC-HanhChinh-S100-2 (thư mục VPC17, VLAN40) | 17 | vpcs |
+| PC-HanhChinh-S100 (cũ VPC18) | 18 | linux (Ubuntu 18.04 GNOME, config="0") |
+| PC-CNTT-S100-2 (thư mục VPC19, VLAN10) | 19 | vpcs |
+| PC-TTK-S100-1 (thư mục VPC20, VLAN20) | 20 | vpcs |
+| PC-TTK-S100-2 (thư mục VPC21, VLAN20) | 21 | vpcs |
+| Web-Server | 22 | linux (`linux-ubuntu-18.04-server`, cấu hình tay) |
+| DHCP-Server | 72 | winserver (cấu hình tay) |
+| SwitchServerFarm | 24 | iol |
+| Syslog-Server | 25 | win (cấu hình tay) |
+| Internet | 26 | vios |
+| MPLS | 27 | vios |
+| vEdge1-S100 | 28 | vtedge |
+| vEdge1-S200 | 29 | vtedge |
+| vEdge1-S300 | 30 | vtedge |
+| vEdge1-S400 | 31 | vtedge |
+| Switch32 | 32 | iol |
+| vManager | 33 | vtmgmt (**có config.cfg từ 15/08/2026** — dán tay qua console) |
+| vSmart | 34 | vtsmart (**có config.cfg từ 15/08/2026** — dán tay qua console) |
+| vBond | 35 | vtbond (**có config.cfg từ 15/08/2026** — dán tay qua console) |
+| Win (quản trị) | 36 | win (cấu hình tay) |
+| Brand-FW-S200 | 37 | asav |
+| Brand-FW-S400 | 38 | asav |
+| Brand-FW-S300 | 39 | asav |
+| vEdge2-S300 | 40 | vtedge |
+| vEdge2-S400 | 41 | vtedge |
+| vEdge2-S200 | 42 | vtedge |
+| VPC chi nhánh (thư mục VPC43…VPC54): 43=PC-NongNghiep-S200-1; 44=PC-NongNghiep-S200-2; 46=PC-YTe-S200-2; 48=PC-TaiChinh-S300-2; 50=PC-DuLich-S300-1; 54=PC-DuLich-S300-2; 45=PC-ThuySan-S400-2; 49=PC-LuHanh-S400-2; 51=PC-ThuySan-S400-1 | 43,44,45,46,48,49,50,51,54 | vpcs |
+| PC-YTe-S200 / PC-LuHanh-S400 / PC-TaiChinh-S300 (cũ VPC47/52/53) | 47, 52, 53 | linux (Ubuntu 18.04 GNOME, config="0") |
+| SW55, SW56, SW57, SW58, SW59, SW60 | 55,56,57,58,59,60 | iol |
+| Switch61 | 61 | iol |
+| SwitchBrand-S300 | 62 | iol |
+| SwitchBrand-S200 | 63 | iol |
+| SwitchBrand-S400 (đổi id 64 → 75 ngày 31/10/2026) | 75 | iol |
+| vEdge1-S500 (tên node `vEdge`, vEdge65; Site 500 từ 03/10/2026) | 65 | vtedge (config="0" từ 02/11/2026, không embed — cấu hình tay, bản tham chiếu `07-Site500/vEdge65`) |
+| Access-SW2 | 66 | linux (OVS script) |
+| Access-SW1 | 68 | linux (OVS script) |
+| Access-SW4 | 69 | linux (OVS script) |
+| Access-SW3 | 70 | linux (OVS script) |
+| PC-Management | 73 | win (cấu hình tay) |
+| SW-WAN-Edge1 (Site 100, VLAN 103 FW-OUTSIDE ↔ vEdge1) | 76 | iol (thêm 31/10/2026) |
+| SW-WAN-Edge2 (Site 100, VLAN 104 FW-OUTSIDE2 ↔ vEdge2) | 77 | iol (thêm 31/10/2026) |
+
+## 3. Cách nạp config vào EVE-NG
+
+### Cách A — Đặt file vào thư mục lab trên server EVE (khuyến nghị)
+
+1. Upload file của từng thiết bị về đúng thư mục node trên server EVE:
+
+   ```
+   scp configs/01-Site100-Campus/Core-SW1/config.cfg root@<eve-ip>:/opt/unetlab/labs/<user>/Campus\ Network\ SDN\ SD-WAN/3/config.cfg
+   ```
+
+2. Trong file `.unl` trên server, node đã được bật `config="1"` (file `.unl` trong repo đã sửa sẵn — nếu lab đang chạy, dùng bản trên server đã được chỉnh hoặc sửa tay: chuột phải node → **Edit** → tích **Config**).
+3. Tắt node (Power off) rồi **Wipe** và khởi động lại — EVE nạp config khi boot.
+
+> Với node đang **chạy**: EVE giữ file config ở `/opt/unetlab/tmp/...` — an toàn nhất là wipe node sau khi đặt file ở `/opt/unetlab/labs/...`.
+
+### Cách B — Dán qua console (telnet) — áp dụng cho mọi thiết bị
+
+- EVE cung cấp cổng telnet: `telnet <eve-ip> <port-console>` (port hiển thị khi double-click node).
+- Với IOS/IOL: dán từng khối lệnh sau dấu `#`.
+- Với ASAv: vào `configure terminal` rồi dán.
+- Với **vEdge**: EVE không đảm bảo tự nạp `config.cfg` cho vtedge. Cách chắc chắn: sau lần boot đầu (onboarding đặt password), vào `config` mode rồi dán nội dung `config.cfg`.
+- Với node Linux/OVS: copy script vào VM rồi chạy `bash script.sh` (xem mục 5).
+
+## 4. Ghi chú từng loại thiết bị
+
+| Loại | File | Nạp tự động khi boot? |
+|---|---|---|
+| iol (Core-SW1/2, SW55–61, SwitchBrand, SwitchDMZ, SwitchServerFarm) | `config.cfg` | ✅ (cần `config="1"`) |
+| viosl2 / vios (Internet, MPLS — dự phòng) | `config.cfg` | ✅ (cần `config="1"`) |
+| asav (FW-ASAv, Brand-FW) | `config.cfg` | ✅ (cần `config="1"`) |
+| vpcs (VPC14–54, trừ 18/47/52/53 đã đổi sang PC Linux) | `config.txt` | ✅ |
+| vtedge (vEdge1/2, vEdge65) | `config.cfg` | ⚠️ dán tay qua console an toàn nhất |
+| linux (SDN_CONTROLLER, Access/Dist-SW) | `.sh` | ❌ chạy script thủ công trong VM |
+| linux (Web-Server) | — | ❌ cấu hình IP và Web service thủ công trong VM |
+| win / vtmgmt / vtsmart / vtbond | `config.cfg` (controller từ 15/08/2026) | ❌ dán tay qua console / cấu hình GUI (xem dưới) |
+
+> **Core-SW1/2 (IOL từ 11/08/2026)**: image `i86bi_linux_l2-adventerprisek9-ms.SSA.high_iron_20190423.bin`, cổng `Ethernet0/x`/`Ethernet1/x`. Hai điểm bắt buộc trong config: (1) `vtp mode off` đặt trước khối `vlan ...` — nếu để VTP server mặc định (rev 0, domain rỗng), switch IOL khác (vd SwitchServerFarm) có rev cao hơn sẽ **quét sạch toàn bộ VLAN DB** khiến SVI down; (2) `switchport trunk encapsulation dot1q` trước mỗi `switchport mode trunk` (image l2 không nhận encapsulation Auto → "Command rejected").
+
+> **VPC (PC ảo) mặc định xin DHCP**: `config.txt` chỉ chứa `ip dhcp` → PC tự xin IP từ scope tương ứng (campus: DHCP-Server 10.1.90.10 relay qua Core; chi nhánh: dhcpd trên Brand-FW; dải `.100–.199` theo mục 2.4 của md).
+
+**Các thiết bị cấu hình bằng tay (không có file):**
+- **Web-Server (22)**: dùng image `linux-ubuntu-18.04-server`, template `linux`, 2 vCPU, RAM 4096 MB và 1 NIC; đặt IP tĩnh **10.1.1.10/28**, gateway **10.1.1.1**, sau đó cài Nginx/Apache và kiểm tra TCP/80 hoặc TCP/443. Node giữ `config="0"`, cấu hình thủ công qua VNC/console.
+- **vManager (33) / vSmart (34) / vBond (35)**: khởi động vManager → vào GUI `https://10.9.0.10` (mặt LAN) hoặc `10.9.1.10` (mặt cloud). Setup cluster vBond→vSmart→vManager, cấp system-ip/site-id cho từng vEdge từ vManager (tính năng Zero-Touch/Manual). vSmart/vBond sau đó được cấu hình **từ xa qua vManager**.
+  - **15/08/2026**: đã lấy `show running-config` thật từ console host 1 (`telnet <eve>:33569/33570/33571`) lưu vào `05-Site900-Controller/vManager-33|vSmart-34|vBond-35/config.cfg` và upload lên host 2 (`Campus Network SDN SD-WAN/33|34|35/`). **Cùng ngày đã sửa IP 3 con theo thiết kế** (md 2.2.5): vManager thêm eth1 = **10.9.1.10/24**; vSmart eth0 đổi dhcp → **10.9.0.11/24** + thêm eth1 = **10.9.1.11/24** + default route 10.9.0.2; vBond VPN 512 eth0 đổi dhcp → **10.9.1.12/24** (mặt cloud NAT → 203.0.113.100). **Lưu ý luật Viptela**: vSmart không cho phép IP interface trùng System-IP trong vpn 0 → **system-ip vSmart đã đổi 10.9.0.11 → 10.9.0.13** (vManager/vBond không bị chặn, system-ip = IP LAN OK). **Login CLI**: `admin`/`vnpro@123` (vManager), `admin`/`okok` (vSmart, vBond). Lưu ý khi lấy config qua console: gặp `--More--` gửi phím `!` (dump hết) — không dùng space/Ctrl-L (mất phần đầu config); nếu console đang kẹt config mode ("Uncommitted changes found") thì `exit` + trả lời `no` trước khi gõ lệnh.
+- **Mail-Server (13), DHCP-Server (72), Syslog-Server (25), Win (36), PC-Management (73)**: đặt IP tĩnh qua Network Settings Windows:
+  - Mail-Server: 10.1.1.11/28, GW 10.1.1.1
+  - DHCP-Server: 10.1.90.10/24, GW 10.1.90.1 (node 72 dùng image **winserver-S2012-R2-x64** — cài role **DHCP Server** bản địa, tạo scope cho VLAN 10/20/30/40 theo mục 2.4 của md; Core đã khai `ip helper-address 10.1.90.10` trên SVI nên relay tự hoạt động. **Trạng thái 01/09/2026: ĐÃ HOÀN TẤT** — role + 4 scope VLAN10/20/30/40 Active (Xác minh: OCR VNC node 72, MMC `DHCP > IPv4` hiển thị đủ 4 scope, mỗi scope trạng thái **Active**; server khai báo IP 10.1.90.10/24). **Lưu ý data-plane SDN campus**: DHCP Discover từ VPC access (VLAN 10/20/30/40) hiện **không flood qua datapath OVS/controller lên Core SVI** (MAC VPC không học được tại Core, `vunl6_72_0` = 0 gói) — là issue SDN campus cũ, KHÔNG phải lỗi DHCP server; chờ khi datapath campus hoạt động thì relay hoạt động bình thường)
+  - Syslog-Server: 10.1.90.11/24, GW 10.1.90.1 (image `win-7-x86-IPCC-WSAlicensed` vẫn dùng được — nhận syslog là phần mềm ứng dụng như Kiwi Syslog/TFTPD64, không cần Windows Server. **Đã triển khai 12/08/2026**: dùng **Kiwi Syslog có sẵn trong image** (không cài Python), listen UDP 514 + rule firewall `syslog514`. Các thiết bị đã cấu hình `logging host 10.1.90.11`: Core-SW1/2, SwitchServerFarm (`logging host 10.1.90.11` — đã có trong config.cfg), FW-ASAv Active/Standby (`logging host inside 10.1.90.11` + `logging trap informational` + `logging enable`))
+  - Win: 10.9.0.20/24, GW 10.9.0.2
+  - **PC-Management: 10.1.99.50/24, GW 10.1.99.1** (nối SwitchServerFarm e2/0, access VLAN 99) — dùng để mở **ASDM** quản lý 2 FW: `https://10.1.99.33` (active) / `https://10.1.99.34` (standby), đăng nhập `admin`/`vnpro@2026` (cần Java 8)
+
+> **FW-ASAv Active/Standby — ASDM management (11/08/2026)**: cả 2 FW cắm cổng **Management0/0** (NIC EVE id 0) vào SwitchServerFarm **e1/2 / e1/3** (access VLAN 99) với IP **10.1.99.33 / .34**; config đã khai `interface Management0/0` (nameif management), `failover management-interface management Management0/0` + `failover interface ip management 10.1.99.33 … standby 10.1.99.34` (active .33 / standby .34 tự hoán đổi), `http server enable` + `http 10.1.99.0 255.255.255.0 management`. **Bắt buộc 1 lần trên console cả 2 unit**: `crypto key generate rsa modulus 2048` (không replicate). ASDM 7.20(2) nhúng sẵn trong image (`show version` → Device Manager Version) nên không cần set `asdm image`.
+
+## 5. Node Linux/OVS — cách chạy script
+
+Các node dùng image `linux-ubuntu-ovs-16p` (Access-SW1–4, Dist-SW1/2, SDN_CONTROLLER):
+- Boot node → console VNC (hoặc SSH từ EVE) → login root (password mặc định theo image).
+- Copy nội dung file `.sh` tương ứng vào VM (hoặc chép qua SCP) rồi chạy:
+
+  ```
+  bash /root/<ten-script>.sh
+  ```
+
+- Để cấu hình tồn tại sau reboot: thêm script vào `/etc/rc.local` hoặc crontab `@reboot` (xem thêm `HuondanchitietController_OVS.md` trong repo).
+
+> **SDN campus (từ 08/2026)**: SDN_CONTROLLER quản lý toàn bộ L2 campus qua OpenFlow 1.3 — Dist-SW1/2 (dpid 5, 8) + Access-SW1–4 (dpid 68, 66, 70, 69) với **control plane trên VLAN 99 MANAGEMENT** (dải 10.1.99.0/24, link uplink sẵn có — **không còn link riêng**, mạng cũ `10.1.100.0/24` + 6 link đã xóa 07/08/2026): SDN_CONTROLLER e0 = **10.1.99.10/24** → SwitchServerFarm e1/0 (access VLAN 99); mỗi switch giữ IP mgmt trong VLAN 99 (Dist 10.1.99.11/.12, Access .21–.24) và `set-controller br0 tcp:10.1.99.10:6653`. App Ryu: **`campus_switch_13.py`** (trong `configs/01-Site100-Campus/`) — chạy cùng `ryu.app.ofctl_rest` (REST port 8080). `BLOCK_PORTS` mặc định rỗng để mọi VPC dùng DHCP; mục **2.7** của `campus_network_sdn_sdwan.md` và cuối file app có hướng dẫn demo ACL/northbound. *(Node test cũ AccessTest + VPC11/12 đã xóa 04/08/2026.)*
+
+### 5.1. Tự phục hồi Ryu/OVS sau stop/start
+
+Không đưa nguyên các script khởi tạo `Dist-SW*.sh`/`Access-SW*.sh` có bước reset OVSDB vào `rc.local` hoặc `@reboot`. Dùng bộ persistence idempotent:
+
+| File nguồn | Đích trong guest |
+|---|---|
+| `Campus-OVS-restore.sh` | `/root/Campus-OVS-restore.sh` trên 6 OVS |
+| `systemd/ovs-nodes/<node>.env` | `/etc/default/campus-ovs` trên đúng OVS |
+| `systemd/campus-ovs-restore.service` | `/etc/systemd/system/campus-ovs-restore.service` |
+| `SDN_CONTROLLER-autostart.sh` | `/root/SDN_CONTROLLER-autostart.sh` trên node 9 |
+| `Campus-Cloud-DHCP.sh` | `/root/Campus-Cloud-DHCP.sh` trên node 9 |
+| `systemd/campus-ryu.service` | `/etc/systemd/system/campus-ryu.service` trên node 9 |
+| `systemd/campus-cloud-dhcp.service` | `/etc/systemd/system/campus-cloud-dhcp.service` trên node 9 |
+
+Sau khi copy đúng file và cấp quyền script:
+
+```bash
+systemctl daemon-reload
+systemctl enable --now campus-ovs-restore.service   # trên OVS
+systemctl enable --now campus-cloud-dhcp.service campus-ryu.service  # controller
+```
+
+Service OVS phục hồi bridge/port theo kiểu `--may-exist`, IP `br-mgmt`, DPID, controller, pruning VLAN 99 và hai flow bootstrap priority 50000. Unit được liên kết với `openvswitch-switch.service`, vì vậy restart daemon OVS cũng chạy lại script và khôi phục flow runtime. Service Ryu gán lại `10.1.99.10/24` trên `ens3` rồi giữ `ryu-manager` trong foreground. DHCP Cloud-NAT trên `ens6` chạy bằng service riêng để restart Ryu không sinh lease trùng. Stop/start thông thường tự phục hồi; wipe vẫn cần triển khai lại file.
+
+## 6. Thứ tự khởi động lab khuyến nghị
+
+1. Service Provider (Internet 26, MPLS 27) → Switch32/Switch61 + vManager/vSmart/vBond → các vEdge (28,6,29,42,30,40,31,41,65).
+2. Site 100: Core-SW1/2 → FW → SwitchServerFarm/DMZ → Dist/Access → VPC.
+3. Các chi nhánh: Brand-FW → SwitchBrand/SW → VPC.
+4. Onboard vEdge qua vManager (đăng ký System-IP, site-id; kích hoạt tunnel IPsec).
+5. Với SDN: chạy SDN_CONTROLLER script → script 6 switch campus (Dist/Access) → kiểm tra `ovs-vsctl show` thấy controller connected; `curl http://127.0.0.1:8080/stats/switches` → `[5, 8, 68, 66, 70, 69]`.
+
+## 7. Địa chỉ tóm tắt nhanh (theo bảng 2.2/2.3 của md)
+
+| Thiết bị | IP chính | Mặt WAN |
+|---|---|---|
+| vEdge1-S100 / vEdge2-S100 | 10.200.100.1 / .2 | Internet 203.0.113.1 / .5 — MPLS 100.64.100.1 / .5 |
+| vEdge1-S200 / vEdge2-S200 | 10.200.200.1 / .2 | Internet 203.0.113.9 — MPLS 100.64.200.1 |
+| vEdge1-S300 / vEdge2-S300 | 10.200.30.1 / .2 | Internet 203.0.113.13 — MPLS 100.64.30.1 |
+| vEdge1-S400 / vEdge2-S400 | 10.200.40.1 / .2 | Internet 203.0.113.17 — MPLS 100.64.40.1 |
+| vEdge1-S500 (node 65) | 10.200.50.1 (site 500) | Internet 203.0.113.21 — MPLS 100.64.50.1 (phía SP đã cấu hình) |
+
+### 7.1. BGP (Service Provider — thay OSPF underlay, 15/08/2026)
+
+| ASN | Thiết bị | Peering |
+|---|---|---|
+| 64511 | Internet (26) | eBGP backbone ↔ MPLS (100.64.254.2); CE-PE ↔ vEdge Internet TLOC (203.0.113.1/.5/.9/.13/.17/.21) + `default-originate` |
+| 64512 | MPLS (27) | eBGP backbone ↔ Internet (100.64.254.1); CE-PE ↔ vEdge MPLS TLOC (100.64.100.1/.5, 100.64.200.1, 100.64.30.1, 100.64.40.1, 100.64.50.1) + `default-originate` |
+| 65000 / 65010 / 65020 / 65030 | vEdge S100 / S200 / S300 / S400 | eBGP với ISP transport tương ứng (thay static default) |
+| 65040 | vEdge65 (Site 500) | Neighbor đã khai trên Internet Gi0/8 và MPLS Gi0/7 (03/10/2026); vEdge chưa cấu hình → phiên `Active` |
+| — | Switch32 (site 900) | Static CE-PE theo phạm vi thiết kế; Switch32 hiện dùng IOL High Iron |
+
+- Mỗi ISP quảng bá transit /30 của mình qua backbone (`network … mask`); Internet Gi0/0 vẫn DHCP (cấm IP tĩnh).
+- vEdge config: `router bgp <ASN>` dưới `vpn 0` + `neighbor <SP-IP> remote-as <SP-ASN>`; bỏ `ip route 0.0.0.0/0` (học default qua BGP).
+- **BẮT BUỘC trên vEdge (bài học 29/08/2026 — S100):** `allow-service bgp` trong **từng** `tunnel-interface` (không `no allow-service bgp`, S100 không dùng `allow-service all`) + `neighbor <SP-IP> address-family ipv4-unicast` **cho từng neighbor**. Thiếu 1 trong 2 → TCP 179 bị stateful firewall của tunnel-interface chặn / neighbor không active → eBGP kẹt `connect`, vEdge mất default route, không reach TLOC site khác → **GUI báo BFD partial + device đỏ** (đã gặp trên vEdge1/2-S100, đã vá live + payload nhúng id 6/28).
+
+- **`tunnel-interface color` phải khớp transport (bài học 30/08/2026 — vEdge2-S200/S300/S400):** WAN **Internet** (203.0.113.x) = **`color biz-internet`**; WAN **MPLS** (100.64.x) = **`color mpls`**. VĐ2-Sxxx chi nhánh (id 40/41/42) trước đó khai nhầm `color mpls` trên ge0/0 (Internet) → không có TLOC `biz-internet` chi nhánh → mọi tunnel **biz-internet ↔ MPLS** Down (Health đỏ, QoE thấp). Đã sửa live 30/08/2026 (`no color mpls` / `color biz-internet` + `commit`) và đồng bộ lại payload nhúng `.unl` (id 40/41/42). BFD cross-color còn lại (S100 `biz-internet` → vEdge1 chi nhánh `mpls`) giữ trạng thái down = hành vi ưu tiên same-color của vEdge, không phải lỗi (underlay 2 chiều đã ping OK 100%).
+
+- **S100 cần route tới controller qua TỪNG transport (bài học 30/08/2026 TỐI — sau test failover):** `color mpls` + interface up + eBGP MPLS Established chưa đủ để TLOC mpls vào OMP — vpn0 còn phải có đường đến controller **qua chính màu đó**. S100 chỉ có `ip route 10.9.0.0/16 203.0.113.2/.6` (Internet) + BGP default → DTLS màu mpls (vsmart/vbond) không dial được → TLOC mpls local không valid, không quảng bá (đúng vấn đề "mpls TLOC không hồi phục sau failover/reboot"). Đã thêm trên **cả 2 vEdge S100** trong `vpn 0`: `ip route 10.9.0.0/24 100.64.100.2` (vEdge1) / `ip route 10.9.0.0/24 100.64.100.6` (vEdge2) → ~60s sau control DTLS 2 màu UP + mpls TLOC vào OMP + BFD mpls→mpls UP (S100 9/12, 3 down = standby). Đồng bộ: config.cfg 2 vEdge S100 + `configs/04-Site400-NhaTrang/vEdge1-S400/config.cfg` (sửa artifact git merge: marker `>>>>>>> + system header trùng lặp → ghi đè bằng payload id 31) + re-embed .unl id 29/30 (thiếu `tunnel-interface`) + 6/28/31/40/41/42 (verify 8/8 == repo) → đã push host 1 (md5 `743e0340...`). vEdge65 dùng System-IP `10.200.90.1`; node phụ này vẫn cần onboarding/kiểm thử riêng nếu đưa vào fabric. *(Đồng bộ 01/09/2026: `.unl` + `configs/05-Site900-Controller/vEdge65/config.cfg` giờ theo host 1 — KHÔNG còn `organization-name`/`vbond`/`tunnel-interface` trên ge0/0, giữ cấu hình tối giản; config nhúng id 65 khớp repo.)*
+| vManager/vSmart/vBond | 10.9.0.10 / .11 / .12 | Cloud 10.9.1.10 / .11 / .12 |
+| SDN_CONTROLLER | 10.1.99.10 (e0, mgmt/control VLAN 99); e3 = Cloud-NAT (pnet0, Internet) | — |
+| Dist-SW1 / Dist-SW2 | mgmt/control 10.1.99.11 / .12 | controller 10.1.99.10:6653 |
+| Access-SW1–4 | mgmt/control 10.1.99.21–.24 | controller 10.1.99.10:6653 |

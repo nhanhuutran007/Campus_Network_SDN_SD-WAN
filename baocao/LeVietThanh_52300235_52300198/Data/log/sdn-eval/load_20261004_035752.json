@@ -1,0 +1,170 @@
+{
+ "phase_seconds": 60.0,
+ "phases": {
+  "1 nen": {
+   "samples": 12,
+   "stats": {
+    "Dist-SW1 Mbps": {
+     "avg": 1.1,
+     "max": 1.16
+    },
+    "Dist-SW1 pps": {
+     "avg": 847.67,
+     "max": 886.9
+    },
+    "Dist-SW1 pkt-in/s": {
+     "avg": 22.19,
+     "max": 23.59
+    },
+    "Dist-SW2 Mbps": {
+     "avg": 3.2,
+     "max": 3.4
+    },
+    "Dist-SW2 pps": {
+     "avg": 2443.22,
+     "max": 2564.8
+    },
+    "Dist-SW2 pkt-in/s": {
+     "avg": 22.16,
+     "max": 23.4
+    },
+    "Core-SW1 uplink Mbps": {
+     "avg": 0.67,
+     "max": 0.73
+    },
+    "Core-SW1 uplink pps": {
+     "avg": 465.99,
+     "max": 493.4
+    },
+    "Core-SW2 uplink Mbps": {
+     "avg": 0.01,
+     "max": 0.01
+    },
+    "Controller CPU %": {
+     "avg": 8.75,
+     "max": 14.3
+    },
+    "Ryu CPU %": {
+     "avg": 4.96,
+     "max": 9.1
+    },
+    "Packet-in/s tong": {
+     "avg": 92.88,
+     "max": 98.0
+    }
+   }
+  },
+  "2 luu luong": {
+   "samples": 12,
+   "stats": {
+    "Dist-SW1 Mbps": {
+     "avg": 2.72,
+     "max": 2.95
+    },
+    "Dist-SW1 pps": {
+     "avg": 1062.21,
+     "max": 1123.0
+    },
+    "Dist-SW1 pkt-in/s": {
+     "avg": 22.41,
+     "max": 23.59
+    },
+    "Dist-SW2 Mbps": {
+     "avg": 3.19,
+     "max": 3.41
+    },
+    "Dist-SW2 pps": {
+     "avg": 2457.95,
+     "max": 2592.9
+    },
+    "Dist-SW2 pkt-in/s": {
+     "avg": 22.34,
+     "max": 23.79
+    },
+    "Core-SW1 uplink Mbps": {
+     "avg": 1.48,
+     "max": 1.6
+    },
+    "Core-SW1 uplink pps": {
+     "avg": 574.6,
+     "max": 612.0
+    },
+    "Core-SW2 uplink Mbps": {
+     "avg": 0.01,
+     "max": 0.01
+    },
+    "Controller CPU %": {
+     "avg": 6.31,
+     "max": 7.2
+    },
+    "Ryu CPU %": {
+     "avg": 5.66,
+     "max": 6.2
+    },
+    "Packet-in/s tong": {
+     "avg": 93.83,
+     "max": 99.4
+    }
+   }
+  },
+  "3 luu luong + su co": {
+   "samples": 12,
+   "stats": {
+    "Dist-SW1 Mbps": {
+     "avg": 1.19,
+     "max": 1.73
+    },
+    "Dist-SW1 pps": {
+     "avg": 915.85,
+     "max": 1086.3
+    },
+    "Dist-SW1 pkt-in/s": {
+     "avg": 22.28,
+     "max": 25.59
+    },
+    "Dist-SW2 Mbps": {
+     "avg": 3.29,
+     "max": 3.78
+    },
+    "Dist-SW2 pps": {
+     "avg": 2584.45,
+     "max": 2921.6
+    },
+    "Dist-SW2 pkt-in/s": {
+     "avg": 22.76,
+     "max": 26.39
+    },
+    "Core-SW1 uplink Mbps": {
+     "avg": 0.72,
+     "max": 0.98
+    },
+    "Core-SW1 uplink pps": {
+     "avg": 522.62,
+     "max": 586.2
+    },
+    "Core-SW2 uplink Mbps": {
+     "avg": 0.01,
+     "max": 0.01
+    },
+    "Controller CPU %": {
+     "avg": 9.56,
+     "max": 37.7
+    },
+    "Ryu CPU %": {
+     "avg": 5.64,
+     "max": 7.1
+    },
+    "Packet-in/s tong": {
+     "avg": 95.56,
+     "max": 111.0
+    }
+   }
+  }
+ },
+ "pinger": {
+  "sent": 2372,
+  "loss_pct": 0.34,
+  "rtt_avg": 2.46,
+  "jitter": 0.58
+ }
+}

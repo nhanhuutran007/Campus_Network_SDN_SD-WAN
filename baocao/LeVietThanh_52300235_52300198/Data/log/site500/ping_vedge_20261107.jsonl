@@ -1,0 +1,15 @@
+{"src": "vEdge1-S500", "target": "S100 beacon", "ip": "10.1.255.1", "sent": 10, "recv": 10, "rtt_avg": 1.571, "time": "2026-11-07 22:08:05"}
+{"src": "vEdge1-S500", "target": "S100 FW outside", "ip": "10.1.3.1", "sent": 10, "recv": 10, "rtt_avg": 7.539, "time": "2026-11-07 22:08:15"}
+{"src": "vEdge1-S500", "target": "S200 vEdge1 LAN", "ip": "10.2.1.2", "sent": 10, "recv": 10, "rtt_avg": 43.432, "time": "2026-11-07 22:08:28"}
+{"src": "vEdge1-S500", "target": "S200 VPC43", "ip": "10.2.60.100", "sent": 10, "recv": 10, "rtt_avg": 4.043, "time": "2026-11-07 22:08:38"}
+{"src": "vEdge1-S500", "target": "S300 vEdge1 LAN", "ip": "10.3.1.2", "sent": 10, "recv": 10, "rtt_avg": 1.896, "time": "2026-11-07 22:08:49"}
+{"src": "vEdge1-S500", "target": "S400 vEdge1 LAN", "ip": "10.4.1.2", "sent": 10, "recv": 10, "rtt_avg": 2.015, "time": "2026-11-07 22:09:00"}
+{"src": "vEdge2-S500", "target": "S100 beacon", "ip": "10.1.255.1", "sent": 10, "recv": 10, "rtt_avg": 2.759, "time": "2026-11-07 22:09:18"}
+{"src": "vEdge2-S500", "target": "S100 FW outside", "ip": "10.1.3.1", "sent": 10, "recv": 10, "rtt_avg": 11.674, "time": "2026-11-07 22:09:29"}
+{"src": "vEdge2-S500", "target": "S200 vEdge1 LAN", "ip": "10.2.1.2", "sent": 10, "recv": 10, "rtt_avg": 26.283, "time": "2026-11-07 22:09:42"}
+{"src": "vEdge2-S500", "target": "S200 VPC43", "ip": "10.2.60.100", "sent": 10, "recv": 10, "rtt_avg": 36.42, "time": "2026-11-07 22:09:53"}
+{"src": "vEdge2-S500", "target": "S300 vEdge1 LAN", "ip": "10.3.1.2", "sent": null, "recv": null, "rtt_avg": null, "time": "2026-11-07 22:10:20", "tail": " ms\r\r\n64 bytes from 10.3.1.2: icmp_seq=8 ttl=64 time=4.17 ms\r\r\n64 bytes from 10.3.1.2: icmp_seq=9 ttl=64 time=4.26 ms\r\r\n"}
+{"src": "vEdge2-S500", "target": "S400 vEdge1 LAN", "ip": "10.4.1.2", "sent": 10, "recv": 10, "rtt_avg": 58.707, "time": "2026-11-07 22:10:24"}
+{"note": "re-run; earlier vEdge2 S300/S400 rows invalid (output overlap)"}
+{"src": "vEdge2-S500", "target": "S300 vEdge1 LAN", "ip": "10.3.1.2", "sent": 10, "recv": 10, "rtt_min": 2.183, "rtt_avg": 27.728, "rtt_max": 231.749, "took_s": 12.2, "time": "2026-11-07 22:11:03"}
+{"src": "vEdge2-S500", "target": "S400 vEdge1 LAN", "ip": "10.4.1.2", "sent": 10, "recv": 10, "rtt_min": 1.171, "rtt_avg": 42.111, "rtt_max": 389.583, "took_s": 12.2, "time": "2026-11-07 22:11:18"}

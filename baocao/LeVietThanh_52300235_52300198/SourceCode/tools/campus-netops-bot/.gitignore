@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env
+
+# Campus NetOps
+netbox-import/
+*.log
+alert_state.json
+alert_state.json.tmp
+audit.log
+backups/
+dist/
+logs/

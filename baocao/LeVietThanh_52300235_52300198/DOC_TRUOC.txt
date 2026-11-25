@@ -1,0 +1,25 @@
+ĐỒ ÁN: XÂY DỰNG CAMPUS NETWORK SỬ DỤNG SDN VÀ SD-WAN
+GVHD: ThS. Lê Viết Thanh
+SV: Trần Hữu Nhân - 52300235 | Nguyễn Nhật Hào - 52300198
+
+NỘI DUNG THƯ MỤC NỘP
+- BaoCao_Campus_SDN_SD-WAN.pdf      Báo cáo cuối kỳ
+- Poster_Campus_SDN_SD-WAN.pptx     Poster dự án
+- KẾ HOẠCH KLTN_...xlsx             Kế hoạch thực hiện (sheet "File kế hoạch mẫu")
+- Link.txt                          Link kế hoạch thực hiện (Google Sheets)
+
+SourceCode/
+- Campus Network SDN SD-WAN.unl     Topology lab EVE-NG (74 node, cấu hình khởi động nhúng)
+- campus_network_sdn_sdwan.md       Tài liệu thiết kế: IP/VLAN, ASN, sơ đồ
+- README.md                         Kiến trúc, cài đặt, hướng dẫn kiểm thử
+- configs/                          Cấu hình thiết bị theo site (Site 100, 200, 300, 400, 500, 900, nhà cung cấp dịch vụ),
+                                    ứng dụng SDN Ryu + Campus SDN Console (configs/01-Site100-Campus)
+- scripts/                          Công cụ đo/kiểm thử và onboard SD-WAN (Python)
+- tools/campus-netops-bot/          Campus NetOps Bot (Telegram + AI agent quản trị mạng)
+- web/                              Trang web kiểm thử dịch vụ
+- bieu-do/ve_bieu_do.py             Script vẽ biểu đồ trong báo cáo
+
+Data/
+- log/                              Số liệu đo gốc (CSV/JSON): hiệu năng và phục hồi SDN, failover FW HA,
+                                    failover chi nhánh, BFD, thông lượng, tính sẵn sàng SD-WAN, tiêu chí vận hành
+- ket-qua-kiem-thu/                 Kết quả kiểm thử chính sách tập trung và failover SD-WAN

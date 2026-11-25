@@ -1,0 +1,118 @@
+
+=== D1-C1 (vunl6_5_6) giu 25s: DAT 
+  10.1.10.100  cat: mat  36 goi, gian doan   3527 ms | khoi phuc: mat  24,   2463 ms
+  10.1.20.100  cat: mat  37 goi, gian doan   3632 ms | khoi phuc: mat   2,    201 ms
+  10.1.30.100  cat: mat  36 goi, gian doan   3527 ms | khoi phuc: mat   1,    200 ms
+  10.1.40.100  cat: mat  37 goi, gian doan   3625 ms | khoi phuc: mat   1,    201 ms
+  ve day du sau 4337 ms; khung controller 11 lan; cay luc cat ['A1-D2', 'A2-D2', 'A3-D2', 'A4-D2', 'D1-D2', 'D2-C1']
+     +3.52s link_down        D1-C1 down (probe het han)
+    +11.26s controller_stall Controller khung 1798 ms - tam ngung ket luan lien ket chet
+    +12.96s controller_stall Controller khung 550 ms - tam ngung ket luan lien ket chet
+    +18.98s controller_stall Controller khung 2214 ms - tam ngung ket luan lien ket chet
+    +23.80s controller_stall Controller khung 1198 ms - tam ngung ket luan lien ket chet
+    +24.90s controller_stall Controller khung 1048 ms - tam ngung ket luan lien ket chet
+    +26.73s controller_stall Controller khung 691 ms - tam ngung ket luan lien ket chet
+    +29.19s link_up          D1-C1 up (probe phuc hoi)
+    +46.56s controller_stall Controller khung 1462 ms - tam ngung ket luan lien ket chet
+    +47.70s controller_stall Controller khung 1048 ms - tam ngung ket luan lien ket chet
+    +51.26s link_down        D1-D2 down (probe het han) - cay khong doi
+    +51.26s link_down        A1-D1 down (probe het han)
+    +51.29s link_down        A2-D1 down (probe het han)
+    +51.29s link_down        A3-D1 down (probe het han)
+    +51.29s link_down        A4-D1 down (probe het han)
+    +52.40s link_up          D1-D2 up (probe phuc hoi) - cay khong doi
+    +52.40s link_up          A1-D1 up (probe phuc hoi)
+    +52.40s link_up          A2-D1 up (probe phuc hoi)
+    +52.40s link_up          A3-D1 up (probe phuc hoi)
+    +52.41s link_up          A4-D1 up (probe phuc hoi)
+    +53.94s controller_stall Controller khung 1444 ms - tam ngung ket luan lien ket chet
+    +55.51s controller_stall Controller khung 1496 ms - tam ngung ket luan lien ket chet
+    +61.64s controller_stall Controller khung 6044 ms - tam ngung ket luan lien ket chet
+
+=== A4-D1 (vunl6_69_1) giu 25s: KHONG DAT gian doan khi cat 6.0 s > 5 s
+  10.1.10.100  cat: mat   2 goi, gian doan   5889 ms | khoi phuc: mat   0,      0 ms
+  10.1.20.100  cat: mat   2 goi, gian doan   5979 ms | khoi phuc: mat   0,      0 ms
+  10.1.30.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.40.100  cat: mat  35 goi, gian doan   5912 ms | khoi phuc: mat   1,    203 ms
+  ve day du sau 2990 ms; khung controller 9 lan; cay luc cat ['A1-D1', 'A2-D1', 'A3-D1', 'A4-D2', 'D1-C1', 'D2-C1']
+     +2.98s link_down        A4-D1 down (probe het han)
+     +4.52s controller_stall Controller khung 1189 ms - tam ngung ket luan lien ket chet
+     +9.73s controller_stall Controller khung 5141 ms - tam ngung ket luan lien ket chet
+    +10.68s controller_stall Controller khung 870 ms - tam ngung ket luan lien ket chet
+    +22.45s controller_stall Controller khung 1565 ms - tam ngung ket luan lien ket chet
+    +23.47s controller_stall Controller khung 941 ms - tam ngung ket luan lien ket chet
+    +27.39s link_up          A4-D1 up (probe phuc hoi)
+    +34.98s controller_stall Controller khung 587 ms - tam ngung ket luan lien ket chet
+    +36.42s controller_stall Controller khung 1442 ms - tam ngung ket luan lien ket chet
+    +37.38s controller_stall Controller khung 855 ms - tam ngung ket luan lien ket chet
+    +40.25s controller_stall Controller khung 2068 ms - tam ngung ket luan lien ket chet
+
+=== D1-D2 (vunl6_5_5) giu 25s: DAT 
+  10.1.10.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.20.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.30.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.40.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  ve day du sau 2891 ms; khung controller 5 lan; cay luc cat ['A1-D1', 'A2-D1', 'A3-D1', 'A4-D1', 'D1-C1', 'D2-C1']
+     +2.00s link_down        D1-D2 down (probe het han) - cay khong doi
+    +24.35s controller_stall Controller khung 532 ms - tam ngung ket luan lien ket chet
+    +26.00s controller_stall Controller khung 1666 ms - tam ngung ket luan lien ket chet
+    +26.87s controller_stall Controller khung 762 ms - tam ngung ket luan lien ket chet
+    +27.54s controller_stall Controller khung 572 ms - tam ngung ket luan lien ket chet
+    +29.58s link_up          D1-D2 up (probe phuc hoi) - cay khong doi
+    +32.78s controller_stall Controller khung 1580 ms - tam ngung ket luan lien ket chet
+
+=== D2-C1 (vunl6_8_7) giu 25s: DAT 
+  10.1.10.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.20.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.30.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.40.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  ve day du sau 2398 ms; khung controller 2 lan; cay luc cat ['A1-D1', 'A2-D1', 'A3-D1', 'A4-D1', 'D1-C1', 'D1-D2']
+     +2.62s link_down        D2-C1 down (probe het han)
+     +6.53s controller_stall Controller khung 1569 ms - tam ngung ket luan lien ket chet
+     +7.21s controller_stall Controller khung 604 ms - tam ngung ket luan lien ket chet
+    +27.18s link_up          D2-C1 up (probe phuc hoi)
+
+=== A4-D1+D2-C1 (vunl6_69_1+vunl6_8_7) giu 25s: DAT 
+  10.1.10.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.20.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.30.100  cat: mat   0 goi, gian doan      0 ms | khoi phuc: mat   0,      0 ms
+  10.1.40.100  cat: mat  30 goi, gian doan   3135 ms | khoi phuc: mat   1,    216 ms
+  ve day du sau 16105 ms; khung controller 4 lan; cay luc cat ['A1-D1', 'A2-D1', 'A3-D1', 'A4-D2', 'D1-C1', 'D1-D2']
+     +1.69s link_down        A4-D1 down (probe het han)
+     +3.20s link_down        D2-C1 down (probe het han)
+    +27.54s controller_stall Controller khung 1254 ms - tam ngung ket luan lien ket chet
+    +28.68s controller_stall Controller khung 1074 ms - tam ngung ket luan lien ket chet
+    +36.89s controller_stall Controller khung 8096 ms - tam ngung ket luan lien ket chet
+    +39.20s controller_stall Controller khung 2227 ms - tam ngung ket luan lien ket chet
+    +39.53s switch_down      Access-SW4 mat ket noi controller
+    +39.54s switch_down      Access-SW2 mat ket noi controller
+    +39.54s switch_down      Dist-SW2 mat ket noi controller
+    +39.54s tree_change      switch_down Dist-SW2
+    +39.57s switch_down      Access-SW3 mat ket noi controller
+    +39.58s switch_down      Access-SW1 mat ket noi controller
+    +39.64s switch_up        Access-SW2 ket noi controller
+    +39.64s tree_change      switch_up Access-SW2
+    +39.70s switch_up        Access-SW4 ket noi controller
+    +39.70s tree_change      switch_up Access-SW4
+    +39.81s switch_up        Dist-SW2 ket noi controller
+    +39.81s tree_change      switch_up Dist-SW2
+    +39.82s switch_up        Access-SW1 ket noi controller
+    +39.82s tree_change      switch_up Access-SW1
+    +40.14s switch_up        Access-SW3 ket noi controller
+    +40.14s tree_change      switch_up Access-SW3
+    +40.38s link_up          D2-C1 up (probe phuc hoi)
+    +40.39s link_up          A4-D1 up (probe phuc hoi)
+
+=== D1-C1+D1-C2 (vunl6_5_6+vunl6_5_7) giu 25s: DAT 
+  10.1.10.100  cat: mat  32 goi, gian doan   3335 ms | khoi phuc: mat   0,      0 ms
+  10.1.20.100  cat: mat  32 goi, gian doan   3335 ms | khoi phuc: mat   0,      0 ms
+  10.1.30.100  cat: mat  32 goi, gian doan   3335 ms | khoi phuc: mat   0,      0 ms
+  10.1.40.100  cat: mat  32 goi, gian doan   3335 ms | khoi phuc: mat   0,      0 ms
+  ve day du sau 2444 ms; khung controller 3 lan; cay luc cat ['A1-D2', 'A2-D2', 'A3-D2', 'A4-D2', 'D1-D2', 'D2-C1']
+     +3.32s link_down        D1-C1 down (probe het han)
+     +3.33s link_down        D1-C2 down (probe het han) - cay khong doi
+    +26.98s link_up          D1-C1 up (probe phuc hoi)
+    +26.98s link_up          D1-C2 up (probe phuc hoi) - cay khong doi
+    +28.79s controller_stall Controller khung 588 ms - tam ngung ket luan lien ket chet
+    +30.93s controller_stall Controller khung 2151 ms - tam ngung ket luan lien ket chet
+    +31.64s controller_stall Controller khung 607 ms - tam ngung ket luan lien ket chet
