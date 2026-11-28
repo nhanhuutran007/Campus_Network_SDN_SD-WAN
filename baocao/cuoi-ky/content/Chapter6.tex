@@ -1,0 +1,39 @@
+\section{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}\label{sec:ket_luan_huong_phat_trien}
+
+\subsection{Kết quả đạt được}
+
+Đề tài đã xây dựng mô hình mạng Campus đa cơ sở kết hợp SDN và SD-WAN trên EVE-NG với 74 node, gồm Campus chính, ba cơ sở phụ, một cơ sở mở rộng, trung tâm điều khiển SD-WAN và hai nhà cung cấp. Cả 30 kịch bản kiểm thử đều đạt; năm nội dung của đề tài (mạng ba tầng, phân chia VLAN theo khoa, SDN Controller điều khiển toàn bộ switch lớp 2 Campus chính, SD-WAN kết nối các cơ sở, tích hợp RSTP, OSPF, DHCP, ACL và dự phòng ở mọi tầng) đều đã được hiện thực và kiểm chứng.
+\begin{itemize}
+    \item \textbf{Thiết kế:} quy hoạch địa chỉ thống nhất theo mã site; sơ đồ vật lý và sơ đồ logic; hai kiến trúc cùng tồn tại có chủ đích (ba tầng có SDN tại Campus chính, Firewall-as-Core tại chi nhánh).
+    \item \textbf{Campus chính:} VRRP cho năm VLAN, OSPF với tường lửa biên, DHCP Relay; cặp ASAv HA tự chuyển vai trò (dưới 1 giây khi chủ động, 11--21 giây khi hỏng), bảo vệ DMZ bằng ba ACL theo hướng.
+    \item \textbf{SDN:} ứng dụng Ryu điều khiển sáu OVS với học MAC theo VLAN, cây chuyển tiếp tập trung, thăm dò liên kết chủ động, kênh quản trị VLAN 99 không phụ thuộc STP, thêm VLAN (3,8~ms) và áp chính sách (8,0--12,6~ms) bằng một lệnh API, tự phục hồi với gián đoạn không quá 3,6 giây, cùng Campus SDN Console.
+    \item \textbf{SD-WAN:} mười vEdge xác thực bằng PKI, overlay IPsec trên hai transport, toàn bộ BFD hoạt động; SLA, AAR, data policy, control policy áp tập trung, đạt 10/10 phép thử tại bốn chi nhánh; luồng mới tự khôi phục sau 3,2--13,4 giây qua 46 lần cắt thật; mất controller không làm mất gói; cảnh báo qua email.
+    \item \textbf{Internet, dịch vụ, vận hành:} người dùng ra Internet tại chỗ có dự phòng qua MPLS; DNS, Web HTTPS, Mail, Syslog dùng được từ mọi cơ sở dưới hai lớp kiểm soát; NetOps Bot giám sát, chẩn đoán theo lớp và thay đổi cấu hình có duyệt qua Telegram.
+    \item \textbf{Đối chứng và bảo mật:} trên cùng topology, khi sáu OVS chạy RSTP như switch truyền thống, mạng không tự phục hồi trong 20 giây sau khi đứt ngầm một liên kết đang dùng (bảng MAC của Core không được xóa ở các VLAN dữ liệu), và chỉ phục hồi sau 4,2--5,9 giây khi giả lập việc xóa MAC đúng; SDN phục hồi sau 1,6--3,6 giây. Bắt gói xác nhận lưu lượng giữa các cơ sở được mã hóa trên cả hai transport; quét cổng xác nhận ranh giới DMZ hoạt động đúng hai chiều.
+    \item \textbf{Phương pháp:} triển khai từ dưới lên, chẩn đoán theo lớp có bằng chứng, phép đo tự động hóa, nhờ đó xác định được nguyên nhân gốc của nhiều sự cố không hiển nhiên.
+\end{itemize}
+
+\subsection{Hạn chế}
+
+\begin{itemize}
+    \item \textbf{Controller chưa có dự phòng:} một SDN Controller (luồng mới không được xử lý khi Controller dừng, bị khựng tới 4 giây khi máy chủ quá tải) và một bộ vManage, vSmart, vBond (không thể đổi chính sách hay thêm thiết bị khi mất controller, mỗi controller cần khoảng 3 phút để kết nối lại).
+    \item \textbf{Failover:} luồng đang chạy khôi phục chậm hơn luồng mới (19--38 giây) vì chờ \texttt{floating-conn} của ASA; thời gian phát hiện bị giới hạn bởi timer BFD mặc định. \texttt{track} trên tường lửa biên Site 100 chưa được thử khi khởi động lại đồng thời cả hai đơn vị.
+    \item \textbf{Môi trường mô phỏng:} WAN chỉ khoảng 2~Mbit/s; ASAv không giấy phép giới hạn 100 kết nối và khoảng 0,1~Mbit/s; CPU do Core IOL báo luôn là 0\%; card mạng ảo đôi khi treo chiều nhận.
+    \item \textbf{Chính sách từ chi nhánh vào Campus chính còn rộng:} phép quét cổng cho thấy máy chi nhánh tới được RPC, SMB, Remote Desktop của DHCP Server và giao diện web quản trị của Core-SW1, vì tường lửa biên cho mọi lưu lượng từ chi nhánh vào \texttt{10.1.0.0/16} và data policy chỉ chặn Telnet.
+    \item \textbf{Đo lường và bảo mật:} thời gian thêm site chưa gồm bước ký chứng chỉ; MOS chỉ là ước lượng, video không đo được; chi phí mới ước lượng phần đường truyền; các mô hình Flat, Two-Tier, VXLAN EVPN chỉ so sánh định tính; 802.1X, DHCP Snooping, DAI, SNMPv3, SSH toàn hệ thống, xác thực REST API và AAA mới ở mức thiết kế; chính sách SD-WAN cấu hình bằng CLI trên vSmart, chưa dùng template của vManage.
+\end{itemize}
+
+\subsection{Hướng phát triển}
+
+\begin{enumerate}
+    \item Chạy Controller dự phòng nóng (vai trò master/slave của OpenFlow) và tách Controller khỏi các dịch vụ nặng; bổ sung controller SD-WAN dự phòng.
+    \item Giảm thời gian failover: timer BFD ngắn sau khi đủ vCPU cho mọi vEdge, giảm chu kỳ SLA trên Brand-FW, OSPF graceful restart cho tường lửa HA.
+    \item Thu hẹp chính sách từ chi nhánh vào Campus chính thành danh sách dịch vụ cần thiết (DHCP, DNS, Web, Mail, Syslog) và tắt giao diện web quản trị trên Core.
+    \item Tăng cường bảo mật: 802.1X, chống DHCP/ARP giả mạo bằng flow trên Controller, SSH/SNMPv3, xác thực API, AAA tập trung.
+    \item Chuẩn hóa SD-WAN bằng template trên vManage; tự động hóa triển khai và kiểm tra nhất quán cấu hình qua API.
+    \item Đo kiểm trên một cụm thiết bị thật nhỏ để đối chiếu hiệu năng và thời gian hội tụ với môi trường ảo.
+\end{enumerate}
+
+\subsection{Kết luận chung}
+
+Kết quả cho thấy SDN và SD-WAN có thể kết hợp trong một kiến trúc mạng Campus đa cơ sở mà không làm mất vai trò của các cơ chế truyền thống: VRRP, OSPF, tường lửa HA và VLAN bảo đảm ổn định tại lớp 3 và biên mạng; Ryu mang lại khả năng lập trình, tự phục hồi và quan sát tập trung cho lớp 2 với thời gian thêm VLAN và áp chính sách tính bằng mili giây; vManage, vSmart, vBond điều phối overlay an toàn, có chính sách tập trung, tự chọn đường và chủ động cảnh báo. Các giới hạn còn lại là cơ sở để tiếp tục phát triển mô hình thành nền tảng thực hành mạng Campus đa cơ sở.

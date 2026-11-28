@@ -177,3 +177,88 @@ route outside2 0.0.0.0 0.0.0.0 10.2.1.6 1 track 2
 route outside1 0.0.0.0 0.0.0.0 10.2.1.2 2
 route outside2 9.9.9.9 255.255.255.255 10.2.1.6 1
 \end{lstlisting}
+
+\subsection*{D. Hướng dẫn tái lập hệ thống và phép đo}
+\setcounter{table}{0}\renewcommand{\thetable}{D.\arabic{table}}
+
+Phụ lục này tóm tắt các bước dựng lại hệ thống và chạy lại các phép đo trong báo cáo. Toàn bộ topology nằm trong một tệp lab EVE-NG (\texttt{Campus Network SDN SD-WAN.unl}, 74 node, 107 phân đoạn mạng); cấu hình nguồn của từng thiết bị nằm trong thư mục \texttt{configs/} của kho mã, mỗi site một thư mục. Địa chỉ và tham số chính xem ở Bảng~\ref{tab:cac_site}, \ref{tab:vlan_campus_chinh}, \ref{tab:vlan_chi_nhanh} và \ref{tab:system_ip_tloc}.
+
+\textbf{D.1. Thứ tự khởi động.} Các nhóm node được bật theo thứ tự phụ thuộc, nhóm sau chờ nhóm trước sẵn sàng (Bảng~\ref{tab:thu_tu_khoi_dong}). Toàn bộ lab lên đủ sau khoảng 25--30 phút trên máy chủ 48 luồng, 188 GB RAM. Thứ tự này tránh hai lỗi đã gặp: OVS bật trước Controller làm bão broadcast trên VLAN 99, và vEdge bật trước vBond phải chờ thêm một chu kỳ kết nối lại.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{|P{1.0cm}|L{5.6cm}|L{\dimexpr\textwidth-1.0cm-5.6cm-2.2cm-8\tabcolsep-5\arrayrulewidth\relax}|L{2.2cm}|}
+    \caption{Thứ tự khởi động các nhóm node}\label{tab:thu_tu_khoi_dong} \\
+    \hline
+    \textbf{Bước} & \textbf{Node} & \textbf{Lý do} & \textbf{Chờ sau đó} \\
+    \hline
+    \endfirsthead
+    \hline
+    \textbf{Bước} & \textbf{Node} & \textbf{Lý do} & \textbf{Chờ sau đó} \\
+    \hline
+    \endhead
+    \hline
+    \endfoot
+    1 & Router Internet, MPLS; switch Site 900; vBond, vSmart, vManage & Underlay và controller SD-WAN phải có trước mọi Edge & 120 s \\
+    \hline
+    2 & SwitchServerFarm, Core-SW1/2, SwitchDMZ, SW-WAN-Edge1/2 & Hạ tầng lớp 2/3 và VLAN 99 của Campus chính & 45 s \\
+    \hline
+    3 & FW-ASAv-Active, rồi FW-ASAv-Standby & Đơn vị Active lên trước để giữ vai trò & 90 s, 45 s \\
+    \hline
+    4 & vEdge1, vEdge2 Site 100 & Kết nối Campus chính vào fabric & 30 s \\
+    \hline
+    5 & SDN Controller & Ryu phải nghe cổng 6653 trước khi OVS kết nối & 90 s \\
+    \hline
+    6 & Dist-SW1/2, rồi Access-SW1--4 & OVS kết nối Controller qua VLAN 99 & 60 s, 30 s \\
+    \hline
+    7 & DHCP-Server, Web, Mail, Syslog; máy trạm Site 100 & Dịch vụ và máy trạm & 30 s \\
+    \hline
+    8 & Từng chi nhánh: vEdge1, vEdge2, Brand-FW, switch, máy trạm (Site 200, 300, 400, 500) & Mỗi chi nhánh lên fabric rồi mới cấp DHCP & 30 s mỗi site \\
+\end{longtable}
+\endgroup
+
+\textbf{D.2. Lệnh kiểm chứng trạng thái.} Sau khi khởi động, trạng thái từng lớp được kiểm bằng các lệnh ở Bảng~\ref{tab:lenh_kiem_chung}; hệ thống chỉ được coi là sẵn sàng khi mọi dòng cho đúng kết quả mong đợi.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{|L{2.6cm}|L{5.4cm}|L{\dimexpr\textwidth-2.6cm-5.4cm-6\tabcolsep-4\arrayrulewidth\relax}|}
+    \caption{Lệnh kiểm chứng và kết quả mong đợi}\label{tab:lenh_kiem_chung} \\
+    \hline
+    \textbf{Thiết bị} & \textbf{Lệnh} & \textbf{Kết quả mong đợi} \\
+    \hline
+    \endfirsthead
+    \hline
+    \textbf{Thiết bị} & \textbf{Lệnh} & \textbf{Kết quả mong đợi} \\
+    \hline
+    \endhead
+    \hline
+    \endfoot
+    SDN Controller & \texttt{curl -s http://127.0.0.1:8080/\allowbreak stats/switches} & Đủ 6 DPID: 5, 8, 66, 68, 69, 70 \\
+    \hline
+    OVS & \texttt{ovs-vsctl get bridge br0 protocols fail\_mode stp\_enable} & \texttt{OpenFlow13}, \texttt{secure}, \texttt{false} \\
+    \hline
+    OVS & \texttt{ovs-ofctl -O OpenFlow13 dump-flows br0} & Có flow bảng 0 (kiểm soát) và bảng 1 (chuyển tiếp) \\
+    \hline
+    Core-SW1/2 & \texttt{show vrrp brief}, \texttt{show ip ospf neighbor} & Core-SW1 Master các VLAN 10--40; láng giềng OSPF \texttt{FULL} \\
+    \hline
+    FW-ASAv & \texttt{show failover state} & Một đơn vị Active, một Standby Ready \\
+    \hline
+    vEdge & \texttt{show control connections} & Kết nối \texttt{up} tới vSmart và vManage \\
+    \hline
+    vEdge & \texttt{show bfd sessions} & Mọi phiên \texttt{up} trên cả hai color \\
+    \hline
+    vEdge & \texttt{show omp routes vpn 1} & Có prefix LAN của mọi site, trạng thái \texttt{C,I,R} \\
+    \hline
+    vSmart & \texttt{show policy from-vsmart} (trên vEdge) & Có SLA class, AAR, data policy \\
+    \hline
+    Brand-FW & \texttt{show track}, \texttt{show route} & Hai đối tượng track \texttt{Up}; tuyến mặc định qua vEdge2 \\
+    \hline
+    Máy trạm & \texttt{ip dhcp} (VPCS), \texttt{ping} gateway & Nhận địa chỉ trong dải \texttt{.100--.199}; ping thành công \\
+\end{longtable}
+\endgroup
+
+\textbf{D.3. Công cụ đo.} Các phép đo trong báo cáo được tự động hóa bằng script Python trong kho mã (thư mục \texttt{scripts/} và \texttt{.claude/skills/campus-network-lab/scripts/lab/}). Script đăng nhập máy chủ EVE-NG, mở console thiết bị qua kênh chuyển tiếp của SSH, hoặc chạy đầu đo trong network namespace gắn vào phân đoạn mạng cần đo. Mật khẩu được đọc từ tệp cục bộ lúc chạy, không nằm trong mã. Các script chính: \texttt{sdn\_realcut\_test.py} (cắt liên kết thật trên OVS, đo gián đoạn), \texttt{sdn\_vlan\_test.py} và \texttt{sdn\_policy\_test.py} (thêm VLAN, áp chính sách), \texttt{sdn\_load\_test.py} (tải cao), \texttt{branch\_failover\_test.py} và \texttt{fw\_failover\_test.py} (cắt đường truyền, vEdge, tường lửa), \texttt{icmp\_probe.py} (đầu đo ICMP 5 gói/giây, phân biệt luồng mới và luồng đang chạy), \texttt{site\_join\_test.py}, \texttt{cfgload\_test.py}, \texttt{sdwan\_policy\_time.py}, \texttt{sla\_stats.py}, \texttt{bw\_util.py} và \texttt{mttr\_test.py} (năm tiêu chí vận hành), \texttt{sdwan\_reliability.py} (độ khả dụng từ API vManage).
+
+\textbf{D.4. Cắt liên kết thật.} Mọi phép đo phục hồi cắt liên kết bằng cách hạ giao diện ảo của node trên máy chủ (\texttt{ip link set vunl0\_<node>\_<cổng> down}), giữ một khoảng thời gian cố định rồi bật lại. Thiết bị hai đầu không nhận được sự kiện mất sóng mang, giống đứt cáp ở giữa đường truyền, nên thời gian đo được gồm cả thời gian phát hiện của từng giao thức.

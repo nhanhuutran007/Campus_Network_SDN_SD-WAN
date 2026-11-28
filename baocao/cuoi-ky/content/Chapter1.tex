@@ -28,7 +28,7 @@ Hai công nghệ Software-Defined Networking (SDN) và Software-Defined Wide Are
     \item Mô hình được hiện thực trên nền tảng mô phỏng Emulated Virtual Environment -- Next Generation (EVE-NG) với 74 node: Campus chính (Site 100), ba cơ sở phụ (Site 200, 300, 400), trung tâm điều khiển SD-WAN (Site 900), hai router mô phỏng nhà cung cấp Internet, MPLS và một cơ sở mở rộng (Site 500). Switch Cisco dùng image IOS on Linux (IOL).
     \item SDN áp dụng cho tầng Distribution và Access của Campus chính (sáu OVS); tầng Core và tường lửa giữ cơ chế truyền thống theo mô hình Hybrid SDN. Liên kết giữa các cơ sở do SD-WAN đảm nhận.
     \item Mạng WAN mô phỏng dùng dải \texttt{203.0.113.0/24} và \texttt{100.64.0.0/10}; router nhà cung cấp Internet nối ra mạng thật của phòng lab. Mạng không dây và xác thực 802.1X nằm ngoài phạm vi.
-    \item Đánh giá theo bảy nhóm tiêu chí của đề cương (hiệu năng, mở rộng, độ tin cậy, quản trị, bảo mật, Quality of Service (QoS), quy mô); thông lượng và độ trễ đo trong môi trường ảo hóa nên không phản ánh hiệu năng thiết bị thật.
+    \item Đánh giá theo tám mục tiêu kỹ thuật của thiết kế mạng (mở rộng, khả dụng, hiệu suất, bảo mật, quản lý, sử dụng, thích ứng, kinh tế), trong đó giữ đủ các chỉ số thuộc bảy nhóm tiêu chí của đề cương (hiệu năng, mở rộng, độ tin cậy, quản trị, bảo mật, Quality of Service (QoS), quy mô); thông lượng và độ trễ đo trong môi trường ảo hóa nên không phản ánh hiệu năng thiết bị thật.
 \end{itemize}
 
 \subsection{Phương pháp nghiên cứu}
@@ -44,10 +44,12 @@ Hai công nghệ Software-Defined Networking (SDN) và Software-Defined Wide Are
 
 Mô hình cho thấy cách kết hợp SDN và SD-WAN với các cơ chế truyền thống trong một hệ thống thống nhất; các nguyên nhân gốc của sự cố đã gặp (phụ thuộc vòng giữa switch và Controller trong SDN in-band, quy tắc in-band ẩn gây bão broadcast, định tuyến tới controller cho từng màu TLOC, xung đột tên miền \texttt{.local} với mDNS) là kinh nghiệm có giá trị cho triển khai thực tế. Mô hình cũng có thể dùng làm nền tảng thực hành cho các học phần mạng máy tính.
 
-Báo cáo gồm bốn chương:
+Báo cáo gồm sáu chương:
 \begin{itemize}
     \item \textbf{Chương 1 -- Mở đầu và tổng quan đề tài:} lý do, mục tiêu, phạm vi, phương pháp và bố cục.
-    \item \textbf{Chương 2 -- Cơ sở lý thuyết:} mạng Campus phân cấp, VLAN, dự phòng, định tuyến, dịch vụ, tường lửa, SDN, SD-WAN và EVE-NG.
+    \item \textbf{Chương 2 -- Cơ sở lý thuyết:} mạng Campus phân cấp, VLAN, dự phòng, định tuyến, dịch vụ, tường lửa, SDN, SD-WAN, EVE-NG và các nghiên cứu liên quan.
     \item \textbf{Chương 3 -- Mô hình mạng Campus đề xuất:} yêu cầu, kiến trúc, sơ đồ vật lý và sơ đồ logic, quy hoạch địa chỉ, thiết kế định tuyến, SDN, SD-WAN, dịch vụ và bảo mật.
-    \item \textbf{Chương 4 -- Triển khai, đánh giá và kết luận:} hiện thực, các vấn đề kỹ thuật, kết quả kiểm thử, đánh giá theo tiêu chí của đề cương, kết luận và hướng phát triển.
+    \item \textbf{Chương 4 -- Triển khai và hiện thực:} hiện thực từng phần của hệ thống, các vấn đề kỹ thuật cùng nguyên nhân gốc và kết quả kiểm thử từng phần.
+    \item \textbf{Chương 5 -- Kiểm thử và đánh giá:} tổng hợp kiểm thử, các phép đo theo tiêu chí vận hành, đánh giá theo tám mục tiêu kỹ thuật, phép thử bảo mật, đối chứng với mạng truyền thống, chi phí và giới hạn của kết quả.
+    \item \textbf{Chương 6 -- Kết luận và hướng phát triển:} kết quả đạt được, hạn chế và hướng phát triển.
 \end{itemize}

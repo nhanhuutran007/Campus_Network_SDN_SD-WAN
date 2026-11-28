@@ -1,6 +1,37 @@
 \begin{thebibliography}{}
 
 \bibitem [\protect \citeauthoryear {%
+Casado%
+\ \protect \BOthers {.}}{%
+Casado%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2007}}%
+}]{%
+casado2007ethane}
+\APACinsertmetastar {%
+casado2007ethane}%
+\begin{APACrefauthors}%
+Casado, M.%
+, Freedman, M\BPBI J.%
+, Pettit, J.%
+, Luo, J.%
+, McKeown, N.%
+\BCBL {}\ \BBA {} Shenker, S.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2007}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Ethane: Taking Control of the Enterprise} {Ethane:
+  Taking control of the enterprise}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {Proceedings of the ACM SIGCOMM 2007 Conference}
+  {Proceedings of the acm sigcomm 2007 conference}\ (\BPGS\ 1--12).
+\newblock
+\begin{APACrefDOI} \doi{10.1145/1282380.1282382} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
 Cheshire%
 \ \BBA {} Krochmal%
 }{%
@@ -20,12 +51,61 @@ Cheshire, S.%
 \newblock
 \APACrefYearMonthDay{2013}{{\APACmonth{02}}}{}.
 \newblock
-\APACrefbtitle {Multicast DNS} {Multicast dns}\ \APACbVolEdTR {}{RFC\ \BNUM\
-  6762}.
+\APACrefbtitle {Multicast {DNS}} {Multicast {DNS}}\ \APACbVolEdTR {}{RFC\
+  \BNUM\ 6762}.
 \newblock
 \APACaddressInstitution{}{Internet Engineering Task Force}.
 \newblock
 \APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc6762/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{Chogia.vn}%
+}{%
+{Chogia.vn}%
+}{%
+{\protect \APACyear {2024}}%
+}]{%
+chogia_fpt_2026}
+\APACinsertmetastar {%
+chogia_fpt_2026}%
+\begin{APACrefauthors}%
+{Chogia.vn}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2024}{}{}.
+\newblock
+\APACrefbtitle {Cập nhật bảng giá lắp mạng {Internet} cáp quang.}
+  {Cập nhật bảng giá lắp mạng {Internet} cáp quang.}
+\newblock
+\APACrefnote{Bài đăng 01/04/2024, truy cập 28/11/2026. Available at:
+  \url{https://chogia.vn/cap-nhat-bang-gia-lap-mang-internet-cap-quang-hom-nay-ngay-thang-nam-49979/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{Cisco Systems}%
+}{%
+{Cisco Systems}%
+}{%
+{\protect \APACyear {2020}}%
+}]{%
+cisco_sdwan_design}
+\APACinsertmetastar {%
+cisco_sdwan_design}%
+\begin{APACrefauthors}%
+{Cisco Systems}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2020}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Cisco {SD-WAN} Design Guide (Cisco Validated Design)}
+  {Cisco {SD-WAN} design guide (cisco validated design)}{\BBCQ}\
+  [\bibcomputersoftwaremanual].
+\newblock
+\APACrefnote{Available at:
+  \url{https://www.cisco.com/c/en/us/td/docs/solutions/CVD/SDWAN/cisco-sdwan-design-guide.html}}
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -45,10 +125,10 @@ cisco_asa_failover}%
 \newblock
 \APACrefYearMonthDay{2024}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Cisco Secure Firewall ASA Series General Operations CLI
-  Configuration Guide: Failover for High Availability} {Cisco secure firewall
-  asa series general operations cli configuration guide: Failover for high
-  availability}{\BBCQ}\ [\bibcomputersoftwaremanual].
+{\BBOQ}\APACrefatitle {Cisco Secure Firewall {ASA} Series General Operations
+  {CLI} Configuration Guide: Failover for High Availability} {Cisco secure
+  firewall {ASA} series general operations {CLI} configuration guide: Failover
+  for high availability}{\BBCQ}\ [\bibcomputersoftwaremanual].
 \newblock
 \APACrefnote{Available at:
   \url{https://www.cisco.com/c/en/us/support/security/adaptive-security-appliance-asa-software/products-installation-and-configuration-guides-list.html}}
@@ -81,6 +161,269 @@ cisco_sdwan_omp}%
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
+Cooper%
+\ \protect \BOthers {.}}{%
+Cooper%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2008}}%
+}]{%
+rfc5280_x509}
+\APACinsertmetastar {%
+rfc5280_x509}%
+\begin{APACrefauthors}%
+Cooper, D.%
+, Santesson, S.%
+, Farrell, S.%
+, Boeyen, S.%
+, Housley, R.%
+\BCBL {}\ \BBA {} Polk, T.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2008}{{\APACmonth{05}}}{}.
+\newblock
+\APACrefbtitle {Internet {X.509} Public Key Infrastructure Certificate and
+  Certificate Revocation List ({CRL}) Profile} {Internet {X.509} public key
+  infrastructure certificate and certificate revocation list ({CRL}) profile}\
+  \APACbVolEdTR {}{RFC\ \BNUM\ 5280}.
+\newblock
+\APACaddressInstitution{}{Internet Engineering Task Force}.
+\newblock
+\APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc5280/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Droms%
+}{%
+Droms%
+}{%
+{\protect \APACyear {1997}}%
+}]{%
+rfc2131_dhcp}
+\APACinsertmetastar {%
+rfc2131_dhcp}%
+\begin{APACrefauthors}%
+Droms, R.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{1997}{{\APACmonth{03}}}{}.
+\newblock
+\APACrefbtitle {Dynamic Host Configuration Protocol} {Dynamic host
+  configuration protocol}\ \APACbVolEdTR {}{RFC\ \BNUM\ 2131}.
+\newblock
+\APACaddressInstitution{}{Internet Engineering Task Force}.
+\newblock
+\APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc2131/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{EVE-NG Ltd}%
+}{%
+{EVE-NG Ltd}%
+}{%
+{\protect \APACyear {2024}}%
+}]{%
+eveng_docs}
+\APACinsertmetastar {%
+eveng_docs}%
+\begin{APACrefauthors}%
+{EVE-NG Ltd}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2024}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {{EVE-NG} Community Edition Documentation} {{EVE-NG}
+  community edition documentation}{\BBCQ}\ [\bibcomputersoftwaremanual].
+\newblock
+\APACrefnote{Available at:
+  \url{https://www.eve-ng.net/index.php/documentation/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Fu%
+, Wang%
+\BCBL {}\ \BBA {} Wang%
+}{%
+Fu%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2024}}%
+}]{%
+fu2024sdwan}
+\APACinsertmetastar {%
+fu2024sdwan}%
+\begin{APACrefauthors}%
+Fu, C.%
+, Wang, B.%
+\BCBL {}\ \BBA {} Wang, W.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2024}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Software-Defined Wide Area Networks ({SD-WANs}): A
+  Survey} {Software-defined wide area networks ({SD-WANs}): A survey}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Electronics}{13}{15}{3011}.
+\newblock
+\begin{APACrefDOI} \doi{10.3390/electronics13153011} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Gerhards%
+}{%
+Gerhards%
+}{%
+{\protect \APACyear {2009}}%
+}]{%
+rfc5424_syslog}
+\APACinsertmetastar {%
+rfc5424_syslog}%
+\begin{APACrefauthors}%
+Gerhards, R.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2009}{{\APACmonth{03}}}{}.
+\newblock
+\APACrefbtitle {The Syslog Protocol} {The syslog protocol}\ \APACbVolEdTR
+  {}{RFC\ \BNUM\ 5424}.
+\newblock
+\APACaddressInstitution{}{Internet Engineering Task Force}.
+\newblock
+\APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc5424/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{IEEE}%
+}{%
+{IEEE}%
+}{%
+{\protect \APACyear {2004}}%
+}]{%
+ieee8021d_2004}
+\APACinsertmetastar {%
+ieee8021d_2004}%
+\begin{APACrefauthors}%
+{IEEE}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2004}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {{IEEE} Standard for Local and Metropolitan Area
+  Networks: Media Access Control ({MAC}) Bridges ({IEEE} Std 802.1{D}-2004)}
+  {{IEEE} standard for local and metropolitan area networks: Media access
+  control ({MAC}) bridges ({IEEE} std 802.1{D}-2004)}{\BBCQ}\
+  [\bibcomputersoftwaremanual].
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{IEEE}%
+}{%
+{IEEE}%
+}{%
+{\protect \APACyear {2018}}%
+}]{%
+ieee8021q_2018}
+\APACinsertmetastar {%
+ieee8021q_2018}%
+\begin{APACrefauthors}%
+{IEEE}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2018}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {{IEEE} Standard for Local and Metropolitan Area
+  Networks--Bridges and Bridged Networks ({IEEE} Std 802.1{Q}-2018)} {{IEEE}
+  standard for local and metropolitan area networks--bridges and bridged
+  networks ({IEEE} std 802.1{Q}-2018)}{\BBCQ}\ [\bibcomputersoftwaremanual].
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{IEEE}%
+}{%
+{IEEE}%
+}{%
+{\protect \APACyear {2020}}%
+}]{%
+ieee8021ax_2020}
+\APACinsertmetastar {%
+ieee8021ax_2020}%
+\begin{APACrefauthors}%
+{IEEE}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2020}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {{IEEE} Standard for Local and Metropolitan Area
+  Networks--Link Aggregation ({IEEE} Std 802.1{AX}-2020)} {{IEEE} standard for
+  local and metropolitan area networks--link aggregation ({IEEE} std
+  802.1{AX}-2020)}{\BBCQ}\ [\bibcomputersoftwaremanual].
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{ITU-T}%
+}{%
+{ITU-T}%
+}{%
+{\protect \APACyear {2015}}%
+}]{%
+itut_g107}
+\APACinsertmetastar {%
+itut_g107}%
+\begin{APACrefauthors}%
+{ITU-T}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2015}{{\APACmonth{06}}}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Recommendation {G.107}: The {E}-model: A Computational
+  Model for Use in Transmission Planning} {Recommendation {G.107}: The
+  {E}-model: A computational model for use in transmission planning}{\BBCQ}\
+  [\bibcomputersoftwaremanual].
+\newblock
+\APACrefnote{Available at: \url{https://www.itu.int/rec/T-REC-G.107}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Jain%
+\ \protect \BOthers {.}}{%
+Jain%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2013}}%
+}]{%
+jain2013b4}
+\APACinsertmetastar {%
+jain2013b4}%
+\begin{APACrefauthors}%
+Jain, S.%
+, Kumar, A.%
+, Mandal, S.%
+, Ong, J.%
+, Poutievski, L.%
+, Singh, A.%
+\BDBL {}Vahdat, A.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2013}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {{B4}: Experience with a Globally-Deployed Software
+  Defined {WAN}} {{B4}: Experience with a globally-deployed software defined
+  {WAN}}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {Proceedings of the ACM SIGCOMM 2013 Conference}
+  {Proceedings of the acm sigcomm 2013 conference}\ (\BPGS\ 3--14).
+\newblock
+\begin{APACrefDOI} \doi{10.1145/2486001.2486019} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
 Katz%
 \ \BBA {} Ward%
 }{%
@@ -100,12 +443,245 @@ Katz, D.%
 \newblock
 \APACrefYearMonthDay{2010}{{\APACmonth{06}}}{}.
 \newblock
-\APACrefbtitle {Bidirectional Forwarding Detection (BFD)} {Bidirectional
-  forwarding detection (bfd)}\ \APACbVolEdTR {}{RFC\ \BNUM\ 5880}.
+\APACrefbtitle {Bidirectional Forwarding Detection ({BFD})} {Bidirectional
+  forwarding detection ({BFD})}\ \APACbVolEdTR {}{RFC\ \BNUM\ 5880}.
 \newblock
 \APACaddressInstitution{}{Internet Engineering Task Force}.
 \newblock
 \APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc5880/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Kent%
+}{%
+Kent%
+}{%
+{\protect \APACyear {2005}}%
+}]{%
+rfc4303_esp}
+\APACinsertmetastar {%
+rfc4303_esp}%
+\begin{APACrefauthors}%
+Kent, S.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2005}{{\APACmonth{12}}}{}.
+\newblock
+\APACrefbtitle {{IP} Encapsulating Security Payload ({ESP})} {{IP}
+  encapsulating security payload ({ESP})}\ \APACbVolEdTR {}{RFC\ \BNUM\ 4303}.
+\newblock
+\APACaddressInstitution{}{Internet Engineering Task Force}.
+\newblock
+\APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc4303/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Kent%
+\ \BBA {} Seo%
+}{%
+Kent%
+\ \BBA {} Seo%
+}{%
+{\protect \APACyear {2005}}%
+}]{%
+rfc4301_ipsec}
+\APACinsertmetastar {%
+rfc4301_ipsec}%
+\begin{APACrefauthors}%
+Kent, S.%
+\BCBT {}\ \BBA {} Seo, K.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2005}{{\APACmonth{12}}}{}.
+\newblock
+\APACrefbtitle {Security Architecture for the Internet Protocol} {Security
+  architecture for the internet protocol}\ \APACbVolEdTR {}{RFC\ \BNUM\ 4301}.
+\newblock
+\APACaddressInstitution{}{Internet Engineering Task Force}.
+\newblock
+\APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc4301/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Khorsandroo%
+, S{\'a}nchez%
+, Tosun%
+, Arco%
+\BCBL {}\ \BBA {} Doriguzzi-Corin%
+}{%
+Khorsandroo%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2021}}%
+}]{%
+khorsandroo2021hybrid}
+\APACinsertmetastar {%
+khorsandroo2021hybrid}%
+\begin{APACrefauthors}%
+Khorsandroo, S.%
+, S{\'a}nchez, A\BPBI G.%
+, Tosun, A\BPBI S.%
+, Arco, J\BPBI M.%
+\BCBL {}\ \BBA {} Doriguzzi-Corin, R.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2021}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Hybrid {SDN} Evolution: A Comprehensive Survey of the
+  State-of-the-Art} {Hybrid {SDN} evolution: A comprehensive survey of the
+  state-of-the-art}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Computer Networks}{192}{}{107981}.
+\newblock
+\begin{APACrefDOI} \doi{10.1016/j.comnet.2021.107981} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Kreutz%
+\ \protect \BOthers {.}}{%
+Kreutz%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2015}}%
+}]{%
+kreutz2015sdn}
+\APACinsertmetastar {%
+kreutz2015sdn}%
+\begin{APACrefauthors}%
+Kreutz, D.%
+, Ramos, F\BPBI M\BPBI V.%
+, Ver{\'\i}ssimo, P\BPBI E.%
+, Rothenberg, C\BPBI E.%
+, Azodolmolky, S.%
+\BCBL {}\ \BBA {} Uhlig, S.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2015}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Software-Defined Networking: A Comprehensive Survey}
+  {Software-defined networking: A comprehensive survey}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Proceedings of the IEEE}{103}{1}{14--76}.
+\newblock
+\begin{APACrefDOI} \doi{10.1109/JPROC.2014.2371999} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{Kênh truyền Viettel}%
+}{%
+{Kênh truyền Viettel}%
+}{%
+{\protect \APACyear {2023}}%
+}]{%
+viettel_officewan_2023}
+\APACinsertmetastar {%
+viettel_officewan_2023}%
+\begin{APACrefauthors}%
+{Kênh truyền Viettel}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2023}{}{}.
+\newblock
+\APACrefbtitle {Bảng giá cước dịch vụ {OfficeWAN} ({VPN L3}) và
+  {MetroWAN} ({VPN L2}) dùng cho mạng nội bộ {Viettel}.} {Bảng giá
+  cước dịch vụ {OfficeWAN} ({VPN L3}) và {MetroWAN} ({VPN L2}) dùng
+  cho mạng nội bộ {Viettel}.}
+\newblock
+\APACrefnote{Bài đăng 20/03/2023, truy cập 28/11/2026. Available at:
+  \url{https://kenhtruyenviettel.vn/bang-gia-cuoc-dich-vu-officwan-vpn-l3-va-metrowan-vpn-l2-dung-cho-mang-noi-bo-viettel/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Levin%
+, Canini%
+, Schmid%
+, Schaffert%
+\BCBL {}\ \BBA {} Feldmann%
+}{%
+Levin%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2014}}%
+}]{%
+levin2014panopticon}
+\APACinsertmetastar {%
+levin2014panopticon}%
+\begin{APACrefauthors}%
+Levin, D.%
+, Canini, M.%
+, Schmid, S.%
+, Schaffert, F.%
+\BCBL {}\ \BBA {} Feldmann, A.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2014}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Panopticon: Reaping the Benefits of Incremental {SDN}
+  Deployment in Enterprise Networks} {Panopticon: Reaping the benefits of
+  incremental {SDN} deployment in enterprise networks}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {2014 USENIX Annual Technical Conference (USENIX ATC 14)}
+  {2014 usenix annual technical conference (usenix atc 14)}\ (\BPGS\ 333--345).
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+McKeown%
+\ \protect \BOthers {.}}{%
+McKeown%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2008}}%
+}]{%
+mckeown2008openflow}
+\APACinsertmetastar {%
+mckeown2008openflow}%
+\begin{APACrefauthors}%
+McKeown, N.%
+, Anderson, T.%
+, Balakrishnan, H.%
+, Parulkar, G.%
+, Peterson, L.%
+, Rexford, J.%
+\BDBL {}Turner, J.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2008}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {{OpenFlow}: Enabling Innovation in Campus Networks}
+  {{OpenFlow}: Enabling innovation in campus networks}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{ACM SIGCOMM Computer Communication
+  Review}{38}{2}{69--74}.
+\newblock
+\begin{APACrefDOI} \doi{10.1145/1355734.1355746} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Mockapetris%
+}{%
+Mockapetris%
+}{%
+{\protect \APACyear {1987}}%
+}]{%
+rfc1035_dns}
+\APACinsertmetastar {%
+rfc1035_dns}%
+\begin{APACrefauthors}%
+Mockapetris, P.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{1987}{{\APACmonth{11}}}{}.
+\newblock
+\APACrefbtitle {Domain Names -- Implementation and Specification} {Domain names
+  -- implementation and specification}\ \APACbVolEdTR {}{RFC\ \BNUM\ 1035}.
+\newblock
+\APACaddressInstitution{}{Internet Engineering Task Force}.
+\newblock
+\APACrefnote{Available at: \url{https://www.rfc-editor.org/info/rfc1035/}}
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -200,11 +776,65 @@ onos_docs}%
 \newblock
 \APACrefYearMonthDay{2022}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {ONOS -- Open Network Operating System Documentation}
-  {Onos -- open network operating system documentation}{\BBCQ}\
+{\BBOQ}\APACrefatitle {{ONOS} -- Open Network Operating System Documentation}
+  {{ONOS} -- open network operating system documentation}{\BBCQ}\
   [\bibcomputersoftwaremanual].
 \newblock
 \APACrefnote{Available at: \url{https://wiki.onosproject.org/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Oppenheimer%
+}{%
+Oppenheimer%
+}{%
+{\protect \APACyear {2011}}%
+}]{%
+oppenheimer2011topdown}
+\APACinsertmetastar {%
+oppenheimer2011topdown}%
+\begin{APACrefauthors}%
+Oppenheimer, P.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYear{2011}.
+\newblock
+\APACrefbtitle {Top-Down Network Design} {Top-down network design}\
+  (\PrintOrdinal{3rd}\ \BEd).
+\newblock
+\APACaddressPublisher{Indianapolis, IN}{Cisco Press}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Pfaff%
+\ \protect \BOthers {.}}{%
+Pfaff%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2015}}%
+}]{%
+pfaff2015ovs}
+\APACinsertmetastar {%
+pfaff2015ovs}%
+\begin{APACrefauthors}%
+Pfaff, B.%
+, Pettit, J.%
+, Koponen, T.%
+, Jackson, E.%
+, Zhou, A.%
+, Rajahalme, J.%
+\BDBL {}Casado, M.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2015}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {The Design and Implementation of {Open vSwitch}} {The
+  design and implementation of {Open vSwitch}}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {12th USENIX Symposium on Networked Systems Design and
+  Implementation (NSDI 15)} {12th usenix symposium on networked systems design
+  and implementation (nsdi 15)}\ (\BPGS\ 117--130).
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -262,6 +892,96 @@ ryu_434_docs}%
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
+{\v{S}}eremet%
+\ \BBA {} {\v{C}}au{\v{s}}evi{\'c}%
+}{%
+{\v{S}}eremet%
+\ \BBA {} {\v{C}}au{\v{s}}evi{\'c}%
+}{%
+{\protect \APACyear {2019}}%
+}]{%
+seremet2019mpls}
+\APACinsertmetastar {%
+seremet2019mpls}%
+\begin{APACrefauthors}%
+{\v{S}}eremet, I.%
+\BCBT {}\ \BBA {} {\v{C}}au{\v{s}}evi{\'c}, S.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2019}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Advancing {IP/MPLS} with Software Defined Network in
+  Wide Area Network} {Advancing {IP/MPLS} with software defined network in wide
+  area network}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {2019 International Workshop on Fiber Optics in Access
+  Networks (FOAN).} {2019 international workshop on fiber optics in access
+  networks (foan).}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Sharma%
+, Staessens%
+, Colle%
+, Pickavet%
+\BCBL {}\ \BBA {} Demeester%
+}{%
+Sharma%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2013}}%
+}]{%
+sharma2013inband}
+\APACinsertmetastar {%
+sharma2013inband}%
+\begin{APACrefauthors}%
+Sharma, S.%
+, Staessens, D.%
+, Colle, D.%
+, Pickavet, M.%
+\BCBL {}\ \BBA {} Demeester, P.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2013}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Fast Failure Recovery for In-Band {OpenFlow} Networks}
+  {Fast failure recovery for in-band {OpenFlow} networks}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {2013 9th International Conference on the Design of
+  Reliable Communication Networks (DRCN)} {2013 9th international conference on
+  the design of reliable communication networks (drcn)}\ (\BPGS\ 52--59).
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Sun%
+\ \BBA {} Radenkovic%
+}{%
+Sun%
+\ \BBA {} Radenkovic%
+}{%
+{\protect \APACyear {2024}}%
+}]{%
+sun2024sdwan}
+\APACinsertmetastar {%
+sun2024sdwan}%
+\begin{APACrefauthors}%
+Sun, C.%
+\BCBT {}\ \BBA {} Radenkovic, M.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2024}{}{}.
+\newblock
+\APACrefbtitle {An Investigation of Software Defined Wide Area Networking
+  ({SD-WAN}) for Optimizing Multi-site Enterprise Networks.} {An investigation
+  of software defined wide area networking ({SD-WAN}) for optimizing multi-site
+  enterprise networks.}
+\newblock
+\APACrefnote{arXiv preprint arXiv:2411.07791}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
 {The Linux Foundation}%
 }{%
 {The Linux Foundation}%
@@ -278,10 +998,110 @@ ovs_docs}%
 \newblock
 \APACrefYearMonthDay{2024}{}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Open vSwitch Documentation} {Open vswitch
+{\BBOQ}\APACrefatitle {Open {vSwitch} Documentation} {Open {vSwitch}
   documentation}{\BBCQ}\ [\bibcomputersoftwaremanual].
 \newblock
 \APACrefnote{Available at: \url{https://docs.openvswitch.org/}}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Troia%
+, Zorello%
+, Maralit%
+\BCBL {}\ \BBA {} Maier%
+}{%
+Troia%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2020}}%
+}]{%
+troia2020sdwan}
+\APACinsertmetastar {%
+troia2020sdwan}%
+\begin{APACrefauthors}%
+Troia, S.%
+, Zorello, L\BPBI M\BPBI M.%
+, Maralit, A\BPBI J.%
+\BCBL {}\ \BBA {} Maier, G.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2020}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {{SD-WAN}: An Open-Source Implementation for Enterprise
+  Networking Services} {{SD-WAN}: An open-source implementation for enterprise
+  networking services}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {2020 22nd International Conference on Transparent
+  Optical Networks (ICTON).} {2020 22nd international conference on transparent
+  optical networks (icton).}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Vissicchio%
+, Vanbever%
+\BCBL {}\ \BBA {} Bonaventure%
+}{%
+Vissicchio%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2014}}%
+}]{%
+vissicchio2014hybrid}
+\APACinsertmetastar {%
+vissicchio2014hybrid}%
+\begin{APACrefauthors}%
+Vissicchio, S.%
+, Vanbever, L.%
+\BCBL {}\ \BBA {} Bonaventure, O.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2014}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Opportunities and Research Challenges of Hybrid Software
+  Defined Networks} {Opportunities and research challenges of hybrid software
+  defined networks}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{ACM SIGCOMM Computer Communication Review}{44}{2}{}.
+\newblock
+\begin{APACrefDOI} \doi{10.1145/2602204.2602216} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Yang%
+, Cui%
+, Li%
+, Liu%
+\BCBL {}\ \BBA {} Xu%
+}{%
+Yang%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2019}}%
+}]{%
+yang2019sdwan}
+\APACinsertmetastar {%
+yang2019sdwan}%
+\begin{APACrefauthors}%
+Yang, Z.%
+, Cui, Y.%
+, Li, B.%
+, Liu, Y.%
+\BCBL {}\ \BBA {} Xu, Y.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2019}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Software-Defined Wide Area Network ({SD-WAN}):
+  Architecture, Advances and Opportunities} {Software-defined wide area network
+  ({SD-WAN}): Architecture, advances and opportunities}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {2019 28th International Conference on Computer
+  Communication and Networks (ICCCN).} {2019 28th international conference on
+  computer communication and networks (icccn).}
+\newblock
+\APACaddressPublisher{Valencia, Spain}{}.
+\newblock
+\begin{APACrefDOI} \doi{10.1109/ICCCN.2019.8847124} \end{APACrefDOI}
 \PrintBackRefs{\CurrentBib}
 
 \end{thebibliography}
