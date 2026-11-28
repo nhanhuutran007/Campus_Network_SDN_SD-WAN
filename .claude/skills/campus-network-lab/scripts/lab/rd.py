@@ -21,7 +21,7 @@ if kind=="ios":
     ch.send("terminal length 0\r"); drain(ch,1.5,8)
 elif kind=="vedge":
     if last.rstrip().endswith("login:"):
-        tag = "vEdge Site 100" if nid in (6, 28) else "vEdge chi nhánh"  # vEdge Site 100 dùng tài khoản riêng
+        tag = "vEdge Site 100" if nid in (6, 28) else ("vSmart (34)" if nid == 34 else "vEdge chi nhánh")  # moi ho tai khoan rieng
         ch.send("admin\r"); drain(ch,2,10); ch.send(password(tag)+"\r"); o=drain(ch,3,30)
         if "incorrect" in o or o.rstrip().endswith("login:"): print("LOGIN FAILED"); sys.exit(1)
         print("login OK")

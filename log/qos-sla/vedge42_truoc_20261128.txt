@@ -1,0 +1,85 @@
+PROMPT: 'vEdge2-S200 login:'
+login OK
+show running-config bfd
+bfd app-route poll-interval 120000
+vEdge2-S200# 
+show running-config policy
+% No entries found.
+vEdge2-S200# 
+show running-config vpn 0 interface
+vpn 0
+ interface ge0/0
+  ip address 203.0.113.9/30
+  ipv6 dhcp-client
+  nat
+  !
+  tunnel-interface
+   encapsulation ipsec
+   color biz-internet
+   allow-service all
+   no allow-service bgp
+   allow-service dhcp
+   allow-service dns
+   allow-service icmp
+   no allow-service sshd
+   no allow-service netconf
+   no allow-service ntp
+   no allow-service ospf
+   no allow-service stun
+   allow-service https
+  !
+  no shutdown
+ !
+!
+vEdge2-S200# 
+show running-config system
+system
+ host-name               vEdge2-S200
+ system-ip               10.200.200.2
+ site-id                 200
+ admin-tech-on-failure
+ no route-consistency-check
+ no vrrp-advt-with-phymac
+ organization-name       site-900
+ vbond 10.9.0.12
+ aaa
+  auth-order      local radius tacacs
+  usergroup basic
+   task system read
+   task interface read
+  !
+  usergroup netadmin
+  !
+  usergroup operator
+   task system read
+   task interface read
+   task policy read
+   task routing read
+   task security read
+  !
+  usergroup tenantadmin
+  !
+  user admin
+  !
+  ciscotacro-user true
+  ciscotacrw-user true
+ !
+ logging
+  disk
+   enable
+  !
+ !
+ ntp
+  parent
+   no enable
+   stratum 5
+  exit
+ !
+ support
+  zbfw-tcp-finwait-time 30
+  zbfw-tcp-idle-time    3600
+  zbfw-tcp-synwait-time 30
+  zbfw-udp-idle-time    30
+ !
+!
+vEdge2-S200# 
