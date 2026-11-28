@@ -183,7 +183,7 @@ route outside2 9.9.9.9 255.255.255.255 10.2.1.6 1
 
 Phụ lục này tóm tắt các bước dựng lại hệ thống và chạy lại các phép đo trong báo cáo. Toàn bộ topology nằm trong một tệp lab EVE-NG (\texttt{Campus Network SDN SD-WAN.unl}, 74 node, 107 phân đoạn mạng); cấu hình nguồn của từng thiết bị nằm trong thư mục \texttt{configs/} của kho mã, mỗi site một thư mục. Địa chỉ và tham số chính xem ở Bảng~\ref{tab:cac_site}, \ref{tab:vlan_campus_chinh}, \ref{tab:vlan_chi_nhanh} và \ref{tab:system_ip_tloc}.
 
-\textbf{D.1. Thứ tự khởi động.} Các nhóm node được bật theo thứ tự phụ thuộc, nhóm sau chờ nhóm trước sẵn sàng (Bảng~\ref{tab:thu_tu_khoi_dong}). Toàn bộ lab lên đủ sau khoảng 25--30 phút trên máy chủ 48 luồng, 188 GB RAM. Thứ tự này tránh hai lỗi đã gặp: OVS bật trước Controller làm bão broadcast trên VLAN 99, và vEdge bật trước vBond phải chờ thêm một chu kỳ kết nối lại.
+D.1. Thứ tự khởi động. Các nhóm node được bật theo thứ tự phụ thuộc, nhóm sau chờ nhóm trước sẵn sàng (Bảng~\ref{tab:thu_tu_khoi_dong}). Toàn bộ lab lên đủ sau khoảng 25--30 phút trên máy chủ 48 luồng, 188 GB RAM. Thứ tự này tránh hai lỗi đã gặp: OVS bật trước Controller làm bão broadcast trên VLAN 99, và vEdge bật trước vBond phải chờ thêm một chu kỳ kết nối lại.
 
 \begingroup
 \small
@@ -218,7 +218,7 @@ Phụ lục này tóm tắt các bước dựng lại hệ thống và chạy l�
 \end{longtable}
 \endgroup
 
-\textbf{D.2. Lệnh kiểm chứng trạng thái.} Sau khi khởi động, trạng thái từng lớp được kiểm bằng các lệnh ở Bảng~\ref{tab:lenh_kiem_chung}; hệ thống chỉ được coi là sẵn sàng khi mọi dòng cho đúng kết quả mong đợi.
+D.2. Lệnh kiểm chứng trạng thái. Sau khi khởi động, trạng thái từng lớp được kiểm bằng các lệnh ở Bảng~\ref{tab:lenh_kiem_chung}; hệ thống chỉ được coi là sẵn sàng khi mọi dòng cho đúng kết quả mong đợi.
 
 \begingroup
 \small
@@ -259,6 +259,6 @@ Phụ lục này tóm tắt các bước dựng lại hệ thống và chạy l�
 \end{longtable}
 \endgroup
 
-\textbf{D.3. Công cụ đo.} Các phép đo trong báo cáo được tự động hóa bằng script Python trong kho mã (thư mục \texttt{scripts/} và \texttt{.claude/skills/campus-network-lab/scripts/lab/}). Script đăng nhập máy chủ EVE-NG, mở console thiết bị qua kênh chuyển tiếp của SSH, hoặc chạy đầu đo trong network namespace gắn vào phân đoạn mạng cần đo. Mật khẩu được đọc từ tệp cục bộ lúc chạy, không nằm trong mã. Các script chính: \texttt{sdn\_realcut\_test.py} (cắt liên kết thật trên OVS, đo gián đoạn), \texttt{sdn\_vlan\_test.py} và \texttt{sdn\_policy\_test.py} (thêm VLAN, áp chính sách), \texttt{sdn\_load\_test.py} (tải cao), \texttt{branch\_failover\_test.py} và \texttt{fw\_failover\_test.py} (cắt đường truyền, vEdge, tường lửa), \texttt{icmp\_probe.py} (đầu đo ICMP 5 gói/giây, phân biệt luồng mới và luồng đang chạy), \texttt{site\_join\_test.py}, \texttt{cfgload\_test.py}, \texttt{sdwan\_policy\_time.py}, \texttt{sla\_stats.py}, \texttt{bw\_util.py} và \texttt{mttr\_test.py} (năm tiêu chí vận hành), \texttt{sdwan\_reliability.py} (độ khả dụng từ API vManage).
+D.3. Công cụ đo. Các phép đo trong báo cáo được tự động hóa bằng script Python trong kho mã (thư mục \texttt{scripts/} và \texttt{.claude/skills/campus-network-lab/scripts/lab/}). Script đăng nhập máy chủ EVE-NG, mở console thiết bị qua kênh chuyển tiếp của SSH, hoặc chạy đầu đo trong network namespace gắn vào phân đoạn mạng cần đo. Mật khẩu được đọc từ tệp cục bộ lúc chạy, không nằm trong mã. Các script chính: \texttt{sdn\_realcut\_test.py} (cắt liên kết thật trên OVS, đo gián đoạn), \texttt{sdn\_vlan\_test.py} và \texttt{sdn\_policy\_test.py} (thêm VLAN, áp chính sách), \texttt{sdn\_load\_test.py} (tải cao), \texttt{branch\_failover\_test.py} và \texttt{fw\_failover\_test.py} (cắt đường truyền, vEdge, tường lửa), \texttt{icmp\_probe.py} (đầu đo ICMP 5 gói/giây, phân biệt luồng mới và luồng đang chạy), \texttt{site\_join\_test.py}, \texttt{cfgload\_test.py}, \texttt{sdwan\_policy\_time.py}, \texttt{sla\_stats.py}, \texttt{bw\_util.py} và \texttt{mttr\_test.py} (năm tiêu chí vận hành), \texttt{sdwan\_reliability.py} (độ khả dụng từ API vManage).
 
-\textbf{D.4. Cắt liên kết thật.} Mọi phép đo phục hồi cắt liên kết bằng cách hạ giao diện ảo của node trên máy chủ (\texttt{ip link set vunl0\_<node>\_<cổng> down}), giữ một khoảng thời gian cố định rồi bật lại. Thiết bị hai đầu không nhận được sự kiện mất sóng mang, giống đứt cáp ở giữa đường truyền, nên thời gian đo được gồm cả thời gian phát hiện của từng giao thức.
+D.4. Cắt liên kết thật. Mọi phép đo phục hồi cắt liên kết bằng cách hạ giao diện ảo của node trên máy chủ (\texttt{ip link set vunl0\_<node>\_<cổng> down}), giữ một khoảng thời gian cố định rồi bật lại. Thiết bị hai đầu không nhận được sự kiện mất sóng mang, giống đứt cáp ở giữa đường truyền, nên thời gian đo được gồm cả thời gian phát hiện của từng giao thức.

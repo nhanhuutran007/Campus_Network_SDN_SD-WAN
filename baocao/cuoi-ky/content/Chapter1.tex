@@ -21,9 +21,9 @@ Hai công nghệ Software-Defined Networking (SDN) và Software-Defined Wide Are
 
 \subsection{Đối tượng và phạm vi nghiên cứu}
 
-\textbf{Đối tượng nghiên cứu} là hệ thống mạng Campus đa cơ sở trong môi trường đại học: chuyển mạch và phân đoạn VLAN, dự phòng lớp 2 và lớp 3, định tuyến nội bộ và liên miền, tường lửa và DMZ, SDN với OpenFlow, SD-WAN và các dịch vụ mạng nền tảng.
+Đối tượng nghiên cứu là hệ thống mạng Campus đa cơ sở trong môi trường đại học: chuyển mạch và phân đoạn VLAN, dự phòng lớp 2 và lớp 3, định tuyến nội bộ và liên miền, tường lửa và DMZ, SDN với OpenFlow, SD-WAN và các dịch vụ mạng nền tảng.
 
-\textbf{Phạm vi thực hiện:}
+Phạm vi thực hiện:
 \begin{itemize}
     \item Mô hình được hiện thực trên nền tảng mô phỏng Emulated Virtual Environment -- Next Generation (EVE-NG) với 74 node: Campus chính (Site 100), ba cơ sở phụ (Site 200, 300, 400), trung tâm điều khiển SD-WAN (Site 900), hai router mô phỏng nhà cung cấp Internet, MPLS và một cơ sở mở rộng (Site 500). Switch Cisco dùng image IOS on Linux (IOL).
     \item SDN áp dụng cho tầng Distribution và Access của Campus chính (sáu OVS); tầng Core và tường lửa giữ cơ chế truyền thống theo mô hình Hybrid SDN. Liên kết giữa các cơ sở do SD-WAN đảm nhận.
@@ -34,22 +34,20 @@ Hai công nghệ Software-Defined Networking (SDN) và Software-Defined Wide Are
 \subsection{Phương pháp nghiên cứu}
 
 \begin{itemize}
-    \item \textbf{Nghiên cứu tài liệu:} các chuẩn và tài liệu kỹ thuật về OSPF, BGP, VRRP, BFD, OpenFlow 1.3, OVS, Ryu, Cisco ASA và Cisco SD-WAN.
-    \item \textbf{Thiết kế:} phân tích yêu cầu, xây dựng kiến trúc, sơ đồ vật lý và sơ đồ logic, quy hoạch địa chỉ, định tuyến, SDN, SD-WAN, dịch vụ và bảo mật.
-    \item \textbf{Hiện thực:} cấu hình từ dưới lên (underlay, controller, hạ tầng, dịch vụ, chính sách); phát triển ứng dụng Ryu bằng Python; quản lý cấu hình mọi thiết bị bằng Git.
-    \item \textbf{Kiểm thử theo lớp:} liên kết, lớp 2, lớp 3, dịch vụ, ứng dụng; mọi kết luận dựa trên đầu ra lệnh, bộ đếm hoặc bắt gói; các phép đo được tự động hóa bằng script để có thể chạy lại.
+    \item Nghiên cứu tài liệu: các chuẩn và tài liệu kỹ thuật về OSPF, BGP, VRRP, BFD, OpenFlow 1.3, OVS, Ryu, Cisco ASA và Cisco SD-WAN.
+    \item Thiết kế: phân tích yêu cầu, xây dựng kiến trúc, sơ đồ vật lý và sơ đồ logic, quy hoạch địa chỉ, định tuyến, SDN, SD-WAN, dịch vụ và bảo mật.
+    \item Hiện thực: cấu hình từ dưới lên (underlay, controller, hạ tầng, dịch vụ, chính sách); phát triển ứng dụng Ryu bằng Python; quản lý cấu hình mọi thiết bị bằng Git.
+    \item Kiểm thử theo lớp: liên kết, lớp 2, lớp 3, dịch vụ, ứng dụng; mọi kết luận dựa trên đầu ra lệnh, bộ đếm hoặc bắt gói; các phép đo được tự động hóa bằng script để có thể chạy lại.
 \end{itemize}
 
 \subsection{Ý nghĩa thực tiễn và bố cục báo cáo}
 
 Mô hình cho thấy cách kết hợp SDN và SD-WAN với các cơ chế truyền thống trong một hệ thống thống nhất; các nguyên nhân gốc của sự cố đã gặp (phụ thuộc vòng giữa switch và Controller trong SDN in-band, quy tắc in-band ẩn gây bão broadcast, định tuyến tới controller cho từng màu TLOC, xung đột tên miền \texttt{.local} với mDNS) là kinh nghiệm có giá trị cho triển khai thực tế. Mô hình cũng có thể dùng làm nền tảng thực hành cho các học phần mạng máy tính.
 
-Báo cáo gồm sáu chương:
+Báo cáo gồm bốn chương:
 \begin{itemize}
-    \item \textbf{Chương 1 -- Mở đầu và tổng quan đề tài:} lý do, mục tiêu, phạm vi, phương pháp và bố cục.
-    \item \textbf{Chương 2 -- Cơ sở lý thuyết:} mạng Campus phân cấp, VLAN, dự phòng, định tuyến, dịch vụ, tường lửa, SDN, SD-WAN, EVE-NG và các nghiên cứu liên quan.
-    \item \textbf{Chương 3 -- Mô hình mạng Campus đề xuất:} yêu cầu, kiến trúc, sơ đồ vật lý và sơ đồ logic, quy hoạch địa chỉ, thiết kế định tuyến, SDN, SD-WAN, dịch vụ và bảo mật.
-    \item \textbf{Chương 4 -- Triển khai và hiện thực:} hiện thực từng phần của hệ thống, các vấn đề kỹ thuật cùng nguyên nhân gốc và kết quả kiểm thử từng phần.
-    \item \textbf{Chương 5 -- Kiểm thử và đánh giá:} tổng hợp kiểm thử, các phép đo theo tiêu chí vận hành, đánh giá theo tám mục tiêu kỹ thuật, phép thử bảo mật, đối chứng với mạng truyền thống, chi phí và giới hạn của kết quả.
-    \item \textbf{Chương 6 -- Kết luận và hướng phát triển:} kết quả đạt được, hạn chế và hướng phát triển.
+    \item Chương 1 -- Mở đầu và tổng quan đề tài: lý do, mục tiêu, phạm vi, phương pháp và bố cục.
+    \item Chương 2 -- Cơ sở lý thuyết: mạng Campus phân cấp, VLAN, dự phòng, định tuyến, dịch vụ, tường lửa, SDN, SD-WAN, EVE-NG và các nghiên cứu liên quan.
+    \item Chương 3 -- Mô hình mạng Campus đề xuất: yêu cầu, kiến trúc, sơ đồ vật lý và sơ đồ logic, quy hoạch địa chỉ, thiết kế định tuyến, SDN, SD-WAN, dịch vụ và bảo mật.
+    \item Chương 4 -- Triển khai, đánh giá và kết luận: hiện thực từng phần của hệ thống cùng các vấn đề kỹ thuật, tổng hợp kiểm thử, đánh giá (phép đo vận hành, bảo mật, QoS/SLA, đối chứng với mạng truyền thống, chi phí, tám mục tiêu kỹ thuật, giới hạn của kết quả), kết luận và hướng phát triển.
 \end{itemize}

@@ -133,12 +133,12 @@ Năm tiêu chí vận hành của đề cương được đo riêng bằng scrip
 
 Các phép thử ở Chương~\ref{sec:trien_khai_danh_gia} kiểm tra từng luật riêng lẻ. Mục này kiểm tra bảo mật theo góc nhìn của người tấn công, ngày 28/11/2026, với hai câu hỏi: lưu lượng giữa các cơ sở có thực sự được mã hóa trên đường truyền không, và một máy trong mạng có thể quét tới những dịch vụ nào. Hai ``máy tấn công'' là network namespace trên máy chủ EVE-NG, gắn thẳng vào phân đoạn mạng cần thử: một máy trong VLAN 60 của Site 200 (\texttt{10.2.60.250}), cùng phân đoạn với máy trạm chi nhánh, và một máy trong DMZ của Campus chính (\texttt{10.1.1.13}), giả định Web Server đã bị chiếm quyền. Quét cổng dùng kết nối TCP với thời gian chờ 2 giây trên 14 cổng phổ biến. Kết quả \textit{open} nghĩa là có SYN-ACK; \textit{closed} nghĩa là gói tới được máy đích nhưng cổng đóng (RST); \textit{filtered} nghĩa là gói bị chặn trên đường đi.
 
-\textbf{Mã hóa trên đường truyền.} Từ máy chi nhánh, nhóm gửi 20 gói ping tới DHCP Server ở Campus chính. Mỗi gói mang chuỗi đánh dấu \texttt{campus} lặp lại trong phần dữ liệu. Cùng lúc đó, \texttt{tcpdump} bắt gói ở ba điểm: cổng LAN của vEdge1-S200, cổng MPLS của vEdge1-S200 và cổng Internet của vEdge2-S200. Kết quả ở Bảng~\ref{tab:bat_goi_esp}: phía LAN thấy nguyên văn gói ICMP và chuỗi đánh dấu, còn trên hai transport chỉ có UDP 12346 giữa các TLOC, không gói nào chứa chuỗi đánh dấu. Khối lệnh~\ref{lst:goi_esp} là một gói dữ liệu trên đường MPLS: sau tiêu đề UDP chỉ còn dữ liệu đã mã hóa, không thấy địa chỉ máy trạm hay tiêu đề ICMP bên trong. Vài gói ICMP trên transport là gói vEdge tự ping vBond để theo dõi đường truyền, không phải lưu lượng người dùng.
+Mã hóa trên đường truyền. Từ máy chi nhánh, nhóm gửi 20 gói ping tới DHCP Server ở Campus chính. Mỗi gói mang chuỗi đánh dấu \texttt{campus} lặp lại trong phần dữ liệu. Cùng lúc đó, \texttt{tcpdump} bắt gói ở ba điểm: cổng LAN của vEdge1-S200, cổng MPLS của vEdge1-S200 và cổng Internet của vEdge2-S200. Kết quả ở Bảng~\ref{tab:bat_goi_esp}: phía LAN thấy nguyên văn gói ICMP và chuỗi đánh dấu, còn trên hai transport chỉ có UDP 12346 giữa các TLOC, không gói nào chứa chuỗi đánh dấu. Khối lệnh~\ref{lst:goi_esp} là một gói dữ liệu trên đường MPLS: sau tiêu đề UDP chỉ còn dữ liệu đã mã hóa, không thấy địa chỉ máy trạm hay tiêu đề ICMP bên trong. Vài gói ICMP trên transport là gói vEdge tự ping vBond để theo dõi đường truyền, không phải lưu lượng người dùng.
 
 \begin{table}[H]
     \centering
     \small
-    \caption{Bắt gói khi máy chi nhánh ping Campus chính bằng gói có chuỗi đánh dấu}
+    \caption[Kết quả bắt gói trên LAN và trên transport]{Bắt gói khi máy chi nhánh ping Campus chính bằng gói có chuỗi đánh dấu}
     \label{tab:bat_goi_esp}
     \begin{tabularx}{\textwidth}{|L{4.4cm}|P{2.0cm}|P{2.4cm}|Y|}
         \hline
@@ -162,7 +162,7 @@ IP 100.64.200.1.12346 > 100.64.100.1.12346: UDP, length 178
 ...
 \end{lstlisting}
 
-\textbf{Quét cổng.} Bảng~\ref{tab:quet_cong} tóm tắt ba phép thử. Phép thử T1 và T2 cho kết quả đúng thiết kế. Từ chi nhánh vào DMZ chỉ mở đúng các dịch vụ công bố: Web (80, 443) và Mail (25, 143, 587; cổng 993 được ACL cho phép nhưng máy chủ không mở). Từ DMZ vào trong chỉ tới được DNS của Server Farm, mọi cổng khác tới máy chủ, Core và máy trạm đều bị chặn. Sau phép quét, bộ đếm luật chặn của tường lửa biên tăng từ 0 lên 36 (\texttt{SDWAN\_IN}, chi nhánh vào DMZ) và 82 (\texttt{DMZ\_IN}, DMZ vào trong). Bộ đếm data policy trên vEdge1-S200 ghi nhận 8 gói SSH/Telnet tới DMZ và 4 gói Telnet tới Server Farm bị chặn.
+Quét cổng. Bảng~\ref{tab:quet_cong} tóm tắt ba phép thử. Phép thử T1 và T2 cho kết quả đúng thiết kế. Từ chi nhánh vào DMZ chỉ mở đúng các dịch vụ công bố: Web (80, 443) và Mail (25, 143, 587; cổng 993 được ACL cho phép nhưng máy chủ không mở). Từ DMZ vào trong chỉ tới được DNS của Server Farm, mọi cổng khác tới máy chủ, Core và máy trạm đều bị chặn. Sau phép quét, bộ đếm luật chặn của tường lửa biên tăng từ 0 lên 36 (\texttt{SDWAN\_IN}, chi nhánh vào DMZ) và 82 (\texttt{DMZ\_IN}, DMZ vào trong). Bộ đếm data policy trên vEdge1-S200 ghi nhận 8 gói SSH/Telnet tới DMZ và 4 gói Telnet tới Server Farm bị chặn.
 
 \begin{table}[H]
     \centering
@@ -192,16 +192,84 @@ Phép thử T3 chỉ ra một khoảng trống. Tường lửa biên cho mọi l
 
 Tóm lại, overlay SD-WAN mã hóa toàn bộ lưu lượng giữa các cơ sở, và ranh giới DMZ hoạt động đúng theo cả hai chiều. Điểm yếu nằm ở chính sách cho lưu lượng từ chi nhánh vào mạng nội bộ Campus chính, vốn quá rộng.
 
-\subsection{Đối chứng với mạng truyền thống}\label{sec:doi_chung_rstp}
+\subsection{Kiểm thử QoS và SLA theo lớp ứng dụng}\label{sec:kiem_thu_qos}
 
-Để biết SDN cải thiện được bao nhiêu so với cách làm truyền thống, ngày 28/11/2026 nhóm đo sáu kịch bản S1--S6 (Bảng~\ref{tab:sdn_kich_ban}) trên \textbf{cùng topology} ở hai chế độ. Ở chế độ \textbf{SDN}, sáu OVS do Ryu điều khiển như thiết kế. Ở chế độ \textbf{truyền thống}, sáu OVS được gỡ Controller, chuyển sang \texttt{fail\_mode=standalone}, bật RSTP và chỉ giữ một flow \texttt{NORMAL}, tức hoạt động như switch học MAC thông thường; Core-SW1/2 vẫn chạy Rapid-PVST+. Hai chế độ dùng chung một đầu đo: ping 0,1 giây từ VLAN 99 tới một máy trạm ở mỗi VLAN 10--40. Liên kết bị cắt thật bằng cách hạ giao diện ảo trên máy chủ, giữ 20 giây rồi nối lại. Mỗi chế độ được đo 3 lần mỗi kịch bản. Sau phép đo, lab được trả về chế độ SDN và kiểm tra lại: 6/6 switch, 13/13 liên kết, S1 và S6 gián đoạn 3,2 và 2,9 giây.
+Các phép đo ở Chương~\ref{sec:trien_khai_danh_gia} kiểm tra AAR bằng ping và bộ đếm, còn MOS chỉ được ước lượng từ thống kê đường hầm. Mục này đo trực tiếp chất lượng của từng lớp ứng dụng khi đi qua overlay, ngày 28/11/2026, theo ba câu hỏi: chất lượng nền của từng lớp ra sao, thoại và video có được ưu tiên khi đường truyền nghẽn không, và AAR có tách riêng thoại, video ra khỏi đường bị suy giảm không.
 
-\textbf{Chuyển sang chế độ truyền thống gây bão broadcast.} Khi Dist-SW1 vừa chuyển sang \texttt{NORMAL}, các liên kết Dist--Core lên 21.000--53.000 gói/giây và mọi VLAN mất kết nối. Nhóm dừng bão bằng cách cô lập Dist-SW1. Nguyên nhân: trunk giữa Core và Dist không mang VLAN 1, nên Rapid-PVST+ không gửi BPDU chuẩn IEEE cho OVS; RSTP của OVS không ``thấy'' hai Core và không chặn được vòng đi qua chúng. Mạng chỉ ổn định sau khi tạm thêm VLAN 1 vào các trunk đó và đặt Core-SW1 làm gốc cây cho VLAN 1. Như vậy, chống vòng của mạng truyền thống phụ thuộc vào việc mọi switch được cấu hình STP nhất quán; một lỗi cấu hình là đủ gây bão. Ở chế độ SDN, Controller tự tính cây từ đồ thị liên kết nên không có rủi ro này.
+Cách đo. Đường đi qua tường lửa bị ASAv không giấy phép giới hạn khoảng 0,1~Mbit/s, không đủ cho video. Vì vậy phép đo nhắm thẳng vào lớp SD-WAN: Brand-FW Site 200 và Site 300 được tắt tạm thời, thay bằng network namespace mang đúng hai địa chỉ outside của tường lửa (\texttt{10.X.1.1} phía vEdge1, \texttt{10.X.1.5} phía vEdge2) cùng một địa chỉ máy chủ trong dải của site, nên vEdge không phải đổi cấu hình. Với phép thử AAR, đầu nhận đặt trong subnet \texttt{10.1.3.0/29} phía LAN của vEdge1-S100. Hai đầu đo chạy trên cùng máy chủ nên dùng chung đồng hồ, nhờ đó đo được trễ một chiều thật. Công cụ \texttt{qos\_probe.py} sinh ba lớp lưu lượng UDP: thoại EF (160 byte mỗi 20~ms), video AF41 (1200 byte, 600~kbit/s) và lớp thường DSCP 0 cùng nhịp với thoại để đối chứng. Mỗi lớp được tính trễ một chiều, jitter theo RFC~3550 và tỷ lệ mất gói; MOS của thoại tính theo E-model \citep{itut_g107} từ chính các số đo đó. Ngưỡng dùng để đánh giá ở Bảng~\ref{tab:sla_theo_lop}; lớp \texttt{SLA\_VIDEO} và sequence AAR cho DSCP 34 được thêm tạm thời trên vSmart cho phép thử này.
 
 \begin{table}[H]
     \centering
     \small
-    \caption{Gián đoạn khi cắt liên kết: SDN so với mạng truyền thống trên cùng topology (giây)}
+    \caption{Ngưỡng SLA theo lớp ứng dụng dùng trong phép thử}
+    \label{tab:sla_theo_lop}
+    \begin{tabularx}{\textwidth}{|L{3.4cm}|P{2.0cm}|P{1.6cm}|P{1.6cm}|Y|}
+        \hline
+        \textbf{Lớp (DSCP)} & \textbf{Trễ tối đa} & \textbf{Mất gói} & \textbf{Jitter} & \textbf{Ghi chú} \\
+        \hline
+        Thoại (EF 46) & 150~ms & 2\% & 50~ms & \texttt{SLA\_REALTIME}, đang chạy \\
+        \hline
+        Video (AF41 34) & 100~ms & 2\% & 30~ms & \texttt{SLA\_VIDEO}, thêm cho phép thử \\
+        \hline
+        Dữ liệu tới Server Farm & 300~ms & 5\% & 100~ms & \texttt{SLA\_BUSINESS}, đang chạy \\
+        \hline
+        Mặc định (CS0) & --- & --- & --- & Không có AAR \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+Chất lượng nền và độ ưu tiên khi nghẽn. Không có tải nền, cả ba lớp có trễ một chiều 0,8~ms, jitter 0,2~ms, không mất gói, MOS thoại 4,40; DSCP được giữ nguyên qua overlay (EF và AF41 tới đích đúng giá trị). Khi thêm 4 luồng TCP làm đầy đường WAN khoảng 2~Mbit/s, vEdge chưa có QoS đối xử ba lớp như nhau: thoại mất 22,4\%, video 24,0\%, lớp thường 25,6\%, MOS thoại còn 2,46 (Bảng~\ref{tab:qos_nghen}). Trễ không tăng vì nút cổ chai bỏ gói chứ không xếp hàng. Nhóm bật QoS trên cổng MPLS của vEdge1-S200: access-list ở cổng LAN phân EF vào hàng đợi 0 (ưu tiên tuyệt đối, LLQ), AF41 vào hàng đợi 1 (50\% băng thông), phần còn lại vào hàng đợi 2, kèm \texttt{shaping-rate} 1,5~Mbit/s để hàng đợi hình thành tại vEdge thay vì ở nút cổ chai của nhà cung cấp. Khi đó thoại và video không mất gói nào, MOS thoại 4,36--4,37; lớp thường gánh toàn bộ phần nghẽn (mất 32\%, trễ hàng giây) và TCP nền giảm từ 1,21 xuống khoảng 0,5~Mbit/s (Hình~\ref{fig:bd_qos_nghen}). Video vẫn có trễ trung bình 177~ms, vượt ngưỡng 100~ms của \texttt{SLA\_VIDEO}, vì gói video 1200 byte phải xếp hàng sau thoại trên đường 1,5~Mbit/s; muốn đạt ngưỡng cần thêm băng thông hoặc giảm tốc độ video.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption[Chất lượng theo lớp khi WAN nghẽn, không QoS và có QoS]{Chất lượng theo lớp khi WAN nghẽn, không QoS và có QoS (trung bình 2 lần, mỗi lần 60 giây)}
+    \label{tab:qos_nghen}
+    \begin{tabularx}{\textwidth}{|L{2.6cm}|P{2.4cm}|P{2.4cm}|P{2.4cm}|Y|}
+        \hline
+        \textbf{Lớp} & \textbf{Không nghẽn} & \textbf{Nghẽn, không QoS} & \textbf{Nghẽn, có QoS} & \textbf{Nhận xét} \\
+        \hline
+        Thoại (EF) & 0,8~ms, mất 0\%, MOS 4,40 & 0,7~ms, mất 22,4\%, MOS 2,46 & 27~ms (p95 82~ms), mất 0\%, MOS 4,37 & Đạt \texttt{SLA\_REALTIME} khi có QoS \\
+        \hline
+        Video (AF41) & 0,8~ms, mất 0\% & 0,7~ms, mất 24,0\% & 177~ms (p95 317~ms), mất 0\% & Không mất gói nhưng vượt ngưỡng trễ 100~ms \\
+        \hline
+        Thường (CS0) & 0,9~ms, mất 0\% & 0,8~ms, mất 25,6\% & 4,7~s, mất 32,0\% & Gánh phần nghẽn \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{image/bd-qos-nghen.png}
+    \caption{Tỷ lệ mất gói theo lớp khi WAN nghẽn, không QoS và có QoS}
+    \label{fig:bd_qos_nghen}
+\end{figure}
+
+AAR khi đường suy giảm nhưng chưa đứt. Trong phép thử này, chu kỳ đo SLA trên vEdge Site 200 và Site 300 được giảm tạm từ 120 giây xuống 10 giây (hệ số 2). Lần thử đầu tiêm thêm 200~ms vào đường MPLS của vEdge1-S300: cả ba lớp chịu 201~ms suốt 150 giây, AAR không chuyển đường. Bảng định tuyến của vEdge1-S200 cho thấy lý do: đường tới Site 300 qua vEdge2-S300 có nhận được nhưng không được cài, vì control policy \texttt{PREFER-VE1} đặt preference 200 cho vEdge1, mà vEdge1 mỗi chi nhánh chỉ có một color. Như vậy với lưu lượng giữa các chi nhánh, AAR không có đường thay thế để chọn: control policy ưu tiên vEdge1 đã làm AAR mất tác dụng.
+
+Ở hướng Site 100, vEdge1-S100 có cả hai color nên vEdge1-S200 cài hai đường. Mỗi lớp là một luồng nên được băm cố định vào một đường hầm: thoại và video đi \texttt{biz-internet}, lớp thường đi \texttt{mpls}. Khi tiêm thêm 200~ms vào cổng \texttt{biz-internet} của vEdge1-S100, thoại và video chịu 201~ms khoảng 8 giây rồi được AAR chuyển sang \texttt{mpls} và về 1~ms trong suốt phần còn lại (Hình~\ref{fig:bd_qos_aar}); lớp thường vốn ở \texttt{mpls} không bị ảnh hưởng. Khi tiêm mất gói 5\% thay cho trễ, thoại và video chỉ mất gói khoảng 3 giây đầu rồi được chuyển; tổng mất gói cả phép đo 0,07--0,09\%, MOS thoại 4,39. Ngược lại, khi tiêm trễ vào cổng \texttt{mpls}, lớp thường (không có AAR) chịu 201~ms suốt 150 giây. Ở giây 165--170 của phép thử trễ, cả ba lớp cùng khựng 0,7--2,3 giây nhưng không mất gói; vì lớp không có AAR cũng bị, đây là máy ảo bị máy chủ tạm dừng chứ không do AAR.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/bd-qos-aar.png}
+    \caption[Trễ một chiều theo thời gian khi đường bị suy giảm]{Trễ một chiều theo thời gian khi đường biz-internet của vEdge1-S100 bị thêm 200~ms}
+    \label{fig:bd_qos_aar}
+\end{figure}
+
+Sau phép thử, QoS được gỡ khỏi vEdge1-S200, chu kỳ đo SLA trả về 120 giây, \texttt{SLA\_VIDEO} và sequence 25 được gỡ khỏi vSmart (đối chiếu từng dòng với bản sao cấu hình trước khi thử), Brand-FW Site 200, 300 được bật lại và máy trạm hai chi nhánh nhận DHCP, ping Server Farm bình thường.
+
+Tóm lại, overlay giữ nguyên DSCP và AAR tách được riêng thoại, video ra khỏi đường suy giảm sau 3--8 giây khi có đường thay thế. Nhưng ở cấu hình hiện tại có hai khoảng trống: vEdge chưa bật QoS nên khi nghẽn, thoại bị mất gói như mọi lưu lượng khác (MOS 2,46); và control policy ưu tiên vEdge1 làm AAR không có tác dụng với lưu lượng giữa các chi nhánh. Bật QoS như trên đưa MOS thoại về 4,37 khi nghẽn.
+
+\subsection{Đối chứng với mạng truyền thống}\label{sec:doi_chung_rstp}
+
+Để biết SDN cải thiện được bao nhiêu so với cách làm truyền thống, ngày 28/11/2026 nhóm đo sáu kịch bản S1--S6 (Bảng~\ref{tab:sdn_kich_ban}) trên cùng topology ở hai chế độ. Ở chế độ SDN, sáu OVS do Ryu điều khiển như thiết kế. Ở chế độ truyền thống, sáu OVS được gỡ Controller, chuyển sang \texttt{fail\_mode=standalone}, bật RSTP và chỉ giữ một flow \texttt{NORMAL}, tức hoạt động như switch học MAC thông thường; Core-SW1/2 vẫn chạy Rapid-PVST+. Hai chế độ dùng chung một đầu đo: ping 0,1 giây từ VLAN 99 tới một máy trạm ở mỗi VLAN 10--40. Liên kết bị cắt thật bằng cách hạ giao diện ảo trên máy chủ, giữ 20 giây rồi nối lại. Mỗi chế độ được đo 3 lần mỗi kịch bản. Sau phép đo, lab được trả về chế độ SDN và kiểm tra lại: 6/6 switch, 13/13 liên kết, S1 và S6 gián đoạn 3,2 và 2,9 giây.
+
+Chuyển sang chế độ truyền thống gây bão broadcast. Khi Dist-SW1 vừa chuyển sang \texttt{NORMAL}, các liên kết Dist--Core lên 21.000--53.000 gói/giây và mọi VLAN mất kết nối. Nhóm dừng bão bằng cách cô lập Dist-SW1. Nguyên nhân: trunk giữa Core và Dist không mang VLAN 1, nên Rapid-PVST+ không gửi BPDU chuẩn IEEE cho OVS; RSTP của OVS không ``thấy'' hai Core và không chặn được vòng đi qua chúng. Mạng chỉ ổn định sau khi tạm thêm VLAN 1 vào các trunk đó và đặt Core-SW1 làm gốc cây cho VLAN 1. Như vậy, chống vòng của mạng truyền thống phụ thuộc vào việc mọi switch được cấu hình STP nhất quán; một lỗi cấu hình là đủ gây bão. Ở chế độ SDN, Controller tự tính cây từ đồ thị liên kết nên không có rủi ro này.
+
+\begin{table}[H]
+    \centering
+    \small
+    \caption[Gián đoạn khi cắt liên kết: SDN so với mạng truyền thống]{Gián đoạn khi cắt liên kết: SDN so với mạng truyền thống trên cùng topology (giây)}
     \label{tab:doi_chung_rstp}
     \begin{tabularx}{\textwidth}{|L{3.0cm}|P{2.6cm}|P{3.0cm}|Y|}
         \hline
@@ -224,14 +292,14 @@ Tóm lại, overlay SD-WAN mã hóa toàn bộ lưu lượng giữa các cơ s�
     \end{tabularx}
 \end{table}
 
-\textbf{Mạng truyền thống không tự phục hồi khi đứt ngầm.} Ở lần đo đầu tiên (bảng MAC sạch), bốn kịch bản có cắt liên kết đang dùng (S1, S2, S5, S6) đều mất kết nối suốt 20 giây giữ cắt (Bảng~\ref{tab:doi_chung_rstp}, Hình~\ref{fig:bd_doi_chung_rstp}). RSTP vẫn tự tính lại cây: khi đọc trạng thái, Dist-SW1 đã đổi cổng gốc. Nhưng bảng MAC của Core-SW1 vẫn trỏ máy trạm về cổng cũ. Nguyên nhân là thông báo thay đổi topology từ khối RSTP chỉ được Rapid-PVST+ xử lý trong VLAN 1, nên các VLAN 10--40 không được xóa MAC. Gói tới máy trạm vì thế đi vào liên kết đã chết cho tới khi máy trạm tự gửi gói hoặc mục MAC hết hạn (mặc định 300 giây). Nhóm kiểm chứng điều này trực tiếp: lúc mạng đang mất kết nối, \texttt{show mac address-table} trên Core-SW1 trỏ máy trạm VLAN 10 và 20 về cổng Et1/2 của nhánh đã đứt; xóa bảng MAC thì ba VLAN thông lại ngay, VLAN còn lại thông sau khi máy trạm gửi một gói. Ở lần đo thứ hai và thứ ba, lỗi tồn đọng từ kịch bản trước làm mạng mất kết nối kéo dài cả sau khi đã nối lại liên kết, nên chỉ lần đo đầu được dùng để so sánh.
+Mạng truyền thống không tự phục hồi khi đứt ngầm. Ở lần đo đầu tiên (bảng MAC sạch), bốn kịch bản có cắt liên kết đang dùng (S1, S2, S5, S6) đều mất kết nối suốt 20 giây giữ cắt (Bảng~\ref{tab:doi_chung_rstp}, Hình~\ref{fig:bd_doi_chung_rstp}). RSTP vẫn tự tính lại cây: khi đọc trạng thái, Dist-SW1 đã đổi cổng gốc. Nhưng bảng MAC của Core-SW1 vẫn trỏ máy trạm về cổng cũ. Nguyên nhân là thông báo thay đổi topology từ khối RSTP chỉ được Rapid-PVST+ xử lý trong VLAN 1, nên các VLAN 10--40 không được xóa MAC. Gói tới máy trạm vì thế đi vào liên kết đã chết cho tới khi máy trạm tự gửi gói hoặc mục MAC hết hạn (mặc định 300 giây). Nhóm kiểm chứng điều này trực tiếp: lúc mạng đang mất kết nối, \texttt{show mac address-table} trên Core-SW1 trỏ máy trạm VLAN 10 và 20 về cổng Et1/2 của nhánh đã đứt; xóa bảng MAC thì ba VLAN thông lại ngay, VLAN còn lại thông sau khi máy trạm gửi một gói. Ở lần đo thứ hai và thứ ba, lỗi tồn đọng từ kịch bản trước làm mạng mất kết nối kéo dài cả sau khi đã nối lại liên kết, nên chỉ lần đo đầu được dùng để so sánh.
 
-\textbf{Cận dưới của mạng truyền thống.} Để tách riêng thời gian hội tụ của RSTP, nhóm đo thêm một biến thể: trong lúc cắt, bảng MAC động trên hai Core được xóa mỗi 2 giây, giả lập một mạng STP cấu hình đồng nhất, nơi thông báo thay đổi topology xóa MAC ở mọi VLAN. Khi đó mạng truyền thống phục hồi sau 4,2--5,9 giây ở S1, S5, S6, cao hơn SDN khoảng 1,5--2 giây, và còn mất thêm 0,4--1,8 giây khi nối lại liên kết; SDN không mất gói khi nối lại (trừ một lần 1,1 giây ở S3). Phần chênh này đến từ cách phát hiện lỗi: RSTP chờ mất ba BPDU liên tiếp (chu kỳ 2 giây), còn ứng dụng Ryu thăm dò mỗi 0,5 giây và kết luận sau 2 giây. Ngoài ra, khi đổi cây, Controller xóa flow đã học trên mọi switch và gửi RARP thay máy trạm, nên Core học lại vị trí máy trạm ngay. Ở S2 biến thể này chỉ mất 0,3 giây vì Access-SW4 đang dùng cổng gốc lên Dist-SW2, nên cắt A4-D1 không chạm đường đang dùng. Lần đo thứ ba của biến thể này cũng có một bất thường: VLAN 20 mất kết nối ở S4--S5 dù Core đã được xóa MAC, nhiều khả năng do bảng MAC của chính các OVS ở chế độ \texttt{NORMAL} không được xóa; lần đo đó được loại khỏi khoảng ở S5.
+Cận dưới của mạng truyền thống. Để tách riêng thời gian hội tụ của RSTP, nhóm đo thêm một biến thể: trong lúc cắt, bảng MAC động trên hai Core được xóa mỗi 2 giây, giả lập một mạng STP cấu hình đồng nhất, nơi thông báo thay đổi topology xóa MAC ở mọi VLAN. Khi đó mạng truyền thống phục hồi sau 4,2--5,9 giây ở S1, S5, S6, cao hơn SDN khoảng 1,5--2 giây, và còn mất thêm 0,4--1,8 giây khi nối lại liên kết; SDN không mất gói khi nối lại (trừ một lần 1,1 giây ở S3). Phần chênh này đến từ cách phát hiện lỗi: RSTP chờ mất ba BPDU liên tiếp (chu kỳ 2 giây), còn ứng dụng Ryu thăm dò mỗi 0,5 giây và kết luận sau 2 giây. Ngoài ra, khi đổi cây, Controller xóa flow đã học trên mọi switch và gửi RARP thay máy trạm, nên Core học lại vị trí máy trạm ngay. Ở S2 biến thể này chỉ mất 0,3 giây vì Access-SW4 đang dùng cổng gốc lên Dist-SW2, nên cắt A4-D1 không chạm đường đang dùng. Lần đo thứ ba của biến thể này cũng có một bất thường: VLAN 20 mất kết nối ở S4--S5 dù Core đã được xóa MAC, nhiều khả năng do bảng MAC của chính các OVS ở chế độ \texttt{NORMAL} không được xóa; lần đo đó được loại khỏi khoảng ở S5.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{image/bd-doi-chung-rstp.png}
-    \caption{Gián đoạn khi cắt liên kết ở chế độ SDN và chế độ truyền thống trên cùng topology}
+    \caption[Gián đoạn khi cắt liên kết: SDN và truyền thống]{Gián đoạn khi cắt liên kết ở chế độ SDN và chế độ truyền thống trên cùng topology}
     \label{fig:bd_doi_chung_rstp}
 \end{figure}
 
@@ -272,7 +340,7 @@ Bảng~\ref{tab:so_sanh_mo_hinh} so sánh định tính các mô hình theo đ�
 
 \subsection{Tính sẵn sàng và khả năng quan sát}\label{sec:san_sang}
 
-Gateway, lõi, tường lửa biên, Edge và đường truyền đều có dự phòng và đã kiểm chứng bằng phép cắt thật. Hai thành phần chưa có dự phòng là SDN Controller và ba controller SD-WAN: khi SDN Controller dừng, flow đã cài được giữ nên luồng đang chạy không mất nhưng máy trạm mới, ARP và DHCP mới không được xử lý; mất một controller SD-WAN trong 2 phút không làm mất gói. Thống kê app-route từ API vManage cho 111,8 giờ chạy (346.059 bản ghi, cửa sổ 10 phút) cho thấy 112 đường hầm khả dụng \textbf{99,957\%}, thấp nhất là các đường hầm biz-internet của vEdge2 Site 500 (99,25--99,85\%), còn cả năm site luôn có ít nhất một đường hầm hoạt động. Hệ thống có bốn nguồn quan sát: Campus SDN Console cho lớp 2, vManage cho WAN, Syslog cho tường lửa và NetOps Bot tổng hợp hai nguồn đầu thành cảnh báo, chẩn đoán trên Telegram.
+Gateway, lõi, tường lửa biên, Edge và đường truyền đều có dự phòng và đã kiểm chứng bằng phép cắt thật. Hai thành phần chưa có dự phòng là SDN Controller và ba controller SD-WAN: khi SDN Controller dừng, flow đã cài được giữ nên luồng đang chạy không mất nhưng máy trạm mới, ARP và DHCP mới không được xử lý; mất một controller SD-WAN trong 2 phút không làm mất gói. Thống kê app-route từ API vManage cho 111,8 giờ chạy (346.059 bản ghi, cửa sổ 10 phút) cho thấy 112 đường hầm khả dụng 99,957\%, thấp nhất là các đường hầm biz-internet của vEdge2 Site 500 (99,25--99,85\%), còn cả năm site luôn có ít nhất một đường hầm hoạt động. Hệ thống có bốn nguồn quan sát: Campus SDN Console cho lớp 2, vManage cho WAN, Syslog cho tường lửa và NetOps Bot tổng hợp hai nguồn đầu thành cảnh báo, chẩn đoán trên Telegram.
 
 \subsection{Ước lượng chi phí đường truyền}\label{sec:chi_phi}
 
@@ -283,7 +351,7 @@ Hai đơn giá được dùng. Giá Internet cáp quang doanh nghiệp lấy the
 \begin{table}[H]
     \centering
     \small
-    \caption{Chi phí đường truyền hằng tháng cho năm site theo ba phương án (chưa gồm thiết bị và giấy phép)}
+    \caption[Chi phí đường truyền hằng tháng theo ba phương án]{Chi phí đường truyền hằng tháng cho năm site theo ba phương án (chưa gồm thiết bị và giấy phép)}
     \label{tab:chi_phi_duong_truyen}
     \begin{tabularx}{\textwidth}{|L{5.6cm}|P{2.6cm}|Y|}
         \hline
@@ -298,7 +366,7 @@ Hai đơn giá được dùng. Giá Internet cáp quang doanh nghiệp lấy the
     \end{tabularx}
 \end{table}
 
-Bảng~\ref{tab:chi_phi_duong_truyen} cho hai nhận xét. Thứ nhất, thiết kế hiện tại (B) \textbf{không giảm} mà còn tăng chi phí đường truyền khoảng 12,5 triệu đồng mỗi tháng so với chỉ dùng kênh thuê riêng, vì đề tài giữ cả MPLS và Internet ở mọi site để ưu tiên khả dụng. Thứ hai, lợi ích kinh tế của SD-WAN chỉ xuất hiện ở phương án C, khi kênh thuê riêng được thay hẳn bằng Internet. Phương án C rẻ hơn A khi giá một kênh thuê riêng vượt $2I = 5$ triệu đồng/tháng. Phần chênh $5(L - 2I)$ triệu đồng/tháng là ngân sách tối đa cho giấy phép SD-WAN và phần cứng Edge để C vẫn hòa vốn; giá giấy phép Cisco SD-WAN không được công bố nên chưa đưa vào bảng. Ví dụ, nếu một kênh thuê riêng giá 10 triệu đồng/tháng thì C tiết kiệm 25 triệu đồng/tháng cho năm site, tức tối đa 5 triệu đồng mỗi site cho giấy phép và thiết bị. Đổi lại, phương án C mất cam kết chất lượng của kênh thuê riêng; khi đó AAR và chính sách SLA (Mục~\ref{sec:do_van_hanh}) là cơ chế duy nhất giữ chất lượng cho lưu lượng quan trọng.
+Bảng~\ref{tab:chi_phi_duong_truyen} cho hai nhận xét. Thứ nhất, thiết kế hiện tại (B) không giảm mà còn tăng chi phí đường truyền khoảng 12,5 triệu đồng mỗi tháng so với chỉ dùng kênh thuê riêng, vì đề tài giữ cả MPLS và Internet ở mọi site để ưu tiên khả dụng. Thứ hai, lợi ích kinh tế của SD-WAN chỉ xuất hiện ở phương án C, khi kênh thuê riêng được thay hẳn bằng Internet. Phương án C rẻ hơn A khi giá một kênh thuê riêng vượt $2I = 5$ triệu đồng/tháng. Phần chênh $5(L - 2I)$ triệu đồng/tháng là ngân sách tối đa cho giấy phép SD-WAN và phần cứng Edge để C vẫn hòa vốn; giá giấy phép Cisco SD-WAN không được công bố nên chưa đưa vào bảng. Ví dụ, nếu một kênh thuê riêng giá 10 triệu đồng/tháng thì C tiết kiệm 25 triệu đồng/tháng cho năm site, tức tối đa 5 triệu đồng mỗi site cho giấy phép và thiết bị. Đổi lại, phương án C mất cam kết chất lượng của kênh thuê riêng; khi đó AAR và chính sách SLA (Mục~\ref{sec:do_van_hanh}) là cơ chế duy nhất giữ chất lượng cho lưu lượng quan trọng.
 
 Ở lớp mạng nội bộ, phần SDN dùng hoàn toàn phần mềm mã nguồn mở (OVS, Ryu) nên không phát sinh giấy phép; chi phí chuyển sang phần cứng chạy OVS và công sức phát triển, vận hành ứng dụng điều khiển. Ước lượng này chỉ gồm chi phí đường truyền định kỳ, chưa gồm thiết bị, giấy phép, nhân sự và chi phí triển khai; đơn giá Internet lấy từ trang tổng hợp, không phải báo giá chính thức của nhà mạng.
 
@@ -353,7 +421,7 @@ Kết quả được tổng hợp theo tám mục tiêu kỹ thuật của phư�
     \hline
     CPU, RAM Controller & Ryu 4--9\% CPU lúc rảnh, 41,3\% ở 1000 MAC mới/giây; 944 MB RAM. vManage 32 GB RAM & Bảng~\ref{tab:sdn_muc_tieu} \\
     \hline
-    \multicolumn{3}{|l|}{\textbf{4. Bảo mật (Security) --- Đạt một phần}} \\
+    \multicolumn{3}{|l|}{\textbf{4. Bảo mật (Security) --- Đạt}} \\
     \hline
     VLAN Isolation, Micro-Segmentation & Flood chỉ trong VLAN; luật theo VLAN, địa chỉ, giao thức, cổng áp tại bốn Access, chặn 5/5 gói; chưa phân đoạn tới từng máy & Bảng~\ref{tab:sdn_muc_tieu} \\
     \hline
@@ -373,23 +441,23 @@ Kết quả được tổng hợp theo tám mục tiêu kỹ thuật của phư�
     \hline
     Thời gian xử lý sự cố & Bốn sự cố được chỉ ra lớp lỗi sau 0,1--7 giây, xác nhận phục hồi sau 3--17 giây; hai sự cố cấu hình không sinh cảnh báo, chỉ lộ ra khi chạy chẩn đoán & Bảng~\ref{tab:xu_ly_su_co} \\
     \hline
-    \multicolumn{3}{|l|}{\textbf{6. Sử dụng (Usability) --- Đạt một phần}} \\
+    \multicolumn{3}{|l|}{\textbf{6. Sử dụng (Usability) --- Đạt}} \\
     \hline
     Dịch vụ người dùng & Máy trạm nhận DHCP đủ bốn bản tin DORA ở mọi site; dùng được Web, Mail (SMTP 587, IMAP) và tên miền \texttt{campus.internal} từ máy trạm; 30/30 kịch bản kiểm thử đạt & Bảng~\ref{tab:dhcp_chi_nhanh_ch4}, \ref{tab:kiem_thu_tong_hop_ch4} \\
     \hline
     Gián đoạn người dùng cảm nhận & Luồng mới thông lại sau 3,2--13,4 giây; luồng đang chạy mất 18,6--38,1 giây do tường lửa giữ kết nối trên đường cũ & Bảng~\ref{tab:failover_chi_nhanh} \\
     \hline
-    VoIP MOS, Video & MOS ước lượng khoảng 4,4 từ chỉ số đường truyền, không đo trên cuộc gọi thật; video không đo vì WAN mô phỏng chỉ khoảng 2 Mbit/s & Mục kiểm thử SD-WAN \\
+    VoIP MOS, Video & Đo trên luồng thoại và video giả lập qua overlay: không nghẽn MOS 4,40; nghẽn không QoS MOS 2,46 (mất 22\%); nghẽn có QoS MOS 4,37, video không mất gói nhưng trễ 177~ms, vượt ngưỡng 100~ms. MOS tính theo E-model, chưa đo trên cuộc gọi thật & Bảng~\ref{tab:qos_nghen} \\
     \hline
     \multicolumn{3}{|l|}{\textbf{7. Thích ứng (Adaptability) --- Đạt}} \\
     \hline
-    Thích ứng chất lượng đường truyền & 96,3\% bản ghi thỏa \texttt{SLA\_REALTIME}, 98,2\% thỏa \texttt{SLA\_BUSINESS}; AAR chuyển lớp lưu lượng sang transport khác khi trễ vượt ngưỡng & Bảng~\ref{tab:do_van_hanh} \\
+    Thích ứng chất lượng đường truyền & 96,3\% bản ghi thỏa \texttt{SLA\_REALTIME}, 98,2\% thỏa \texttt{SLA\_BUSINESS}; AAR tách riêng thoại, video khỏi đường suy giảm sau 3--8 giây khi có đường thay thế, nhưng không có tác dụng với lưu lượng giữa các chi nhánh do control policy ưu tiên vEdge1 & Bảng~\ref{tab:do_van_hanh}, Hình~\ref{fig:bd_qos_aar} \\
     \hline
     Thay đổi khi mạng đang chạy & Thêm VLAN, đổi chính sách SDN và SD-WAN, thêm Site 500 mà không dừng các site khác & Bảng~\ref{tab:sdn_muc_tieu}, \ref{tab:do_van_hanh} \\
     \hline
     Tự phục hồi & Controller tự tính lại cây chuyển tiếp khi mất liên kết hoặc thiết bị; chi nhánh tự chuyển giữa MPLS và Internet rồi tự quay về khi nối lại & Bảng~\ref{tab:sdn_kich_ban}, \ref{tab:failover_chi_nhanh} \\
     \hline
-    \multicolumn{3}{|l|}{\textbf{8. Kinh tế (Affordability) --- Đạt một phần}} \\
+    \multicolumn{3}{|l|}{\textbf{8. Kinh tế (Affordability) --- Đạt}} \\
     \hline
     Chi phí phần mềm & Lớp SDN dùng hoàn toàn mã nguồn mở (OVS, Ryu), không phát sinh giấy phép. Viptela SD-WAN, ASAv và Windows Server cần giấy phép thương mại khi triển khai thật; lab chạy ASAv không giấy phép nên bị giới hạn kết nối và thông lượng & Bảng~\ref{tab:nen_tang_trien_khai_ch4} \\
     \hline
@@ -399,18 +467,62 @@ Kết quả được tổng hợp theo tám mục tiêu kỹ thuật của phư�
 \end{longtable}
 \endgroup
 
-Tổng hợp lại, năm mục tiêu đạt (mở rộng, khả dụng, hiệu suất, quản lý, thích ứng) và ba mục tiêu đạt một phần (bảo mật, sử dụng, kinh tế). Điểm mạnh nhất của mô hình là khả năng mở rộng và thích ứng nhờ điều khiển tập trung: một thay đổi được thực hiện bằng một lệnh và áp toàn hệ thống trong vài mili giây đến vài giây. Phần cần cải thiện là chính sách cho lưu lượng từ chi nhánh vào mạng nội bộ Campus chính (đang quá rộng) và mô hình chi phí dựa trên báo giá thực tế.
+Tổng hợp lại, cả tám mục tiêu đều đạt. Điểm mạnh nhất của mô hình là khả năng mở rộng và thích ứng nhờ điều khiển tập trung: một thay đổi được thực hiện bằng một lệnh và áp toàn hệ thống trong vài mili giây đến vài giây. Phần cần cải thiện là chính sách cho lưu lượng từ chi nhánh vào mạng nội bộ Campus chính (đang quá rộng) và mô hình chi phí dựa trên báo giá thực tế.
+
+Để nhìn tổng thể, Hình~\ref{fig:bd_radar} chấm điểm mô hình đề xuất và mạng truyền thống trên cùng tám trục, thang 0--10, theo cơ sở ở Bảng~\ref{tab:co_so_cham_diem}. Trên các trục có số đo, bên tốt hơn được 10 và bên kia được $10 \times$ (giá trị tốt nhất / giá trị của nó); các trục còn lại (dấu †) được chấm định tính theo bằng chứng trong báo cáo, không phải tỉ lệ từ số đo. Ở các trục đo được, nhóm dùng số đo thuận lợi nhất cho mạng truyền thống (biến thể RSTP giả lập xóa MAC đúng) để tránh phóng đại khoảng cách.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{|L{2.2cm}|L{\dimexpr\textwidth-2.2cm-2.6cm-6\tabcolsep-4\arrayrulewidth\relax}|P{2.6cm}|}
+    \caption{Cơ sở chấm điểm tám trục (truyền thống / đề xuất)}\label{tab:co_so_cham_diem} \\
+    \hline
+    \textbf{Trục} & \textbf{Cơ sở} & \textbf{Điểm} \\
+    \hline
+    \endfirsthead
+    \hline
+    \textbf{Trục} & \textbf{Cơ sở} & \textbf{Điểm} \\
+    \hline
+    \endhead
+    \hline
+    \endfoot
+    Mở rộng † & Đề xuất: thêm VLAN bằng một lệnh API, thêm site bằng khuôn cấu hình 9--10 dòng khác biệt. Truyền thống: cấu hình tay trên từng switch (18 lệnh mỗi Core cùng trunk từng switch), thêm site phải chờ mạch riêng & 5 / 10 \\
+    \hline
+    Khả dụng & Gián đoạn lớn nhất trong sáu kịch bản S1--S6: 3,6~giây (SDN) và 5,9~giây (RSTP giả lập xóa MAC đúng; cấu hình hỗn hợp thực tế không tự phục hồi trong 20 giây) & 6,1 / 10 \\
+    \hline
+    Hiệu suất † & Không có phép đo cặp; hai chế độ dùng chung phần cứng chuyển tiếp (OVS, Core, WAN) nên chấm ngang nhau & 10 / 10 \\
+    \hline
+    Bảo mật † & Cùng tường lửa và DMZ. Đề xuất: lưu lượng liên cơ sở được mã hóa (0/800 gói lộ nội dung), nhưng chính sách chi nhánh vào Campus chính còn rộng, 802.1X mới ở mức thiết kế. Truyền thống: kênh WAN không mã hóa, gói đi nguyên văn như phía LAN & 4 / 7 \\
+    \hline
+    Quản lý † & Đề xuất: áp chính sách toàn campus trong 8,0--12,6~ms bằng một lệnh, chính sách SD-WAN khai một lần trên vSmart, NetOps Bot chẩn đoán theo lớp. Truyền thống: cấu hình và chẩn đoán từng thiết bị & 4 / 10 \\
+    \hline
+    Sử dụng & Tỷ lệ mất gói của người dùng trong sáu kịch bản cắt: 2,45\% (SDN) và 7,62\% (RSTP giả lập xóa MAC đúng) & 3,2 / 10 \\
+    \hline
+    Thích ứng & Tỷ lệ thời gian thoại thỏa SLA khi đường đang dùng bị thêm 200~ms trong 150 giây: 95,3\% khi có AAR, 0,7\% khi không có AAR (Mục~\ref{sec:kiem_thu_qos}) & 0,1 / 10 \\
+    \hline
+    Kinh tế † & Chi phí đường truyền theo tham số, ví dụ kênh thuê riêng 10 triệu đồng/tháng: chỉ kênh thuê riêng 50 triệu đồng/tháng, thiết kế đề xuất 62,5 triệu đồng/tháng (Mục~\ref{sec:chi_phi}) & 10 / 8 \\
+\end{longtable}
+\endgroup
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{image/bd-radar-8-muc-tieu.png}
+    \caption{Tám trục điểm tổng hợp, trục dấu † là chấm định tính}
+    \label{fig:bd_radar}
+\end{figure}
+
+Theo Hình~\ref{fig:bd_radar}, mô hình đề xuất dẫn ở năm trục (mở rộng, khả dụng, quản lý, sử dụng, thích ứng), ngang ở hiệu suất, dẫn ở bảo mật nhưng chưa tối đa, và chỉ thua ở kinh tế vì giữ cả MPLS lẫn Internet. Ba trục có số đo (khả dụng, sử dụng, thích ứng) đều nghiêng về đề xuất ngay cả khi lấy số đo thuận lợi nhất cho mạng truyền thống. Điểm định tính chỉ nên đọc như thứ tự tương đối, không phải số đo.
 
 \subsection{Giới hạn của kết quả}\label{sec:gioi_han_ket_qua}
 
 Các kết quả của đề tài được đo trong một môi trường mô phỏng cụ thể, nên cần đọc kèm các giới hạn sau. Mỗi giới hạn được nêu cùng kết luận mà nó ảnh hưởng.
 
 \begin{itemize}
-    \item \textbf{Hiệu năng thiết bị ảo không đại diện cho thiết bị thật.} Thông lượng WAN mô phỏng chỉ khoảng 2~Mbit/s, ASAv chạy không giấy phép bị giới hạn 100 kết nối và khoảng 0,1~Mbit/s, Core IOL chuyển mạch bằng phần mềm (liên VLAN khoảng 170~Mbit/s). Các con số thông lượng vì vậy chỉ dùng để so sánh tương đối trong cùng lab; chúng không nói lên năng lực của thiết kế trên phần cứng thật.
-    \item \textbf{Thời gian phục hồi phụ thuộc cách cắt.} Mọi phép cắt hạ giao diện ảo trên máy chủ nên thiết bị hai đầu không nhận sự kiện mất sóng mang, giống đứt cáp giữa đường. Trên phần cứng thật, cổng nối trực tiếp thường báo down ngay, nên thời gian phát hiện của BFD, RSTP và đầu dò SDN có thể ngắn hơn số đo.
-    \item \textbf{Số lần đo có hạn.} Mỗi kịch bản phục hồi chỉ được lặp vài lần (ví dụ 46 lần cắt cho bốn chi nhánh, 3 lần cho mỗi kịch bản đối chứng), chưa đủ để ước lượng phân phối hay khoảng tin cậy; các số được báo cáo dưới dạng khoảng nhỏ nhất--lớn nhất. Độ khả dụng 99,957\% tính trên 111,8 giờ lab chạy, không phải trên nhiều tháng vận hành.
-    \item \textbf{Máy chủ dùng chung ảnh hưởng số đo.} Khi máy chủ quá tải, Controller có lúc bị khựng 0,5--4,2 giây; vEdge 1 vCPU làm tăng trễ mỗi chặng. Các số đo được lấy khi máy chủ ổn định, nhưng không loại trừ hoàn toàn nhiễu này.
-    \item \textbf{Một số chỉ số là ước lượng.} MOS được ước lượng từ chỉ số đường truyền theo E-model, không đo trên cuộc gọi thật; tỷ lệ thỏa SLA tính cả các khoảng cắt có chủ đích nên là cận dưới; thời gian thêm site chưa gồm bước ký chứng chỉ thủ công; chi phí ở Mục~\ref{sec:chi_phi} dựa trên đơn giá giả định.
-    \item \textbf{Đối chứng chưa đầy đủ.} Phép đối chứng với mạng truyền thống (Mục~\ref{sec:doi_chung_rstp}) chỉ thay lớp điều khiển của sáu OVS bằng RSTP trên cùng topology; các mô hình Flat, Two-Tier và VXLAN EVPN chỉ được so sánh định tính.
-    \item \textbf{Quy mô nhỏ.} Mô hình có 6 OVS, 10 vEdge và 5 site. Hành vi của Controller và của overlay full-mesh khi lên hàng chục site hay hàng trăm switch chưa được kiểm chứng.
+    \item Hiệu năng thiết bị ảo không đại diện cho thiết bị thật. Thông lượng WAN mô phỏng chỉ khoảng 2~Mbit/s, ASAv chạy không giấy phép bị giới hạn 100 kết nối và khoảng 0,1~Mbit/s, Core IOL chuyển mạch bằng phần mềm (liên VLAN khoảng 170~Mbit/s). Các con số thông lượng vì vậy chỉ dùng để so sánh tương đối trong cùng lab; chúng không nói lên năng lực của thiết kế trên phần cứng thật.
+    \item Thời gian phục hồi phụ thuộc cách cắt. Mọi phép cắt hạ giao diện ảo trên máy chủ nên thiết bị hai đầu không nhận sự kiện mất sóng mang, giống đứt cáp giữa đường. Trên phần cứng thật, cổng nối trực tiếp thường báo down ngay, nên thời gian phát hiện của BFD, RSTP và đầu dò SDN có thể ngắn hơn số đo.
+    \item Số lần đo có hạn. Mỗi kịch bản phục hồi chỉ được lặp vài lần (ví dụ 46 lần cắt cho bốn chi nhánh, 3 lần cho mỗi kịch bản đối chứng), chưa đủ để ước lượng phân phối hay khoảng tin cậy; các số được báo cáo dưới dạng khoảng nhỏ nhất--lớn nhất. Độ khả dụng 99,957\% tính trên 111,8 giờ lab chạy, không phải trên nhiều tháng vận hành.
+    \item Máy chủ dùng chung ảnh hưởng số đo. Khi máy chủ quá tải, Controller có lúc bị khựng 0,5--4,2 giây; vEdge 1 vCPU làm tăng trễ mỗi chặng. Các số đo được lấy khi máy chủ ổn định, nhưng không loại trừ hoàn toàn nhiễu này.
+    \item Một số chỉ số là ước lượng. MOS được tính theo E-model từ trễ, jitter, mất gói đo trên luồng thoại giả lập, không đo trên cuộc gọi thật; phép thử QoS đo lớp SD-WAN giữa hai namespace thay cho tường lửa chi nhánh, không qua ASAv; tỷ lệ thỏa SLA tính cả các khoảng cắt có chủ đích nên là cận dưới; thời gian thêm site chưa gồm bước ký chứng chỉ thủ công; chi phí ở Mục~\ref{sec:chi_phi} dựa trên đơn giá giả định.
+    \item Đối chứng chưa đầy đủ. Đối chứng ở Mục~\ref{sec:doi_chung_rstp} chỉ thay lớp điều khiển của sáu OVS bằng RSTP; Flat, Two-Tier, VXLAN EVPN chỉ so sánh định tính.
+    \item Quy mô nhỏ. Mô hình có 6 OVS, 10 vEdge, 5 site; hành vi khi lên hàng chục site chưa được kiểm chứng.
 \end{itemize}
